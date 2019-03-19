@@ -1,0 +1,10 @@
+# libldac-master
+PKG_URL="https://android.googlesource.com/platform/external/libldac/+archive/refs/heads/master.tar.gz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/arm-linux-gnueabihf --sysconfdir=/etc --localstatedir=/var --disable-static"
+INST_CMD=install-strip
+PATCHES="libldac-config.patch"
+MAKEDIR=1
+PKG_LDFLAGS="-lm"
+
+# Notes: Install autoconf-archive package

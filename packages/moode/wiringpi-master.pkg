@@ -1,0 +1,8 @@
+# wiringpi-master
+PKG_URL="https://git.drogon.net/?p=wiringPi;a=snapshot;h=8d188fa0e00bb8c6ff6eddd07bf92857e9bd533a;sf=tgz"
+PATCHES="wiringpi-makefiles.patch"
+BUILD_PROCESS=simplemake
+INST_CMD=install
+PKG_DEPS=
+PKG_MAKEVARS="PREFIX=/usr HARCH=${HARCH}"
+PKG_CFLAGS="-I."

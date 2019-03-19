@@ -1,0 +1,8 @@
+# subunit-1.3.0
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/s/subunit/subunit_1.3.0.orig.tar.gz"
+MAKEDIR=1
+BUILD_PROCESS=configmake
+CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/${HARCH} --infodir=/usr/share/info"
+INST_CMD=install-strip
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/s/subunit/subunit_1.3.0-1.debian.tar.xz"
+PKG_DEPS="raspbian/cppunit-1.14.0 raspbian/check-basic-0.10.0"

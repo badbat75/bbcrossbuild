@@ -1,0 +1,15 @@
+diff -Naur ffmpeg-4.1.1-stage1.orig/configure.wrapper ffmpeg-4.1.1-stage1/configure.wrapper
+--- ffmpeg-4.1.1-stage1.orig/configure.wrapper	1970-01-01 01:00:00.000000000 +0100
++++ ffmpeg-4.1.1-stage1/configure.wrapper	2019-02-22 11:09:51.557592600 +0100
+@@ -0,0 +1,11 @@
++#!/bin/bash
++set -x
++
++CONF_DIR=$(dirname ${0})
++
++LDFLAGS="${CFLAGS} ${LDFLAGS}" ${CONF_DIR}/configure ${@} \
++	--enable-cross-compile --disable-x86asm --target-os=linux --sysroot=${SYSROOT} \
++	--cc="${CC}" \
++	--ld="${CC}"
++
++set +x

@@ -1,0 +1,11 @@
+--- libconfig_1.5-0.4/tests/tests.orig	2019-03-02 19:38:59.753526800 +0100
++++ libconfig_1.5-0.4/tests/tests.c	2019-03-02 19:39:50.101168700 +0100
+@@ -28,7 +28,7 @@
+ #define snprintf _snprintf
+ #endif
+ 
+-#include <libconfig.h>
++#include "../lib/libconfig.h"
+ #include <tinytest.h>
+ 
+ /* ------------------------------------------------------------------------- */

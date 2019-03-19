@@ -1,0 +1,71 @@
+#!/bin/bash
+
+check_core_functions
+
+function create_sysroot() {
+	echo -n "Creating sysroot with ${1}..."
+	if [ ! -d ${DISTOS_PATH} ]
+	then
+		mkdir -p ${DISTOS_PATH}
+		[ ! -d ${LOG_PATH} ] && mkdir ${LOG_PATH}
+		tar xf ${IMG_PATH}/${1} -C${DISTOS_PATH} ./boot ./bin ./lib ./usr/bin ./usr/include ./usr/lib ./usr/share ./usr/local/bin ./usr/local/include ./usr/local/lib ./etc >> ${LOG_PATH}/sysroot.log 2>&1 &&
+		libraries_relink >> ${LOG_PATH}/sysroot.log 2>&1
+		local STATUS=${?}
+		if [ -f ${DISTOS_PATH}/usr/lib/${HARCH}/pkgconfig/libical.pc ]
+		then
+			sed -i "s|/usr/lib/${HARCH:+${HARCH}/}libicu|${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}libicu|g" ${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}pkgconfig/libical.pc
+		fi
+		if [ ${STATUS} -eq 0 ]
+		then
+			echo "Done."
+			return 0
+		else
+			echo "Fail."
+			return 1
+		fi
+	else
+		echo "already present."
+		return 1
+	fi
+}
+
+function libraries_relink () {
+	while (( "$#" )); do
+		case ${1} in
+		-s|--sysroot)
+			shift
+			test -z "${1:-}" && echo "--sysroot specified without DISTOS_PATH path." && exit 1
+					DISTOS_PATH="${1}"
+			;;
+		-a|--arch)
+			shift
+			test -z "${1:-}" && echo "--arch specified without architecture." && exit 1
+			HARCH="${1}"
+			;; 
+		-h|--help)
+			cat <<-EOF
+				$0 -s <sysroot> [parameters]
+
+				-a --arch:      Optional. Specify architecture tuple. Default: arm-linux-gnueabihf.
+				-s --sysroot:   Mandatory. Specify DISTOS_PATH path.
+				-h --help:      This message.
+			EOF
+			exit 0
+			;;             
+		esac
+		shift
+	done
+
+	test -z "${DISTOS_PATH:-}" && echo "DISTOS_PATH not set" && exit 1
+	test -z "${HARCH:-}" && HARCH="arm-linux-gnueabihf"
+
+	echo "DISTOS_PATH: ${DISTOS_PATH}"
+	echo
+
+	for i in $(find -L ${DISTOS_PATH}/usr/lib/${HARCH} -lname "/lib/${HARCH}*");
+	do
+		echo -n "Relinking $i... "
+		ln -f -s ../../..$(readlink $i) $i
+		echo "done."
+	done
+}

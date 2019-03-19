@@ -1,0 +1,8 @@
+# check-0.10.0
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/c/check/check_0.10.0.orig.tar.gz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/${HARCH} --infodir=/usr/share/info --enable-subunit"
+INST_CMD=install-strip
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/c/check/check_0.10.0-3.debian.tar.xz"
+PATCHES="check-pkgconfig.patch"
+PKG_DEPS="raspbian/subunit-1.3.0"

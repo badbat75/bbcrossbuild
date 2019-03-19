@@ -1,0 +1,11 @@
+# libexif-0.6.21-5.1
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libe/libexif/libexif_0.6.21.orig.tar.gz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/arm-linux-gnueabihf --disable-static"
+INST_CMD=install-strip
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libe/libexif/libexif_0.6.21-5.1.debian.tar.xz"
+PKG_DEPS=
+PKG_CFLAGS="-Wno-switch -Wno-enum-compare -Wno-unused-but-set-variable"
+
+# Note:
+# Install autopoint in build host

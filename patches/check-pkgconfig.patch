@@ -1,0 +1,10 @@
+--- check-0.10.0/check.pc.in.orig	2019-02-21 14:32:39.338402300 +0100
++++ check-0.10.0/check.pc.in	2019-02-21 14:32:55.466127500 +0100
+@@ -8,6 +8,6 @@
+ URL: http://check.sourceforge.net
+ Version: @VERSION@
+ Requires: @LIBSUBUNIT_PC@
+-Libs: -L${libdir} -lcheck_pic @GCOV_LIBS@ @PTHREAD_CFLAGS@ @PTHREAD_LIBS@ @LIBS@
++Libs: -L${libdir} -lcheck @GCOV_LIBS@ @PTHREAD_CFLAGS@ @PTHREAD_LIBS@ @LIBS@
+ Libs.private:
+ Cflags: -I${includedir} -pthread

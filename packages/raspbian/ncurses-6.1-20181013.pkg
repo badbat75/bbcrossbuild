@@ -1,0 +1,34 @@
+# ncurses-6.1-20181013
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/n/ncurses/ncurses_6.1%2b20181013.orig.tar.gz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--prefix=/usr \
+        --with-shared \
+        --mandir=/usr/share/man \
+        --with-manpage-format=normal \
+        --without-profile --without-debug \
+        --disable-rpath --enable-echo \
+        --disable-stripping \
+        --enable-const \
+        --enable-pc-files \
+        --with-pkg-config-libdir=/usr/lib/arm-linux-gnueabihf/pkgconfig \
+        --libdir=/usr/lib/arm-linux-gnueabihf \
+        --without-ada \
+        --without-tests \
+        --with-sysmouse \
+        --enable-ext-mouse \
+        --enable-symlinks \
+        --disable-termcap \
+        --with-default-terminfo-dir=/etc/terminfo \
+        --with-terminfo-dirs="/etc/terminfo:/lib/terminfo:/usr/share/terminfo" \
+        --with-ticlib=tic \
+        --with-termlib=tinfo \
+        --with-versioned-syms \
+        --disable-wattr-macros \
+        --disable-relink \
+        --enable-overwrite \
+        --with-xterm-kbs=del \
+        --with-progs \
+        --enable-widec" \
+INST_CMD=install \
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/n/ncurses/ncurses_6.1%2b20181013-1.debian.tar.xz"
+AUTOCONF=0

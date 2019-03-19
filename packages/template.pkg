@@ -1,0 +1,6 @@
+# Package Name 1.0
+PKG_URL="URL where download the sources"
+BUILD_PROCESS=configmake|mesonninja
+CONF_FLAGS="configure or meson FLAGS"
+INST_CMD=install|install-strip
+PATCHDEB="Debian package that contains patches"

@@ -1,0 +1,7 @@
+# ashuffle-1.1.2
+PKG_URL="https://github.com/joshkunz/ashuffle/archive/v1.1.2.tar.gz"
+#PATCHES=
+BUILD_PROCESS=simplemake
+INST_CMD=install
+PKG_DEPS=
+PKG_MAKEVARS="prefix=${BIN_PATH}/usr"

@@ -1,0 +1,30 @@
+#!/bin/bash
+
+check_core_functions
+
+function cleanproject () {
+#	[ -d "${BIN_PATH}" ] && rm -rf "${BIN_PATH}"
+	[ -f "${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.tar.xz" ] && rm -f ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.tar.xz
+}
+
+function rootproject () {
+	cd ${BIN_PATH}
+	sudo chown -R root:root *
+	cd ${BB_HOME}
+}
+
+function zipproject () {
+	cd ${BIN_PATH}
+	tar cf ../${PRJ_NAME}.tar --owner=0 --group=0 . &&
+	cd ${DATA_PATH}/${PRJ_NAME}
+	xz -T0 ${PRJ_NAME}.tar
+	local BUILD_STATUS=${?}
+	cd ${BB_HOME}
+	if [ ${BUILD_STATUS} -ne 0 ]
+	then
+		return ${BUILD_STATUS}
+	#	else
+	#	rm -rf ${BIN_PATH}
+	fi
+}
+

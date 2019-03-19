@@ -1,0 +1,6 @@
+# libmpdclient-2.16
+PKG_URL="https://www.musicpd.org/download/libmpdclient/2/libmpdclient-2.16.tar.xz"
+BUILD_PROCESS=mesonninja
+CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/${HARCH} -Ddocumentation=true"
+INST_CMD=install-strip
+#PKG_DEPS="raspbian/check-0.10.0"

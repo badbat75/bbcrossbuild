@@ -1,0 +1,6 @@
+# rpi-kernel-4.19-master
+PKG_URL="https://github.com/raspberrypi/linux/archive/rpi-4.19.y.tar.gz"
+#PATCHES=lto-kernel.patch
+BUILD_PROCESS=kernelbuild
+INST_CMD="INSTALL_MOD_STRIP=1"
+[ ${KERN_LTOENABLE:-0} -eq 1 ] && KERN_IMAGE="Image" && PKG_LDFLAGS="-msoft-float"

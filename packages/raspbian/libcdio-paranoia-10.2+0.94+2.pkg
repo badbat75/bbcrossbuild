@@ -1,0 +1,8 @@
+# libcdio-paranoia-10.2+0.94+2
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libc/libcdio-paranoia/libcdio-paranoia_10.2%2b0.94%2b2.orig.tar.gz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/arm-linux-gnueabihf --sysconfdir=/etc --localstatedir=/var \
+	--disable-silent-rules --disable-static --disable-cddb --disable-vcd-info"
+INST_CMD=install-strip
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libc/libcdio-paranoia/libcdio-paranoia_10.2%2b0.94%2b2-4.debian.tar.xz"
+PKG_DEPS="raspbian/libcdio-2.0.0"

@@ -1,0 +1,581 @@
+#!/bin/bash
+
+check_core_functions
+
+export MAKEFLAGS="-j${NPROCS} ${MAKEFLAGS:+ ${MAKEFLAGS}}"
+if [ ${HARCH} != ${BARCH} ]
+then
+	export CROSS_COMPILING=yes
+	export PKG_CONFIG_ALLOW_CROSS=1
+fi
+
+function settoolflags () {
+	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH} }${HMCPU:+-mtune=${HMCPU}}"
+	PLATFORM_RUSTFLAGS="${HMARCH_RUST:+-C target-feature=${HMARCH_RUST} }${HMCPU:+-C target-cpu=${HMCPU}}"
+	COMMON_CFLAGS="-I${BIN_PATH}/usr/include"
+	COMMON_CXXFLAGS="-I${BIN_PATH}/usr/include"
+	COMMON_CPPFLAGS="-I${BIN_PATH}/usr/include"
+	COMMON_LDFLAGS="-fuse-ld=gold -Wl,-rpath-link,${BIN_PATH}/lib/${HARCH} -Wl,-rpath-link,${BIN_PATH}/usr/lib/${HARCH}-L${BIN_PATH}/lib/${HARCH} -L${BIN_PATH}/usr/lib/${HARCH}"
+	COMMON_PKG_CONFIG_LIBDIR="${BIN_PATH}/usr/lib/${HARCH}/pkgconfig:${BIN_PATH}/usr/share/pkgconfig"
+	# Construct build tools flags
+	# Build Include search paths
+	if [ -d ${DISTOS_PATH}/usr/include ]
+	then
+		#local STD_CFLAGS="-nostdinc -isystem ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include -isystem ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include-fixed"
+		#local STD_CXXFLAGS="-nostdinc -std=c++98 -I ${DISTOS_PATH}/usr/include/c++/6 -I ${DISTOS_PATH}/usr/include/${HARCH:+${HARCH}/}c++/6 -I ${DISTOS_PATH}/usr/include/c++/6/backward -I ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include -I ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include-fixed"
+		#local STD_CXXFLAGS+=" -include math.h -include bits/extc++.h"
+		#local STD_CPPFLAGS="-isystem ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include -isystem ${DISTOS_PATH}/usr/local/include -isystem ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include-fixed -isystem ${DISTOS_PATH}/usr/include/arm-linux-gnueabihf -isystem ${DISTOS_PATH}/usr/include"
+		#local STD_LDFLAGS+=" -Wl,-nostdlib -Wl,${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/libstdc++.so"
+		COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include/${HARCH}}"
+		COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CXXFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include/${HARCH}}"
+		COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CPPFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include/${HARCH}}"
+		COMMON_LDFLAGS+=" ${STD_LDFLAGS}"
+		COMMON_PKG_CONFIG_LIBDIR+=":${DISTOS_PATH}/usr/lib/${HARCH}/pkgconfig:${DISTOS_PATH}/usr/share/pkgconfig"
+		SYSROOT_CFLAGS="${DISTOS_PATH:+--sysroot=${DISTOS_PATH}}"
+		SYSROOT_LDFLAGS="${DISTOS_PATH:+-Wl,--sysroot=${DISTOS_PATH}}"
+	fi
+	# Build LDFLAGS search paths
+	if [ -d ${DISTOS_PATH}/etc/ld.so.conf.d ]
+	then
+		for entry in $(cat ${DISTOS_PATH}/etc/ld.so.conf.d/* | grep -v '#' | sort)
+		do
+			COMMON_LDFLAGS+=" -L${DISTOS_PATH}$entry -Wl,-rpath-link,${DISTOS_PATH}$entry"
+		done
+	fi
+}
+
+function build () (
+	unset PKG_URL \
+		GIT_URL \
+		PKG_SRCDIR \
+		BUILD_PROCESS \
+		STD_CONF_FLAGS \
+		CONF_CMD \
+		CONF_FLAGS \
+		CONF_COPYSOURCE \
+		CONF_PATH \
+		INST_CMD \
+		MAKEDIR \
+		AUTOCONF \
+		AUTOCONF_PATH \
+		PATCHDEB \
+		PATCHES \
+		PKG_NAME \
+		PKG_DEPS \
+		PKG_CFLAGS \
+		PKG_CXXFLAGS \
+		PKG_LDFLAGS \
+		PKG_MAKEVARS \
+		CARGO_BIN \
+		CARGO_LIB \
+		CARGO_BINLIST \
+		CARGO_LIBLIST \
+		CARGO_STRIP
+	if [ -f ${PKG_PATH}/${1}.pkg ]
+	then
+		source ${PKG_PATH}/${1}.pkg
+		for deps in ${PKG_DEPS}
+		do
+			#echo "Called from ${1}"
+			build ${deps}
+			if [ ${?} -ne 0 ]
+			then
+				echo
+				return ${?} 
+			fi
+		done
+	else
+		echo "Package ${1} does not exists."
+		echo
+	fi	
+	local PKG_NAME=$(basename ${1})
+	echo "Package ${PKG_NAME}"
+	if [ -f ${STATUS_PATH}/${PKG_NAME} ]
+	then
+		if [ "$(md5sum ${PKG_PATH}/${1}.pkg)" == "$(cat ${STATUS_PATH}/${PKG_NAME})" ]
+		then
+			echo "Package ${PKG_NAME} already built."
+			echo
+			return 0
+		else
+			rm -f ${STATUS_PATH}/${PKG_NAME}
+		fi
+	fi
+	# Build defaults
+	local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_NAME}}
+	local PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
+	if [ ! -d ${BLD_PATH} ]
+	then
+		mkdir -p ${BLD_PATH}
+	fi
+	if [ ! -d ${BIN_PATH} ]
+	then
+		mkdir -p ${BIN_PATH}
+	fi
+	if [ ! -d ${LOG_PATH} ]
+	then
+		mkdir -p ${LOG_PATH}
+	fi
+	> ${LOG_PATH}/${PKG_NAME}.log
+	if [ ! -d ${PKG_SRCPATH} ]
+	then
+		echo -n "Downloading ${PKG_NAME}..."
+		downloadsources >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		if [ ${?} -ne 0 ]
+		then
+			echo "Fail."
+			return 1
+		fi
+		echo "Done."
+		preparesources
+	fi
+	echo -n "Building ${PKG_NAME}..."
+	if [ -d ${BLD_PATH}/${PKG_NAME} ]
+	then
+		rm -rf ${BLD_PATH}/${PKG_NAME}
+	fi
+	settoolflags
+	${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+	if [ ${?} -eq 0 ]
+	then
+		if [ ! -d ${STATUS_PATH} ]
+		then
+			mkdir -p ${STATUS_PATH}
+		fi
+		md5sum ${PKG_PATH}/${1}.pkg > ${STATUS_PATH}/${PKG_NAME}
+		echo "Done."
+		echo
+		return 0
+	else
+		echo "Fail."
+		echo
+		return 1
+	fi
+)
+
+function downloadsources () {
+	if [ ! -z ${PKG_URL} ]
+	then
+		local CTTYPE=$(curl -Ls "${PKG_URL}" | file -b -)
+		case "${CTTYPE}" in
+			"gzip compressed data"*)
+				TARFLAG="z"
+				;;
+			"XZ compressed data"*)
+				TARFLAG="J"
+				;;
+			"bzip2 compressed data"*)
+				TARFLAG="j"
+				;;
+			*)
+				echo "${CTTYPE}"
+				TARFLAG="z"
+				;;
+		esac
+		mkdir -p ${PKG_SRCPATH}
+		if [ ${MAKEDIR:-0} -eq 1 ]
+		then
+			curl -Ls "${PKG_URL}" | tar xf${TARFLAG} - -C${PKG_SRCPATH}
+			local STATUS=${?}
+		else
+			curl -Ls "${PKG_URL}" | tar xf${TARFLAG} - --strip-components=1 -C${PKG_SRCPATH} &&
+			local STATUS=${?}
+		fi
+	else
+		if [ ! -z ${GIT_URL} ]
+		then
+			git clone --single-branch ${GIT_URL} ${PKG_SRCPATH}
+			local STATUS=${?}
+		fi
+	fi
+	return ${STATUS}
+}
+
+function preparesources () {
+	cd ${PKG_SRCPATH}
+	if [ "x${PATCHDEB}" != "x" ]
+	then
+		echo -n "Retrieve DEB patch info..."
+		mkdir ${PKG_SRCPATH}/debpatches
+		curl -Ls "${PATCHDEB}" | tar xfJ - -C${PKG_SRCPATH}/debpatches --strip-components 2 debian/patches >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
+			echo "Done." || echo "Fail."
+		for scanpatch in $(cat ${PKG_SRCPATH}/debpatches/series)
+		do
+			echo -n "Apply $scanpatch patch..."
+			patch -p1 < ${PKG_SRCPATH}/debpatches/${scanpatch} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
+						echo "Done." || echo "Fail."
+		done
+	fi
+	for scanpatch in ${PATCHES:-}
+	do
+		echo -n "Apply $scanpatch patch..."
+		patch -p1 < ${PATCH_PATH}/$scanpatch >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
+					echo "Done." || echo "Fail."
+	done
+	if [ -f "${PKG_SRCPATH}/${CONF_CMD}" ] && [ ! -x "${PKG_SRCPATH}/${CONF_CMD}" ]
+	then
+		chmod +x ${PKG_SRCPATH}/${CONF_CMD}
+	fi
+	cd ${BB_HOME}
+}
+
+function downloadonly () {
+	return 0
+}
+
+function configmake () {
+	set -x
+	cd ${PKG_SRCPATH}
+	if [ ${AUTOCONF:-1} -eq 1 ]
+	then
+		echo -n "AutoReconf ${PKG_NAME}..."
+		[ ! -z ${AUTOCONF_PATH} ] && cd ${AUTOCONF_PATH}
+		autoreconf -fi >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
+		echo "Done." || echo "Fail."
+	fi
+	if [ ${CONF_COPYSRC:-0} -eq 1 ] 
+	then
+		cp -rp ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME}
+	else
+		mkdir -p ${BLD_PATH}/${PKG_NAME}${CONF_PATH:+/${CONF_PATH}}
+	fi
+	cd ${BLD_PATH}/${PKG_NAME}${CONF_PATH:+/${CONF_PATH}}
+	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+	[ ${STD_CONF_FLAGS:-1} -eq 1 ] && CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH} ${CONF_FLAGS}"
+	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+	CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc ${SYSROOT_CFLAGS} ${PKG_CFLAGS}" \
+	CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
+	CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}g++ ${SYSROOT_CFLAGS} ${PKG_CXXFLAGS}" \
+	CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
+	CPP="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}cpp ${SYSROOT_CFLAGS}" \
+	CPPFLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS}" \
+	LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+	AR=${HARCH:+${HARCH}-}gcc-ar \
+	AS=${HARCH:+${HARCH}-}as \
+	NM=${HARCH:+${HARCH}-}gcc-nm \
+	RANLIB=${HARCH:+${HARCH}-}gcc-ranlib \
+	STRIP=${HARCH:+${HARCH}-}strip \
+	OBJDUMP=${HARCH:+${HARCH}-}objdump \
+	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
+	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
+	${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS} &&
+	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} &&
+	find -name '*.la' -exec sed -i '/# Libraries that this one depends upon./d;/^dependency_libs=/d;/^relink_command=/d' {} \; &&
+	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD}
+	local BUILD_STATUS=${?}
+	cd ${BB_HOME}
+	set +x
+	return ${BUILD_STATUS}
+}
+
+function simplemake () {
+	set -x
+	cp -rp ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME}
+	cd ${BLD_PATH}/${PKG_NAME}
+	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+	CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc ${SYSROOT_CFLAGS}" \
+	CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
+	CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
+	CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
+	CPP="${HARCH:+${HARCH}-}cpp ${SYSROOT_CFLAGS}" \
+	CPPFLAGS="${COMMON_CPPFLAGS}" \
+	LD="${HARCH:+${HARCH}-}ld.gold ${PKG_LDFLAGS}" \
+	LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+	AR=${HARCH:+${HARCH}-}gcc-ar \
+	AS=${HARCH:+${HARCH}-}as \
+	NM=${HARCH:+${HARCH}-}gcc-nm \
+	RANLIB=${HARCH:+${HARCH}-}gcc-ranlib \
+	STRIP=${HARCH:+${HARCH}-}strip \
+	OBJDUMP=${HARCH:+${HARCH}-}objdump \
+	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
+	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
+	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} &&
+	find -name '*.la' -exec sed -i '/# Libraries that this one depends upon./d;/^dependency_libs=/d;/^relink_command=/d' {} \; &&
+	make ${PKG_MAKEVARS} DESTDIR=${BIN_PATH} V=${MAKEVERBOSE:-0} ${INST_CMD}
+	local BUILD_STATUS=${?}
+	cd ${BB_HOME}
+	set +x
+	return ${BUILD_STATUS}
+}
+
+function cmakemake () {
+	set -x
+	mkdir -p ${BLD_PATH}/${PKG_NAME}
+	cd ${BLD_PATH}/${PKG_NAME}
+	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
+	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
+	cmake ${PKG_SRCPATH} ${CONF_FLAGS} \
+		-DCMAKE_BUILD_TYPE="Release" \
+		-DTOOLCHAIN_PREFIX=${HARCH:+${HARCH}-} \
+		-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \
+        -DCMAKE_C_COMPILER=${HARCH:+${HARCH}-}gcc \
+        -DCMAKE_C_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}" \
+		-DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \
+        -DCMAKE_CXX_COMPILER="${HARCH}-g++" \
+        -DCMAKE_CXX_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}" \
+        -DCMAKE_CPP_COMPILER=${HARCH:+${HARCH}-}cpp \
+        -DCMAKE_CPP_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS}" \
+		-DCMAKE_LINKER=${HARCH:+${HARCH}-}ld.gold \
+		-DCMAKE_EXE_LINKER_FLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS}" \
+        -DCMAKE_AR=${HARCH:+${HARCH}-}gcc-ar \
+        -DCMAKE_NM=${HARCH:+${HARCH}-}gcc-nm \
+        -DCMAKE_CC_COMPILER_RANLIB=${HARCH:+${HARCH}-}gcc-ranlib \
+        -DCMAKE_CXX_COMPILER_RANLIB=${HARCH:+${HARCH}-}gcc-ranlib \
+		-DCMAKE_STRIP=${HARCH:+${HARCH}-}strip &&
+	make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0} &&
+	find -name '*.la' -exec sed -i '/# Libraries that this one depends upon./d;/^dependency_libs=/d;/^relink_command=/d' {} \; &&
+	make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD}
+	local BUILD_STATUS=${?}
+	cd ${BB_HOME}
+	set +x
+	return ${BUILD_STATUS}
+}
+
+function mesonninja () {
+	mkdir -p ${BLD_PATH}/${PKG_NAME}
+	cd ${BLD_PATH}/${PKG_NAME}
+	local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n '-v')"
+	createmesoncross
+	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
+	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
+	meson ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME} --buildtype=release --strip -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS} &&
+	ninja ${NINJA_FLAGS} -C ${BLD_PATH}/${PKG_NAME} &&
+	find -name '*.la' -exec sed -i '/# Libraries that this one depends upon./d;/^dependency_libs=/d;/^relink_command=/d' {} \; &&
+	DESTDIR=${BIN_PATH} ninja ${NINJA_FLAGS} -C ${BLD_PATH}/${PKG_NAME} install
+	local BUILD_STATUS=${?}
+	cd ${BB_HOME}
+	return ${BUILD_STATUS}
+}
+
+function buildmesonargs () {
+	local FIRST=1
+	for flag in ${1}
+	do
+		if [ ${FIRST} -ne 1 ]
+		then
+			echo -n ", "
+		fi
+		echo -n "'${flag}'"
+	local FIRST=0
+	done
+	echo
+}
+
+function createmesoncross () {
+	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+	local CC="${HARCH:+${HARCH}-}gcc"
+	local CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}"
+	local CXX="${HARCH}-g++"
+	local CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}"
+	local CPP=${HARCH:+${HARCH}-}cpp
+	local CPPFLAGS="${COMMON_CPPFLAGS}"
+	local LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS}"
+	local AR=${HARCH:+${HARCH}-}gcc-ar
+	local NM=${HARCH:+${HARCH}-}gcc-nm
+	local RANLIB=${HARCH:+${HARCH}-}gcc-ranlib
+	local STRIP=${HARCH:+${HARCH}-}strip
+	local C_ARGS=$(buildmesonargs "${CFLAGS}")
+	local CPP_ARGS=$(buildmesonargs "${CXXFLAGS}")
+	local C_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
+	local CPP_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
+	cat > cross-${PLATFORM_NAME} <<-EOF
+		[binaries]
+		c = '${CC}'
+		cpp = '${CXX}'
+		ar = '${AR}'
+		strip = '${STRIP}'
+		nm = '${NM}'
+		ranlib = '${RANLIB}'
+		pkgconfig = 'pkg-config'
+
+		[host_machine]
+		system = '${HOS}'
+		cpu_family = '${HM}'
+		cpu = '${HMCPU}'
+		endian = '${HMENDIAN}'
+
+		[properties]
+		c_args = [${C_ARGS}]
+		cpp_args = [${CPP_ARGS}]
+		c_link_args = [${C_LINK_ARGS}]
+		cpp_link_args = [${CPP_LINK_ARGS}]
+	EOF
+}
+
+function cargobuild () {
+	cp -rp ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME}
+	cd ${BLD_PATH}/${PKG_NAME}
+	OPTCOMP_FLAGS+="${OPTLEVEL:+ -C opt-level=${OPTLEVEL}}"
+	[ ${CARGO_STRIP:-0} -eq 1 ] && local STRIP_FLAG=-s
+	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_RUSTFLAGS+=" -C lto"
+	cat > ${HARCH:+${HARCH}-}gcc <<-EOF
+		#!/bin/bash
+		echo "$(which ${HARCH:+${HARCH}-}gcc) \${@} ${STRIP_FLAG} ${SYSROOT_CFLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS}" >> ${LOG_PATH}/${PKG_NAME}.log
+		exec $(which ${HARCH:+${HARCH}-}gcc) \${@} ${STRIP_FLAG} ${SYSROOT_CFLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS}
+		return \${?}
+	EOF
+	chmod +x ${HARCH:+${HARCH}-}gcc
+	local CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
+	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
+	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
+	RUSTFLAGS="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} \
+		-C linker=${BLD_PATH}/${PKG_NAME}/${HARCH:+${HARCH}-}gcc" \
+		cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}
+	local BUILD_STATUS=${?}
+	if [ ${BUILD_STATUS} -eq 0 ]
+	then
+		for file in ${CARGO_BINLIST}
+		do
+			cp -p target/${CARGO_TARGET}/release/${file} ${BIN_PATH}${CARGO_BIN}/${file}
+		done
+		for file in ${CARGO_LIBLIST}
+		do
+			cp -p target/${CARGO_TARGET}/release/${file} ${BIN_PATH}${CARGO_LIB}/${file}
+		done
+	fi
+	cd ${BB_HOME}
+	return ${BUILD_STATUS}
+}
+
+function kernelbuild () {
+	set -x
+	cp -rp ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME}
+	cd ${BLD_PATH}/${PKG_NAME}
+	KERN_VER=$(make kernelversion)
+	make ${HM:+ARCH=${HM}} ${HARCH:+CROSS_COMPILE=${HARCH}-} ${KERN_DEFCONFIG} .config
+	if [ "x${CONF_FLAGS}" != "x" ]
+	then
+		scripts/config ${CONF_FLAGS} &&
+		make ${HM:+ARCH=${HM}} ${HARCH:+CROSS_COMPILE=${HARCH}-} ${KERN_DEFCONFIG} oldconfig
+	fi
+	if [ ! -d ${BIN_PATH}/boot ]
+	then
+		mkdir -p ${BIN_PATH}/boot
+	fi
+	# Build kernel
+	make4kern ${KERN_IMAGE}
+	local STATUS=${?}
+	if [ ${STATUS} -ne 0 ]
+	then
+		set +x
+		return ${STATUS}
+	fi
+	case ${KERN_NAME}
+	in
+		kernel*)
+			cp arch/${HM}/boot/${KERN_IMAGE} ${BIN_PATH}/boot/${KERN_NAME}
+			local STATUS=${?}
+			;;
+		*)
+			[ ! -d ${BIN_PATH}/boot ] && mkdir ${BIN_PATH}/boot
+			make ${HM:+ARCH=${HM}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_PATH=${BIN_PATH}/boot ${INST_CMD} install
+			local STATUS=${?}
+			;;
+	esac
+	if [ ${STATUS} -ne 0 ]
+	then
+		set +x
+		return ${STATUS}
+	fi
+	# Build modules
+	make4kern modules &&
+	make ${HM:+ARCH=${HM}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_MOD_PATH=${BIN_PATH} ${INST_CMD} modules_install &&
+	rm ${BIN_PATH}/lib/modules/${KERN_VER}${KERN_EXTRAVERSION}/build &&
+	rm ${BIN_PATH}/lib/modules/${KERN_VER}${KERN_EXTRAVERSION}/source
+	local STATUS=${?}
+	if [ ${STATUS} -ne 0 ]
+	then
+		set +x
+		return ${STATUS}
+	fi
+	# Build DTBS
+	if [ ${KERN_DTBS:-0} -eq 1 ] && [ ${STATUS} -eq 0 ]
+	then
+		if [ ! -d ${BIN_PATH}/boot/overlays ]
+		then
+			mkdir -p ${BIN_PATH}/boot/overlays
+		fi
+		make4kern dtbs &&
+		make ${HM:+ARCH=${HM}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_DTBS_PATH=${BIN_PATH}/boot ${INST_CMD} dtbs_install
+		local STATUS=${?}
+	fi
+	cd ${BB_HOME}
+	set +x
+	return ${STATUS}
+}
+
+function make4kern () {
+	if [ ${KERN_LTOENABLE:-0} -eq 1 ] 
+	then
+		KERN_OPTCOMP_FLAGS+="${KERN_OPTLEVEL:+ -O${KERN_OPTLEVEL}}"
+		KERN_OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+		KBUILD_BUILD_TIMESTAMP='' make \
+		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc" \
+		LD="scripts/gcc-ld" \
+		AR="${HARCH:+${HARCH}-}gcc-ar" \
+		RANLIB="${HARCH:+${HARCH}-}gcc-ranlib" \
+		KCFLAGS="${KERN_OPTCOMP_FLAGS} ${PLATFORM_CFLAGS} ${PKG_CFLAGS}" \
+		KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+		LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+		ARCH=${HM} \
+		CROSS_COMPILE=${HARCH:+${HARCH}-} \
+		EXTRAVERSION=${KERN_EXTRAVERSION} \
+		${EXTRA_PARMS} \
+		DISABLE_LTO=-fno-lto \
+		${@} ${PKG_MAKEVARS}
+		local STATUS=${?}
+	else
+		KBUILD_BUILD_TIMESTAMP='' make \
+		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc" \
+		KCFLAGS="${KERN_OPTCOMP_FLAGS} ${PLATFORM_CFLAGS} ${PKG_CFLAGS}" \
+		KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+		LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+		ARCH=${HM} \
+		CROSS_COMPILE=${HARCH:+${HARCH}-} \
+		EXTRAVERSION=${KERN_EXTRAVERSION} \
+		${EXTRA_PARMS} \
+		${@} ${PKG_MAKEVARS}
+		local STATUS=${?}
+	fi
+	return ${STATUS}
+}
+
+function pythonbuild () {
+	set -x
+	cp -rp ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME}
+	cd ${BLD_PATH}/${PKG_NAME}
+	local PYTHONBINVER=$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)
+	if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBINVER}m ]
+	then
+		COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBINVER}m"
+		COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBINVER}m"
+	fi
+	COMMON_LDFLAGS+=" -lpython${PYTHONBINVER}m"
+	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+	#source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate
+	CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc ${SYSROOT_CFLAGS}" \
+	CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
+	CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
+	CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
+	CPP="${HARCH:+${HARCH}-}cpp ${SYSROOT_CFLAGS}" \
+	CPPFLAGS="${COMMON_CPPFLAGS} ${PKG_CFLAGS}" \
+	LD="${HARCH:+${HARCH}-}ld.gold ${PKG_LDFLAGS}" \
+	LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+	AR=${HARCH:+${HARCH}-}gcc-ar \
+	AS=${HARCH:+${HARCH}-}as \
+	NM=${HARCH:+${HARCH}-}gcc-nm \
+	RANLIB=${HARCH:+${HARCH}-}gcc-ranlib \
+	STRIP=${HARCH:+${HARCH}-}strip \
+	OBJDUMP=${HARCH:+${HARCH}-}objdump \
+	python${PYTHONBINVER} setup.py build -j${NPROCS} &&
+	python${PYTHONBINVER} setup.py install --root=${BIN_PATH} ${CONF_FLAGS}
+	local BUILD_STATUS=${?}
+	cd ${BB_HOME}
+	set +x
+	return ${BUILD_STATUS}
+}

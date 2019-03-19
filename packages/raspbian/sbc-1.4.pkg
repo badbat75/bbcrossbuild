@@ -1,0 +1,8 @@
+#sbc-1.4
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/s/sbc/sbc_1.4.orig.tar.gz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/arm-linux-gnueabihf --disable-static \
+	--disable-tester --disable-silent-rules --enable-high-precision"
+INST_CMD=install-strip
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/s/sbc/sbc_1.4-1.debian.tar.xz"
+#PKG_DEPS="raspbian/libsndfile-1.0.27"

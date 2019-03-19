@@ -1,0 +1,8 @@
+# libupnppsamples-master       
+GIT_URL="http://@opensourceprojects.eu/git/p/libupnppsamples/code"
+GIT_BRANCH=
+PATCHES=libupnppsample-upexploreronly.patch
+BUILD_PROCESS=configmake
+CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/${HARCH}"
+INST_CMD=install-strip
+PKG_DEPS="moode/libupnpp-0.17.0"

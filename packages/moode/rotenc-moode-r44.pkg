@@ -1,0 +1,8 @@
+# rotenc-moode-r44
+PKG_URL="https://github.com/moode-player/moode/archive/r44prod.tar.gz"
+PKG_SRCDIR=moode-r44
+PATCHES="rotenc-makefile.patch"
+BUILD_PROCESS=simplemake
+INST_CMD=install
+PKG_DEPS="moode/moode-r44 moode/wiringpi-master"
+PKG_MAKEVARS="PREFIX=/usr -C other/rotenc"

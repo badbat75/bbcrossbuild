@@ -1,0 +1,10 @@
+# libid3tag_0.15.1b
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libi/libid3tag/libid3tag_0.15.1b.orig.tar.gz"
+#PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libi/libid3tag/libid3tag_0.15.1b-13.debian.tar.xz"
+PATCHES="id3tag-pkgconfig.patch"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/${HARCH} --disable-static --enable-shared"
+INST_CMD=install
+PKGDEPS=
+# Note:
+# Depends on: cdbs (>= 0.4.93~), dh-autoreconf, quilt, debhelper (>= 9), gettext, zlib1g-dev, gperf

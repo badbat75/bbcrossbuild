@@ -1,0 +1,13 @@
+--- squeezelite-master/Makefile.old	2019-02-27 12:30:54.856396800 +0100
++++ squeezelite-master/Makefile.rpi	2019-02-27 12:50:12.424834600 +0100
+@@ -21,3 +29,10 @@
+ 
+ clean:
+ 	rm -f $(OBJECTS) $(EXECUTABLE)
++
++install: all
++	install -m 0755 -d $(DESTDIR)$(PREFIX)/bin
++	install -m 0755 $(EXECUTABLE) $(DESTDIR)$(PREFIX)/bin/$(EXECUTABLE)
++
++install-strip: install
++	$(STRIP) -s $(DESTDIR)$(PREFIX)/bin/$(EXECUTABLE)

@@ -1,0 +1,7 @@
+# bluez-5.50        
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/b/bluez/bluez_5.50.orig.tar.xz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/arm-linux-gnueabihf \
+        --disable-silent-rules" \
+INST_CMD=install-strip \
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/b/bluez/bluez_5.50-1.debian.tar.xz"

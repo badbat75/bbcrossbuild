@@ -1,0 +1,5 @@
+# fdk-aac-2.0.0
+PKG_URL="https://github.com/mstorsjo/fdk-aac/archive/v2.0.0.tar.gz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/arm-linux-gnueabihf --sysconfdir=/etc --localstatedir=/var --disable-static"
+INST_CMD=install-strip

@@ -1,0 +1,8 @@
+--- alac-master/codec/Makefile.am.orig	2019-02-26 12:27:16.102137300 +0100
++++ alac-master/codec/Makefile.am	2019-02-26 12:27:27.740623000 +0100
+@@ -36,4 +36,4 @@
+ alacincludedir = $(includedir)/alac
+ 
+ # Install everything
+-alacinclude_HEADERS = *.h
++alacinclude_HEADERS = $(srcdir)/*.h

@@ -1,0 +1,10 @@
+--- minidlna-1.2.1/Makefile.am.orig	2019-02-26 17:19:28.143179100 +0100
++++ minidlna-1.2.1/Makefile.am	2019-02-26 17:20:38.351276300 +0100
+@@ -70,6 +70,7 @@
+ SUFFIXES = .tmpl .
+ 
+ .tmpl:
++	cp -r $(srcdir)/linux .
+ 	sed -e s@:SBINDIR:@${sbindir}@ <$< >$@
+ 
+ GENERATED_FILES = \

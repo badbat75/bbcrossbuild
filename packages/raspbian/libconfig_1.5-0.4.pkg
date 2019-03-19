@@ -1,0 +1,10 @@
+# libconfig_1.5-0.4
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libc/libconfig/libconfig_1.5.orig.tar.gz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libc/libconfig/libconfig_1.5-0.4.debian.tar.xz"
+PATCHES="libconfig_tests_header.patch"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--prefix=/usr -libdir=/usr/lib/arm-linux-gnueabihf --disable-static"
+INST_CMD=install-strip
+
+# Note:
+# Dependencies: texinfo, texlive-latex-base, texlive-fonts-recommended

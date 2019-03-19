@@ -1,0 +1,63 @@
+#!/bin/bash
+
+BB_HOME=$(dirname $(realpath ${0}))
+
+check_core_functions () {
+	is_core_functions 2>/dev/null
+	if [ ! ${?} ]
+	then
+		echo "Core functions not loaded"
+		exit 1
+	fi
+}
+
+NPROCS=$(echo $(nproc)/2+1 | bc)
+
+source ${BB_HOME}/bbxb.conf
+
+DISTOS_PATH=${DATA_PATH}/${PRJ_NAME}/${DISTOS_DIR:-distos}
+SRC_PATH=${DATA_PATH}/${PRJ_NAME}/${SRC_DIR:-sources}
+BLD_PATH=${DATA_PATH}/${PRJ_NAME}/${BLD_DIR:-builds}
+BIN_PATH=${DATA_PATH}/${PRJ_NAME}/${BIN_DIR:-binaries}
+LOG_PATH=${DATA_PATH}/${PRJ_NAME}/${LOG_DIR:-logs}
+STATUS_PATH=${DATA_PATH}/${PRJ_NAME}/${STATUS_DIR:-status}
+TOOLCHAIN_PATH=${DATA_PATH}/${PRJ_NAME}/${TOOLCHAIN_DIR:-toolchain}
+
+export PATH=${TOOLCHAIN_PATH}/bin:${PATH}
+export LD_LIBRARY_PATH=${TOOLCHAIN_PATH}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+
+PRJ_PATH=${BB_HOME}/${PRJ_DIR:-projects}
+PKG_PATH=${BB_HOME}/${PKG_DIR:-packages}
+PATCH_PATH=${BB_HOME}/${PATCH_DIR:-patches}
+IMG_PATH=${BB_HOME}/${IMG_DIR:-images}
+
+# Check platform consistency
+PLATFORM=${BB_HOME}/${PLATFORM_DIR:-platforms}/${PLATFORM_NAME}.conf
+if [ -f ${PLATFORM} ]
+then
+	. ${PLATFORM}
+	HARCH=${HM}-${HOS}-${HLIBC}
+else
+	echo "Platform file ${PLATFORM} does not exists!!! Proceeding as no platform specified."
+fi
+
+# Check the toolchains
+gcc -v > /dev/null 2>&1
+if [ ! ${?} -eq 0 ]
+then
+	echo "The toolchain for host compile does not exist."
+	exit 1
+fi
+BARCH=$(gcc -dumpmachine)
+${HARCH}-gcc -v > /dev/null 2>&1
+if [ ! ${?} -eq 0 ]
+then
+	echo "The toolchain for cross-compile does not exist."
+	exit 1
+fi
+
+umask 0022
+
+is_core_functions () {
+	return 0
+}

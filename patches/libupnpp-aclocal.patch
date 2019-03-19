@@ -1,0 +1,190 @@
+--- libupnpp-0.17/aclocal.m4.old	2019-02-27 15:45:01.777078700 +0100
++++ libupnpp-0.17/aclocal.m4	2019-02-27 15:46:44.099089600 +0100
+@@ -5066,7 +5066,6 @@
+     # are reset later if shared libraries are not supported. Putting them
+     # here allows them to be overridden if necessary.
+     runpath_var=LD_RUN_PATH
+-    _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath $wl$libdir'
+     _LT_TAGVAR(export_dynamic_flag_spec, $1)='$wl--export-dynamic'
+     # ancient GNU ld didn't support --whole-archive et. al.
+     if $LD --help 2>&1 | $GREP 'no-whole-archive' > /dev/null; then
+@@ -5192,7 +5191,6 @@
+     interix[[3-9]]*)
+       _LT_TAGVAR(hardcode_direct, $1)=no
+       _LT_TAGVAR(hardcode_shlibpath_var, $1)=no
+-      _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath,$libdir'
+       _LT_TAGVAR(export_dynamic_flag_spec, $1)='$wl-E'
+       # Hack: On Interix 3.x, we cannot compile PIC because of a broken gcc.
+       # Instead, shared libraries are loaded at an image base (0x10000000 by
+@@ -5268,7 +5266,6 @@
+ 	xlf* | bgf* | bgxlf* | mpixlf*)
+ 	  # IBM XL Fortran 10.1 on PPC cannot create shared libs itself
+ 	  _LT_TAGVAR(whole_archive_flag_spec, $1)='--whole-archive$convenience --no-whole-archive'
+-	  _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath $wl$libdir'
+ 	  _LT_TAGVAR(archive_cmds, $1)='$LD -shared $libobjs $deplibs $linker_flags -soname $soname -o $lib'
+ 	  if test yes = "$supports_anon_versioning"; then
+ 	    _LT_TAGVAR(archive_expsym_cmds, $1)='echo "{ global:" > $output_objdir/$libname.ver~
+@@ -5335,7 +5332,6 @@
+ 	  # DT_RUNPATH tag from executables and libraries.  But doing so
+ 	  # requires that you compile everything twice, which is a pain.
+ 	  if $LD --help 2>&1 | $GREP ': supported targets:.* elf' > /dev/null; then
+-	    _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath $wl$libdir'
+ 	    _LT_TAGVAR(archive_cmds, $1)='$CC -shared $libobjs $deplibs $compiler_flags $wl-soname $wl$soname -o $lib'
+ 	    _LT_TAGVAR(archive_expsym_cmds, $1)='$CC -shared $libobjs $deplibs $compiler_flags $wl-soname $wl$soname $wl-retain-symbols-file $wl$export_symbols -o $lib'
+ 	  else
+@@ -5810,7 +5806,6 @@
+ 	_LT_TAGVAR(archive_expsym_cmds, $1)='$CC -shared $libobjs $deplibs $compiler_flags -soname $soname `test -n "$verstring" && func_echo_all "-set_version $verstring"` -update_registry $output_objdir/so_locations -exports_file $export_symbols -o $lib'
+       fi
+       _LT_TAGVAR(archive_cmds_need_lc, $1)='no'
+-      _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath $wl$libdir'
+       _LT_TAGVAR(hardcode_libdir_separator, $1)=:
+       _LT_TAGVAR(inherit_rpath, $1)=yes
+       _LT_TAGVAR(link_all_deplibs, $1)=yes
+@@ -5840,7 +5835,6 @@
+     newsos6)
+       _LT_TAGVAR(archive_cmds, $1)='$LD -G -h $soname -o $lib $libobjs $deplibs $linker_flags'
+       _LT_TAGVAR(hardcode_direct, $1)=yes
+-      _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath $wl$libdir'
+       _LT_TAGVAR(hardcode_libdir_separator, $1)=:
+       _LT_TAGVAR(hardcode_shlibpath_var, $1)=no
+       ;;
+@@ -5856,11 +5850,9 @@
+ 	if test -z "`echo __ELF__ | $CC -E - | $GREP __ELF__`"; then
+ 	  _LT_TAGVAR(archive_cmds, $1)='$CC -shared $pic_flag -o $lib $libobjs $deplibs $compiler_flags'
+ 	  _LT_TAGVAR(archive_expsym_cmds, $1)='$CC -shared $pic_flag -o $lib $libobjs $deplibs $compiler_flags $wl-retain-symbols-file,$export_symbols'
+-	  _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath,$libdir'
+ 	  _LT_TAGVAR(export_dynamic_flag_spec, $1)='$wl-E'
+ 	else
+ 	  _LT_TAGVAR(archive_cmds, $1)='$CC -shared $pic_flag -o $lib $libobjs $deplibs $compiler_flags'
+-	  _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath,$libdir'
+ 	fi
+       else
+ 	_LT_TAGVAR(ld_shlibs, $1)=no
+@@ -5904,7 +5896,6 @@
+ 	_LT_TAGVAR(archive_cmds, $1)='$CC -shared$allow_undefined_flag $libobjs $deplibs $compiler_flags -soname $soname `test -n "$verstring" && func_echo_all "-set_version $verstring"` -update_registry $output_objdir/so_locations -o $lib'
+       fi
+       _LT_TAGVAR(archive_cmds_need_lc, $1)='no'
+-      _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath $wl$libdir'
+       _LT_TAGVAR(hardcode_libdir_separator, $1)=:
+       ;;
+ 
+@@ -5912,7 +5903,6 @@
+       if test yes = "$GCC"; then
+ 	_LT_TAGVAR(allow_undefined_flag, $1)=' $wl-expect_unresolved $wl\*'
+ 	_LT_TAGVAR(archive_cmds, $1)='$CC -shared$allow_undefined_flag $pic_flag $libobjs $deplibs $compiler_flags $wl-msym $wl-soname $wl$soname `test -n "$verstring" && func_echo_all "$wl-set_version $wl$verstring"` $wl-update_registry $wl$output_objdir/so_locations -o $lib'
+-	_LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath $wl$libdir'
+       else
+ 	_LT_TAGVAR(allow_undefined_flag, $1)=' -expect_unresolved \*'
+ 	_LT_TAGVAR(archive_cmds, $1)='$CC -shared$allow_undefined_flag $libobjs $deplibs $compiler_flags -msym -soname $soname `test -n "$verstring" && func_echo_all "-set_version $verstring"` -update_registry $output_objdir/so_locations -o $lib'
+@@ -5920,7 +5910,6 @@
+           $CC -shared$allow_undefined_flag $wl-input $wl$lib.exp $compiler_flags $libobjs $deplibs -soname $soname `test -n "$verstring" && $ECHO "-set_version $verstring"` -update_registry $output_objdir/so_locations -o $lib~$RM $lib.exp'
+ 
+ 	# Both c and cxx compiler support -rpath directly
+-	_LT_TAGVAR(hardcode_libdir_flag_spec, $1)='-rpath $libdir'
+       fi
+       _LT_TAGVAR(archive_cmds_need_lc, $1)='no'
+       _LT_TAGVAR(hardcode_libdir_separator, $1)=:
+@@ -6418,7 +6407,6 @@
+         _LT_TAGVAR(archive_cmds, $1)='$CC $pic_flag -shared -nostdlib $predep_objects $libobjs $deplibs $postdep_objects $compiler_flags $wl-soname $wl$soname -o $lib'
+         _LT_TAGVAR(archive_expsym_cmds, $1)='$CC $pic_flag -shared -nostdlib $predep_objects $libobjs $deplibs $postdep_objects $compiler_flags $wl-soname $wl$soname $wl-retain-symbols-file $wl$export_symbols -o $lib'
+ 
+-        _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath $wl$libdir'
+         _LT_TAGVAR(export_dynamic_flag_spec, $1)='$wl--export-dynamic'
+ 
+         # If archive_cmds runs LD, not CC, wlarc should be empty
+@@ -6916,7 +6904,6 @@
+       interix[[3-9]]*)
+ 	_LT_TAGVAR(hardcode_direct, $1)=no
+ 	_LT_TAGVAR(hardcode_shlibpath_var, $1)=no
+-	_LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath,$libdir'
+ 	_LT_TAGVAR(export_dynamic_flag_spec, $1)='$wl-E'
+ 	# Hack: On Interix 3.x, we cannot compile PIC because of a broken gcc.
+ 	# Instead, shared libraries are loaded at an image base (0x10000000 by
+@@ -6950,7 +6937,6 @@
+ 	    _LT_TAGVAR(link_all_deplibs, $1)=yes
+ 	    ;;
+         esac
+-        _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath $wl$libdir'
+         _LT_TAGVAR(hardcode_libdir_separator, $1)=:
+         _LT_TAGVAR(inherit_rpath, $1)=yes
+         ;;
+@@ -6975,7 +6961,6 @@
+ 	    # dependencies.
+ 	    output_verbose_link_cmd='templist=`$CC $CFLAGS -v conftest.$objext -o libconftest$shared_ext 2>&1 | $GREP "ld"`; rm -f libconftest$shared_ext; list= ; for z in $templist; do case $z in conftest.$objext) list="$list $z";; *.$objext);; *) list="$list $z";;esac; done; func_echo_all "$list"'
+ 
+-	    _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath,$libdir'
+ 	    _LT_TAGVAR(export_dynamic_flag_spec, $1)='$wl--export-dynamic'
+ 
+ 	    # Archives containing C++ object files must be created using
+@@ -7003,7 +6988,6 @@
+ 		;;
+ 	    esac
+ 	    _LT_TAGVAR(archive_cmds_need_lc, $1)=no
+-	    _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath,$libdir'
+ 	    _LT_TAGVAR(export_dynamic_flag_spec, $1)='$wl--export-dynamic'
+ 	    _LT_TAGVAR(whole_archive_flag_spec, $1)='$wl--whole-archive$convenience $wl--no-whole-archive'
+ 	    ;;
+@@ -7035,7 +7019,6 @@
+ 	      ;;
+ 	    esac
+ 
+-	    _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl--rpath $wl$libdir'
+ 	    _LT_TAGVAR(export_dynamic_flag_spec, $1)='$wl--export-dynamic'
+ 	    _LT_TAGVAR(whole_archive_flag_spec, $1)='$wl--whole-archive`for conv in $convenience\"\"; do test  -n \"$conv\" && new_convenience=\"$new_convenience,$conv\"; done; func_echo_all \"$new_convenience\"` $wl--no-whole-archive'
+             ;;
+@@ -7045,7 +7028,6 @@
+ 	    _LT_TAGVAR(archive_expsym_cmds, $1)='$CC -shared $predep_objects $libobjs $deplibs $postdep_objects $compiler_flags $wl-soname $wl$soname  -o $lib $wl-retain-symbols-file $wl$export_symbols'
+ 
+ 	    runpath_var=LD_RUN_PATH
+-	    _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='-rpath $libdir'
+ 	    _LT_TAGVAR(hardcode_libdir_separator, $1)=:
+ 
+ 	    # Commands to make compiler produce verbose output that lists
+@@ -7060,7 +7042,6 @@
+ 	    ;;
+ 	  xl* | mpixl* | bgxl*)
+ 	    # IBM XL 8.0 on PPC, with GNU ld
+-	    _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath $wl$libdir'
+ 	    _LT_TAGVAR(export_dynamic_flag_spec, $1)='$wl--export-dynamic'
+ 	    _LT_TAGVAR(archive_cmds, $1)='$CC -qmkshrobj $libobjs $deplibs $compiler_flags $wl-soname $wl$soname -o $lib'
+ 	    if test yes = "$supports_anon_versioning"; then
+@@ -7142,7 +7123,6 @@
+ 	  _LT_TAGVAR(hardcode_shlibpath_var, $1)=no
+ 	  _LT_TAGVAR(hardcode_direct_absolute, $1)=yes
+ 	  _LT_TAGVAR(archive_cmds, $1)='$CC -shared $pic_flag $predep_objects $libobjs $deplibs $postdep_objects $compiler_flags -o $lib'
+-	  _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath,$libdir'
+ 	  if test -z "`echo __ELF__ | $CC -E - | grep __ELF__`"; then
+ 	    _LT_TAGVAR(archive_expsym_cmds, $1)='$CC -shared $pic_flag $predep_objects $libobjs $deplibs $postdep_objects $compiler_flags $wl-retain-symbols-file,$export_symbols -o $lib'
+ 	    _LT_TAGVAR(export_dynamic_flag_spec, $1)='$wl-E'
+@@ -7164,7 +7144,6 @@
+ 	    # to its proper name (with version) after linking.
+ 	    _LT_TAGVAR(archive_cmds, $1)='tempext=`echo $shared_ext | $SED -e '\''s/\([[^()0-9A-Za-z{}]]\)/\\\\\1/g'\''`; templib=`echo "$lib" | $SED -e "s/\$tempext\..*/.so/"`; $CC $predep_objects $libobjs $deplibs $postdep_objects $compiler_flags --soname $soname -o \$templib; mv \$templib $lib'
+ 
+-	    _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath,$libdir'
+ 	    _LT_TAGVAR(hardcode_libdir_separator, $1)=:
+ 
+ 	    # Archives containing C++ object files must be created using
+@@ -7184,7 +7163,6 @@
+ 	      osf3*)
+ 	        _LT_TAGVAR(allow_undefined_flag, $1)=' $wl-expect_unresolved $wl\*'
+ 	        _LT_TAGVAR(archive_cmds, $1)='$CC -shared$allow_undefined_flag $predep_objects $libobjs $deplibs $postdep_objects $compiler_flags $wl-soname $soname `test -n "$verstring" && func_echo_all "$wl-set_version $verstring"` -update_registry $output_objdir/so_locations -o $lib'
+-	        _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath $wl$libdir'
+ 		;;
+ 	      *)
+ 	        _LT_TAGVAR(allow_undefined_flag, $1)=' -expect_unresolved \*'
+@@ -7193,7 +7171,6 @@
+                   echo "-hidden">> $lib.exp~
+                   $CC -shared$allow_undefined_flag $predep_objects $libobjs $deplibs $postdep_objects $compiler_flags -msym -soname $soname $wl-input $wl$lib.exp  `test -n "$verstring" && $ECHO "-set_version $verstring"` -update_registry $output_objdir/so_locations -o $lib~
+                   $RM $lib.exp'
+-	        _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='-rpath $libdir'
+ 		;;
+ 	    esac
+ 
+@@ -7221,7 +7198,6 @@
+ 		  ;;
+ 	      esac
+ 
+-	      _LT_TAGVAR(hardcode_libdir_flag_spec, $1)='$wl-rpath $wl$libdir'
+ 	      _LT_TAGVAR(hardcode_libdir_separator, $1)=:
+ 
+ 	      # Commands to make compiler produce verbose output that lists

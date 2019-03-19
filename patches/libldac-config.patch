@@ -1,0 +1,88 @@
+diff -Naur libldac-master.orig/Makefile.am libldac-master/Makefile.am
+--- libldac-master.orig/Makefile.am	1970-01-01 01:00:00.000000000 +0100
++++ libldac-master/Makefile.am	2019-03-12 15:24:44.510618600 +0100
+@@ -0,0 +1,32 @@
++include_HEADERS = \
++	inc/ldacBT.h \
++	abr/inc/ldacBT_abr.h
++
++lib_LTLIBRARIES = \
++	libldacBT.la \
++	libldacBT_abr.la
++
++libldacBT_la_CFLAGS = \
++	-I$(top_srcdir)/inc
++libldacBT_la_LDFLAGS = \
++	-version-info 2:0:0
++libldacBT_la_SOURCES = \
++	src/ldaclib.c \
++	src/ldacBT.c
++
++libldacBT_abr_la_CFLAGS = \
++	-I$(top_srcdir)/abr/inc \
++	-I$(top_srcdir)/inc
++libldacBT_abr_la_LDFLAGS = \
++	-version-info 2:0:0 \
++	-L$(top_builddir)/.libs \
++	-lldacBT
++libldacBT_abr_la_SOURCES = \
++	abr/src/ldacBT_abr.c
++libldacBT_abr_la_DEPENDENCIES = \
++	libldacBT.la
++
++pkgconfigdir = $(libdir)/pkgconfig
++pkgconfig_DATA = \
++	libldacBT.pc \
++	libldacBT_abr.pc
+diff -Naur libldac-master.orig/configure.ac libldac-master/configure.ac
+--- libldac-master.orig/configure.ac	1970-01-01 01:00:00.000000000 +0100
++++ libldac-master/configure.ac	2019-03-12 15:24:44.511713200 +0100
+@@ -0,0 +1,20 @@
++AC_INIT([libldac], [2.0.2])
++AM_INIT_AUTOMAKE([foreign subdir-objects -Wall -Werror])
++
++AC_PROG_CC
++AM_PROG_AR
++AM_PROG_CC_C_O
++LT_INIT
++
++AC_ARG_ENABLE([debug],
++	AS_HELP_STRING([--enable-debug], [enable debugging support]))
++AM_CONDITIONAL([ENABLE_DEBUG], [test "x$enable_debug" = "xyes"])
++AM_COND_IF([ENABLE_DEBUG], [
++	AX_APPEND_FLAG([-DLOCAL_DEBUG])
++])
++
++AC_CONFIG_FILES([
++	Makefile
++	libldacBT.pc
++	libldacBT_abr.pc])
++AC_OUTPUT
+diff -Naur libldac-master.orig/libldacBT.pc.in libldac-master/libldacBT.pc.in
+--- libldac-master.orig/libldacBT.pc.in	1970-01-01 01:00:00.000000000 +0100
++++ libldac-master/libldacBT.pc.in	2019-03-12 15:24:21.622774100 +0100
+@@ -0,0 +1,10 @@
++prefix=@prefix@
++exec_prefix=@exec_prefix@
++libdir=@libdir@
++includedir=@includedir@
++
++Name: libldacBT
++Description: Audio coding technology developed by Sony
++Version: @VERSION@
++Libs: -L${libdir} -lldacBT
++Cflags: -I${includedir}
+diff -Naur libldac-master.orig/libldacBT_abr.pc.in libldac-master/libldacBT_abr.pc.in
+--- libldac-master.orig/libldacBT_abr.pc.in	1970-01-01 01:00:00.000000000 +0100
++++ libldac-master/libldacBT_abr.pc.in	2019-03-12 15:24:21.623575700 +0100
+@@ -0,0 +1,10 @@
++prefix=@prefix@
++exec_prefix=@exec_prefix@
++libdir=@libdir@
++includedir=@includedir@
++
++Name: libldacBT_abr
++Description: Audio coding technology developed by Sony
++Version: @VERSION@
++Libs: -L${libdir} -lldacBT_abr
++Cflags: -I${includedir}

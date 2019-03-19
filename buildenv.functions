@@ -1,0 +1,102 @@
+#!/bin/bash
+
+check_core_functions
+
+TOOLCHAIN_SRCPATH=${TOOLCHAIN_PATH}/src
+TOOLCHAIN_BLDPATH=${TOOLCHAIN_PATH}/build
+if [ -d ${TOOLCHAIN_PATH} ]
+then
+	mkdir -p ${TOOLCHAIN_PATH}
+fi
+
+function setup_python {
+	if [ -z ${1} ]
+	then
+		echo "No version specified"
+		return 1
+	fi
+	if [ ! -d ${TOOLCHAIN_PATH}/venv-${HARCH} ]
+	then
+		PYTHONVER=${1}
+		PYTHONBINVER=$( echo ${PYTHONVER} | cut -d'.' -f1,2)
+		which python${PYTHONBINVER}
+		if [ ! $? -eq 0 ]
+		then
+			echo -n "No working python${PYTHONBINVER} binary. Building..."
+			build_python > ${LOG_PATH}/bbxb_toolchain.log 2>&1
+			if [ ${?} -ne 0 ]
+			then
+				echo "Fail."
+				return 1
+			fi
+			echo "Done."
+		fi
+		export PYTHON=$(which python${PYTHONBINVER})
+		if [ "$(echo $(${PYTHON} -V) | awk '{print $2}')" != "${PYTHONVER}" ]
+		then
+			echo "Build python version is different from the selected one"
+			return 1
+		fi
+		HOST_PYTHON=${DISTOS_PATH}/usr/bin/python${PYTHONBINVER}
+		if [ ! -x ${HOST_PYTHON} ]
+		then
+			echo "No host python present (${HOST_PYTHON})"
+			return 1
+		fi
+		if [ -f ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/plat-${HARCH}/_sysconfigdata_m.py ]
+		then
+			mv ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/plat-${HARCH}/_sysconfigdata_m.py ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/_sysconfigdata.py
+		fi
+		if [ -d ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/config-3.5m-${HARCH} ]
+		then
+			ln -s config-3.5m-${HARCH} ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/config-3.5m
+		fi
+		build_python_crossenv >> ${LOG_PATH}/bbxb_toolchain.log 2>&1
+		return ${?}
+	else
+		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate >> ${LOG_PATH}/bbxb_toolchain.log 2>&1
+		return ${?}
+	fi
+}
+
+function build_python {
+	set -x
+	local PYTHONURL="https://www.python.org/ftp/python/${PYTHONVER}/Python-${PYTHONVER}.tar.xz"
+	if [ -d ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER} ]
+	then
+		rm -rf ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}
+	fi
+	mkdir -p ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}
+	curl -Ls ${PYTHONURL} | tar xJf - --strip-components=1 -C${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER} &&
+	curl -Ls https://bootstrap.pypa.io/get-pip.py -o ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}/get-pip.py
+	if [ -d ${TOOLCHAIN_BLDPATH}/bbxb-python-${PYTHONVER} ]
+	then
+		rm -rf ${TOOLCHAIN_BLDPATH}/bbxb-python-${PYTHONVER}
+	fi
+	mkdir -p ${TOOLCHAIN_BLDPATH}/bbxb-python-${PYTHONVER}
+	cd ${TOOLCHAIN_BLDPATH}/bbxb-python-${PYTHONVER} &&
+	CC="${CCWRAPPER:+${CCWRAPPER} }gcc" \
+	CFLAGS="-fuse-ld=gold -march=native" \
+	${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}/configure --prefix=${TOOLCHAIN_PATH} --enable-shared &&
+	make &&
+	make install &&
+	python${PYTHONBINVER} ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}/get-pip.py &&
+	pip${PYTHONBINVER} install crossenv &&
+	STATUS=${?}
+	set +x
+	return ${STATUS}
+}
+
+function build_python_crossenv {
+	set -x
+	settoolflags
+	${PYTHON} -m crossenv ${HOST_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH} &&
+	source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate &&
+	CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
+	CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}" \
+	LDFLAGS="${SYSROOT_CFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} -lpython${PYTHONBINVER}m" \
+	pip install cython
+	STATUS=${?}
+	set +x
+	return ${STATUS}
+}

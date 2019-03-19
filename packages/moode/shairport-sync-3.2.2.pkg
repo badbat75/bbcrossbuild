@@ -1,0 +1,14 @@
+# shairport-sync-3.2.2
+#PKG_URL="https://github.com/mikebrady/shairport-sync/archive/3.2.2.tar.gz"
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/s/shairport-sync/shairport-sync_3.2.2.orig.tar.gz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/arm-linux-gnueabihf --sysconfdir=/etc \
+		--with-dummy --with-stdout --with-pipe	--with-ssl=openssl --with-soxr --with-metadata \
+		--with-avahi --with-alsa --with-convolution --with-piddir=/run/shairport-sync --without-configfiles \
+		--with-apple-alac"
+INST_CMD=install-strip
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/s/shairport-sync/shairport-sync_3.2.2-1.debian.tar.xz"
+PKG_DEPS="moode/alac-master raspbian/libconfig_1.5-0.4"
+
+# Dependencies:
+# libdaemon-dev libasound2-dev libpopt-dev libconfig-dev avahi-daemon libavahi-client-dev libssl-dev libsoxr-dev

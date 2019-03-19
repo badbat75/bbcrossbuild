@@ -1,0 +1,11 @@
+--- libcdio-2.0.0/configure.ac.orig	2019-02-19 23:23:36.746845700 +0100
++++ libcdio-2.0.0/configure.ac	2019-02-19 23:27:30.928495400 +0100
+@@ -664,7 +664,7 @@
+ if test "x$enable_cdda_player" = "xyes"; then
+     if test "x$have_ncurses_h" = "xyes"; then
+       AC_CHECK_LIB(ncursesw, mvprintw,
+-        [LIBCURSES=ncursesw; CDDA_PLAYER_LIBS="$CDDA_PLAYER_LIBS -lncursesw"],
++        [LIBCURSES=ncursesw; CDDA_PLAYER_LIBS="$CDDA_PLAYER_LIBS -lncursesw -ltinfo"],
+         AC_CHECK_LIB(curses, mvprintw,
+                      [LIBCURSES=curses;
+                        CDDA_PLAYER_LIBS="$CDDA_PLAYER_LIBS -lcurses"],

@@ -1,0 +1,50 @@
+diff -Naur wiringpi-master/Makefile wiringpi-master.new/Makefile
+--- wiringpi-master/Makefile	1970-01-01 01:00:00.000000000 +0100
++++ wiringpi-master.new/Makefile	2019-02-26 18:43:45.885346300 +0100
+@@ -0,0 +1,8 @@
++all:
++		cd wiringPi && $(MAKE)
++
++install:
++		cd wiringPi && $(MAKE) install
++
++clean:
++		cd wiringPi && $(MAKE) clean
+diff -Naur wiringpi-master/wiringPi/Makefile wiringpi-master.new/wiringPi/Makefile
+--- wiringpi-master/wiringPi/Makefile	2018-03-14 08:17:04.000000000 +0100
++++ wiringpi-master.new/wiringPi/Makefile	2019-02-26 18:53:39.197335000 +0100
+@@ -36,10 +36,10 @@
+ 
+ #DEBUG	= -g -O0
+ DEBUG	= -O2
+-CC	= gcc
++CC	?= gcc
+ INCLUDE	= -I.
+ DEFS	= -D_GNU_SOURCE
+-CFLAGS	= $(DEBUG) $(DEFS) -Wformat=2 -Wall -Wextra -Winline $(INCLUDE) -pipe -fPIC
++CFLAGS	+= $(DEBUG) $(DEFS) -Wformat=2 -Wall -Wextra -Winline $(INCLUDE) -pipe -fPIC
+ #CFLAGS	= $(DEBUG) $(DEFS) -Wformat=2 -Wall -Wextra -Wconversion -Winline $(INCLUDE) -pipe -fPIC
+ 
+ LIBS    = -lm -lpthread -lrt -lcrypt
+@@ -75,7 +75,7 @@
+ 
+ $(DYNAMIC):	$(OBJ)
+ 	$Q echo "[Link (Dynamic)]"
+-	$Q $(CC) -shared -Wl,-soname,libwiringPi.so$(WIRINGPI_SONAME_SUFFIX) -o libwiringPi.so.$(VERSION) $(LIBS) $(OBJ)
++	$Q $(CC) -shared -Wl,-soname,libwiringPi.so$(WIRINGPI_SONAME_SUFFIX) -o libwiringPi.so.$(VERSION) $(LIBS) $(OBJ) $(LDFLAGS)
+ 
+ .c.o:
+ 	$Q echo [Compile] $<
+@@ -100,9 +100,9 @@
+ 	$Q install -m 0644 $(HEADERS)					$(DESTDIR)$(PREFIX)/include
+ 	$Q echo "[Install Dynamic Lib]"
+ 	$Q install -m 0755 -d						$(DESTDIR)$(PREFIX)/lib
+-	$Q install -m 0755 libwiringPi.so.$(VERSION)			$(DESTDIR)$(PREFIX)/lib/libwiringPi.so.$(VERSION)
+-	$Q ln -sf $(DESTDIR)$(PREFIX)/lib/libwiringPi.so.$(VERSION)	$(DESTDIR)/lib/libwiringPi.so
+-	$Q $(LDCONFIG)
++	$Q install -m 0755 libwiringPi.so.$(VERSION)			$(DESTDIR)$(PREFIX)/lib/$(HARCH)/libwiringPi.so.$(VERSION)
++	$Q ln -sf libwiringPi.so.$(VERSION)	$(DESTDIR)$(PREFIX)/lib/$(HARCH)/libwiringPi.so
++#	$Q $(LDCONFIG)
+ 
+ .PHONY:	install-deb
+ install-deb:	$(DYNAMIC)

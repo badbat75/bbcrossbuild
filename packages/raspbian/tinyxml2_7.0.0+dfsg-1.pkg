@@ -1,0 +1,12 @@
+# tinyxml2_7.0.0+dfsg-1
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/t/tinyxml2/tinyxml2_7.0.0%2Bdfsg.orig.tar.gz"
+#PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/t/tinyxml2/tinyxml2_7.0.0%2Bdfsg-1.debian.tar.xz"
+BUILD_PROCESS=cmakemake
+CONF_FLAGS="-DCMAKE_INSTALL_PREFIX=/usr \
+	-DLIB_INSTALL_DIR=/usr/lib \
+	-DLIB_SUFFIX="/${HARCH}" \
+	-DBUILD_SHARED_LIBS=ON \
+	-DBUILD_STATIC_LIBS=OFF"
+INST_CMD=install/strip
+
+# Note:

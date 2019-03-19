@@ -1,0 +1,7 @@
+# upmpdcli-1.4.1
+PKG_URL="https://www.lesbonscomptes.com/upmpdcli/downloads/upmpdcli-1.4.1.tar.gz"
+PATCHES=upmpdcli-makefile.patch
+BUILD_PROCESS=configmake
+CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/arm-linux-gnueabihf --sysconfdir=/etc"
+INST_CMD=install-strip
+PKG_DEPS="moode/libupnpp-0.17.0 raspbian/libmicrohttpd_0.9.62-1 raspbian/libjsoncpp_1.7.4-3"

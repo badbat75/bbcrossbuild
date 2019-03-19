@@ -1,0 +1,11 @@
+--- libupnpp-0.17/Makefile.in.old	2019-02-27 15:34:30.042936300 +0100
++++ libupnpp-0.17/Makefile.in	2019-02-27 15:35:09.178234500 +0100
+@@ -693,7 +693,7 @@
+ 	libupnpp/$(DEPDIR)/$(am__dirstamp)
+ 
+ libupnpp.la: $(libupnpp_la_OBJECTS) $(libupnpp_la_DEPENDENCIES) $(EXTRA_libupnpp_la_DEPENDENCIES) 
+-	$(AM_V_CXXLD)$(libupnpp_la_LINK) -rpath $(libdir) $(libupnpp_la_OBJECTS) $(libupnpp_la_LIBADD) $(LIBS)
++	$(AM_V_CXXLD)$(libupnpp_la_LINK) $(libdir) $(libupnpp_la_OBJECTS) $(libupnpp_la_LIBADD) $(LIBS)
+ 
+ mostlyclean-compile:
+ 	-rm -f *.$(OBJEXT)

@@ -1,0 +1,17 @@
+# libjsoncpp_1.7.4-3
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libj/libjsoncpp/libjsoncpp_1.7.4.orig.tar.gz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libj/libjsoncpp/libjsoncpp_1.7.4-3.debian.tar.xz"
+BUILD_PROCESS=cmakemake
+CONF_FLAGS="-DCMAKE_INSTALL_PREFIX=/usr \
+	-DLIB_INSTALL_DIR=/usr/lib \
+	-DLIB_SUFFIX="/${HARCH}" \
+	-DBUILD_SHARED_LIBS=ON \
+	-DBUILD_STATIC_LIBS=OFF \
+	-DJSONCPP_WITH_CMAKE_PACKAGE=ON \
+	-DINCLUDE_INSTALL_DIR=/usr/include
+	-DJSONCPP_WITH_TESTS=Off"
+INST_CMD=install/strip
+PKG_MAKEVARS=-j1
+
+# Note:
+# Dependencies: cmake, doxygen, python

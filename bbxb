@@ -1,0 +1,36 @@
+#!/bin/bash
+
+START_PWD=${PWD}
+BB_HOME=$(dirname $(realpath ${0}))
+PROGRAM_NAME=$(basename ${0})
+
+PRJ_NAME=${1}
+PLATFORM_NAME=${2}
+
+if [ -z "${PRJ_NAME}" ]
+then
+	echo "No project name specified!!!"
+	exit 1
+fi
+	
+. ${BB_HOME}/core.functions
+check_core_functions
+. ${BB_HOME}/build.functions
+. ${BB_HOME}/project.functions
+. ${BB_HOME}/sysroot.functions
+. ${BB_HOME}/buildenv.functions
+
+PRJ=${PRJ_PATH}/${PRJ_NAME}.prj
+if [ ! -f ${PRJ} ]
+then
+	echo "Project ${PRJ} does not exist."
+	exit 1
+fi
+
+echo "Project path: ${DATA_PATH}/${PRJ_NAME}"
+echo
+
+
+cleanproject
+. $PRJ
+zipproject
