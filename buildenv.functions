@@ -81,11 +81,18 @@ function setup_python () {
 
 	if [ -z ${1} ]
 	then
-		PYTHONVER=$(find ${DISTOS_PATH}/usr/include -maxdepth 1 -name 'python*' -exec grep '#define PY_VERSION ' {}/patchlevel.h \; | awk '{print $3}' | sed 's/\"//g' | sort -u | tail -n1)
-		echo "No version specified. Guessed: ${PYTHONVER}"
-		return 1
+		local PYTHONVER=$(find ${DISTOS_PATH}/usr/include -maxdepth 1 -name 'python*' -exec grep '#define PY_VERSION ' {}/patchlevel.h \; | awk '{print $3}' | sed 's/\"//g' | sort -u | tail -n1)
+		echo -n "No version specified, "
+		if [ "x${PYTHONVER}" == "x" ]
+		then
+			echo "no way to guess it."
+			return 1
+		else
+			echo "guess ${PYTHONVER}"
+		fi
+	else
+		local PYTHONVER=${1}
 	fi
-	local PYTHONVER=${1}
 	PYTHONBINVER=$( echo ${PYTHONVER} | cut -d'.' -f1,2)
 	BUILD_PYTHON=${TOOLCHAIN_PATH}/bin/python${PYTHONBINVER}
 	BUILD_PYTHONPIP=${TOOLCHAIN_PATH}/bin/pip${PYTHONBINVER}
