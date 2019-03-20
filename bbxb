@@ -17,7 +17,6 @@ fi
 check_core_functions
 . ${BB_HOME}/build.functions
 . ${BB_HOME}/project.functions
-. ${BB_HOME}/sysroot.functions
 . ${BB_HOME}/buildenv.functions
 
 PRJ=${PRJ_PATH}/${PRJ_NAME}.prj

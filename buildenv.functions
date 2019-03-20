@@ -9,20 +9,90 @@ then
 	mkdir -p ${TOOLCHAIN_PATH}
 fi
 
+function create_sysroot() {
+	function libraries_relink () {
+		while (( "$#" )); do
+			case ${1} in
+			-s|--sysroot)
+				shift
+				test -z "${1:-}" && echo "--sysroot specified without DISTOS_PATH path." && exit 1
+						DISTOS_PATH="${1}"
+				;;
+			-a|--arch)
+				shift
+				test -z "${1:-}" && echo "--arch specified without architecture." && exit 1
+				HARCH="${1}"
+				;; 
+			-h|--help)
+				cat <<-EOF
+					$0 -s <sysroot> [parameters]
+
+					-a --arch:      Optional. Specify architecture tuple. Default: arm-linux-gnueabihf.
+					-s --sysroot:   Mandatory. Specify DISTOS_PATH path.
+					-h --help:      This message.
+				EOF
+				exit 0
+				;;             
+			esac
+			shift
+		done
+
+		test -z "${DISTOS_PATH:-}" && echo "DISTOS_PATH not set" && exit 1
+		test -z "${HARCH:-}" && HARCH="arm-linux-gnueabihf"
+
+		echo "DISTOS_PATH: ${DISTOS_PATH}"
+		echo
+
+		for i in $(find -L ${DISTOS_PATH}/usr/lib/${HARCH} -lname "/lib/${HARCH}*");
+		do
+			echo -n "Relinking $i... "
+			ln -f -s ../../..$(readlink $i) $i
+			echo "done."
+		done
+	}
+	echo -n "Creating sysroot with ${1}..."
+	if [ ! -d ${DISTOS_PATH} ]
+	then
+		mkdir -p ${DISTOS_PATH}
+		[ ! -d ${LOG_PATH} ] && mkdir ${LOG_PATH}
+		tar xf ${IMG_PATH}/${1} -C${DISTOS_PATH} ./boot ./bin ./lib ./usr/bin ./usr/include ./usr/lib ./usr/share ./usr/local/bin ./usr/local/include ./usr/local/lib ./etc >> ${LOG_PATH}/sysroot.log 2>&1 &&
+		libraries_relink >> ${LOG_PATH}/sysroot.log 2>&1
+		local STATUS=${?}
+		if [ -f ${DISTOS_PATH}/usr/lib/${HARCH}/pkgconfig/libical.pc ]
+		then
+			sed -i "s|/usr/lib/${HARCH:+${HARCH}/}libicu|${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}libicu|g" ${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}pkgconfig/libical.pc
+		fi
+		if [ ${STATUS} -eq 0 ]
+		then
+			echo "done."
+			echo
+			return 0
+		else
+			echo "fail."
+			echo
+			return 1
+		fi
+	else
+		echo "already present."
+		echo
+		return 1
+	fi
+}
+
 function setup_rust () {
 	echo -n "Setting up RUST..."
 	export CARGO_HOME=${TOOLCHAIN_PATH}
 	export RUSTUP_HOME=${TOOLCHAIN_PATH}/var/rustup
 	if [ ! -x ${TOOLCHAIN_PATH}/bin/cargo ] || [ ! -x ${TOOLCHAIN_PATH}/bin/rustc ]
 	then
-		echo -n "Downloading..."
+		echo -n "downloading..."
 		curl -sSf https://sh.rustup.rs -o /tmp/rustup-init &&
 		if [ ${?} -ne 0 ]
 		then
-			echo "Fail."
+			echo "fail."
 			return 1
 		fi
-		echo -n "Installing..."
+		echo -n "installing..."
 		chmod +x /tmp/rustup-init &&
 		/tmp/rustup-init -v -y --no-modify-path >> ${LOG_PATH}/toolchain_rust.log 2>&1 &&
 		rm -f /tmp/rustup-init
@@ -31,26 +101,25 @@ function setup_rust () {
 			echo "Fail."
 			return 1
 		fi
-		echo "Done."
+		echo "done."
 	else
-		echo "Already there."
+		echo "already there."
 	fi
 	CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
 	echo -n "Adding ${CARGO_TARGET} libraries..."
 	rustup -v target add ${CARGO_TARGET} >> ${LOG_PATH}/toolchain_rust.log 2>&1
 	if [ ${?} -ne 0 ]
 	then
-		echo "Fail."
+		echo "fail."
 		echo
 		return 1
 	fi
-	echo "Done."
+	echo "done."
 	echo
 }
 
 function setup_python () {
-	function build_python () {
-		set -x
+	function download_pyton () {
 		local PYTHONURL="https://www.python.org/ftp/python/${PYTHONVER}/Python-${PYTHONVER}.tar.xz"
 		if [ -d ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER} ]
 		then
@@ -59,6 +128,11 @@ function setup_python () {
 		mkdir -p ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}
 		curl -Ls ${PYTHONURL} | tar xJf - --strip-components=1 -C${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER} &&
 		curl -Ls https://bootstrap.pypa.io/get-pip.py -o ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}/get-pip.py
+		return $?
+	}
+
+	function build_python () {
+		set -x
 		if [ -d ${TOOLCHAIN_BLDPATH}/bbxb-python-${PYTHONVER} ]
 		then
 			rm -rf ${TOOLCHAIN_BLDPATH}/bbxb-python-${PYTHONVER}
@@ -112,22 +186,31 @@ function setup_python () {
 	HOST_PYTHON=${DISTOS_PATH}/usr/bin/python${PYTHONBINVER}
 	if [ ! -x ${HOST_PYTHON} ]
 	then
-		echo "No host python present (${HOST_PYTHON})"
+		echo "no host python present (${HOST_PYTHON}). Exiting..."
 		echo
 		return 1
 	fi
 	if [ ! -x ${BUILD_PYTHON} ] || [ ! -x ${BUILD_PYTHONPIP} ]
 	then
-		echo -n "Building..."
+		echo -n "downloading..."
+		download_pyton > ${LOG_PATH}/toolchain_python${PYTHONBINVER}.log 2>&1
+		if [ ${?} -ne 0 ]
+		then
+			echo "fail."
+			echo
+			return 1
+		fi
+		echo -n "building..."
 		build_python > ${LOG_PATH}/toolchain_python${PYTHONBINVER}.log 2>&1
 		if [ ${?} -ne 0 ]
 		then
-			echo "Fail."
+			echo "fail."
+			echo
 			return 1
 		fi
-		echo "Done."
+		echo "done."
 	else
-		echo "Already there."
+		echo "already there."
 	fi
 	if [ -f ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/plat-${HARCH}/_sysconfigdata_m.py ]
 	then
@@ -137,15 +220,15 @@ function setup_python () {
 	then
 		ln -s config-${PYTHONBINVER}m-${HARCH} ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/config-${PYTHONBINVER}m
 	fi
-	echo -n "Adding ${CARGO_TARGET} libraries..."
+	echo -n "Creating virtual cross environment..."
 	if [ ! -d ${TOOLCHAIN_PATH}/venv-${HARCH} ]
 	then
 		build_python_crossenv >> ${LOG_PATH}/toolchain_python${PYTHONBINVER}.log 2>&1
-		echo "Done."
+		echo "done."
 		echo
 		return ${?}
 	else
-		echo "Already there."
+		echo "already there."
 		echo
 		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate >> ${LOG_PATH}/toolchain_python${PYTHONBINVER}.log 2>&1
 		return ${?}
