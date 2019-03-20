@@ -9,7 +9,7 @@ then
 	mkdir -p ${TOOLCHAIN_PATH}
 fi
 
-function setup_cargo () {
+function setup_rust () {
 	export CARGO_HOME=${TOOLCHAIN_PATH}
 	export RUSTUP_HOME=${TOOLCHAIN_PATH}/var/rustup
 	which cargo && which rustc
@@ -18,7 +18,7 @@ function setup_cargo () {
 		echo -n "No working rustc binary. Installing..."
 		curl -sSf https://sh.rustup.rs -o /tmp/rustup-init &&
 		chmod +x /tmp/rustup-init &&
-		/tmp/rustup-init -v -y --no-modify-path &&
+		/tmp/rustup-init -v -y --no-modify-path > ${LOG_PATH}/toolchain_rust.log 2>&1 &&
 		rm -f /tmp/rustup-init
 		if [ ${?} -ne 0 ]
 		then
@@ -29,7 +29,7 @@ function setup_cargo () {
 	fi
 	CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
 	echo -n "Adding ${CARGO_TARGET} libraries..."
-	rustup -v target add ${CARGO_TARGET}
+	rustup -v target add ${CARGO_TARGET} >> ${LOG_PATH}/toolchain_rust.log 2>&1
 	if [ ${?} -ne 0 ]
 	then
 		echo "Fail."
@@ -92,7 +92,7 @@ function setup_python () {
 		if [ ! $? -eq 0 ]
 		then
 			echo -n "No working python${PYTHONBINVER} binary. Building..."
-			build_python > ${LOG_PATH}/bbxb_toolchain.log 2>&1
+			build_python > ${LOG_PATH}/toolchain_python${PYTHONBINVER}.log 2>&1
 			if [ ${?} -ne 0 ]
 			then
 				echo "Fail."
@@ -120,10 +120,10 @@ function setup_python () {
 		then
 			ln -s config-3.5m-${HARCH} ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/config-3.5m
 		fi
-		build_python_crossenv >> ${LOG_PATH}/bbxb_toolchain.log 2>&1
+		build_python_crossenv >> ${LOG_PATH}/toolchain_python${PYTHONBINVER}.log 2>&1
 		return ${?}
 	else
-		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate >> ${LOG_PATH}/bbxb_toolchain.log 2>&1
+		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate >> ${LOG_PATH}/toolchain_python${PYTHONBINVER}.log 2>&1
 		return ${?}
 	fi
 }
