@@ -223,6 +223,32 @@ function downloadonly () {
 	return 0
 }
 
+function forge_la_libs () {
+	set -x
+	function forge_la_file () {
+		set -x
+		local DEPENDENCY_LIBS="$(grep "dependency_libs=" ${1} | grep -o -E "([ '=]-l[^ ']*)" | xargs)"
+		sed -i "s/dependency_libs='.*'/dependency_libs='${DEPENDENCY_LIBS}'/g;/^relink_command=/d" ${1}
+		set +x
+	}
+	export -f forge_la_file
+
+	### List .la files in build package and forge .la in the Installation directory
+	local LIB_LAs_LIST=$(find ${1} -name '*.la' -exec basename {} \; | sort -u)
+	if [ "x${LIB_LAs_LIST}" != "x" ]
+	then
+		FIRST=1
+		for LIB_LA in ${LIB_LAs_LIST}
+		do
+			[ ${FIRST} -ne 1 ] && SEARCH_STRING+=" -o "
+			local SEARCH_STRING+="-name ${LIB_LA}"
+		done
+		find ${BIN_PATH}/lib ${BIN_PATH}/usr/lib \( ${SEARCH_STRING} \) -exec bash -c "forge_la_file {}" \;
+	fi
+	set +x
+}
+
+
 function configmake () {
 	set -x
 	cd ${PKG_SRCPATH}
@@ -260,9 +286,9 @@ function configmake () {
 	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
 	${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS} &&
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} &&
-	find -name '*.la' -exec sed -i '/# Libraries that this one depends upon./d;/^dependency_libs=/d;/^relink_command=/d' {} \; &&
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD}
 	local BUILD_STATUS=${?}
+	forge_la_libs ${PWD}
 	cd ${BB_HOME}
 	set +x
 	return ${BUILD_STATUS}
@@ -291,9 +317,9 @@ function simplemake () {
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} &&
-	find -name '*.la' -exec sed -i '/# Libraries that this one depends upon./d;/^dependency_libs=/d;/^relink_command=/d' {} \; &&
 	make ${PKG_MAKEVARS} DESTDIR=${BIN_PATH} V=${MAKEVERBOSE:-0} ${INST_CMD}
 	local BUILD_STATUS=${?}
+	forge_la_libs ${PWD}
 	cd ${BB_HOME}
 	set +x
 	return ${BUILD_STATUS}
@@ -326,9 +352,9 @@ function cmakemake () {
         -DCMAKE_CXX_COMPILER_RANLIB=${HARCH:+${HARCH}-}gcc-ranlib \
 		-DCMAKE_STRIP=${HARCH:+${HARCH}-}strip &&
 	make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0} &&
-	find -name '*.la' -exec sed -i '/# Libraries that this one depends upon./d;/^dependency_libs=/d;/^relink_command=/d' {} \; &&
 	make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD}
 	local BUILD_STATUS=${?}
+	forge_la_libs ${PWD}
 	cd ${BB_HOME}
 	set +x
 	return ${BUILD_STATUS}
@@ -343,9 +369,9 @@ function mesonninja () {
 	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
 	meson ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME} --buildtype=release --strip -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS} &&
 	ninja ${NINJA_FLAGS} -C ${BLD_PATH}/${PKG_NAME} &&
-	find -name '*.la' -exec sed -i '/# Libraries that this one depends upon./d;/^dependency_libs=/d;/^relink_command=/d' {} \; &&
 	DESTDIR=${BIN_PATH} ninja ${NINJA_FLAGS} -C ${BLD_PATH}/${PKG_NAME} install
 	local BUILD_STATUS=${?}
+	forge_la_libs ${PWD}
 	cd ${BB_HOME}
 	return ${BUILD_STATUS}
 }
