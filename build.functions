@@ -236,11 +236,12 @@ function forge_la_libs () {
 	local LIB_LAs_LIST=$(find ${1} -name '*.la' -exec basename {} \; | sort -u)
 	if [ "x${LIB_LAs_LIST}" != "x" ]
 	then
-		FIRST=1
+		local FIRST=1
 		for LIB_LA in ${LIB_LAs_LIST}
 		do
 			[ ${FIRST} -ne 1 ] && SEARCH_STRING+=" -o "
 			local SEARCH_STRING+="-name ${LIB_LA}"
+			local FIRST=0
 		done
 		find ${BIN_PATH}/lib ${BIN_PATH}/usr/lib \( ${SEARCH_STRING} \) -exec bash -c "forge_la_file {}" \;
 	fi
@@ -579,6 +580,7 @@ function pythonbuild () {
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 	#source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate
+	echo "Python: ${PYTHON}"
 	CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc ${SYSROOT_CFLAGS}" \
 	CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
 	CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \

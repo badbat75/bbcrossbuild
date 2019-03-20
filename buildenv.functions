@@ -9,7 +9,57 @@ then
 	mkdir -p ${TOOLCHAIN_PATH}
 fi
 
-function setup_python {
+function setup_cargo () {
+	export CARGO_HOME=${TOOLCHAIN_PATH}
+	export RUSTUP_HOME=${TOOLCHAIN_PATH}/var/rustup
+	curl -sSf https://sh.rustup.rs -o /tmp/rustup-init &&
+	chmod +x /tmp/rustup-init &&
+	/tmp/rustup-init -v -y --no-modify-path &&
+	rustup -v target add arm-unknown-linux-gnueabihf &&
+	rm -f /tmp/rustup-init
+}
+
+function setup_python () {
+	function build_python () {
+		set -x
+		local PYTHONURL="https://www.python.org/ftp/python/${PYTHONVER}/Python-${PYTHONVER}.tar.xz"
+		if [ -d ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER} ]
+		then
+			rm -rf ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}
+		fi
+		mkdir -p ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}
+		curl -Ls ${PYTHONURL} | tar xJf - --strip-components=1 -C${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER} &&
+		curl -Ls https://bootstrap.pypa.io/get-pip.py -o ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}/get-pip.py
+		if [ -d ${TOOLCHAIN_BLDPATH}/bbxb-python-${PYTHONVER} ]
+		then
+			rm -rf ${TOOLCHAIN_BLDPATH}/bbxb-python-${PYTHONVER}
+		fi
+		mkdir -p ${TOOLCHAIN_BLDPATH}/bbxb-python-${PYTHONVER}
+		cd ${TOOLCHAIN_BLDPATH}/bbxb-python-${PYTHONVER} &&
+		CC="${CCWRAPPER:+${CCWRAPPER} }gcc" \
+		CFLAGS="-fuse-ld=gold -march=native" \
+		${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}/configure --prefix=${TOOLCHAIN_PATH} --enable-shared &&
+		make &&
+		make install &&
+		python${PYTHONBINVER} ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}/get-pip.py &&
+		pip${PYTHONBINVER} install crossenv &&
+		local STATUS=${?}
+		set +x
+		return ${STATUS}
+	}
+	function build_python_crossenv () {
+		set -x
+		settoolflags
+		${PYTHON} -m crossenv ${HOST_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH} &&
+		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate &&
+		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
+		CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}" \
+		LDFLAGS="${SYSROOT_CFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} -lpython${PYTHONBINVER}m" \
+		pip install cython
+		STATUS=${?}
+		set +x
+		return ${STATUS}
+	}
 	if [ -z ${1} ]
 	then
 		echo "No version specified"
@@ -17,7 +67,7 @@ function setup_python {
 	fi
 	if [ ! -d ${TOOLCHAIN_PATH}/venv-${HARCH} ]
 	then
-		PYTHONVER=${1}
+		local PYTHONVER=${1}
 		PYTHONBINVER=$( echo ${PYTHONVER} | cut -d'.' -f1,2)
 		which python${PYTHONBINVER}
 		if [ ! $? -eq 0 ]
@@ -31,13 +81,13 @@ function setup_python {
 			fi
 			echo "Done."
 		fi
-		export PYTHON=$(which python${PYTHONBINVER})
+		PYTHON=$(which python${PYTHONBINVER})
 		if [ "$(echo $(${PYTHON} -V) | awk '{print $2}')" != "${PYTHONVER}" ]
 		then
 			echo "Build python version is different from the selected one"
 			return 1
 		fi
-		HOST_PYTHON=${DISTOS_PATH}/usr/bin/python${PYTHONBINVER}
+		local HOST_PYTHON=${DISTOS_PATH}/usr/bin/python${PYTHONBINVER}
 		if [ ! -x ${HOST_PYTHON} ]
 		then
 			echo "No host python present (${HOST_PYTHON})"
@@ -57,46 +107,4 @@ function setup_python {
 		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate >> ${LOG_PATH}/bbxb_toolchain.log 2>&1
 		return ${?}
 	fi
-}
-
-function build_python {
-	set -x
-	local PYTHONURL="https://www.python.org/ftp/python/${PYTHONVER}/Python-${PYTHONVER}.tar.xz"
-	if [ -d ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER} ]
-	then
-		rm -rf ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}
-	fi
-	mkdir -p ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}
-	curl -Ls ${PYTHONURL} | tar xJf - --strip-components=1 -C${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER} &&
-	curl -Ls https://bootstrap.pypa.io/get-pip.py -o ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}/get-pip.py
-	if [ -d ${TOOLCHAIN_BLDPATH}/bbxb-python-${PYTHONVER} ]
-	then
-		rm -rf ${TOOLCHAIN_BLDPATH}/bbxb-python-${PYTHONVER}
-	fi
-	mkdir -p ${TOOLCHAIN_BLDPATH}/bbxb-python-${PYTHONVER}
-	cd ${TOOLCHAIN_BLDPATH}/bbxb-python-${PYTHONVER} &&
-	CC="${CCWRAPPER:+${CCWRAPPER} }gcc" \
-	CFLAGS="-fuse-ld=gold -march=native" \
-	${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}/configure --prefix=${TOOLCHAIN_PATH} --enable-shared &&
-	make &&
-	make install &&
-	python${PYTHONBINVER} ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}/get-pip.py &&
-	pip${PYTHONBINVER} install crossenv &&
-	STATUS=${?}
-	set +x
-	return ${STATUS}
-}
-
-function build_python_crossenv {
-	set -x
-	settoolflags
-	${PYTHON} -m crossenv ${HOST_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH} &&
-	source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate &&
-	CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
-	CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}" \
-	LDFLAGS="${SYSROOT_CFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} -lpython${PYTHONBINVER}m" \
-	pip install cython
-	STATUS=${?}
-	set +x
-	return ${STATUS}
 }
