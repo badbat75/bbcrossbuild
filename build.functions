@@ -224,16 +224,15 @@ function downloadonly () {
 }
 
 function forge_la_libs () {
-	set -x
+	### List .la files in build package and forge .la in the Installation directory
 	function forge_la_file () {
 		set -x
 		local DEPENDENCY_LIBS="$(grep "dependency_libs=" ${1} | grep -o -E "([ '=]-l[^ ']*)" | xargs)"
 		sed -i "s/dependency_libs='.*'/dependency_libs='${DEPENDENCY_LIBS}'/g;/^relink_command=/d" ${1}
 		set +x
 	}
+	set -x
 	export -f forge_la_file
-
-	### List .la files in build package and forge .la in the Installation directory
 	local LIB_LAs_LIST=$(find ${1} -name '*.la' -exec basename {} \; | sort -u)
 	if [ "x${LIB_LAs_LIST}" != "x" ]
 	then
@@ -247,7 +246,6 @@ function forge_la_libs () {
 	fi
 	set +x
 }
-
 
 function configmake () {
 	set -x
@@ -361,6 +359,60 @@ function cmakemake () {
 }
 
 function mesonninja () {
+	function createmesoncross () {	
+		function buildmesonargs () {
+			local FIRST=1
+			for flag in ${1}
+			do
+				if [ ${FIRST} -ne 1 ]
+				then
+					echo -n ", "
+				fi
+				echo -n "'${flag}'"
+			local FIRST=0
+			done
+			echo
+		}
+		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+		local CC="${HARCH:+${HARCH}-}gcc"
+		local CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}"
+		local CXX="${HARCH}-g++"
+		local CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}"
+		local CPP=${HARCH:+${HARCH}-}cpp
+		local CPPFLAGS="${COMMON_CPPFLAGS}"
+		local LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS}"
+		local AR=${HARCH:+${HARCH}-}gcc-ar
+		local NM=${HARCH:+${HARCH}-}gcc-nm
+		local RANLIB=${HARCH:+${HARCH}-}gcc-ranlib
+		local STRIP=${HARCH:+${HARCH}-}strip
+		local C_ARGS=$(buildmesonargs "${CFLAGS}")
+		local CPP_ARGS=$(buildmesonargs "${CXXFLAGS}")
+		local C_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
+		local CPP_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
+		cat > cross-${PLATFORM_NAME} <<-EOF
+			[binaries]
+			c = '${CC}'
+			cpp = '${CXX}'
+			ar = '${AR}'
+			strip = '${STRIP}'
+			nm = '${NM}'
+			ranlib = '${RANLIB}'
+			pkgconfig = 'pkg-config'
+
+			[host_machine]
+			system = '${HOS}'
+			cpu_family = '${HM}'
+			cpu = '${HMCPU}'
+			endian = '${HMENDIAN}'
+
+			[properties]
+			c_args = [${C_ARGS}]
+			cpp_args = [${CPP_ARGS}]
+			c_link_args = [${C_LINK_ARGS}]
+			cpp_link_args = [${CPP_LINK_ARGS}]
+		EOF
+	}
 	mkdir -p ${BLD_PATH}/${PKG_NAME}
 	cd ${BLD_PATH}/${PKG_NAME}
 	local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n '-v')"
@@ -374,62 +426,6 @@ function mesonninja () {
 	forge_la_libs ${PWD}
 	cd ${BB_HOME}
 	return ${BUILD_STATUS}
-}
-
-function buildmesonargs () {
-	local FIRST=1
-	for flag in ${1}
-	do
-		if [ ${FIRST} -ne 1 ]
-		then
-			echo -n ", "
-		fi
-		echo -n "'${flag}'"
-	local FIRST=0
-	done
-	echo
-}
-
-function createmesoncross () {
-	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
-	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-	local CC="${HARCH:+${HARCH}-}gcc"
-	local CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}"
-	local CXX="${HARCH}-g++"
-	local CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}"
-	local CPP=${HARCH:+${HARCH}-}cpp
-	local CPPFLAGS="${COMMON_CPPFLAGS}"
-	local LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS}"
-	local AR=${HARCH:+${HARCH}-}gcc-ar
-	local NM=${HARCH:+${HARCH}-}gcc-nm
-	local RANLIB=${HARCH:+${HARCH}-}gcc-ranlib
-	local STRIP=${HARCH:+${HARCH}-}strip
-	local C_ARGS=$(buildmesonargs "${CFLAGS}")
-	local CPP_ARGS=$(buildmesonargs "${CXXFLAGS}")
-	local C_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
-	local CPP_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
-	cat > cross-${PLATFORM_NAME} <<-EOF
-		[binaries]
-		c = '${CC}'
-		cpp = '${CXX}'
-		ar = '${AR}'
-		strip = '${STRIP}'
-		nm = '${NM}'
-		ranlib = '${RANLIB}'
-		pkgconfig = 'pkg-config'
-
-		[host_machine]
-		system = '${HOS}'
-		cpu_family = '${HM}'
-		cpu = '${HMCPU}'
-		endian = '${HMENDIAN}'
-
-		[properties]
-		c_args = [${C_ARGS}]
-		cpp_args = [${CPP_ARGS}]
-		c_link_args = [${C_LINK_ARGS}]
-		cpp_link_args = [${CPP_LINK_ARGS}]
-	EOF
 }
 
 function cargobuild () {
@@ -468,6 +464,41 @@ function cargobuild () {
 }
 
 function kernelbuild () {
+	function make4kern () {
+		if [ ${KERN_LTOENABLE:-0} -eq 1 ] 
+		then
+			KERN_OPTCOMP_FLAGS+="${KERN_OPTLEVEL:+ -O${KERN_OPTLEVEL}}"
+			KERN_OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+			KBUILD_BUILD_TIMESTAMP='' make \
+			CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc" \
+			LD="scripts/gcc-ld" \
+			AR="${HARCH:+${HARCH}-}gcc-ar" \
+			RANLIB="${HARCH:+${HARCH}-}gcc-ranlib" \
+			KCFLAGS="${KERN_OPTCOMP_FLAGS} ${PLATFORM_CFLAGS} ${PKG_CFLAGS}" \
+			KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+			LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+			ARCH=${HM} \
+			CROSS_COMPILE=${HARCH:+${HARCH}-} \
+			EXTRAVERSION=${KERN_EXTRAVERSION} \
+			${EXTRA_PARMS} \
+			DISABLE_LTO=-fno-lto \
+			${@} ${PKG_MAKEVARS}
+			local STATUS=${?}
+		else
+			KBUILD_BUILD_TIMESTAMP='' make \
+			CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc" \
+			KCFLAGS="${KERN_OPTCOMP_FLAGS} ${PLATFORM_CFLAGS} ${PKG_CFLAGS}" \
+			KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+			LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+			ARCH=${HM} \
+			CROSS_COMPILE=${HARCH:+${HARCH}-} \
+			EXTRAVERSION=${KERN_EXTRAVERSION} \
+			${EXTRA_PARMS} \
+			${@} ${PKG_MAKEVARS}
+			local STATUS=${?}
+		fi
+		return ${STATUS}
+	}
 	set -x
 	cp -rp ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME}
 	cd ${BLD_PATH}/${PKG_NAME}
@@ -531,42 +562,6 @@ function kernelbuild () {
 	fi
 	cd ${BB_HOME}
 	set +x
-	return ${STATUS}
-}
-
-function make4kern () {
-	if [ ${KERN_LTOENABLE:-0} -eq 1 ] 
-	then
-		KERN_OPTCOMP_FLAGS+="${KERN_OPTLEVEL:+ -O${KERN_OPTLEVEL}}"
-		KERN_OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-		KBUILD_BUILD_TIMESTAMP='' make \
-		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc" \
-		LD="scripts/gcc-ld" \
-		AR="${HARCH:+${HARCH}-}gcc-ar" \
-		RANLIB="${HARCH:+${HARCH}-}gcc-ranlib" \
-		KCFLAGS="${KERN_OPTCOMP_FLAGS} ${PLATFORM_CFLAGS} ${PKG_CFLAGS}" \
-		KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-		LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-		ARCH=${HM} \
-		CROSS_COMPILE=${HARCH:+${HARCH}-} \
-		EXTRAVERSION=${KERN_EXTRAVERSION} \
-		${EXTRA_PARMS} \
-		DISABLE_LTO=-fno-lto \
-		${@} ${PKG_MAKEVARS}
-		local STATUS=${?}
-	else
-		KBUILD_BUILD_TIMESTAMP='' make \
-		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc" \
-		KCFLAGS="${KERN_OPTCOMP_FLAGS} ${PLATFORM_CFLAGS} ${PKG_CFLAGS}" \
-		KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-		LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-		ARCH=${HM} \
-		CROSS_COMPILE=${HARCH:+${HARCH}-} \
-		EXTRAVERSION=${KERN_EXTRAVERSION} \
-		${EXTRA_PARMS} \
-		${@} ${PKG_MAKEVARS}
-		local STATUS=${?}
-	fi
 	return ${STATUS}
 }
 
