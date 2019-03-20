@@ -580,7 +580,6 @@ function pythonbuild () {
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 	#source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate
-	echo "Python: ${PYTHON}"
 	CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc ${SYSROOT_CFLAGS}" \
 	CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
 	CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
@@ -595,8 +594,8 @@ function pythonbuild () {
 	RANLIB=${HARCH:+${HARCH}-}gcc-ranlib \
 	STRIP=${HARCH:+${HARCH}-}strip \
 	OBJDUMP=${HARCH:+${HARCH}-}objdump \
-	python${PYTHONBINVER} setup.py build -j${NPROCS} &&
-	python${PYTHONBINVER} setup.py install --root=${BIN_PATH} ${CONF_FLAGS}
+	python setup.py build -j${NPROCS} &&
+	python setup.py install --root=${BIN_PATH} ${CONF_FLAGS}
 	local BUILD_STATUS=${?}
 	cd ${BB_HOME}
 	set +x

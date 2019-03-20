@@ -12,7 +12,7 @@ fi
 function setup_rust () {
 	export CARGO_HOME=${TOOLCHAIN_PATH}
 	export RUSTUP_HOME=${TOOLCHAIN_PATH}/var/rustup
-	if [ ! -x ${TOOLCHAIN_PATH}/bin/cargo || ! -x ${TOOLCHAIN_PATH}/bin/rustc ]
+	if [ ! -x ${TOOLCHAIN_PATH}/bin/cargo ] || [ ! -x ${TOOLCHAIN_PATH}/bin/rustc ]
 	then
 		echo -n "No working rustc binary. Installing..."
 		curl -sSf https://sh.rustup.rs -o /tmp/rustup-init &&
@@ -59,8 +59,8 @@ function setup_python () {
 		${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}/configure --prefix=${TOOLCHAIN_PATH} --enable-shared &&
 		make &&
 		make install &&
-		${PYTHON} ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}/get-pip.py &&
-		${PYTHONPIP} install crossenv
+		${BUILD_PYTHON} ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}/get-pip.py &&
+		${BUILD_PYTHONPIP} install crossenv
 		local STATUS=${?}
 		set +x
 		return ${STATUS}
@@ -68,7 +68,7 @@ function setup_python () {
 	function build_python_crossenv () {
 		set -x
 		settoolflags
-		${PYTHON} -m crossenv ${HOST_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH} &&
+		${BUILD_PYTHON} -m crossenv ${HOST_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH} &&
 		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate &&
 		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
 		CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}" \
@@ -78,43 +78,43 @@ function setup_python () {
 		set +x
 		return ${STATUS}
 	}
+
 	if [ -z ${1} ]
 	then
 		echo "No version specified"
 		return 1
 	fi
-	if [ ! -d ${TOOLCHAIN_PATH}/venv-${HARCH} ]
+	local PYTHONVER=${1}
+	PYTHONBINVER=$( echo ${PYTHONVER} | cut -d'.' -f1,2)
+	BUILD_PYTHON=${TOOLCHAIN_PATH}/bin/python${PYTHONBINVER}
+	BUILD_PYTHONPIP=${TOOLCHAIN_PATH}/bin/pip${PYTHONBINVER}
+	HOST_PYTHON=${DISTOS_PATH}/usr/bin/python${PYTHONBINVER}
+	if [ ! -x ${BUILD_PYTHON} ] || [ ! -x ${BUILD_PYTHONPIP} ]
 	then
-		local PYTHONVER=${1}
-		PYTHONBINVER=$( echo ${PYTHONVER} | cut -d'.' -f1,2)
-		PYTHON=${TOOLCHAIN_PATH}/bin/python${PYTHONBINVER}
-		PYTHONPIP=${TOOLCHAIN_PATH}/bin/pip${PYTHONBINVER}
-		if [ ! -x ${PYTHON} || ! -x ${PYTHONPIP} ]
+		echo -n "No working python${PYTHONBINVER} binary. Building..."
+		build_python > ${LOG_PATH}/toolchain_python${PYTHONBINVER}.log 2>&1
+		if [ ${?} -ne 0 ]
 		then
-			echo -n "No working python${PYTHONBINVER} binary. Building..."
-			build_python > ${LOG_PATH}/toolchain_python${PYTHONBINVER}.log 2>&1
-			if [ ${?} -ne 0 ]
-			then
-				echo "Fail."
-				return 1
-			fi
-			echo "Done."
-		fi
-		PYTHON=$(which python${PYTHONBINVER})
-		local HOST_PYTHON=${DISTOS_PATH}/usr/bin/python${PYTHONBINVER}
-		if [ ! -x ${HOST_PYTHON} ]
-		then
-			echo "No host python present (${HOST_PYTHON})"
+			echo "Fail."
 			return 1
 		fi
-		if [ -f ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/plat-${HARCH}/_sysconfigdata_m.py ]
-		then
-			mv ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/plat-${HARCH}/_sysconfigdata_m.py ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/_sysconfigdata.py
-		fi
-		if [ -d ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/config-3.5m-${HARCH} ] && [ ! -L ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/config-3.5m ]
-		then
-			ln -s config-3.5m-${HARCH} ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/config-3.5m
-		fi
+		echo "Done."
+	fi
+	if [ ! -x ${HOST_PYTHON} ]
+	then
+		echo "No host python present (${HOST_PYTHON})"
+		return 1
+	fi
+	if [ -f ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/plat-${HARCH}/_sysconfigdata_m.py ]
+	then
+		mv ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/plat-${HARCH}/_sysconfigdata_m.py ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/_sysconfigdata.py
+	fi
+	if [ -d ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/config-${PYTHONBINVER}m-${HARCH} ] && [ ! -L ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/config-${PYTHONBINVER}m ]
+	then
+		ln -s config-${PYTHONBINVER}m-${HARCH} ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/config-${PYTHONBINVER}m
+	fi
+	if [ ! -d ${TOOLCHAIN_PATH}/venv-${HARCH} ]
+	then
 		build_python_crossenv >> ${LOG_PATH}/toolchain_python${PYTHONBINVER}.log 2>&1
 		return ${?}
 	else
