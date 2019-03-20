@@ -10,12 +10,19 @@ then
 fi
 
 function setup_rust () {
+	echo -n "Setting up RUST..."
 	export CARGO_HOME=${TOOLCHAIN_PATH}
 	export RUSTUP_HOME=${TOOLCHAIN_PATH}/var/rustup
 	if [ ! -x ${TOOLCHAIN_PATH}/bin/cargo ] || [ ! -x ${TOOLCHAIN_PATH}/bin/rustc ]
 	then
-		echo -n "No working rustc binary. Installing..."
+		echo -n "Downloading..."
 		curl -sSf https://sh.rustup.rs -o /tmp/rustup-init &&
+		if [ ${?} -ne 0 ]
+		then
+			echo "Fail."
+			return 1
+		fi
+		echo -n "Installing..."
 		chmod +x /tmp/rustup-init &&
 		/tmp/rustup-init -v -y --no-modify-path >> ${LOG_PATH}/toolchain_rust.log 2>&1 &&
 		rm -f /tmp/rustup-init
@@ -25,6 +32,8 @@ function setup_rust () {
 			return 1
 		fi
 		echo "Done."
+	else
+		echo "Already there."
 	fi
 	CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
 	echo -n "Adding ${CARGO_TARGET} libraries..."
@@ -32,9 +41,11 @@ function setup_rust () {
 	if [ ${?} -ne 0 ]
 	then
 		echo "Fail."
+		echo
 		return 1
 	fi
 	echo "Done."
+	echo
 }
 
 function setup_python () {
@@ -79,27 +90,35 @@ function setup_python () {
 		return ${STATUS}
 	}
 
+	echo -n "Setting up Pyton"
 	if [ -z ${1} ]
 	then
 		local PYTHONVER=$(find ${DISTOS_PATH}/usr/include -maxdepth 1 -name 'python*' -exec grep '#define PY_VERSION ' {}/patchlevel.h \; | awk '{print $3}' | sed 's/\"//g' | sort -u | tail -n1)
-		echo -n "No version specified, "
 		if [ "x${PYTHONVER}" == "x" ]
 		then
-			echo "no way to guess it."
+			echo "...no way to guess its version and not specified. Exiting..."
+			echo
 			return 1
 		else
-			echo "guess ${PYTHONVER}"
+			echo -n "-${PYTHONVER} (guessed)..."
 		fi
 	else
 		local PYTHONVER=${1}
+		echo -n "-${PYTHONVER}..."
 	fi
 	PYTHONBINVER=$( echo ${PYTHONVER} | cut -d'.' -f1,2)
 	BUILD_PYTHON=${TOOLCHAIN_PATH}/bin/python${PYTHONBINVER}
 	BUILD_PYTHONPIP=${TOOLCHAIN_PATH}/bin/pip${PYTHONBINVER}
 	HOST_PYTHON=${DISTOS_PATH}/usr/bin/python${PYTHONBINVER}
+	if [ ! -x ${HOST_PYTHON} ]
+	then
+		echo "No host python present (${HOST_PYTHON})"
+		echo
+		return 1
+	fi
 	if [ ! -x ${BUILD_PYTHON} ] || [ ! -x ${BUILD_PYTHONPIP} ]
 	then
-		echo -n "No working python${PYTHONBINVER} binary. Building..."
+		echo -n "Building..."
 		build_python > ${LOG_PATH}/toolchain_python${PYTHONBINVER}.log 2>&1
 		if [ ${?} -ne 0 ]
 		then
@@ -107,11 +126,8 @@ function setup_python () {
 			return 1
 		fi
 		echo "Done."
-	fi
-	if [ ! -x ${HOST_PYTHON} ]
-	then
-		echo "No host python present (${HOST_PYTHON})"
-		return 1
+	else
+		echo "Already there."
 	fi
 	if [ -f ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/plat-${HARCH}/_sysconfigdata_m.py ]
 	then
@@ -121,11 +137,16 @@ function setup_python () {
 	then
 		ln -s config-${PYTHONBINVER}m-${HARCH} ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/config-${PYTHONBINVER}m
 	fi
+	echo -n "Adding ${CARGO_TARGET} libraries..."
 	if [ ! -d ${TOOLCHAIN_PATH}/venv-${HARCH} ]
 	then
 		build_python_crossenv >> ${LOG_PATH}/toolchain_python${PYTHONBINVER}.log 2>&1
+		echo "Done."
+		echo
 		return ${?}
 	else
+		echo "Already there."
+		echo
 		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate >> ${LOG_PATH}/toolchain_python${PYTHONBINVER}.log 2>&1
 		return ${?}
 	fi
