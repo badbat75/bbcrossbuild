@@ -116,7 +116,7 @@ function setup_python () {
 		then
 			mv ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/plat-${HARCH}/_sysconfigdata_m.py ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/_sysconfigdata.py
 		fi
-		if [ -d ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/config-3.5m-${HARCH} ]
+		if [ -d ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/config-3.5m-${HARCH} && ! -L ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/config-3.5m ]
 		then
 			ln -s config-3.5m-${HARCH} ${DISTOS_PATH}/usr/lib/python${PYTHONBINVER}/config-3.5m
 		fi
