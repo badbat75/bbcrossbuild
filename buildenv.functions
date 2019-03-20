@@ -2,8 +2,8 @@
 
 check_core_functions
 
-TOOLCHAIN_SRCPATH=${TOOLCHAIN_PATH}/src
-TOOLCHAIN_BLDPATH=${TOOLCHAIN_PATH}/build
+TOOLCHAIN_SRCPATH=${SRC_PATH}/toolchain
+TOOLCHAIN_BLDPATH=${BLD_PATH}/toolchain
 if [ -d ${TOOLCHAIN_PATH} ]
 then
 	mkdir -p ${TOOLCHAIN_PATH}
@@ -12,11 +12,30 @@ fi
 function setup_cargo () {
 	export CARGO_HOME=${TOOLCHAIN_PATH}
 	export RUSTUP_HOME=${TOOLCHAIN_PATH}/var/rustup
-	curl -sSf https://sh.rustup.rs -o /tmp/rustup-init &&
-	chmod +x /tmp/rustup-init &&
-	/tmp/rustup-init -v -y --no-modify-path &&
-	rustup -v target add arm-unknown-linux-gnueabihf &&
-	rm -f /tmp/rustup-init
+	which cargo && which rustc
+	if [ ! $? -eq 0 ]
+	then
+		echo -n "No working rustc binary. Installing..."
+		curl -sSf https://sh.rustup.rs -o /tmp/rustup-init &&
+		chmod +x /tmp/rustup-init &&
+		/tmp/rustup-init -v -y --no-modify-path &&
+		rm -f /tmp/rustup-init
+		if [ ${?} -ne 0 ]
+		then
+			echo "Fail."
+			return 1
+		fi
+		echo "Done."
+	fi
+	CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
+	echo -n "Adding ${CARGO_TARGET} libraries..."
+	rustup -v target add ${CARGO_TARGET}
+	if [ ${?} -ne 0 ]
+	then
+		echo "Fail."
+		return 1
+	fi
+	echo "Done."
 }
 
 function setup_python () {
