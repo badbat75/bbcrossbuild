@@ -2,8 +2,7 @@
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libu/libupnp/libupnp_1.6.25.orig.tar.bz2"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libu/libupnp/libupnp_1.6.25-1.debian.tar.xz"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/${HARCH} --disable-static \
-	--without-documentation --disable-samples --enable-ipv6 --disable-test"
+CONF_FLAGS="--without-documentation --disable-samples --enable-ipv6 --disable-test"
 INST_CMD=install
 PKG_LDFLAGS="-Wl,-z,defs -Wl,--as-needed"
 PKGDEPS=

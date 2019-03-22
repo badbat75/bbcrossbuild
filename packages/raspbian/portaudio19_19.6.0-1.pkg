@@ -4,7 +4,7 @@ PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/p/portaudio19/portaudio
 PATCHES="portaudio_test_LDFLAGS.patch"
 AUTOCONF=0
 BUILD_PROCESS=configmake
-CONF_FLAGS="--prefix=/usr -libdir=/usr/lib/arm-linux-gnueabihf --enable-cxx -with-pic=yes --disable-static"
+CONF_FLAGS="--enable-cxx -with-pic=yes"
 PKG_CFLAGS="${COMMON_LDFLAGS} -s"
 PKG_MAKEVARS="-j1"
 INST_CMD=install

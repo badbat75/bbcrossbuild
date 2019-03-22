@@ -1,7 +1,7 @@
 # mpc-0.31
 PKG_URL="https://www.musicpd.org/download/mpc/0/mpc-0.31.tar.xz"
 BUILD_PROCESS=mesonninja
-CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/${HARCH}"
+# CONF_FLAGS=""
 INST_CMD=install-strip
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/m/mpc/mpc_0.31-1.debian.tar.xz"
 #PKG_DEPS="raspbian/check-0.10.0 moode/libmpdclient-2.16"

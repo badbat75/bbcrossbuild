@@ -5,8 +5,7 @@ BUILD_PROCESS=configmake
 AUTOCONF_PATH=Project/GNU/Library
 CONF_COPYSRC=1
 CONF_PATH=Project/GNU/Library
-CONF_FLAGS="--prefix=/usr -libdir=/usr/lib/${HARCH} --disable-static \
-	--enable-visibility --with-libcurl --with-libmms --with-libtinyxml2 --without-libmd5"
+CONF_FLAGS="--enable-visibility --with-libcurl --with-libmms --with-libtinyxml2 --without-libmd5"
 INST_CMD=install-strip
 PKG_DEPS="raspbian/libmms_0.6.4-3 raspbian/libzen_0.4.37-1 raspbian/tinyxml2_7.0.0+dfsg-1"
 

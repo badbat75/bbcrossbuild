@@ -5,5 +5,5 @@ BUILD_PROCESS=configmake
 AUTOCONF_PATH=Project/GNU/Library
 CONF_COPYSRC=1
 CONF_PATH=Project/GNU/Library
-CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/${HARCH} --disable-static"
+# CONF_FLAGS=""
 INST_CMD=install-strip

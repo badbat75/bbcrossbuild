@@ -2,6 +2,6 @@
 PKG_URL="https://github.com/mikebrady/alac/archive/master.tar.gz"
 PATCHES="alac-headerpath-issue.patch"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/arm-linux-gnueabihf --disable-static"
+# CONF_FLAGS=""
 INST_CMD=install-strip
 PKG_DEPS=

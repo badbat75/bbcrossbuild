@@ -2,13 +2,6 @@
 
 check_core_functions
 
-export MAKEFLAGS="-j${NPROCS} ${MAKEFLAGS:+ ${MAKEFLAGS}}"
-if [ ${HARCH} != ${BARCH} ]
-then
-	export CROSS_COMPILING=yes
-	export PKG_CONFIG_ALLOW_CROSS=1
-fi
-
 function settoolflags () {
 	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH} }${HMCPU:+-mtune=${HMCPU}}"
 	PLATFORM_RUSTFLAGS="${HMARCH_RUST:+-C target-feature=${HMARCH_RUST} }${HMCPU:+-C target-cpu=${HMCPU}}"
@@ -17,6 +10,7 @@ function settoolflags () {
 	COMMON_CPPFLAGS="-I${BIN_PATH}/usr/include"
 	COMMON_LDFLAGS="-fuse-ld=gold -Wl,-rpath-link,${BIN_PATH}/lib/${HARCH} -Wl,-rpath-link,${BIN_PATH}/usr/lib/${HARCH}-L${BIN_PATH}/lib/${HARCH} -L${BIN_PATH}/usr/lib/${HARCH}"
 	COMMON_PKG_CONFIG_LIBDIR="${BIN_PATH}/usr/lib/${HARCH}/pkgconfig:${BIN_PATH}/usr/share/pkgconfig"
+	export MAKEFLAGS="-j${NPROCS} ${MAKEFLAGS:+ ${MAKEFLAGS}}"
 	# Construct build tools flags
 	# Build Include search paths
 	if [ -d ${DISTOS_PATH}/usr/include ]
@@ -42,6 +36,23 @@ function settoolflags () {
 			COMMON_LDFLAGS+=" -L${DISTOS_PATH}$entry -Wl,-rpath-link,${DISTOS_PATH}$entry"
 		done
 	fi
+	if [ ${HARCH} != ${BARCH} ]
+	then
+		export CROSS_COMPILING=yes
+		export PKG_CONFIG_ALLOW_CROSS=1
+	fi
+	MULTI_ARCH=${MULTIARCH:-1}
+	export BUILD_PREFIX="${BUILD_PREFIX:-/usr}"
+	export BUILD_INCLUDEDIR="${BUILD_INCLUDEDIR:-${BUILD_PREFIX}/include}"
+	export BUILD_LIBDIR="${BUILD_LIBDIR:-${BUILD_PREFIX}/lib}"
+	export BUILD_SYSCONFDIR="${BUILD_SYSCONFDIR:-/etc}"
+	export BUILD_LOCALSTATEDIR="${BUILD_LOCALSTATEDIR:-/var}"
+	if [ ${MULTI_ARCH} -eq 1 ]
+	then
+		export BUILD_LIBSUFFIX="/${HARCH}"
+	fi
+	BUILD_LIBSHARED=${BUILD_LIBSHARED:-1}
+	BUILD_LIBSTATIC=${BUILD_LIBSTATIC:-1}
 }
 
 function build () (
@@ -266,7 +277,23 @@ function configmake () {
 	fi
 	cd ${BLD_PATH}/${PKG_NAME}${CONF_PATH:+/${CONF_PATH}}
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
-	[ ${STD_CONF_FLAGS:-1} -eq 1 ] && CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH} ${CONF_FLAGS}"
+	if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
+	then
+		CONF_FLAGS+=" --build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH}"
+		CONF_FLAGS+=" --prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR}"
+		if [ ${BUILD_LIBSHARED} -eq 1 ]
+		then
+			CONF_FLAGS+=" --enable-shared"
+		else
+			CONF_FLAGS+=" --disable-shared"
+		fi
+		if [ ${BUILD_LIBSTATIC} -eq 1 ]
+		then
+			CONF_FLAGS+=" --enable-static"
+		else
+			CONF_FLAGS+=" --disable-static"
+		fi
+	fi
 	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 	CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc ${SYSROOT_CFLAGS} ${PKG_CFLAGS}" \
 	CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
@@ -329,10 +356,22 @@ function cmakemake () {
 	mkdir -p ${BLD_PATH}/${PKG_NAME}
 	cd ${BLD_PATH}/${PKG_NAME}
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+	if [ ${BUILD_LIBSHARED} -eq 1 ]
+	then
+		CONF_FLAGS+=" -DBUILD_SHARED_LIBS=ON"
+	else
+		CONF_FLAGS+=" -DBUILD_SHARED_LIBS=OFF"
+	fi
+	if [ ${BUILD_LIBSTATIC} -eq 1 ]
+	then
+		CONF_FLAGS+=" -DBUILD_STATIC_LIBS=ON"
+	else
+		CONF_FLAGS+=" -DBUILD_STATIC_LIBS=OFF"
+	fi
 	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
-	cmake ${PKG_SRCPATH} ${CONF_FLAGS} \
+	cmake ${PKG_SRCPATH} \
 		-DCMAKE_BUILD_TYPE="Release" \
 		-DTOOLCHAIN_PREFIX=${HARCH:+${HARCH}-} \
 		-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \
@@ -349,7 +388,13 @@ function cmakemake () {
         -DCMAKE_NM=${HARCH:+${HARCH}-}gcc-nm \
         -DCMAKE_CC_COMPILER_RANLIB=${HARCH:+${HARCH}-}gcc-ranlib \
         -DCMAKE_CXX_COMPILER_RANLIB=${HARCH:+${HARCH}-}gcc-ranlib \
-		-DCMAKE_STRIP=${HARCH:+${HARCH}-}strip &&
+		-DCMAKE_STRIP=${HARCH:+${HARCH}-}strip \
+		-DCMAKE_INSTALL_PREFIX=${BUILD_PREFIX} \
+		-DLIB_INSTALL_DIR=${BUILD_LIBDIR} \
+		-DLIB_SUFFIX=${BUILD_LIBSUFFIX} \
+		-DINCLUDE_INSTALL_DIR=${BUILD_INCLUDEDIR} \
+		-DSYSCONF_INSTALL_DIR=${BUILD_SYSCONFDIR} \
+		${CONF_FLAGS} &&
 	make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0} &&
 	make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD}
 	local BUILD_STATUS=${?}
@@ -375,6 +420,18 @@ function mesonninja () {
 			echo
 		}
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+		if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
+		then
+			CONF_FLAGS+=" --prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR}"
+			if [ ${BUILD_LIBSHARED} -eq 0 ] && [ ${BUILD_LIBSTATIC} -eq 1 ]
+			then
+				CONF_FLAGS+=" --default-library=static"
+			fi
+			if [ ${BUILD_LIBSHARED} -eq 1 ] && [ ${BUILD_LIBSTATIC} -eq 0 ]
+			then
+				CONF_FLAGS+=" --default-library=shared"
+			fi
+		fi
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 		local CC="${HARCH:+${HARCH}-}gcc"
 		local CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}"
@@ -578,8 +635,11 @@ function pythonbuild () {
 	fi
 	COMMON_LDFLAGS+=" -lpython${PYTHONBINVER}m"
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+	if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
+	then
+		CONF_FLAGS+=" --prefix=${BUILD_PREFIX}"
+	fi
 	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-	#source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate
 	CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc ${SYSROOT_CFLAGS}" \
 	CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
 	CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \

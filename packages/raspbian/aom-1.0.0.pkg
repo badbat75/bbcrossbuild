@@ -1,11 +1,7 @@
 #aom-1.0.0
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/a/aom/aom_1.0.0.orig.tar.xz"
 BUILD_PROCESS=cmakemake
-CONF_FLAGS="
-        -DCMAKE_INSTALL_PREFIX=/usr \
-        -DLIB_INSTALL_DIR=/usr/lib/${HARCH} \
-	-DCMAKE_INSTALL_DO_STRIP:BOOL=ON \
-	-DBUILD_SHARED_LIBS=1 \
+CONF_FLAGS="-DCMAKE_INSTALL_DO_STRIP:BOOL=ON \
 	-DENABLE_TESTS=0 \
 	-DGIT_EXECUTABLE=/nonexistant-binary \
 	-DAOM_TARGET_CPU=arm"

@@ -1,8 +1,7 @@
 # ncurses-6.1-20181013
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/n/ncurses/ncurses_6.1%2b20181013.orig.tar.gz"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--prefix=/usr \
-        --with-shared \
+CONF_FLAGS="--with-shared \
         --mandir=/usr/share/man \
         --with-manpage-format=normal \
         --without-profile --without-debug \

@@ -4,4 +4,4 @@ PKG_URL="https://github.com/hrkfdn/mpdas/archive/master.tar.gz"
 BUILD_PROCESS=simplemake
 INST_CMD=install
 PKG_DEPS=
-PKG_MAKEVARS="PREFIX=/usr"
+PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX}"

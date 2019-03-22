@@ -5,4 +5,4 @@ PATCHES="rotenc-makefile.patch"
 BUILD_PROCESS=simplemake
 INST_CMD=install
 PKG_DEPS="moode/moode-r44 moode/wiringpi-master"
-PKG_MAKEVARS="PREFIX=/usr -C other/rotenc"
+PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} -C other/rotenc"

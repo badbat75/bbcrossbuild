@@ -3,7 +3,7 @@ PKG_URL="http://archive.raspbian.org/raspbian/pool/main/m/minidlna/minidlna_1.2.
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/m/minidlna/minidlna_1.2.1%2bdfsg-1.debian.tar.xz"
 PATCHES="minidlna-copytemplates.patch"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/arm-linux-gnueabihf --sysconfdir=/etc"
+# CONF_FLAGS=""
 INST_CMD=install-strip
 PKG_DEPS="raspbian/libexif-0.6.21-5.1 raspbian/libid3tag_0.15.1b"
 #PKG_DEPS="raspbian/libjpeg-turbo-1.5.2 raspbian/sqlite3-3.26.0 raspbian/libexif-0.6.21-5.1"

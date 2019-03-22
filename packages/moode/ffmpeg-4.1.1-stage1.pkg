@@ -6,7 +6,7 @@ AUTOCONF=0
 BUILD_PROCESS=configmake
 STD_CONF_FLAGS=0
 CONF_CMD="configure.wrapper"
-CONF_FLAGS="--prefix=/usr --incdir=/usr/include/${HARCH} --libdir=/usr/lib/${HARCH} \
+CONF_FLAGS="--prefix=\${BUILD_PREFIX} --incdir=\${BUILD_INCLUDEDIR}\${BUILD_LIBSUFFIX} --libdir=\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX} \
 	--enable-shared \
 	--toolchain=hardened \
 	--enable-gpl \

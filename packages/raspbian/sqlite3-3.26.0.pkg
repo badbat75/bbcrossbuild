@@ -2,9 +2,8 @@
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/s/sqlite3/sqlite3_3.26.0%2bfossilbc891ac6b.orig.tar.xz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/s/sqlite3/sqlite3_3.26.0%2bfossilbc891ac6b-2.debian.tar.xz"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/${HARCH} --libexecdir=/usr/lib/${HARCH}/sqlite3 --mandir=/usr/share/man \
-	--enable-threadsafe --enable-load-extension --enable-json1 --enable-fts4 --enable-fts5 --disable-static \
-	CROSS_COMPILE=yes TCLLIBDIR=/usr/lib/tcltk/sqlite3"
+CONF_FLAGS="--enable-threadsafe --enable-load-extension --enable-json1 --enable-fts4 --enable-fts5 \
+	CROSS_COMPILE=\${CROSS_COMPILING} TCLLIBDIR=/usr/lib/tcltk/sqlite3"
 INST_CMD=install
 PKGDEPS=
 PKG_CFLAGS="-fno-strict-aliasing \

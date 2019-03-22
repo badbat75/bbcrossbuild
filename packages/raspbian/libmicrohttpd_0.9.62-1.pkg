@@ -2,7 +2,7 @@
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libm/libmicrohttpd/libmicrohttpd_0.9.62.orig.tar.gz"
 #PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libm/libmicrohttpd/libmicrohttpd_0.9.62-1.debian.tar.xz"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--prefix=/usr -libdir=/usr/lib/arm-linux-gnueabihf --disable-static"
+# CONF_FLAGS=""
 INST_CMD=install-strip
 
 # Note:

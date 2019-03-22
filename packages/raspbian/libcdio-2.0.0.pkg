@@ -1,8 +1,7 @@
 # libcdio-2.0.0
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libc/libcdio/libcdio_2.0.0.orig.tar.gz"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--prefix=/usr --libdir=/usr/lib/arm-linux-gnueabihf --sysconfdir=/etc --localstatedir=/var \
-	--disable-silent-rules --disable-static --disable-cddb --disable-vcd-info" \
+CONF_FLAGS="--disable-cddb --disable-vcd-info"
 INST_CMD=install-strip
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libc/libcdio/libcdio_2.0.0-2.debian.tar.xz"
 PATCHES=libcdio-config.patch

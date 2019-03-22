@@ -5,7 +5,7 @@ BUILD_PROCESS=configmake
 AUTOCONF_PATH=Project/GNU/CLI
 CONF_COPYSRC=1
 CONF_PATH=Project/GNU/CLI
-CONF_FLAGS="--prefix=/usr -libdir=/usr/lib/${HARCH} --disable-static"
+# CONF_FLAGS=""
 INST_CMD=install-strip
 PKG_DEPS="raspbian/libmediainfo-18.12-1"
 
