@@ -54,6 +54,10 @@ function settoolflags () {
 			COMMON_LDFLAGS+=" -L${DISTOS_PATH}$entry -Wl,-rpath-link,${DISTOS_PATH}$entry"
 		done
 	fi
+	if [ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libstdc++.so.6 ]
+	then
+		COMMON_LDFLAGS+=" ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libstdc++.so.6"
+	fi
 }
 
 function build () (
@@ -280,19 +284,19 @@ function configmake () {
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 	then
-		CONF_FLAGS+=" --build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH}"
-		CONF_FLAGS+=" --prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR}"
+		CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} ${CONF_FLAGS}"
+		CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH} ${CONF_FLAGS}"
 		if [ ${BUILD_LIBSHARED} -eq 1 ]
 		then
-			CONF_FLAGS+=" --enable-shared"
+			CONF_FLAGS=" --enable-shared ${CONF_FLAGS}"
 		else
-			CONF_FLAGS+=" --disable-shared"
+			CONF_FLAGS=" --disable-shared ${CONF_FLAGS}"
 		fi
 		if [ ${BUILD_LIBSTATIC} -eq 1 ]
 		then
-			CONF_FLAGS+=" --enable-static"
+			CONF_FLAGS=" --enable-static ${CONF_FLAGS}"
 		else
-			CONF_FLAGS+=" --disable-static"
+			CONF_FLAGS=" --disable-static ${CONF_FLAGS}"
 		fi
 	fi
 	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
@@ -311,9 +315,10 @@ function configmake () {
 	OBJDUMP=${HARCH:+${HARCH}-}objdump \
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
+	PATH=${PATH}:${BIN_PATH}${BUILD_PREFIX}/bin \
 	${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS} &&
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} &&
-	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD}
+	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD:-install}
 	local BUILD_STATUS=${?}
 	forge_la_libs ${PWD}
 	cd ${BB_HOME}
@@ -639,8 +644,13 @@ function pythonbuild () {
 	if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 	then
 		CONF_FLAGS+=" --prefix=${BUILD_PREFIX}"
+		if [ -f ${DISTOS_PATH}/etc/debian_version ]
+		then
+			CONF_FLAGS+=" --install-lib=${BUILD_LIBDIR}/python${PYTHONBINVER}/dist-packages"
+		fi
 	fi
 	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+	local PYTHONPKG_DIR=
 	CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc ${SYSROOT_CFLAGS}" \
 	CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
 	CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \

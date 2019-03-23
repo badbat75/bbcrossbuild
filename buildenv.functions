@@ -180,7 +180,7 @@ function setup_python () {
 		local PYTHONVER=${1}
 		echo -n "-${PYTHONVER}..."
 	fi
-	PYTHONBINVER=$( echo ${PYTHONVER} | cut -d'.' -f1,2)
+	export PYTHONBINVER=$( echo ${PYTHONVER} | cut -d'.' -f1,2)
 	BUILD_PYTHON=${TOOLCHAIN_PATH}/bin/python${PYTHONBINVER}
 	BUILD_PYTHONPIP=${TOOLCHAIN_PATH}/bin/pip${PYTHONBINVER}
 	HOST_PYTHON=${DISTOS_PATH}/usr/bin/python${PYTHONBINVER}
