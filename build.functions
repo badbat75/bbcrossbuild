@@ -3,39 +3,6 @@
 check_core_functions
 
 function settoolflags () {
-	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH} }${HMCPU:+-mtune=${HMCPU}}"
-	PLATFORM_RUSTFLAGS="${HMARCH_RUST:+-C target-feature=${HMARCH_RUST} }${HMCPU:+-C target-cpu=${HMCPU}}"
-	COMMON_CFLAGS="-I${BIN_PATH}/usr/include"
-	COMMON_CXXFLAGS="-I${BIN_PATH}/usr/include"
-	COMMON_CPPFLAGS="-I${BIN_PATH}/usr/include"
-	COMMON_LDFLAGS="-fuse-ld=gold -Wl,-rpath-link,${BIN_PATH}/lib/${HARCH} -Wl,-rpath-link,${BIN_PATH}/usr/lib/${HARCH}-L${BIN_PATH}/lib/${HARCH} -L${BIN_PATH}/usr/lib/${HARCH}"
-	COMMON_PKG_CONFIG_LIBDIR="${BIN_PATH}/usr/lib/${HARCH}/pkgconfig:${BIN_PATH}/usr/share/pkgconfig"
-	export MAKEFLAGS="-j${NPROCS} ${MAKEFLAGS:+ ${MAKEFLAGS}}"
-	# Construct build tools flags
-	# Build Include search paths
-	if [ -d ${DISTOS_PATH}/usr/include ]
-	then
-		#local STD_CFLAGS="-nostdinc -isystem ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include -isystem ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include-fixed"
-		#local STD_CXXFLAGS="-nostdinc -std=c++98 -I ${DISTOS_PATH}/usr/include/c++/6 -I ${DISTOS_PATH}/usr/include/${HARCH:+${HARCH}/}c++/6 -I ${DISTOS_PATH}/usr/include/c++/6/backward -I ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include -I ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include-fixed"
-		#local STD_CXXFLAGS+=" -include math.h -include bits/extc++.h"
-		#local STD_CPPFLAGS="-isystem ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include -isystem ${DISTOS_PATH}/usr/local/include -isystem ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include-fixed -isystem ${DISTOS_PATH}/usr/include/arm-linux-gnueabihf -isystem ${DISTOS_PATH}/usr/include"
-		#local STD_LDFLAGS+=" -Wl,-nostdlib -Wl,${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/libstdc++.so"
-		COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include/${HARCH}}"
-		COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CXXFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include/${HARCH}}"
-		COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CPPFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include/${HARCH}}"
-		COMMON_LDFLAGS+=" ${STD_LDFLAGS}"
-		COMMON_PKG_CONFIG_LIBDIR+=":${DISTOS_PATH}/usr/lib/${HARCH}/pkgconfig:${DISTOS_PATH}/usr/share/pkgconfig"
-		SYSROOT_CFLAGS="${DISTOS_PATH:+--sysroot=${DISTOS_PATH}}"
-		SYSROOT_LDFLAGS="${DISTOS_PATH:+-Wl,--sysroot=${DISTOS_PATH}}"
-	fi
-	# Build LDFLAGS search paths
-	if [ -d ${DISTOS_PATH}/etc/ld.so.conf.d ]
-	then
-		for entry in $(cat ${DISTOS_PATH}/etc/ld.so.conf.d/* | grep -v '#' | sort)
-		do
-			COMMON_LDFLAGS+=" -L${DISTOS_PATH}$entry -Wl,-rpath-link,${DISTOS_PATH}$entry"
-		done
-	fi
 	if [ ${HARCH} != ${BARCH} ]
 	then
 		export CROSS_COMPILING=yes
@@ -53,6 +20,40 @@ function settoolflags () {
 	fi
 	BUILD_LIBSHARED=${BUILD_LIBSHARED:-1}
 	BUILD_LIBSTATIC=${BUILD_LIBSTATIC:-1}
+
+	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH} }${HMCPU:+-mtune=${HMCPU}}"
+	PLATFORM_RUSTFLAGS="${HMARCH_RUST:+-C target-feature=${HMARCH_RUST} }${HMCPU:+-C target-cpu=${HMCPU}}"
+	COMMON_CFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
+	COMMON_CXXFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
+	COMMON_CPPFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
+	COMMON_LDFLAGS="-fuse-ld=gold -Wl,-rpath-link,${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -L${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
+	COMMON_PKG_CONFIG_LIBDIR="${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig:${BIN_PATH}${BUILD_PREFIX}/share/pkgconfig"
+	export MAKEFLAGS="-j${NPROCS} ${MAKEFLAGS:+ ${MAKEFLAGS}}"
+	# Construct build tools flags
+	# Build Include search paths
+	if [ -d ${DISTOS_PATH}/usr/include ]
+	then
+		#local STD_CFLAGS="-nostdinc -isystem ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include -isystem ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include-fixed"
+		#local STD_CXXFLAGS="-nostdinc -std=c++98 -I ${DISTOS_PATH}/usr/include/c++/6 -I ${DISTOS_PATH}/usr/include/${HARCH:+${HARCH}/}c++/6 -I ${DISTOS_PATH}/usr/include/c++/6/backward -I ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include -I ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include-fixed"
+		#local STD_CXXFLAGS+=" -include math.h -include bits/extc++.h"
+		#local STD_CPPFLAGS="-isystem ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include -isystem ${DISTOS_PATH}/usr/local/include -isystem ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include-fixed -isystem ${DISTOS_PATH}/usr/include/arm-linux-gnueabihf -isystem ${DISTOS_PATH}/usr/include"
+		#local STD_LDFLAGS+=" -Wl,-nostdlib -Wl,${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/libstdc++.so"
+		COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include${BUILD_LIBSUFFIX}}"
+		COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CXXFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include${BUILD_LIBSUFFIX}}"
+		COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CPPFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include${BUILD_LIBSUFFIX}}"
+		COMMON_LDFLAGS+=" ${STD_LDFLAGS}"
+		COMMON_PKG_CONFIG_LIBDIR+=":${DISTOS_PATH}/usr/lib${BUILD_LIBSUFFIX}/pkgconfig:${DISTOS_PATH}/usr/share/pkgconfig"
+		SYSROOT_CFLAGS="${DISTOS_PATH:+--sysroot=${DISTOS_PATH}}"
+		SYSROOT_LDFLAGS="${DISTOS_PATH:+-Wl,--sysroot=${DISTOS_PATH}}"
+	fi
+	# Build LDFLAGS search paths
+	if [ -d ${DISTOS_PATH}/etc/ld.so.conf.d ]
+	then
+		for entry in $(cat ${DISTOS_PATH}/etc/ld.so.conf.d/* | grep -v '#' | sort)
+		do
+			COMMON_LDFLAGS+=" -L${DISTOS_PATH}$entry -Wl,-rpath-link,${DISTOS_PATH}$entry"
+		done
+	fi
 }
 
 function build () (
