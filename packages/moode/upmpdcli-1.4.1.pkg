@@ -4,4 +4,4 @@ PATCHES=upmpdcli-makefile.patch
 BUILD_PROCESS=configmake
 # CONF_FLAGS=""
 INST_CMD=install-strip
-PKG_DEPS="moode/libupnpp-0.17.0 raspbian/libmicrohttpd_0.9.62-1 raspbian/libjsoncpp_1.7.4-3"
+PKG_DEPS="moode/libupnpp-0.17.0 raspbian/libmicrohttpd_0.9.62-1 raspbian/libjsoncpp_1.7.4-3 python/bottle-0.12.16"
