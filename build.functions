@@ -674,13 +674,16 @@ function pythonbuild () {
 }
 
 function install_gcclibs () {
-	set -x
 	settoolflags
 	local GCCSEARCHLIBS="$(arm-linux-gnueabihf-gcc -x cpp -print-search-dirs | grep 'libraries:' | sed 's/^libraries: =//;s/\:/ /g')"
 	local GCCCXXLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 -type f \( -name 'libstdc++.so.*' ! -name 'libstdc++.so.*-*.py' \)  -exec realpath {} \; 2>/dev/null | sort | tail -n1)
-	cp ${GCCCXXLIB} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 	local GCCCXXLIBNAME=$(basename ${GCCCXXLIB})
 	local BASEGCCCXXLIBNAME=$(echo ${GCCCXXLIBNAME} | cut -d'.' -f1,2,3)
-	ln -s ${GCCCXXLIBNAME} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/${BASEGCCCXXLIBNAME}
-	set +x
+	echo "GCCSEARCHLIBS:	${GCCSEARCHLIBS}" > ${LOG_PATH}/gcclibs.log
+	echo "GCCCXXLIB:		${GCCCXXLIB}" >> ${LOG_PATH}/gcclibs.log
+	echo "GCCCXXLIBNAME:	${GCCCXXLIBNAME}" >> ${LOG_PATH}/gcclibs.log
+	echo "BASEGCCCXXLIBNAME:${BASEGCCCXXLIBNAME}" >> ${LOG_PATH}/gcclibs.log
+	cp -v ${GCCCXXLIB} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} >> ${LOG_PATH}/gcclibs.log 2>&1 &&
+	ln -fs ${GCCCXXLIBNAME} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/${BASEGCCCXXLIBNAME} >> ${LOG_PATH}/gcclibs.log 2>&1
+	return ${?}
 }
