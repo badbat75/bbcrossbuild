@@ -1,6 +1,7 @@
 #!/bin/bash
 
 check_core_functions
+check_build_functions
 
 function cleanproject () {
 #	[ -d "${BIN_PATH}" ] && rm -rf "${BIN_PATH}"
@@ -28,3 +29,46 @@ function zipproject () {
 	fi
 }
 
+function install_gcclibs () {
+	settoolflags
+	local GCCSEARCHLIBS="$(${HARCH:+${HARCH}-}gcc -print-search-dirs | grep 'libraries:' | sed 's/^libraries: =//;s/\:/ /g')"
+	local GCCCXXLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 -type f \( -name 'libstdc++.so.*' ! -name 'libstdc++.so.*-*.py' \)  -exec realpath {} \; 2>/dev/null | sort | tail -n1)
+	local GCCCXXLIBNAME=$(basename ${GCCCXXLIB})
+	local BASEGCCCXXLIBNAME=$(echo ${GCCCXXLIBNAME} | cut -d'.' -f1,2,3)
+	echo -n "Installing ${BASEGCCCXXLIBNAME} library..."
+	echo "GCCSEARCHLIBS: ${GCCSEARCHLIBS}" > ${LOG_PATH}/gcclibs.log
+	echo "GCCCXXLIB: ${GCCCXXLIB}" >> ${LOG_PATH}/gcclibs.log
+	echo "GCCCXXLIBNAME: ${GCCCXXLIBNAME}" >> ${LOG_PATH}/gcclibs.log
+	echo "BASEGCCCXXLIBNAME: ${BASEGCCCXXLIBNAME}" >> ${LOG_PATH}/gcclibs.log
+	cp -v ${GCCCXXLIB} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} >> ${LOG_PATH}/gcclibs.log 2>&1 &&
+	ln -fs ${GCCCXXLIBNAME} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/${BASEGCCCXXLIBNAME} >> ${LOG_PATH}/gcclibs.log 2>&1
+	local BUILD_STATUS=${?}
+	if [ ${BUILD_STATUS} -eq 0 ]
+	then
+		echo "done."
+		echo
+	else
+		echo "fail."
+		echo
+	fi
+	return ${BUILD_STATUS}
+}
+
+function remove_devfiles () {
+	settoolflags
+	echo -n "Removing development files..."
+	rm -rf ${STATUS_PATH} && echo "${STATUS_PATH} removed." &&
+	find ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -type f -name '*.la' -exec rm -f {} \; && echo "Removed .la files in ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}." &&
+	rm -rf ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig && echo "${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig removed." &&
+	rm -rf ${BIN_PATH}${BUILD_INCLUDEDIR} && echo "${BIN_PATH}${BUILD_INCLUDEDIR} removed."
+	local BUILD_STATUS=${?}
+	if [ ${BUILD_STATUS} -eq 0 ]
+	then
+		echo "done."
+		echo
+	else
+		echo "fail."
+		echo
+	fi
+	return ${BUILD_STATUS}
+}

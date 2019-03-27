@@ -1,6 +1,7 @@
 #!/bin/bash
 
 check_core_functions
+check_build_functions
 
 TOOLCHAIN_SRCPATH=${SRC_PATH}/toolchain
 TOOLCHAIN_BLDPATH=${BLD_PATH}/toolchain
