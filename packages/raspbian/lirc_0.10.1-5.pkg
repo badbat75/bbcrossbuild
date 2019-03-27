@@ -1,0 +1,14 @@
+# lirc_0.10.1-5
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/l/lirc/lirc_0.10.1.orig.tar.gz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--enable-uinput --enable-devinput DEVINPUT_HEADER=\${BIN_PATH}\${BUILD_INCLUDEDIR}/linux/input.h"
+INST_CMD=install-strip
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/l/lirc/lirc_0.10.1-5.debian.tar.xz"
+#PATCHES=
+#PKG_DEPS=
+PKG_LDFLAGS="-Wl,--as-needed"
+
+# Build-Depends:  debhelper (>= 11), dh-exec, dh-python, doxygen, expect [!hurd-any], kmod [linux-any], libasound2-dev [linux-any kfreebsd-any], libftdi1-dev,
+#		 libsystemd-dev [linux-any], libudev-dev [linux-any], libusb-1.0-0-dev [!kfreebsd-any], libusb-dev[!kfreebsd-any], libx11-dev, man2html-base,
+#		 pkg-config, portaudio19-dev, python3-dev (>= 3.5), python3-setuptools, python3-yaml, rdfind, socat [!hurd-any], systemd [linux-any], xsltproc
+

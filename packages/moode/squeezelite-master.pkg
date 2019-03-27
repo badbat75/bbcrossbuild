@@ -2,8 +2,8 @@
 PKG_URL="https://github.com/ralph-irving/squeezelite/archive/master.tar.gz"
 PATCHES=squeezelite-makefile.patch
 BUILD_PROCESS=simplemake
-INST_CMD=install
-PKG_DEPS=
-PKG_CFLAGS="-fPIC -s"
-PKG_LDFLAGS="-s -lasound -lpthread -lm -ldl -lrt -lwiringPi"
-PKG_MAKEVARS="PREFIX=/usr EXECUTABLE=squeezelite -f Makefile.rpi"
+INST_CMD=install-strip
+PKG_DEPS=""
+PKG_CFLAGS="-DRESAMPLE -DFFMPEG -DVISEXPORT -DDSD -DGPIO -DRPI -fPIC"
+PKG_LDFLAGS="-lasound -lpthread -lm -ldl -lrt -lwiringPi"
+PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} EXECUTABLE=squeezelite -f Makefile.rpi"

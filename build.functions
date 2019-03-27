@@ -35,7 +35,7 @@ function settoolflags () {
 	COMMON_CFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
 	COMMON_CXXFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
 	COMMON_CPPFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
-	COMMON_LDFLAGS="-fuse-ld=gold -Wl,-rpath-link,${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -L${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
+	COMMON_LDFLAGS="-Wl,-rpath-link,${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -L${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
 	COMMON_PKG_CONFIG_LIBDIR="${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig:${BIN_PATH}${BUILD_PREFIX}/share/pkgconfig"
 	export MAKEFLAGS="-j${NPROCS} ${MAKEFLAGS:+ ${MAKEFLAGS}}"
 	# Construct build tools flags
@@ -62,10 +62,6 @@ function settoolflags () {
 		do
 			COMMON_LDFLAGS+=" -L${DISTOS_PATH}$entry -Wl,-rpath-link,${DISTOS_PATH}$entry"
 		done
-	fi
-	if [ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libstdc++.so.6 ]
-	then
-		COMMON_LDFLAGS+=" ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libstdc++.so.6"
 	fi
 }
 
@@ -324,12 +320,15 @@ function configmake () {
 	OBJDUMP=${HARCH:+${HARCH}-}objdump \
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
-	PATH=${PATH}:${BIN_PATH}${BUILD_PREFIX}/bin \
+	PATH=${PATH}:${BIN_PATH}${BUILD_PREFIX}/bin${DISTOS_PATH:+:${DISTOS_PATH}/usr/bin} \
 	${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS} &&
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} &&
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD:-install}
 	local BUILD_STATUS=${?}
-	forge_la_libs ${PWD}
+	if [ ${BUILD_STATUS} -eq 0 ]
+	then
+		forge_la_libs ${PWD}
+	fi
 	cd ${BB_HOME}
 	set +x
 	return ${BUILD_STATUS}
@@ -358,9 +357,13 @@ function simplemake () {
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} &&
+	STRIP=${HARCH:+${HARCH}-}strip \
 	make ${PKG_MAKEVARS} DESTDIR=${BIN_PATH} V=${MAKEVERBOSE:-0} ${INST_CMD}
 	local BUILD_STATUS=${?}
-	forge_la_libs ${PWD}
+	if [ ${BUILD_STATUS} -eq 0 ]
+	then
+		forge_la_libs ${PWD}
+	fi
 	cd ${BB_HOME}
 	set +x
 	return ${BUILD_STATUS}
@@ -413,7 +416,10 @@ function cmakemake () {
 	make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0} &&
 	make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD}
 	local BUILD_STATUS=${?}
-	forge_la_libs ${PWD}
+	if [ ${BUILD_STATUS} -eq 0 ]
+	then
+		forge_la_libs ${PWD}
+	fi
 	cd ${BB_HOME}
 	set +x
 	return ${BUILD_STATUS}
@@ -496,7 +502,10 @@ function mesonninja () {
 	ninja ${NINJA_FLAGS} -C ${BLD_PATH}/${PKG_NAME} &&
 	DESTDIR=${BIN_PATH} ninja ${NINJA_FLAGS} -C ${BLD_PATH}/${PKG_NAME} install
 	local BUILD_STATUS=${?}
-	forge_la_libs ${PWD}
+	if [ ${BUILD_STATUS} -eq 0 ]
+	then
+		forge_la_libs ${PWD}
+	fi
 	cd ${BB_HOME}
 	return ${BUILD_STATUS}
 }
