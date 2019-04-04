@@ -1,6 +1,6 @@
 # libnl3_3.2.27-2
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libn/libnl3/libnl3_3.2.27.orig.tar.gz"
 BUILD_PROCESS=configmake
-# CONF_FLAGS=
+CONF_FLAGS="--disable-debug --enable-cli=no"
 INST_CMD=install-strip
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libn/libnl3/libnl3_3.2.27-2.debian.tar.xz"

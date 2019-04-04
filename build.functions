@@ -19,8 +19,9 @@ function settoolflags () {
 	fi
 	MULTI_ARCH=${MULTIARCH:-1}
 	export BUILD_PREFIX="${BUILD_PREFIX:-/usr}"
-	export BUILD_INCLUDEDIR="${BUILD_INCLUDEDIR:-${BUILD_PREFIX}/include}"
-	export BUILD_LIBDIR="${BUILD_LIBDIR:-${BUILD_PREFIX}/lib}"
+	export BUILD_EXECPREFIX="${BUILD_EXECPREFIX:-${BUILD_PREFIX}}"
+	export BUILD_INCLUDEDIR="${BUILD_INCLUDEDIR:-$(readlink -m ${BUILD_PREFIX}/include)}"
+	export BUILD_LIBDIR="${BUILD_LIBDIR:-$(readlink -m ${BUILD_EXECPREFIX}/lib)}"
 	export BUILD_SYSCONFDIR="${BUILD_SYSCONFDIR:-/etc}"
 	export BUILD_LOCALSTATEDIR="${BUILD_LOCALSTATEDIR:-/var}"
 	if [ ${MULTI_ARCH} -eq 1 ]
@@ -32,11 +33,13 @@ function settoolflags () {
 
 	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH} }${HMCPU:+-mtune=${HMCPU}}"
 	PLATFORM_RUSTFLAGS="${HMARCH_RUST:+-C target-feature=${HMARCH_RUST} }${HMCPU:+-C target-cpu=${HMCPU}}"
-	COMMON_CFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
-	COMMON_CXXFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
-	COMMON_CPPFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
-	COMMON_LDFLAGS="-Wl,-rpath-link,${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -L${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
-	COMMON_PKG_CONFIG_LIBDIR="${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig:${BIN_PATH}${BUILD_PREFIX}/share/pkgconfig"
+	COMMON_CFLAGS="-I${BIN_PATH}/usr/include"
+	COMMON_CXXFLAGS="-I${BIN_PATH}/usr/include"
+	COMMON_CPPFLAGS="-I${BIN_PATH}/usr/include"
+	COMMON_LDFLAGS="-Wl,-rpath-link,${BIN_PATH}/lib${BUILD_LIBSUFFIX} -L${BIN_PATH}/lib${BUILD_LIBSUFFIX}"
+	COMMON_LDFLAGS+=" -Wl,-rpath-link,${BIN_PATH}/usr/lib${BUILD_LIBSUFFIX} -L${BIN_PATH}/usr/lib${BUILD_LIBSUFFIX}"
+	COMMON_PKG_CONFIG_LIBDIR="${BIN_PATH}/lib${BUILD_LIBSUFFIX}/pkgconfig"
+	COMMON_PKG_CONFIG_LIBDIR+=":${BIN_PATH}/usr/lib${BUILD_LIBSUFFIX}/pkgconfig:${BIN_PATH}/usr/share/pkgconfig"
 	export MAKEFLAGS="-j${NPROCS} ${MAKEFLAGS:+ ${MAKEFLAGS}}"
 	# Construct build tools flags
 	# Build Include search paths
@@ -289,7 +292,7 @@ function configmake () {
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 	then
-		CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} ${CONF_FLAGS}"
+		CONF_FLAGS="--prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} ${CONF_FLAGS}"
 		CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH} ${CONF_FLAGS}"
 		if [ ${BUILD_LIBSHARED} -eq 1 ]
 		then
@@ -320,10 +323,10 @@ function configmake () {
 	OBJDUMP=${HARCH:+${HARCH}-}objdump \
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
-	PATH=${PATH}:${BIN_PATH}${BUILD_PREFIX}/bin${DISTOS_PATH:+:${DISTOS_PATH}/usr/bin} \
+	PATH=${PATH}:${BIN_PATH}${BUILD_EXECPREFIX}/bin${DISTOS_PATH:+:${DISTOS_PATH}/usr/bin} \
 	${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS} &&
-	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} &&
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD:-install}
+	##make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} &&
 	local BUILD_STATUS=${?}
 	if [ ${BUILD_STATUS} -eq 0 ]
 	then
@@ -445,7 +448,7 @@ function mesonninja () {
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 		then
-			CONF_FLAGS+=" --prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR}"
+			CONF_FLAGS+=" --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR}"
 			if [ ${BUILD_LIBSHARED} -eq 0 ] && [ ${BUILD_LIBSTATIC} -eq 1 ]
 			then
 				CONF_FLAGS+=" --default-library=static"
@@ -663,7 +666,7 @@ function pythonbuild () {
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 	then
-		CONF_FLAGS+=" --prefix=${BUILD_PREFIX}"
+		CONF_FLAGS+=" --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX}"
 		if [ -f ${DISTOS_PATH}/etc/debian_version ]
 		then
 			CONF_FLAGS+=" --install-lib=${BUILD_LIBDIR}/python${PYTHONBINVER}/dist-packages"
