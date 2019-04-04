@@ -1,7 +1,7 @@
 # recoll-1.25.9
 PKG_URL="https://www.lesbonscomptes.com/recoll/recoll-1.25.9.tar.gz"
 AUTOCONF=0
-#PATCHES="recoll-python-bbxb.patch"
+PATCHES="recoll-python-bbxb.patch"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--libdir=\${BUILD_LIBDIR} --enable-recollq --enable-xadump --disable-python-chm --disable-x11mon --disable-qtgui --disable-testmains"
 INST_CMD=install-strip
