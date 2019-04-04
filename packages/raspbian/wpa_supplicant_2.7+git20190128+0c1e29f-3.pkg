@@ -4,7 +4,23 @@ PKG_SRCDIR=wpa_2.7+git20190128+0c1e29f-3
 PKG_CFLAGS="-MMD -Wall -fPIC -I${BIN_PATH}\${BUILD_INCLUDEDIR}/libnl3 -I${BIN_PATH}\${BUILD_INCLUDEDIR}/PCSC"
 PKG_LDFLAGS="-Wl,--as-needed -Wl,--build-id=none"
 BUILD_PROCESS=simplemake
-INST_CMD=install
+INST_CMD=all
 PKG_DEPS="raspbian/wpa_2.7+git20190128+0c1e29f-3 raspbian/libnl3_3.4.0-1 raspbian/pcsc-lite_1.8.24-1"
 PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} INCDIR=\${BUILD_INCLUDEDIR} BINDIR=/sbin -C wpa_supplicant"
-PKG_POSTINST="install --mode=644 -D wpa_supplicant/dbus/dbus-wpa_supplicant.conf \${BIN_PATH}\${BUILD_SYSCONFDIR}/dbus-1/system.d/wpa_supplicant.conf"
+PKG_POSTINST="install --mode=644 -D wpa_supplicant/dbus/dbus-wpa_supplicant.conf \${BIN_PATH}\${BUILD_SYSCONFDIR}/dbus-1/system.d/wpa_supplicant.conf &&
+install --mode=755 -D debian/ifupdown/wpa_action \${BIN_PATH}/sbin/ &&
+install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D ${BLD_PATH}/wpa_supplicant_2.7+git20190128+0c1e29f-3/wpa_supplicant/wpa_cli \${BIN_PATH}/sbin/ &&
+install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D ${BLD_PATH}/wpa_supplicant_2.7+git20190128+0c1e29f-3/wpa_supplicant/wpa_passphrase \${BIN_PATH}/usr/bin/ &&
+install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D ${BLD_PATH}/wpa_supplicant_2.7+git20190128+0c1e29f-3/wpa_supplicant/wpa_supplicant \${BIN_PATH}/sbin/ &&
+mkdir -p \${BIN_PATH}/etc/wpa_supplicant &&
+install --mode=644 -D debian/ifupdown/action_wpa.sh \${BIN_PATH}/etc/wpa_supplicant/ &&
+install --mode=644 -D debian/ifupdown/functions.sh \${BIN_PATH}/etc/wpa_supplicant/ &&
+install --mode=644 -D debian/ifupdown/wpasupplicant/ifupdown.sh \${BIN_PATH}/etc/wpa_supplicant/ &&
+mkdir -p \${BIN_PATH}/usr/share/dbus-1/system-services &&
+install --mode=644 -D ${BLD_PATH}/wpa_supplicant_2.7+git20190128+0c1e29f-3/wpa_supplicant/dbus/fi.*.service \${BIN_PATH}/usr/share/dbus-1/system-services/ &&
+mkdir -p \${BIN_PATH}/usr/lib/pm-utils/sleep.d &&
+install --mode=644 -D wpa_supplicant/examples/60_wpa_supplicant \${BIN_PATH}/usr/lib/pm-utils/sleep.d/ &&
+mkdir -p \${BIN_PATH}/lib/systemd/system &&
+install --mode=644 -D ${BLD_PATH}/wpa_supplicant_2.7+git20190128+0c1e29f-3/wpa_supplicant/systemd/*.service \${BIN_PATH}/lib/systemd/system/ &&
+mkdir -p \${BIN_PATH}/usr/lib/NetworkManager/conf.d/ &&
+install --mode=644 -D debian/NetworkManager/no-mac-addr-change.conf \${BIN_PATH}/usr/lib/NetworkManager/conf.d/"
