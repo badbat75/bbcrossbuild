@@ -56,7 +56,7 @@ function create_sysroot() {
 	then
 		mkdir -p ${DISTOS_PATH}
 		[ ! -d ${LOG_PATH} ] && mkdir ${LOG_PATH}
-		tar xf ${IMG_PATH}/${1} -C${DISTOS_PATH} ./boot ./bin ./lib ./usr/bin ./usr/include ./usr/lib ./usr/share ./usr/local/bin ./usr/local/include ./usr/local/lib ./etc >> ${LOG_PATH}/sysroot.log 2>&1 &&
+		tar xf ${IMG_PATH}/${1} -C${DISTOS_PATH} ./boot ./bin ./lib ./usr/bin ./usr/include ./usr/lib ./usr/share ./usr/local/bin ./usr/local/include ./usr/local/lib ./etc ./opt >> ${LOG_PATH}/sysroot.log 2>&1 &&
 		libraries_relink >> ${LOG_PATH}/sysroot.log 2>&1
 		local STATUS=${?}
 		if [ -f ${DISTOS_PATH}/usr/lib/${HARCH}/pkgconfig/libical.pc ]

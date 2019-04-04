@@ -1,0 +1,9 @@
+# hostapd_2.7+git20190128+0c1e29f-3
+#PKG_URL="http://archive.raspbian.org/raspbian/pool/main/w/wpa/wpa_2.7%2Bgit20190128%2B0c1e29f-3.debian.tar.xz"
+PKG_SRCDIR=wpa_2.7+git20190128+0c1e29f-3
+PKG_CFLAGS="-MMD -Wall -fPIC"
+PKG_LDFLAGS="-Wl,--as-needed -Wl,--build-id=none"
+BUILD_PROCESS=simplemake
+INST_CMD=install
+PKG_DEPS="raspbian/wpa_2.7+git20190128+0c1e29f-3"
+PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} BINDIR=/usr/sbin -C hostapd"
