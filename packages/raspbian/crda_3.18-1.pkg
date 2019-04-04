@@ -2,10 +2,13 @@
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/c/crda/crda_3.18.orig.tar.xz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/c/crda/crda_3.18-1.debian.tar.xz"
 PKG_CFLAGS="-I${BIN_PATH}\${BUILD_INCLUDEDIR}/libnl3"
-PKG_LDFLAGS=
+PKG_LDFLAGS="libreg.so"
 BUILD_PROCESS=simplemake
 PKG_DEPS="raspbian/libnl3_3.4.0-1"
-#PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} LIBDIR=/lib/crda INCDIR=\${BUILD_INCLUDEDIR} LDLIBREG=-Wl,-rpath,/lib/crda REG_BIN=/lib/crda/regulatory.bin USE_OPENSSL=1 RUNTIME_PUBKEY_DIR=/lib/crda/pubkeys RUNTIME_PUBKEY_ONLY=1 all_noverify"
-PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} LIBDIR=/lib/crda INCDIR=\${BUILD_INCLUDEDIR} REG_BIN=/lib/crda/regulatory.bin USE_OPENSSL=1 RUNTIME_PUBKEY_DIR=/lib/crda/pubkeys RUNTIME_PUBKEY_ONLY=1 all_noverify"
+RUNTIME_PUBKEY_DIR=/lib/crda/pubkeys
+PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} LIBDIR=/lib/crda INCDIR=\${BUILD_INCLUDEDIR} LDLIBREG=-Wl,-rpath,/lib/crda REG_BIN=/lib/crda/regulatory.bin USE_OPENSSL=1 RUNTIME_PUBKEY_DIR=${RUNTIME_PUBKEY_DIR} RUNTIME_PUBKEY_ONLY=1 all_noverify"
+PKG_POSTINST="install -D -m 755 debian/setregdomain ${BIN_PATH}/lib/crda/setregdomain &&
+mkdir -m 755 ${BIN_PATH}${RUNTIME_PUBKEY_DIR} &&
+install -m 644 debian/pubkeys/*.pem ${BIN_PATH}${RUNTIME_PUBKEY_DIR}/"
 
 # Note: Build-Depends: debhelper (>= 9), libnl-3-dev (>= 3.2.3-2~) [linux-any], libnl-genl-3-dev (>= 3.2.3-2~) [linux-any], libssl-dev, pkg-config

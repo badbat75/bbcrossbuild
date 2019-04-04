@@ -91,6 +91,8 @@ function build () (
 		PKG_CXXFLAGS \
 		PKG_LDFLAGS \
 		PKG_MAKEVARS \
+		PKG_PREINST \
+		PKG_POSTINST \
 		CARGO_BIN \
 		CARGO_LIB \
 		CARGO_BINLIST \
@@ -156,22 +158,44 @@ function build () (
 		rm -rf ${BLD_PATH}/${PKG_NAME}
 	fi
 	settoolflags
-	${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-	if [ ${?} -eq 0 ]
+	if [ ! -z "${PKG_PREINST}" ]
 	then
-		if [ ! -d ${STATUS_PATH} ]
+		cd ${PKG_SRCPATH}
+		eval "set -x && ${PKG_PREINST} && set +x" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		if [ ${?} -ne 0 ]
 		then
-			mkdir -p ${STATUS_PATH}
+			echo "Fail."
+			echo
+			return 1
 		fi
-		md5sum ${PKG_PATH}/${1}.pkg > ${STATUS_PATH}/${PKG_NAME}
-		echo "Done."
-		echo
-		return 0
-	else
+	fi
+	${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+	if [ ${?} -ne 0 ]
+	then
 		echo "Fail."
 		echo
 		return 1
 	fi
+
+	if [ ! -z "${PKG_POSTINST}" ]
+	then
+		cd ${PKG_SRCPATH}
+		eval "set -x && ${PKG_POSTINST} && set +x" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		if [ ${?} -ne 0 ]
+		then
+			echo "Fail."
+			echo
+			return 1
+		fi
+	fi
+	if [ ! -d ${STATUS_PATH} ]
+	then
+		mkdir -p ${STATUS_PATH}
+	fi
+	md5sum ${PKG_PATH}/${1}.pkg > ${STATUS_PATH}/${PKG_NAME}
+	echo "Done."
+	echo
+	return 0
 )
 
 function downloadsources () {
@@ -217,13 +241,13 @@ function preparesources () {
 	if [ "x${PATCHDEB}" != "x" ]
 	then
 		echo -n "Retrieve DEB patch info..."
-		mkdir ${PKG_SRCPATH}/debpatches
-		curl -Ls "${PATCHDEB}" | tar xfJ - -C${PKG_SRCPATH}/debpatches --strip-components 2 debian/patches >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
+		mkdir ${PKG_SRCPATH}/debian
+		curl -Ls "${PATCHDEB}" | tar xfJ - -C${PKG_SRCPATH}/debian --strip-components 1 debian >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
 			echo "Done." || echo "Fail."
-		for scanpatch in $(cat ${PKG_SRCPATH}/debpatches/series)
+		for scanpatch in $(cat ${PKG_SRCPATH}/debian/patches/series)
 		do
 			echo -n "Apply $scanpatch patch..."
-			patch -p1 < ${PKG_SRCPATH}/debpatches/${scanpatch} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
+			patch -p1 < ${PKG_SRCPATH}/debian/patches/${scanpatch} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
 						echo "Done." || echo "Fail."
 		done
 	fi
