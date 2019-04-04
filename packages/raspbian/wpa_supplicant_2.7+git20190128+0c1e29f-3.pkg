@@ -5,5 +5,5 @@ PKG_CFLAGS="-MMD -Wall -fPIC -I${BIN_PATH}\${BUILD_INCLUDEDIR}/libnl3 -I${BIN_PA
 PKG_LDFLAGS="-Wl,--as-needed -Wl,--build-id=none"
 BUILD_PROCESS=simplemake
 INST_CMD=install
-PKG_DEPS="raspbian/wpa_2.7+git20190128+0c1e29f-3"
+PKG_DEPS="raspbian/wpa_2.7+git20190128+0c1e29f-3 raspbian/libnl3_3.4.0-1 raspbian/pcsc-lite_1.8.24-1"
 PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} INCDIR=\${BUILD_INCLUDEDIR} BINDIR=/sbin -C wpa_supplicant"

@@ -18,12 +18,13 @@ function settoolflags () {
 		export PKG_CONFIG_ALLOW_CROSS=1
 	fi
 	MULTI_ARCH=${MULTIARCH:-1}
-	export BUILD_PREFIX="${BUILD_PREFIX:-/usr}"
-	export BUILD_EXECPREFIX="${BUILD_EXECPREFIX:-${BUILD_PREFIX}}"
-	export BUILD_INCLUDEDIR="${BUILD_INCLUDEDIR:-$(readlink -m ${BUILD_PREFIX}/include)}"
-	export BUILD_LIBDIR="${BUILD_LIBDIR:-$(readlink -m ${BUILD_EXECPREFIX}/lib)}"
-	export BUILD_SYSCONFDIR="${BUILD_SYSCONFDIR:-/etc}"
-	export BUILD_LOCALSTATEDIR="${BUILD_LOCALSTATEDIR:-/var}"
+	BUILD_PREFIX="${BUILD_PREFIX:-/usr}"
+	BUILD_EXECPREFIX="${BUILD_EXECPREFIX:-${BUILD_PREFIX}}"
+	BUILD_INCLUDEDIR="${BUILD_INCLUDEDIR:-$(readlink -m ${BUILD_PREFIX}/include)}"
+	BUILD_LIBDIR="${BUILD_LIBDIR:-$(readlink -m ${BUILD_EXECPREFIX}/lib)}"
+	BUILD_SYSCONFDIR="${BUILD_SYSCONFDIR:-/etc}"
+	BUILD_LOCALSTATEDIR="${BUILD_LOCALSTATEDIR:-/var}"
+	export BUILD_PREFIX BUILD_EXECPREFIX BUILD_INCLUDEDIR BUILD_LIBDIR BUILD_SYSCONFDIR BUILD_LOCALSTATEDIR
 	if [ ${MULTI_ARCH} -eq 1 ]
 	then
 		export BUILD_LIBSUFFIX="/${HARCH}"
@@ -135,10 +136,6 @@ function build () (
 	if [ ! -d ${BIN_PATH} ]
 	then
 		mkdir -p ${BIN_PATH}
-	fi
-	if [ ! -d ${LOG_PATH} ]
-	then
-		mkdir -p ${LOG_PATH}
 	fi
 	> ${LOG_PATH}/${PKG_NAME}.log
 	if [ ! -d ${PKG_SRCPATH} ]
@@ -363,7 +360,7 @@ function simplemake () {
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
 	STRIP=${HARCH:+${HARCH}-}strip \
-	make ${PKG_MAKEVARS} DESTDIR=${BIN_PATH} V=${MAKEVERBOSE:-0} ${INST_CMD}
+	make ${PKG_MAKEVARS} DESTDIR=${BIN_PATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}
 	local BUILD_STATUS=${?}
 	if [ ${BUILD_STATUS} -eq 0 ]
 	then
@@ -448,7 +445,7 @@ function mesonninja () {
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 		then
-			CONF_FLAGS+=" --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR}"
+			CONF_FLAGS+=" --prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR}"
 			if [ ${BUILD_LIBSHARED} -eq 0 ] && [ ${BUILD_LIBSTATIC} -eq 1 ]
 			then
 				CONF_FLAGS+=" --default-library=static"
