@@ -7,20 +7,38 @@ BUILD_PROCESS=simplemake
 INST_CMD=all
 PKG_DEPS="raspbian/wpa_2.7+git20190128+0c1e29f-3 raspbian/libnl3_3.4.0-1 raspbian/pcsc-lite_1.8.24-1"
 PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} INCDIR=\${BUILD_INCLUDEDIR} BINDIR=/sbin -C wpa_supplicant"
-PKG_POSTINST="install --mode=644 -D wpa_supplicant/dbus/dbus-wpa_supplicant.conf \${BIN_PATH}\${BUILD_SYSCONFDIR}/dbus-1/system.d/wpa_supplicant.conf &&
-install --mode=755 -D debian/ifupdown/wpa_action \${BIN_PATH}/sbin/ &&
-install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D ${BLD_PATH}/wpa_supplicant_2.7+git20190128+0c1e29f-3/wpa_supplicant/wpa_cli \${BIN_PATH}/sbin/ &&
-install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D ${BLD_PATH}/wpa_supplicant_2.7+git20190128+0c1e29f-3/wpa_supplicant/wpa_passphrase \${BIN_PATH}/usr/bin/ &&
-install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D ${BLD_PATH}/wpa_supplicant_2.7+git20190128+0c1e29f-3/wpa_supplicant/wpa_supplicant \${BIN_PATH}/sbin/ &&
-mkdir -p \${BIN_PATH}/etc/wpa_supplicant &&
-install --mode=644 -D debian/ifupdown/action_wpa.sh \${BIN_PATH}/etc/wpa_supplicant/ &&
-install --mode=644 -D debian/ifupdown/functions.sh \${BIN_PATH}/etc/wpa_supplicant/ &&
-install --mode=644 -D debian/ifupdown/wpasupplicant/ifupdown.sh \${BIN_PATH}/etc/wpa_supplicant/ &&
-mkdir -p \${BIN_PATH}/usr/share/dbus-1/system-services &&
-install --mode=644 -D ${BLD_PATH}/wpa_supplicant_2.7+git20190128+0c1e29f-3/wpa_supplicant/dbus/fi.*.service \${BIN_PATH}/usr/share/dbus-1/system-services/ &&
-mkdir -p \${BIN_PATH}/usr/lib/pm-utils/sleep.d &&
-install --mode=644 -D wpa_supplicant/examples/60_wpa_supplicant \${BIN_PATH}/usr/lib/pm-utils/sleep.d/ &&
-mkdir -p \${BIN_PATH}/lib/systemd/system &&
-install --mode=644 -D ${BLD_PATH}/wpa_supplicant_2.7+git20190128+0c1e29f-3/wpa_supplicant/systemd/*.service \${BIN_PATH}/lib/systemd/system/ &&
-mkdir -p \${BIN_PATH}/usr/lib/NetworkManager/conf.d/ &&
-install --mode=644 -D debian/NetworkManager/no-mac-addr-change.conf \${BIN_PATH}/usr/lib/NetworkManager/conf.d/"
+PKG_PREBUILD="cp -v --remove-destination debian/config/wpasupplicant/linux wpa_supplicant/.config"
+PKG_POSTBUILD="( [ ! -d ${BIN_PATH}/etc/wpa_supplicant ] && mkdir -p ${BIN_PATH}/etc/wpa_supplicant || true ) &&
+( [ ! -d ${BIN_PATH}/usr/share/dbus-1/system-services ] && mkdir -p ${BIN_PATH}/usr/share/dbus-1/system-services || true ) &&
+( [ ! -d ${BIN_PATH}/usr/lib/pm-utils/sleep.d ] && mkdir -p ${BIN_PATH}/usr/lib/pm-utils/sleep.d || true ) &&
+( [ ! -d ${BIN_PATH}/lib/systemd/system ] && mkdir -p ${BIN_PATH}/lib/systemd/system || true ) &&
+( [ ! -d ${BIN_PATH}/usr/lib/NetworkManager/conf.d ] && mkdir -p ${BIN_PATH}/usr/lib/NetworkManager/conf.d || true ) &&
+( [ ! -d ${BIN_PATH}/etc/network/if-pre-up.d ] && mkdir -p ${BIN_PATH}/etc/network/if-pre-up.d || true ) &&
+( [ ! -d ${BIN_PATH}/etc/network/if-up.d ] && mkdir -p ${BIN_PATH}/etc/network/if-up.d || true ) &&
+( [ ! -d ${BIN_PATH}/etc/network/if-down.d ] && mkdir -p ${BIN_PATH}/etc/network/if-down.d || true ) &&
+( [ ! -d ${BIN_PATH}/etc/network/if-post-down.d ] && mkdir -p ${BIN_PATH}/etc/network/if-post-down.d || true ) &&
+( [ ! -d ${BIN_PATH}/usr/share/man/man5 ] && mkdir -p ${BIN_PATH}/usr/share/man/man5 || true ) &&
+( [ ! -d ${BIN_PATH}/usr/share/man/man8 ] && mkdir -p ${BIN_PATH}/usr/share/man/man8 || true ) &&
+install --mode=644 -D wpa_supplicant/dbus/dbus-wpa_supplicant.conf ${BIN_PATH}\${BUILD_SYSCONFDIR}/dbus-1/system.d/wpa_supplicant.conf &&
+install --mode=755 -D debian/ifupdown/wpa_action ${BIN_PATH}/sbin/ &&
+install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D wpa_supplicant/wpa_cli ${BIN_PATH}/sbin/ &&
+install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D wpa_supplicant/wpa_passphrase ${BIN_PATH}/usr/bin/ &&
+install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D wpa_supplicant/wpa_supplicant ${BIN_PATH}/sbin/ &&
+install --mode=644 -D debian/ifupdown/action_wpa.sh ${BIN_PATH}/etc/wpa_supplicant/ &&
+install --mode=644 -D debian/ifupdown/functions.sh ${BIN_PATH}/etc/wpa_supplicant/ &&
+install --mode=644 -D debian/ifupdown/wpasupplicant/ifupdown.sh ${BIN_PATH}/etc/wpa_supplicant/ &&
+install --mode=644 -D wpa_supplicant/dbus/fi.*.service ${BIN_PATH}/usr/share/dbus-1/system-services/ &&
+install --mode=644 -D wpa_supplicant/examples/60_wpa_supplicant ${BIN_PATH}/usr/lib/pm-utils/sleep.d/ &&
+install --mode=644 -D wpa_supplicant/systemd/*.service ${BIN_PATH}/lib/systemd/system/ &&
+install --mode=644 -D debian/NetworkManager/no-mac-addr-change.conf ${BIN_PATH}/usr/lib/NetworkManager/conf.d/ &&
+ln -s /etc/wpa_supplicant/ifupdown.sh ${BIN_PATH}/etc/network/if-pre-up.d/wpasupplicant &&
+ln -s /etc/wpa_supplicant/ifupdown.sh ${BIN_PATH}/etc/network/if-up.d/wpasupplicant &&
+ln -s /etc/wpa_supplicant/ifupdown.sh ${BIN_PATH}/etc/network/if-down.d/wpasupplicant &&
+ln -s /etc/wpa_supplicant/ifupdown.sh ${BIN_PATH}/etc/network/if-post-down.d/wpasupplicant &&
+ln -s /etc/wpa_supplicant/action_wpa.sh ${BIN_PATH}/etc/ifplugd/action.d/action_wpa &&
+cp debian/ifupdown/wpa_action.8 ${BIN_PATH}/usr/share/man/man8/ && gzip ${BIN_PATH}/usr/share/man/man8/wpa_action.8 &&
+cp wpa_supplicant/doc/docbook/wpa_background.8 ${BIN_PATH}/usr/share/man/man8/ && gzip ${BIN_PATH}/usr/share/man/man8/wpa_background.8 &&
+cp wpa_supplicant/doc/docbook/wpa_cli.8 ${BIN_PATH}/usr/share/man/man8/ && gzip ${BIN_PATH}/usr/share/man/man8/wpa_cli.8 &&
+cp wpa_supplicant/doc/docbook/wpa_passphrase.8 ${BIN_PATH}/usr/share/man/man8/ && gzip ${BIN_PATH}/usr/share/man/man8/wpa_passphrase.8 &&
+cp wpa_supplicant/doc/docbook/wpa_supplicant.8 ${BIN_PATH}/usr/share/man/man8/ && gzip ${BIN_PATH}/usr/share/man/man8/wpa_supplicant.8 &&
+cp wpa_supplicant/doc/docbook/wpa_supplicant.conf.5 ${BIN_PATH}/usr/share/man/man5/ && gzip ${BIN_PATH}/usr/share/man/man5/wpa_supplicant.conf.5"

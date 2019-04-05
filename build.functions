@@ -91,8 +91,8 @@ function build () (
 		PKG_CXXFLAGS \
 		PKG_LDFLAGS \
 		PKG_MAKEVARS \
-		PKG_PREINST \
-		PKG_POSTINST \
+		PKG_PREBUILD \
+		PKG_POSTBUILD \
 		CARGO_BIN \
 		CARGO_LIB \
 		CARGO_BINLIST \
@@ -131,6 +131,7 @@ function build () (
 	# Build defaults
 	local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_NAME}}
 	local PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
+	local PKG_BLDPATH=${BLD_PATH}/${PKG_NAME}
 	if [ ! -d ${BLD_PATH} ]
 	then
 		mkdir -p ${BLD_PATH}
@@ -153,15 +154,15 @@ function build () (
 		preparesources
 	fi
 	echo -n "Building ${PKG_NAME}..."
-	if [ -d ${BLD_PATH}/${PKG_NAME} ]
+	if [ -d ${PKG_BLDPATH} ]
 	then
-		rm -rf ${BLD_PATH}/${PKG_NAME}
+		rm -rf ${PKG_BLDPATH}
 	fi
 	settoolflags
-	if [ ! -z "${PKG_PREINST}" ]
+	if [ ! -z "${PKG_PREBUILD}" ]
 	then
 		cd ${PKG_SRCPATH}
-		eval "set -x && ${PKG_PREINST} && set +x" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		eval "set -x && ${PKG_PREBUILD} && set +x" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 		if [ ${?} -ne 0 ]
 		then
 			echo "Fail."
@@ -177,10 +178,10 @@ function build () (
 		return 1
 	fi
 
-	if [ ! -z "${PKG_POSTINST}" ]
+	if [ ! -z "${PKG_POSTBUILD}" ]
 	then
-		cd ${PKG_SRCPATH}
-		eval "set -x && ${PKG_POSTINST} && set +x" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		cd ${PKG_BLDPATH}
+		eval "set -x && ${PKG_POSTBUILD} && set +x" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 		if [ ${?} -ne 0 ]
 		then
 			echo "Fail."
@@ -305,11 +306,11 @@ function configmake () {
 	fi
 	if [ ${CONF_COPYSRC:-0} -eq 1 ] 
 	then
-		cp -rp ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME}
+		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 	else
-		mkdir -p ${BLD_PATH}/${PKG_NAME}${CONF_PATH:+/${CONF_PATH}}
+		mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 	fi
-	cd ${BLD_PATH}/${PKG_NAME}${CONF_PATH:+/${CONF_PATH}}
+	cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 	then
@@ -360,8 +361,8 @@ function configmake () {
 
 function simplemake () {
 	set -x
-	cp -rp ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME}
-	cd ${BLD_PATH}/${PKG_NAME}
+	cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+	cd ${PKG_BLDPATH}
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 	CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc ${SYSROOT_CFLAGS}" \
@@ -397,8 +398,8 @@ function simplemake () {
 
 function cmakemake () {
 	set -x
-	mkdir -p ${BLD_PATH}/${PKG_NAME}
-	cd ${BLD_PATH}/${PKG_NAME}
+	mkdir -p ${PKG_BLDPATH}
+	cd ${PKG_BLDPATH}
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	if [ ${BUILD_LIBSHARED} -eq 1 ]
 	then
@@ -518,15 +519,15 @@ function mesonninja () {
 			cpp_link_args = [${CPP_LINK_ARGS}]
 		EOF
 	}
-	mkdir -p ${BLD_PATH}/${PKG_NAME}
-	cd ${BLD_PATH}/${PKG_NAME}
+	mkdir -p ${PKG_BLDPATH}
+	cd ${PKG_BLDPATH}
 	local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n '-v')"
 	createmesoncross
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
-	meson ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME} --buildtype=release --strip -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS} &&
-	ninja ${NINJA_FLAGS} -C ${BLD_PATH}/${PKG_NAME} &&
-	DESTDIR=${BIN_PATH} ninja ${NINJA_FLAGS} -C ${BLD_PATH}/${PKG_NAME} install
+	meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release --strip -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS} &&
+	ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH} &&
+	DESTDIR=${BIN_PATH} ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH} install
 	local BUILD_STATUS=${?}
 	if [ ${BUILD_STATUS} -eq 0 ]
 	then
@@ -537,8 +538,8 @@ function mesonninja () {
 }
 
 function cargobuild () {
-	cp -rp ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME}
-	cd ${BLD_PATH}/${PKG_NAME}
+	cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+	cd ${PKG_BLDPATH}
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -C opt-level=${OPTLEVEL}}"
 	[ ${CARGO_STRIP:-0} -eq 1 ] && local STRIP_FLAG=-s
 	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_RUSTFLAGS+=" -C lto"
@@ -553,7 +554,7 @@ function cargobuild () {
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
 	RUSTFLAGS="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} \
-		-C linker=${BLD_PATH}/${PKG_NAME}/${HARCH:+${HARCH}-}gcc" \
+		-C linker=${PKG_BLDPATH}/${HARCH:+${HARCH}-}gcc" \
 		cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}
 	local BUILD_STATUS=${?}
 	if [ ${BUILD_STATUS} -eq 0 ]
@@ -608,8 +609,8 @@ function kernelbuild () {
 		return ${STATUS}
 	}
 	set -x
-	cp -rp ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME}
-	cd ${BLD_PATH}/${PKG_NAME}
+	cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+	cd ${PKG_BLDPATH}
 	KERN_VER=$(make kernelversion)
 	make ${HM:+ARCH=${HM}} ${HARCH:+CROSS_COMPILE=${HARCH}-} ${KERN_DEFCONFIG} .config
 	if [ "x${CONF_FLAGS}" != "x" ]
@@ -675,8 +676,8 @@ function kernelbuild () {
 
 function pythonbuild () {
 	set -x
-	cp -rp ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME}
-	cd ${BLD_PATH}/${PKG_NAME}
+	cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+	cd ${PKG_BLDPATH}
 	local PYTHONBINVER=$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)
 	if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBINVER}m ]
 	then
