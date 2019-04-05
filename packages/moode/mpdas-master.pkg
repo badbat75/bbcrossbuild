@@ -5,7 +5,7 @@ BUILD_PROCESS=simplemake
 INST_CMD=all
 PKG_DEPS=
 PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} MANPREFIX=\${BUILD_PREFIX}/share"
-PKG_POSTBUILD="install -d ${BIN_DIR}\${BUILD_PREFIX}/bin &&
-install -d ${BIN_DIR}\${BUILD_PREFIX}/share/man/man1 &&
-install -m 755 -s --strip-program=${HARCH:+${HARCH}-}strip mpdas ${BIN_DIR}\${BUILD_PREFIX}/bin &&
-install -m 644 mpdas.1 ${BIN_DIR}\${BUILD_PREFIX}/share/man/man1/mpdas.1"
+PKG_POSTBUILD="install -d ${BIN_PATH}\${BUILD_PREFIX}/bin &&
+install -d ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1 &&
+install -m 755 -s --strip-program=${HARCH:+${HARCH}-}strip mpdas ${BIN_PATH}\${BUILD_PREFIX}/bin &&
+install -m 644 mpdas.1 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1/mpdas.1"
