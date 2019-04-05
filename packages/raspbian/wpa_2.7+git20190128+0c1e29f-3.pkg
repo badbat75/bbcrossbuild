@@ -4,4 +4,4 @@ PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/w/wpa/wpa_2.7%2Bgit2019
 BUILD_PROCESS=downloadonly
 AUTOCONF=0
 #PKG_DEPS="raspbian/libnl3_3.2.27-2"
-PATCHES="wpa2_config_getrandom.patch"
+PATCHES="wpa2_getrandom.patch"

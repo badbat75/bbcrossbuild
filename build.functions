@@ -18,11 +18,13 @@ function settoolflags () {
 		export PKG_CONFIG_ALLOW_CROSS=1
 	fi
 	MULTI_ARCH=${MULTIARCH:-1}
-	export BUILD_PREFIX="${BUILD_PREFIX:-/usr}"
-	export BUILD_INCLUDEDIR="${BUILD_INCLUDEDIR:-${BUILD_PREFIX}/include}"
-	export BUILD_LIBDIR="${BUILD_LIBDIR:-${BUILD_PREFIX}/lib}"
-	export BUILD_SYSCONFDIR="${BUILD_SYSCONFDIR:-/etc}"
-	export BUILD_LOCALSTATEDIR="${BUILD_LOCALSTATEDIR:-/var}"
+	BUILD_PREFIX="${BUILD_PREFIX:-/usr}"
+	BUILD_EXECPREFIX="${BUILD_EXECPREFIX:-${BUILD_PREFIX}}"
+	BUILD_INCLUDEDIR="${BUILD_INCLUDEDIR:-$(readlink -m ${BUILD_PREFIX}/include)}"
+	BUILD_LIBDIR="${BUILD_LIBDIR:-$(readlink -m ${BUILD_EXECPREFIX}/lib)}"
+	BUILD_SYSCONFDIR="${BUILD_SYSCONFDIR:-/etc}"
+	BUILD_LOCALSTATEDIR="${BUILD_LOCALSTATEDIR:-/var}"
+	export BUILD_PREFIX BUILD_EXECPREFIX BUILD_INCLUDEDIR BUILD_LIBDIR BUILD_SYSCONFDIR BUILD_LOCALSTATEDIR
 	if [ ${MULTI_ARCH} -eq 1 ]
 	then
 		export BUILD_LIBSUFFIX="/${HARCH}"
@@ -32,11 +34,13 @@ function settoolflags () {
 
 	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH} }${HMCPU:+-mtune=${HMCPU}}"
 	PLATFORM_RUSTFLAGS="${HMARCH_RUST:+-C target-feature=${HMARCH_RUST} }${HMCPU:+-C target-cpu=${HMCPU}}"
-	COMMON_CFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
-	COMMON_CXXFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
-	COMMON_CPPFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
-	COMMON_LDFLAGS="-Wl,-rpath-link,${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -L${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
-	COMMON_PKG_CONFIG_LIBDIR="${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig:${BIN_PATH}${BUILD_PREFIX}/share/pkgconfig"
+	COMMON_CFLAGS="-I${BIN_PATH}/usr/include"
+	COMMON_CXXFLAGS="-I${BIN_PATH}/usr/include"
+	COMMON_CPPFLAGS="-I${BIN_PATH}/usr/include"
+	COMMON_LDFLAGS="-Wl,-rpath-link,${BIN_PATH}/lib${BUILD_LIBSUFFIX} -L${BIN_PATH}/lib${BUILD_LIBSUFFIX}"
+	COMMON_LDFLAGS+=" -Wl,-rpath-link,${BIN_PATH}/usr/lib${BUILD_LIBSUFFIX} -L${BIN_PATH}/usr/lib${BUILD_LIBSUFFIX}"
+	COMMON_PKG_CONFIG_LIBDIR="${BIN_PATH}/lib${BUILD_LIBSUFFIX}/pkgconfig"
+	COMMON_PKG_CONFIG_LIBDIR+=":${BIN_PATH}/usr/lib${BUILD_LIBSUFFIX}/pkgconfig:${BIN_PATH}/usr/share/pkgconfig"
 	export MAKEFLAGS="-j${NPROCS} ${MAKEFLAGS:+ ${MAKEFLAGS}}"
 	# Construct build tools flags
 	# Build Include search paths
@@ -87,6 +91,8 @@ function build () (
 		PKG_CXXFLAGS \
 		PKG_LDFLAGS \
 		PKG_MAKEVARS \
+		PKG_PREBUILD \
+		PKG_POSTBUILD \
 		CARGO_BIN \
 		CARGO_LIB \
 		CARGO_BINLIST \
@@ -125,6 +131,7 @@ function build () (
 	# Build defaults
 	local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_NAME}}
 	local PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
+	local PKG_BLDPATH=${BLD_PATH}/${PKG_NAME}
 	if [ ! -d ${BLD_PATH} ]
 	then
 		mkdir -p ${BLD_PATH}
@@ -132,10 +139,6 @@ function build () (
 	if [ ! -d ${BIN_PATH} ]
 	then
 		mkdir -p ${BIN_PATH}
-	fi
-	if [ ! -d ${LOG_PATH} ]
-	then
-		mkdir -p ${LOG_PATH}
 	fi
 	> ${LOG_PATH}/${PKG_NAME}.log
 	if [ ! -d ${PKG_SRCPATH} ]
@@ -151,27 +154,49 @@ function build () (
 		preparesources
 	fi
 	echo -n "Building ${PKG_NAME}..."
-	if [ -d ${BLD_PATH}/${PKG_NAME} ]
+	if [ -d ${PKG_BLDPATH} ]
 	then
-		rm -rf ${BLD_PATH}/${PKG_NAME}
+		rm -rf ${PKG_BLDPATH}
 	fi
 	settoolflags
-	${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-	if [ ${?} -eq 0 ]
+	if [ ! -z "${PKG_PREBUILD}" ]
 	then
-		if [ ! -d ${STATUS_PATH} ]
+		cd ${PKG_SRCPATH}
+		eval "set -x && ${PKG_PREBUILD} && set +x" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		if [ ${?} -ne 0 ]
 		then
-			mkdir -p ${STATUS_PATH}
+			echo "Fail."
+			echo
+			return 1
 		fi
-		md5sum ${PKG_PATH}/${1}.pkg > ${STATUS_PATH}/${PKG_NAME}
-		echo "Done."
-		echo
-		return 0
-	else
+	fi
+	${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+	if [ ${?} -ne 0 ]
+	then
 		echo "Fail."
 		echo
 		return 1
 	fi
+
+	if [ ! -z "${PKG_POSTBUILD}" ]
+	then
+		cd ${PKG_BLDPATH}
+		eval "set -x && ${PKG_POSTBUILD} && set +x" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		if [ ${?} -ne 0 ]
+		then
+			echo "Fail."
+			echo
+			return 1
+		fi
+	fi
+	if [ ! -d ${STATUS_PATH} ]
+	then
+		mkdir -p ${STATUS_PATH}
+	fi
+	md5sum ${PKG_PATH}/${1}.pkg > ${STATUS_PATH}/${PKG_NAME}
+	echo "Done."
+	echo
+	return 0
 )
 
 function downloadsources () {
@@ -217,13 +242,13 @@ function preparesources () {
 	if [ "x${PATCHDEB}" != "x" ]
 	then
 		echo -n "Retrieve DEB patch info..."
-		mkdir ${PKG_SRCPATH}/debpatches
-		curl -Ls "${PATCHDEB}" | tar xfJ - -C${PKG_SRCPATH}/debpatches --strip-components 2 debian/patches >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
+		mkdir ${PKG_SRCPATH}/debian
+		curl -Ls "${PATCHDEB}" | tar xfJ - -C${PKG_SRCPATH}/debian --strip-components 1 debian >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
 			echo "Done." || echo "Fail."
-		for scanpatch in $(cat ${PKG_SRCPATH}/debpatches/series)
+		for scanpatch in $(cat ${PKG_SRCPATH}/debian/patches/series)
 		do
 			echo -n "Apply $scanpatch patch..."
-			patch -p1 < ${PKG_SRCPATH}/debpatches/${scanpatch} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
+			patch -p1 < ${PKG_SRCPATH}/debian/patches/${scanpatch} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
 						echo "Done." || echo "Fail."
 		done
 	fi
@@ -281,15 +306,15 @@ function configmake () {
 	fi
 	if [ ${CONF_COPYSRC:-0} -eq 1 ] 
 	then
-		cp -rp ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME}
+		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 	else
-		mkdir -p ${BLD_PATH}/${PKG_NAME}${CONF_PATH:+/${CONF_PATH}}
+		mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 	fi
-	cd ${BLD_PATH}/${PKG_NAME}${CONF_PATH:+/${CONF_PATH}}
+	cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 	then
-		CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} ${CONF_FLAGS}"
+		CONF_FLAGS="--prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} ${CONF_FLAGS}"
 		CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH} ${CONF_FLAGS}"
 		if [ ${BUILD_LIBSHARED} -eq 1 ]
 		then
@@ -320,10 +345,10 @@ function configmake () {
 	OBJDUMP=${HARCH:+${HARCH}-}objdump \
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
-	PATH=${PATH}:${BIN_PATH}${BUILD_PREFIX}/bin${DISTOS_PATH:+:${DISTOS_PATH}/usr/bin} \
+	PATH=${PATH}:${BIN_PATH}${BUILD_EXECPREFIX}/bin${DISTOS_PATH:+:${DISTOS_PATH}/usr/bin} \
 	${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS} &&
-	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} &&
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD:-install}
+	##make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} &&
 	local BUILD_STATUS=${?}
 	if [ ${BUILD_STATUS} -eq 0 ]
 	then
@@ -336,8 +361,8 @@ function configmake () {
 
 function simplemake () {
 	set -x
-	cp -rp ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME}
-	cd ${BLD_PATH}/${PKG_NAME}
+	cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+	cd ${PKG_BLDPATH}
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 	CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc ${SYSROOT_CFLAGS}" \
@@ -360,7 +385,7 @@ function simplemake () {
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
 	STRIP=${HARCH:+${HARCH}-}strip \
-	make ${PKG_MAKEVARS} DESTDIR=${BIN_PATH} V=${MAKEVERBOSE:-0} ${INST_CMD}
+	make ${PKG_MAKEVARS} DESTDIR=${BIN_PATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}
 	local BUILD_STATUS=${?}
 	if [ ${BUILD_STATUS} -eq 0 ]
 	then
@@ -373,8 +398,8 @@ function simplemake () {
 
 function cmakemake () {
 	set -x
-	mkdir -p ${BLD_PATH}/${PKG_NAME}
-	cd ${BLD_PATH}/${PKG_NAME}
+	mkdir -p ${PKG_BLDPATH}
+	cd ${PKG_BLDPATH}
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	if [ ${BUILD_LIBSHARED} -eq 1 ]
 	then
@@ -494,15 +519,15 @@ function mesonninja () {
 			cpp_link_args = [${CPP_LINK_ARGS}]
 		EOF
 	}
-	mkdir -p ${BLD_PATH}/${PKG_NAME}
-	cd ${BLD_PATH}/${PKG_NAME}
+	mkdir -p ${PKG_BLDPATH}
+	cd ${PKG_BLDPATH}
 	local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n '-v')"
 	createmesoncross
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
-	meson ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME} --buildtype=release --strip -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS} &&
-	ninja ${NINJA_FLAGS} -C ${BLD_PATH}/${PKG_NAME} &&
-	DESTDIR=${BIN_PATH} ninja ${NINJA_FLAGS} -C ${BLD_PATH}/${PKG_NAME} install
+	meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release --strip -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS} &&
+	ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH} &&
+	DESTDIR=${BIN_PATH} ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH} install
 	local BUILD_STATUS=${?}
 	if [ ${BUILD_STATUS} -eq 0 ]
 	then
@@ -513,8 +538,8 @@ function mesonninja () {
 }
 
 function cargobuild () {
-	cp -rp ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME}
-	cd ${BLD_PATH}/${PKG_NAME}
+	cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+	cd ${PKG_BLDPATH}
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -C opt-level=${OPTLEVEL}}"
 	[ ${CARGO_STRIP:-0} -eq 1 ] && local STRIP_FLAG=-s
 	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_RUSTFLAGS+=" -C lto"
@@ -529,7 +554,7 @@ function cargobuild () {
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
 	RUSTFLAGS="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} \
-		-C linker=${BLD_PATH}/${PKG_NAME}/${HARCH:+${HARCH}-}gcc" \
+		-C linker=${PKG_BLDPATH}/${HARCH:+${HARCH}-}gcc" \
 		cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}
 	local BUILD_STATUS=${?}
 	if [ ${BUILD_STATUS} -eq 0 ]
@@ -584,8 +609,8 @@ function kernelbuild () {
 		return ${STATUS}
 	}
 	set -x
-	cp -rp ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME}
-	cd ${BLD_PATH}/${PKG_NAME}
+	cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+	cd ${PKG_BLDPATH}
 	KERN_VER=$(make kernelversion)
 	make ${HM:+ARCH=${HM}} ${HARCH:+CROSS_COMPILE=${HARCH}-} ${KERN_DEFCONFIG} .config
 	if [ "x${CONF_FLAGS}" != "x" ]
@@ -651,8 +676,8 @@ function kernelbuild () {
 
 function pythonbuild () {
 	set -x
-	cp -rp ${PKG_SRCPATH} ${BLD_PATH}/${PKG_NAME}
-	cd ${BLD_PATH}/${PKG_NAME}
+	cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+	cd ${PKG_BLDPATH}
 	local PYTHONBINVER=$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)
 	if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBINVER}m ]
 	then
@@ -663,7 +688,7 @@ function pythonbuild () {
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 	then
-		CONF_FLAGS+=" --prefix=${BUILD_PREFIX}"
+		CONF_FLAGS+=" --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX}"
 		if [ -f ${DISTOS_PATH}/etc/debian_version ]
 		then
 			CONF_FLAGS+=" --install-lib=${BUILD_LIBDIR}/python${PYTHONBINVER}/dist-packages"

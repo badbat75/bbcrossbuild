@@ -1,0 +1,45 @@
+diff -Naur wpa_2.7+git20190128+0c1e29f-3.orig/src/crypto/random.c wpa_2.7+git20190128+0c1e29f-3/src/crypto/random.c
+--- wpa_2.7+git20190128+0c1e29f-3.orig/src/crypto/random.c	2019-03-29 11:14:58.870045000 +0100
++++ wpa_2.7+git20190128+0c1e29f-3/src/crypto/random.c	2019-04-01 16:30:17.422458400 +0200
+@@ -26,7 +26,8 @@
+ #ifdef __linux__
+ #include <fcntl.h>
+ #ifdef CONFIG_GETRANDOM
+-#include <sys/random.h>
++#include <linux/random.h>
++#include <sys/syscall.h>
+ #endif /* CONFIG_GETRANDOM */
+ #endif /* __linux__ */
+ 
+@@ -238,15 +239,15 @@
+ 	 */
+ 
+ #ifdef CONFIG_GETRANDOM
+-	res = getrandom(dummy_key + dummy_key_avail,
++	res = syscall(SYS_getrandom, dummy_key + dummy_key_avail,
+ 			sizeof(dummy_key) - dummy_key_avail, GRND_NONBLOCK);
+ 	if (res < 0) {
+ 		if (errno == ENOSYS) {
+ 			wpa_printf(MSG_DEBUG,
+-				   "random: getrandom() not supported, falling back to /dev/random");
++				   "random: SYS_getrandom not supported, falling back to /dev/random");
+ 		} else {
+ 			wpa_printf(MSG_INFO,
+-				   "random: no data from getrandom(): %s",
++				   "random: no data from SYS_getrandom: %s",
+ 				   strerror(errno));
+ 			res = 0;
+ 		}
+@@ -442,10 +443,10 @@
+ 	{
+ 		u8 dummy;
+ 
+-		if (getrandom(&dummy, 0, GRND_NONBLOCK) == 0 ||
++		if (syscall(SYS_getrandom, dummy, 0, GRND_NONBLOCK) == 0 ||
+ 		    errno != ENOSYS) {
+ 			wpa_printf(MSG_DEBUG,
+-				   "random: getrandom() support available");
++				   "random: SYS_getrandom support available");
+ 			return;
+ 		}
+ 	}
