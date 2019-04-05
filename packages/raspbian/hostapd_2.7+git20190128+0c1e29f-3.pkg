@@ -17,7 +17,7 @@ PKG_POSTBUILD="( [ ! -d ${BIN_PATH}/usr/sbin ] && mkdir -p ${BIN_PATH}/usr/sbin 
 install --mode=644 -D debian/ifupdown/hostapd/ifupdown.sh ${BIN_PATH}/etc/hostapd/ &&
 install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D hostapd/hostapd ${BIN_PATH}/usr/sbin/ &&
 install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D hostapd/hostapd_cli ${BIN_PATH}/usr/sbin/ &&
-ln -s /etc/hostapd/ifupdown.sh ${BIN_PATH}/etc/network/if-pre-up.d/hostapd &&
-ln -s /etc/hostapd/ifupdown.sh ${BIN_PATH}/etc/network/if-post-down.d/hostapd &&
-cp hostapd/hostapd.8 ${BIN_PATH}/usr/share/man/man8/ && gzip ${BIN_PATH}/usr/share/man/man8/hostapd.8 &&
-cp hostapd/hostapd_cli.1 ${BIN_PATH}/usr/share/man/man5/ && gzip ${BIN_PATH}/usr/share/man/man5/hostapd_cli.1"
+ln -fs /etc/hostapd/ifupdown.sh ${BIN_PATH}/etc/network/if-pre-up.d/hostapd &&
+ln -fs /etc/hostapd/ifupdown.sh ${BIN_PATH}/etc/network/if-post-down.d/hostapd &&
+cp hostapd/hostapd.8 ${BIN_PATH}/usr/share/man/man8/ && gzip -f ${BIN_PATH}/usr/share/man/man8/hostapd.8 &&
+cp hostapd/hostapd_cli.1 ${BIN_PATH}/usr/share/man/man5/ && gzip -f ${BIN_PATH}/usr/share/man/man5/hostapd_cli.1"
