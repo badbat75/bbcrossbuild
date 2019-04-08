@@ -5,7 +5,7 @@ check_build_functions
 
 TOOLCHAIN_SRCPATH=${SRC_PATH}/toolchain
 TOOLCHAIN_BLDPATH=${BLD_PATH}/toolchain
-if [ -d ${TOOLCHAIN_PATH} ]
+if [ ! -d ${TOOLCHAIN_PATH} ]
 then
 	mkdir -p ${TOOLCHAIN_PATH}
 fi

@@ -18,6 +18,7 @@ check_core_functions
 . ${BB_HOME}/build.functions
 . ${BB_HOME}/project.functions
 . ${BB_HOME}/buildenv.functions
+. ${BB_HOME}/data.functions
 
 PRJ=${PRJ_PATH}/${PRJ_NAME}.prj
 if [ ! -f ${PRJ} ]
