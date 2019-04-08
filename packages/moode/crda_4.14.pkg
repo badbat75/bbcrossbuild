@@ -8,6 +8,7 @@ RUNTIME_PUBKEY_DIR=/lib/crda/pubkeys
 PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} LIBDIR=/lib/crda INCDIR=\${BUILD_INCLUDEDIR} LDLIBREG=-Wl,-rpath,/lib/crda REG_BIN=/lib/crda/regulatory.bin USE_OPENSSL=1 RUNTIME_PUBKEY_DIR=${RUNTIME_PUBKEY_DIR} RUNTIME_PUBKEY_ONLY=1 all_noverify"
 PKG_POSTBUILD="install -D -m 755 debian/setregdomain ${BIN_PATH}/lib/crda/setregdomain &&
 install -d {BIN_PATH}${RUNTIME_PUBKEY_DIR} &&
-install -m 644 pubkeys/*.pem ${BIN_PATH}${RUNTIME_PUBKEY_DIR}/"
+install -m 644 pubkeys/*.pem ${BIN_PATH}${RUNTIME_PUBKEY_DIR}/ &&
+install -m 644 ${DATA_PATH}/pki/${PKI_KEY_NAME}.x509.pem ${BIN_PATH}${RUNTIME_PUBKEY_DIR}/${PKI_KEY_NAME}.pem"
 
 # Note: Build-Depends: libnl-3-dev (>= 3.2.3-2~) [linux-any], libnl-genl-3-dev (>= 3.2.3-2~) [linux-any], libssl-dev, pkg-config
