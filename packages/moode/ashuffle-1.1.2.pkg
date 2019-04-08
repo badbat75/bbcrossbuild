@@ -5,3 +5,5 @@ BUILD_PROCESS=simplemake
 INST_CMD=install
 PKG_DEPS=
 PKG_MAKEVARS="prefix=${BIN_PATH}/usr"
+PKG_POSTBUILD="install -d ${BIN_PATH}/usr/local/bin &&
+ln -s /usr/bin/ashuffle ${BIN_PATH}/usr/local/bin/ashuffle"

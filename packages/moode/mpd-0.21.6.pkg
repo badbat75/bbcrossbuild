@@ -1,5 +1,5 @@
-# mpd-0.21.5
-PKG_URL="http://www.musicpd.org/download/mpd/0.21/mpd-0.21.5.tar.xz"
+# mpd-0.21.6
+PKG_URL="http://www.musicpd.org/download/mpd/0.21/mpd-0.21.6.tar.xz"
 BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Dalsa=enabled -Dcurl=enabled -Ddatabase=true -Ddsd=true -Dffmpeg=enabled -Dfaad=enabled -Dflac=enabled \
 	-Dhttpd=true -Did3tag=enabled -Dlame=enabled -Dlibmpdclient=enabled -Dmad=enabled -Dmpg123=enabled \
@@ -10,3 +10,16 @@ CONF_FLAGS="-Dalsa=enabled -Dcurl=enabled -Ddatabase=true -Ddsd=true -Dffmpeg=en
 	-Dsqlite=disabled -Dupnp=disabled -Dwildmidi=disabled -Dzzip=disabled -Ddbus=disabled -Dudisks=disabled"
 INST_CMD=install-strip
 PKG_DEPS="raspbian/libcdio-paranoia-10.2+0.94+2 raspbian/libid3tag_0.15.1b moode/libmpdclient-2.16"
+PKG_POSTBUILD="install -d ${BIN_PATH}/var/lib/mpd
+install -d ${BIN_PATH}/var/lib/mpd/music
+install -d ${BIN_PATH}/var/lib/mpd/playlists
+install -D -m 0644 /dev/null ${BIN_PATH}/var/lib/mpd/state
+install -d ${BIN_PATH}/var/log/mpd
+install -D -m 0644 /dev/null ${BIN_PATH}/var/log/mpd/log
+install -D -m 0666 mpd/mpd.conf.default ${BIN_PATH}/etc/mpd.conf
+install -d ${BIN_PATH}/run/mpd
+install -d ${BIN_PATH}/usr/local/bin
+ln -s /usr/bin/mpd ${BIN_PATH}/usr/local/bin/mpd
+rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.service
+rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.socket
+rm -f ${BIN_PATH}/usr/lib/systemd/user/mpd.service"

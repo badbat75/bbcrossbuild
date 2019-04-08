@@ -15,6 +15,9 @@ install -d ${BIN_PATH}\${BUILD_SYSCONFDIR}/network/if-post-down.d &&
 install -d ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1 &&
 install -d ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8 &&
 install --mode=644 -D debian/ifupdown/hostapd/ifupdown.sh ${BIN_PATH}\${BUILD_SYSCONFDIR}/hostapd/ &&
+install --mode=644 -D debian/hostapd.service ${BIN_PATH}/lib/systemd/system/ &&
+install --mode=644 -D debian/hostapd@.service ${BIN_PATH}/lib/systemd/system/ &&
+install --mode=644 -D debian/hostapd.default ${BIN_PATH}\${BUILD_SYSCONFDIR}/default/hostapd &&
 install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D hostapd/hostapd ${BIN_PATH}\${BUILD_PREFIX}/sbin/ &&
 install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D hostapd/hostapd_cli ${BIN_PATH}\${BUILD_PREFIX}/sbin/ &&
 ln -fs \${BUILD_SYSCONFDIR}/hostapd/ifupdown.sh ${BIN_PATH}\${BUILD_SYSCONFDIR}/network/if-pre-up.d/hostapd &&

@@ -1,0 +1,11 @@
+--- libnl3_3.4.0-1/Makefile.orig	2019-04-23 12:30:32.294651900 +0200
++++ libnl3_3.4.0-1/Makefile.am	2019-04-23 12:32:16.637063700 +0200
+@@ -530,7 +530,7 @@
+ endif
+ 
+ lib_cli_ldflags = \
+-	-module -avoid-version
++	-module -avoid-version -Llib/.libs -Lsrc/lib/.libs -lnl-3 -lnl-route-3 -lnl-cli-3
+ 
+ lib_cli_cls_basic_la_CPPFLAGS       = $(lib_cppflags)
+ lib_cli_cls_basic_la_LDFLAGS        = $(lib_cli_ldflags)

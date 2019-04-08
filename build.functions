@@ -344,7 +344,7 @@ function configmake () {
 	STRIP=${HARCH:+${HARCH}-}strip \
 	OBJDUMP=${HARCH:+${HARCH}-}objdump \
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
+	PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
 	PATH=${PATH}:${BIN_PATH}${BUILD_EXECPREFIX}/bin${DISTOS_PATH:+:${DISTOS_PATH}/usr/bin} \
 	${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS} &&
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD:-install}
@@ -380,10 +380,10 @@ function simplemake () {
 	STRIP=${HARCH:+${HARCH}-}strip \
 	OBJDUMP=${HARCH:+${HARCH}-}objdump \
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
+	PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} &&
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
+	PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
 	STRIP=${HARCH:+${HARCH}-}strip \
 	make ${PKG_MAKEVARS} DESTDIR=${BIN_PATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}
 	local BUILD_STATUS=${?}
@@ -415,7 +415,7 @@ function cmakemake () {
 	fi
 	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
+	PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
 	cmake ${PKG_SRCPATH} \
 		-DCMAKE_BUILD_TYPE="Release" \
 		-DTOOLCHAIN_PREFIX=${HARCH:+${HARCH}-} \
@@ -524,7 +524,7 @@ function mesonninja () {
 	local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n '-v')"
 	createmesoncross
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
+	PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
 	meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release --strip -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS} &&
 	ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH} &&
 	DESTDIR=${BIN_PATH} ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH} install
@@ -552,7 +552,7 @@ function cargobuild () {
 	chmod +x ${HARCH:+${HARCH}-}gcc
 	local CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
 	PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-	PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH} \
+	PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
 	RUSTFLAGS="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} \
 		-C linker=${PKG_BLDPATH}/${HARCH:+${HARCH}-}gcc" \
 		cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}
@@ -651,7 +651,8 @@ function kernelbuild () {
 	make4kern modules &&
 	make ${HM:+ARCH=${HM}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_MOD_PATH=${BIN_PATH} ${INST_CMD} modules_install &&
 	rm ${BIN_PATH}/lib/modules/${KERN_VER}${KERN_EXTRAVERSION}/build &&
-	rm ${BIN_PATH}/lib/modules/${KERN_VER}${KERN_EXTRAVERSION}/source
+	rm ${BIN_PATH}/lib/modules/${KERN_VER}${KERN_EXTRAVERSION}/source &&
+	make ${HM:+ARCH=${HM}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_HDR_PATH=${BIN_PATH}${BUILD_PREFIX} headers_install 
 	local STATUS=${?}
 	if [ ${STATUS} -ne 0 ]
 	then

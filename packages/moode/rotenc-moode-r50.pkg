@@ -1,0 +1,10 @@
+# rotenc-moode-r50
+PKG_URL="https://github.com/moode-player/moode/archive/r50prod.tar.gz"
+PKG_SRCDIR=moode-r50
+PATCHES="rotenc-makefile.patch"
+BUILD_PROCESS=simplemake
+INST_CMD=install
+PKG_DEPS="moode/moode-r50 moode/wiringpi-master"
+PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} -C other/rotenc"
+PKG_POSTBUILD="install -d ${BIN_PATH}/usr/local/bin &&
+ln -s /usr/bin/rotenc ${BIN_PATH}/usr/local/bin/rotenc"

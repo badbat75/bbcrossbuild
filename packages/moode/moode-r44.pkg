@@ -1,5 +1,0 @@
-# moode-r44
-PKG_URL="https://github.com/moode-player/moode/archive/r44prod.tar.gz"
-PKG_SRCDIR=moode-r44
-PATCHES="rotenc-makefile.patch"
-BUILD_PROCESS=downloadonly

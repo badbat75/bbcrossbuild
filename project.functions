@@ -3,19 +3,23 @@
 check_core_functions
 check_build_functions
 
-function cleanproject () {
-#	[ -d "${BIN_PATH}" ] && rm -rf "${BIN_PATH}"
-	[ -f "${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.tar.xz" ] && rm -f ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.tar.xz
+function clean_project () {
+	[ -d "${BIN_PATH}" ] && rm -rf "${BIN_PATH}"
+	[ -d "${STATUS_PATH}" ] && rm -rf "${STATUS_PATH}"
+ 	[ -f "${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.tar.xz" ] && rm -f ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.tar.xz
 }
 
-function rootproject () {
+function root_project () {
 	cd ${BIN_PATH}
-	sudo chown -R root:root *
+	sudo find -gid $(id -g) -exec chgrp -h root {} \;
+	sudo find -uid $(id -u) -exec chown -h root {} \;
+	#sudo chown -R root:root *
 	cd ${BB_HOME}
 }
 
-function zipproject () {
+function zip_project () {
 	cd ${BIN_PATH}
+	[ -f ../${PRJ_NAME}.tar.xz ] && rm -f ../${PRJ_NAME}.tar.xz
 	tar cf ../${PRJ_NAME}.tar --owner=0 --group=0 . &&
 	cd ${DATA_PATH}/${PRJ_NAME}
 	xz -T0 ${PRJ_NAME}.tar
@@ -27,6 +31,40 @@ function zipproject () {
 	#	else
 	#	rm -rf ${BIN_PATH}
 	fi
+}
+
+function create_selfextracting_archive () {
+	zip_project
+	cat >${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx <<-EOF
+		#!/bin/sh -ex
+		echo ""
+		echo "Self Extracting Installer"
+		echo ""
+
+		ARCHIVE=\`awk '/^__ARCHIVE_BELOW__/ {print NR + 1; exit 0; }' \$0\`
+
+	EOF
+	if [ -f ${USERDATA_PATH}/pre.sfx ]
+	then
+			cat ${USERDATA_PATH}/pre.sfx >> ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx
+	fi
+	cat >>${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx <<-EOF
+
+		tail -n+\$ARCHIVE \$0 | tar xJf - -C /
+
+	EOF
+	if [ -f ${USERDATA_PATH}/post.sfx ]
+	then
+			cat ${USERDATA_PATH}/post.sfx >> ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx
+	fi
+	cat >>${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx <<-EOF
+
+		exit 0
+
+		__ARCHIVE_BELOW__
+	EOF
+	cat ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.tar.xz >> ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx
+	chmod +x ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx
 }
 
 function install_gcclibs () {
@@ -57,7 +95,7 @@ function install_gcclibs () {
 function remove_devfiles () {
 	settoolflags
 	echo -n "Removing development files..."
-	rm -rf ${STATUS_PATH} && echo "${STATUS_PATH} removed." &&
+	#rm -rf ${STATUS_PATH} && echo "${STATUS_PATH} removed." &&
 	find ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -type f -name '*.la' -exec rm -f {} \; && echo "Removed .la files in ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}." &&
 	rm -rf ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig && echo "${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig removed." &&
 	rm -rf ${BIN_PATH}${BUILD_INCLUDEDIR} && echo "${BIN_PATH}${BUILD_INCLUDEDIR} removed."

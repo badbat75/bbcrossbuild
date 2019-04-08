@@ -1,0 +1,13 @@
+# hostapd_2.8
+PKG_SRCDIR=wpa_2.8
+PKG_CFLAGS="-fPIC -I${BIN_PATH}\${BUILD_INCLUDEDIR}/libnl3"
+#PKG_LDFLAGS="-Wl,--as-needed -Wl,--build-id=none"
+BUILD_PROCESS=simplemake
+INST_CMD=all
+PKG_DEPS="moode/wpa_2.8 raspbian/libnl3_3.4.0-1"
+PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} INCDIR=\${BUILD_INCLUDEDIR} BINDIR=\${BUILD_PREFIX}/sbin -C hostapd"
+PKG_PREBUILD="cp -v --remove-destination hostapd/defconfig hostapd/.config"
+PKG_POSTBUILD="install -d ${BIN_PATH}\${BUILD_PREFIX}/sbin &&
+install -d ${BIN_PATH}\${BUILD_SYSCONFDIR}/hostapd &&
+install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D hostapd/hostapd ${BIN_PATH}\${BUILD_PREFIX}/sbin/ &&
+install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D hostapd/hostapd_cli ${BIN_PATH}\${BUILD_PREFIX}/sbin/"
