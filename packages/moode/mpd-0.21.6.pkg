@@ -1,0 +1,12 @@
+# mpd-0.21.6
+PKG_URL="http://www.musicpd.org/download/mpd/0.21/mpd-0.21.6.tar.xz"
+BUILD_PROCESS=mesonninja
+CONF_FLAGS="-Dalsa=enabled -Dcurl=enabled -Ddatabase=true -Ddsd=true -Dffmpeg=enabled -Dfaad=enabled -Dflac=enabled \
+	-Dhttpd=true -Did3tag=enabled -Dlame=enabled -Dlibmpdclient=enabled -Dmad=enabled -Dmpg123=enabled \
+	-Dpipe=true -Drecorder=true -Dshout=enabled -Dsoundcloud=enabled -Dsoxr=enabled -Dvorbis=enabled \
+	-Dwave_encoder=true -Dwavpack=enabled -Dzeroconf=avahi -Dao=disabled -Daudiofile=disabled -Dbzip2=disabled \
+	-Dexpat=disabled -Dfluidsynth=disabled -Dgme=disabled -Dipv6=disabled -Djack=disabled -Dlibsamplerate=disabled \
+	-Dnfs=disabled -Doss=disabled -Dpulse=disabled -Dsidplay=disabled -Dsmbclient=disabled -Dsndfile=disabled \
+	-Dsqlite=disabled -Dupnp=disabled -Dwildmidi=disabled -Dzzip=disabled -Ddbus=disabled -Dudisks=disabled"
+INST_CMD=install-strip
+PKG_DEPS="raspbian/libcdio-paranoia-10.2+0.94+2 raspbian/libid3tag_0.15.1b moode/libmpdclient-2.16"
