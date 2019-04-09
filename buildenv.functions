@@ -159,7 +159,7 @@ function setup_python () {
 		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
 		CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}" \
 		LDFLAGS="${SYSROOT_CFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} -lpython${PYTHONBINVER}m" \
-		pip install cython
+		pip install cython &&
 		STATUS=${?}
 		set +x
 		return ${STATUS}

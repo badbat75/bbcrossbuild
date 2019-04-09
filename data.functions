@@ -3,13 +3,13 @@
 check_core_functions
 
 function create_key_sscertificate () {
-if [ ! -d ${DATA_PATH}/pki ]
+if [ ! -d ${USERDATA_PATH}/pki ]
 	then
-		mkdir -p ${DATA_PATH}/pki
+		mkdir -p ${USERDATA_PATH}/pki
 	fi
 	> ${LOG_PATH}/pki.log
-	if [ ! -f ${DATA_PATH}/pki/${PKI_KEY_NAME}.key.pem ] && [ ! -f ${DATA_PATH}/pki/${PKI_KEY_NAME}.x509.pem ]
+	if [ ! -f ${USERDATA_PATH}/pki/${PKI_KEY_NAME}.key.pem ] && [ ! -f ${USERDATA_PATH}/pki/${PKI_KEY_NAME}.x509.pem ]
 	then
-		openssl req -newkey rsa:2048 -nodes -keyout ${DATA_PATH}/pki/${PKI_KEY_NAME}.key.pem -x509 -days 1461 -subj "${PKI_SUBJECT}" -out ${DATA_PATH}/pki/${PKI_KEY_NAME}.x509.pem >> ${LOG_PATH}/pki.log 2>&1
+		openssl req -newkey rsa:2048 -nodes -keyout ${USERDATA_PATH}/pki/${PKI_KEY_NAME}.key.pem -x509 -days 1461 -subj "${PKI_SUBJECT}" -out ${USERDATA_PATH}/pki/${PKI_KEY_NAME}.x509.pem >> ${LOG_PATH}/pki.log 2>&1
 	fi
 }
