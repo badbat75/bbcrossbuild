@@ -141,7 +141,8 @@ function setup_python () {
 		mkdir -p ${TOOLCHAIN_BLDPATH}/bbxb-python-${PYTHONVER}
 		cd ${TOOLCHAIN_BLDPATH}/bbxb-python-${PYTHONVER} &&
 		CC="${CCWRAPPER:+${CCWRAPPER} }gcc" \
-		CFLAGS="-fuse-ld=gold -march=native" \
+		CFLAGS="-pipe -march=native -flto=jobserver -fno-fat-lto-objects -fuse-linker-plugin" \
+		LDFLAGS="-fuse-ld=gold" \
 		${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}/configure --prefix=${TOOLCHAIN_PATH} --enable-shared &&
 		make &&
 		make install &&
@@ -155,12 +156,11 @@ function setup_python () {
 		set -x
 		settoolflags
 		${BUILD_PYTHON} -m crossenv ${HOST_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH} &&
+		CC="${CCWRAPPER:+${CCWRAPPER} }gcc" \
+		CFLAGS="-pipe -march=native -O3 -flto=jobserver -fno-fat-lto-objects -fuse-linker-plugin" \
+		LDFLAGS="-fuse-ld=gold" \
+		${BUILD_PYTHONPIP} install --upgrade -t ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/lib/python${PYTHONBINVER}/site-packages --no-binary :all: cython m2crypto future pycryptodome &&
 		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate &&
-		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
-		CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}" \
-		LDFLAGS="${SYSROOT_CFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} -lpython${PYTHONBINVER}m" \
-		SWIG_FEATURES="-D__$(uname -m)__" \
-		pip install cython m2crypto future &&
 		STATUS=${?}
 		set +x
 		return ${STATUS}
