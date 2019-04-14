@@ -1,5 +1,7 @@
 # Build recipe for moode mediacenter
 
+MOODEREL=r44
+
 ## Enable shared libraries (default) but disable static ones
 BUILD_LIBSHARED=1
 BUILD_LIBSTATIC=0
@@ -23,11 +25,11 @@ sed "s/init=.*//;s/quiet.*//;s/^/net.ifnames=0 /" ${DISTOS_PATH}/boot/cmdline.tx
 #// echo "pi:moodeaudio" | sudo chpasswd
 sed "s/raspberrypi/moode/" ${DISTOS_PATH}/etc/hostname > ${BIN_PATH}/etc/hostname
 sed "s/raspberrypi/moode/" ${DISTOS_PATH}/etc/hosts > ${BIN_PATH}/etc/hosts
-#// sudo timedatectl set-timezone "America/Detroit"
+#// sudo timedatectl set-timezone "Europe/Rome"
 
 # Download moode-sources
-build moode/moode-r44
-cp ${SRC_PATH}/moode-r44/boot/config.txt.default ${BIN_PATH}/boot/config.txt
+build moode/moode-${MOODEREL}
+cp ${SRC_PATH}/moode-${MOODEREL}/boot/config.txt.default ${BIN_PATH}/boot/config.txt
 
 #// sudo dphys-swapfile swapoff
 #// sudo update-rc.d dphys-swapfile remove
@@ -62,7 +64,7 @@ build moode/bluez-alsa-1.3.1
 install -d ${BIN_PATH}/var/run/bluealsa
 
 # STEP 5 - Install Rotary encoder driver
-build moode/rotenc-moode-r44
+build moode/rotenc-moode-${MOODEREL}
 
 # STEP 6 - Compile and install MPD
 build moode/mpd-0.21.6
@@ -77,7 +79,7 @@ install -d ${BIN_PATH}/var/log/mpd
 touch ${BIN_PATH}/var/log/mpd/log
 chmod 644 ${BIN_PATH}/var/log/mpd/log
 #// sudo chown -R mpd:audio /var/log/mpd
-cp ${SRC_PATH}/moode-r44/mpd/mpd.conf.default ${BIN_PATH}/etc/mpd.conf
+cp ${SRC_PATH}/moode-${MOODEREL}/mpd/mpd.conf.default ${BIN_PATH}/etc/mpd.conf
 #// sudo chown mpd:audio /etc/mpd.conf
 chmod 0666 ${BIN_PATH}/etc/mpd.conf
 rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.service
@@ -109,13 +111,13 @@ chmod 0666 ${BIN_PATH}/var/log/moode.log
 touch ${BIN_PATH}/var/log/php_errors.log
 chmod 0666 ${BIN_PATH}/var/log/php_errors.log
 # Files
-cp ${SRC_PATH}/moode-r44/mpd/sticker.sql ${BIN_PATH}/var/lib/mpd
-cp -r "${SRC_PATH}/moode-r44/other/sdcard/Stereo Test/" ${BIN_PATH}/var/lib/mpd/music/SDCARD/
-cp ${SRC_PATH}/moode-r44/network/interfaces.default ${BIN_PATH}/etc/network/interfaces
-cp ${SRC_PATH}/moode-r44/network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
-cp ${SRC_PATH}/moode-r44/network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
-cp ${SRC_PATH}/moode-r44/network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
-cp ${SRC_PATH}/moode-r44/var/local/www/db/moode-sqlite3.db.default ${BIN_PATH}/var/local/www/db/moode-sqlite3.db
+cp ${SRC_PATH}/moode-${MOODEREL}/mpd/sticker.sql ${BIN_PATH}/var/lib/mpd
+cp -r "${SRC_PATH}/moode-${MOODEREL}/other/sdcard/Stereo Test/" ${BIN_PATH}/var/lib/mpd/music/SDCARD/
+cp ${SRC_PATH}/moode-${MOODEREL}/network/interfaces.default ${BIN_PATH}/etc/network/interfaces
+cp ${SRC_PATH}/moode-${MOODEREL}/network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
+cp ${SRC_PATH}/moode-${MOODEREL}/network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
+cp ${SRC_PATH}/moode-${MOODEREL}/network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
+cp ${SRC_PATH}/moode-${MOODEREL}/var/local/www/db/moode-sqlite3.db.default ${BIN_PATH}/var/local/www/db/moode-sqlite3.db
 # Permissions
 chmod 0777 ${BIN_PATH}/var/lib/mpd/music/RADIO
 chmod -R 0777 ${BIN_PATH}/var/local/www/db
@@ -126,16 +128,16 @@ chmod -R 0777 ${BIN_PATH}/var/local/www/db
 # STEP 8 - Install moOde sources and configs
 #// sudo rm /var/lib/mpd/music/RADIO/*
 #// sudo rm /var/www/images/radio-logos/*
-cp ${SRC_PATH}/moode-r44/mpd/RADIO/* ${BIN_PATH}/var/lib/mpd/music/RADIO
-cp ${SRC_PATH}/moode-r44/mpd/playlists/* ${BIN_PATH}/var/lib/mpd/playlists
-cp -r ${SRC_PATH}/moode-r44/etc/* ${BIN_PATH}/etc
-cp -r ${SRC_PATH}/moode-r44/home/* ${BIN_PATH}/home/pi
+cp ${SRC_PATH}/moode-${MOODEREL}/mpd/RADIO/* ${BIN_PATH}/var/lib/mpd/music/RADIO
+cp ${SRC_PATH}/moode-${MOODEREL}/mpd/playlists/* ${BIN_PATH}/var/lib/mpd/playlists
+cp -r ${SRC_PATH}/moode-${MOODEREL}/etc/* ${BIN_PATH}/etc
+cp -r ${SRC_PATH}/moode-${MOODEREL}/home/* ${BIN_PATH}/home/pi
 mv ${BIN_PATH}/home/pi/dircolors ${BIN_PATH}/home/pi/.dircolors
 mv ${BIN_PATH}/home/pi/xinitrc.default ${BIN_PATH}/home/pi/.xinitrc
-cp -r ${SRC_PATH}/moode-r44/lib/* ${BIN_PATH}/lib
-cp -r ${SRC_PATH}/moode-r44/usr/* ${BIN_PATH}/usr
-cp -r ${SRC_PATH}/moode-r44/var/* ${BIN_PATH}/var
-cp -r ${SRC_PATH}/moode-r44/www/* ${BIN_PATH}/var/www
+cp -r ${SRC_PATH}/moode-${MOODEREL}/lib/* ${BIN_PATH}/lib
+cp -r ${SRC_PATH}/moode-${MOODEREL}/usr/* ${BIN_PATH}/usr
+cp -r ${SRC_PATH}/moode-${MOODEREL}/var/* ${BIN_PATH}/var
+cp -r ${SRC_PATH}/moode-${MOODEREL}/www/* ${BIN_PATH}/var/www
 chmod 0755 ${BIN_PATH}/home/pi/*.sh
 chmod 0755 ${BIN_PATH}/home/pi/*.php
 chmod 0755 ${BIN_PATH}/var/www/command/*
@@ -194,12 +196,12 @@ install -d ${BIN_PATH}/var/run/mpd
 # STEP 12 - Launch and configure moOde!
 # STEP 13 - Final prep for image
 #// sudo rm /var/lib/dhcpcd5/*
-cp ${SRC_PATH}/moode-r44/network/interfaces.default ${BIN_PATH}/etc/network/interfaces
+cp ${SRC_PATH}/moode-${MOODEREL}/network/interfaces.default ${BIN_PATH}/etc/network/interfaces
 ## NOTE: if you created a wpa_supplicant.conf file back in STEP 1 to run the
 ## build over a WiFi connection then don't copy the wpa_supplicant.conf file. 
-cp ${SRC_PATH}/moode-r44/network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
-cp ${SRC_PATH}/moode-r44/network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
-cp ${SRC_PATH}/moode-r44/network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
+cp ${SRC_PATH}/moode-${MOODEREL}/network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
+cp ${SRC_PATH}/moode-${MOODEREL}/network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
+cp ${SRC_PATH}/moode-${MOODEREL}/network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
 
 # COMPONENT 1 - MiniDLNA
 build raspbian/minidlna-1.2.1
@@ -210,12 +212,12 @@ build moode/ashuffle-1.1.2
 
 # COMPONENT 3 - MPD Audio Scrobblea
 build moode/mpdas-master
-cp ${SRC_PATH}/moode-r44/usr/local/etc/mpdasrc.default ${BIN_PATH}/usr/local/etc/mpdasrc
+cp ${SRC_PATH}/moode-${MOODEREL}/usr/local/etc/mpdasrc.default ${BIN_PATH}/usr/local/etc/mpdasrc
 chmod 0755 ${BIN_PATH}/usr/local/etc/mpdasrc
 
 # COMPONENT 4A - Shairport-sync
 build moode/shairport-sync-3.3.0
-cp ${SRC_PATH}/moode-r44/usr/local/etc/shairport-sync.conf ${BIN_PATH}/usr/local/etc
+cp ${SRC_PATH}/moode-${MOODEREL}/usr/local/etc/shairport-sync.conf ${BIN_PATH}/usr/local/etc
 
 # COMPONENT 4B - Librespot
 build moode/librespot-master
@@ -227,8 +229,8 @@ build moode/squeezelite-master
 build moode/upmpdcli-1.4.1
 build moode/libupnppsamples-master  
 #// sudo useradd upmpdcli
-cp ${SRC_PATH}/moode-r44/lib/systemd/system/upmpdcli.service ${BIN_PATH}/lib/systemd/system
-cp ${SRC_PATH}/moode-r44/etc/upmpdcli.conf ${BIN_PATH}/etc
+cp ${SRC_PATH}/moode-${MOODEREL}/lib/systemd/system/upmpdcli.service ${BIN_PATH}/lib/systemd/system
+cp ${SRC_PATH}/moode-${MOODEREL}/etc/upmpdcli.conf ${BIN_PATH}/etc
 chmod 0644 ${BIN_PATH}/etc/upmpdcli.conf
 #// sudo systemctl daemon-reload
 #// sudo systemctl disable upmpdcli
