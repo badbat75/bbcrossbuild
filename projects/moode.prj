@@ -78,13 +78,13 @@ install -d ${BIN_PATH}/var/lib/mpd
 install -d ${BIN_PATH}/var/lib/mpd/music
 install -d ${BIN_PATH}/var/lib/mpd/playlists
 touch ${BIN_PATH}/var/lib/mpd/state
-#// sudo chown -R 900:29 /var/lib/mpd
+chown -R 900:29 ${BIN_PATH}/var/lib/mpd
 install -d ${BIN_PATH}/var/log/mpd
 touch ${BIN_PATH}/var/log/mpd/log
 chmod 644 ${BIN_PATH}/var/log/mpd/log
-#// sudo chown -R 900:29 /var/log/mpd
+chown -R 900:29 ${BIN_PATH}/var/log/mpd
 cp ${SRC_PATH}/moode-${MOODEREL}/mpd/mpd.conf.default ${BIN_PATH}/etc/mpd.conf
-#// sudo chown 900:29 /etc/mpd.conf
+chown 900:29 ${BIN_PATH}/etc/mpd.conf
 chmod 0666 ${BIN_PATH}/etc/mpd.conf
 rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.service
 rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.socket
@@ -189,8 +189,7 @@ sed -i 's|bluealsa-aplay --profile-a2dp|bluealsa-aplay --pcm-buffer-time=${BUFFE
 #// sudo chmod 0755 /usr/local/bin/alsaequal.bin
 #// sudo chown 900:29 /usr/local/bin/alsaequal.bin
 #// sudo rm /usr/share/alsa/alsa.conf.d/equal.conf
-install -d ${BIN_PATH}/var/run/mpd
-#// sudo chown 900:29 /var/run/mpd
+install -o 900 -g 29 -d ${BIN_PATH}/var/run/mpd
 #// sudo /usr/local/bin/mpd /etc/mpd.conf
 #// mpc enable only 1
 #// mpc update
@@ -274,9 +273,6 @@ cat <<-EOF > ${BIN_PATH}/home/pi/runme.sh
 	systemctl disable dnsmasq
 	systemctl disable bluetooth.service
 	systemctl disable hciuart.service
-	chown -R 900:29 /var/lib/mpd
-	chown -R 900:29 /var/log/mpd
-	chown 900:29 /etc/mpd.conf
 	rm -r /var/www/html
 	rm /etc/update-motd.d/10-uname
 	rm /var/lib/mpd/music/RADIO/*
@@ -293,7 +289,6 @@ cat <<-EOF > ${BIN_PATH}/home/pi/runme.sh
 	chmod 0755 /usr/local/bin/alsaequal.bin
 	chown 900:29 /usr/local/bin/alsaequal.bin
 	rm /usr/share/alsa/alsa.conf.d/equal.conf
-	chown 900:29 /var/run/mpd
 	/usr/bin/mpd /etc/mpd.conf
 	mpc enable only 1
 	mpc update
