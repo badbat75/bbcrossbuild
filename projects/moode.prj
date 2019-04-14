@@ -14,8 +14,27 @@ setup_python
 
 create_key_sscertificate
 
+mkdir -p ${BIN_PATH}/boot ${BIN_PATH}/etc
+sudo touch ${BIN_PATH}/boot/ssh
+sed "s/init=.*//;s/quiet.*//;s/^/net.ifnames=0 /" ${DISTOS_PATH}/boot/cmdline.txt > ${BIN_PATH}/boot/cmdline.txt
+#// sudo systemctl daemon-reload
+#// sudo systemctl set-default multi-user.target
+#// sudo rm /etc/init.d/resize2fs_once
+#// echo "pi:moodeaudio" | sudo chpasswd
+sed "s/raspberrypi/moode/" ${DISTOS_PATH}/etc/hostname > ${BIN_PATH}/etc/hostname
+sed "s/raspberrypi/moode/" ${DISTOS_PATH}/etc/hosts > ${BIN_PATH}/etc/hosts
+#// sudo timedatectl set-timezone "America/Detroit"
+
 # Download moode-sources
 build moode/moode-r44
+cp ${SRC_PATH}/moode-r44/rel-stretch/boot/config.txt.default ${BIN_PATH}/boot/config.txt
+
+#// sudo dphys-swapfile swapoff
+#// sudo update-rc.d dphys-swapfile remove
+#// sudo rm /var/swap
+#// sudo systemctl disable cron.service
+#// sudo systemctl enable rpcbind
+#// sudo systemctl disable shellinabox
 
 # STEP 1 - Modify Raspbian Lite and create a new, base image
 build moode/rpi-kernel-4.19-master
@@ -24,6 +43,8 @@ build raspbian/hostapd_2.7+git20190128+0c1e29f-3
 build raspbian/iw_5.0.1-1
 build moode/crda_3.18-1
 #build moode/crda_4.14
+#// sudo systemctl disable hostapd
+#// sudo systemctl disable dnsmasq
 
 # STEP 2 - Expand the root partition to 3GB
 # STEP 3 - Install core packages
@@ -31,9 +52,14 @@ build raspbian/mediainfo-18.12-2
 
 # STEP 4 - Install enhanced networking and bluetooth stack
 build moode/bluez-5.50
+ln -s /usr/libexec/bluetooth/bluetoothd ${BIN_PATH}/usr/sbin/bluetoothd
+ln -s /usr/libexec/bluetooth/obexd ${BIN_PATH}/usr/sbin/obexd
+#// sudo systemctl disable bluetooth.service
+#// sudo systemctl disable hciuart.service
 build moode/bluez-alsa-1.3.1
 ### Install a2dp-volume branch of blue-alsa from joerg-krause
 #build moode/bluez-alsa-volume-1.2.0
+mkdir -p ${BIN_PATH}/var/run/bluealsa
 
 # STEP 5 - Install Rotary encoder driver
 build moode/rotenc-moode-r44
@@ -41,25 +67,158 @@ build moode/rotenc-moode-r44
 # STEP 6 - Compile and install MPD
 build moode/mpd-0.21.6
 build moode/mpc-0.31
+#// sudo useradd mpd
+mkdir ${BIN_PATH}/var/lib/mpd
+mkdir ${BIN_PATH}/var/lib/mpd/music
+mkdir ${BIN_PATH}/var/lib/mpd/playlists
+touch ${BIN_PATH}/var/lib/mpd/state
+#// sudo chown -R mpd:audio /var/lib/mpd
+mkdir ${BIN_PATH}/var/log/mpd
+touch ${BIN_PATH}/var/log/mpd/log
+chmod 644 ${BIN_PATH}/var/log/mpd/log
+#// sudo chown -R mpd:audio /var/log/mpd
+cp ${SRC_PATH}/moode-r44/rel-stretch/mpd/mpd.conf.default ${BIN_PATH}/etc/mpd.conf
+#// sudo chown mpd:audio /etc/mpd.conf
+chmod 0666 ${BIN_PATH}/etc/mpd.conf
+rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.service
+rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.socket
+rm -f ${BIN_PATH}/usr/lib/systemd/user/mpd.service
+
 
 # STEP 7 - Create moOde runtime environment
+mkdir ${BIN_PATH}/etc/sudoers.d
+echo -e 'www-data\tALL=(ALL) NOPASSWD: ALL' >> ${BIN_PATH}/etc/sudoers.d/010_www-data
+# Dirs
+mkdir -p ${BIN_PATH}/var/local/www
+mkdir -p ${BIN_PATH}/var/local/www/commandw
+mkdir -p ${BIN_PATH}/var/local/www/imagesw
+mkdir -p ${BIN_PATH}/var/local/www/imagesw/toggle
+mkdir -p ${BIN_PATH}/var/local/www/db
+chmod -R 0755 ${BIN_PATH}/var/local/www
+mkdir -p ${BIN_PATH}/var/lib/mpd/music/RADIO
+# Mount points
+mkdir -p ${BIN_PATH}/mnt/NAS
+mkdir -p ${BIN_PATH}/mnt/SDCARD
+# Symlinks
+ln -s /mnt/NAS ${BIN_PATH}/var/lib/mpd/music/NAS
+ln -s /mnt/SDCARD ${BIN_PATH}/var/lib/mpd/music/SDCARD
+ln -s /media ${BIN_PATH}/var/lib/mpd/music/USB
+# Logs
+touch ${BIN_PATH}/var/log/moode.log
+chmod 0666 ${BIN_PATH}/var/log/moode.log
+touch ${BIN_PATH}/var/log/php_errors.log
+chmod 0666 ${BIN_PATH}/var/log/php_errors.log
+# Files
+cp ${SRC_PATH}/moode-r44/rel-stretch/mpd/sticker.sql ${BIN_PATH}/var/lib/mpd
+cp -r "${SRC_PATH}/moode-r44/rel-stretch/other/sdcard/Stereo Test/" ${BIN_PATH}/var/lib/mpd/music/SDCARD/
+cp ${SRC_PATH}/moode-r44/rel-stretch/network/interfaces.default ${BIN_PATH}/etc/network/interfaces
+cp ${SRC_PATH}/moode-r44/rel-stretch/network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
+cp ${SRC_PATH}/moode-r44/rel-stretch/network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
+cp ${SRC_PATH}/moode-r44/rel-stretch/network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
+cp ${SRC_PATH}/moode-r44/rel-stretch/var/local/www/db/moode-sqlite3.db.default ${BIN_PATH}/var/local/www/db/moode-sqlite3.db
+# Permissions
+chmod 0777 ${BIN_PATH}/var/lib/mpd/music/RADIO
+chmod -R 0777 ${BIN_PATH}/var/local/www/db
+# Deletes
+#// sudo rm -r /var/www/html
+#// sudo rm /etc/update-motd.d/10-uname
+
 # STEP 8 - Install moOde sources and configs
+#// sudo rm /var/lib/mpd/music/RADIO/*
+#// sudo rm /var/www/images/radio-logos/*
+cp ${SRC_PATH}/moode-r44/rel-stretch/mpd/RADIO/* ${BIN_PATH}/var/lib/mpd/music/RADIO
+cp ${SRC_PATH}/moode-r44/rel-stretch/mpd/playlists/* ${BIN_PATH}/var/lib/mpd/playlists
+cp -r ${SRC_PATH}/moode-r44/rel-stretch/etc/* ${BIN_PATH}/etc
+cp -r ${SRC_PATH}/moode-r44/rel-stretch/home/* ${BIN_PATH}/home/pi
+mv ${BIN_PATH}/home/pi/dircolors ${BIN_PATH}/home/pi/.dircolors
+mv ${BIN_PATH}/home/pi/xinitrc.default ${BIN_PATH}/home/pi/.xinitrc
+cp -r ${SRC_PATH}/moode-r44/rel-stretch/lib/* ${BIN_PATH}/lib
+cp -r ${SRC_PATH}/moode-r44/rel-stretch/usr/* ${BIN_PATH}/usr
+cp -r ${SRC_PATH}/moode-r44/rel-stretch/var/* ${BIN_PATH}/var
+cp -r ${SRC_PATH}/moode-r44/rel-stretch/www/* ${BIN_PATH}/var/www
+chmod 0755 ${BIN_PATH}/home/pi/*.sh
+chmod 0755 ${BIN_PATH}/home/pi/*.php
+chmod 0755 ${BIN_PATH}/var/www/command/*
+#// sudo  sqlite3 /var/local/www/db/moode-sqlite3.db "update cfg_system set value='Emerald' where param='accent_color'"
+# MPD
+chmod 0755 ${BIN_PATH}/etc/init.d/mpd
+chmod 0644 ${BIN_PATH}/lib/systemd/system/mpd.service
+chmod 0644 ${BIN_PATH}/lib/systemd/system/mpd.socket
+# Bluetooth
+chmod 0666 ${BIN_PATH}/etc/bluealsaaplay.conf
+chmod 0644 ${BIN_PATH}/etc/systemd/system/bluealsa-aplay@.service
+chmod 0644 ${BIN_PATH}/etc/systemd/system/bluealsa.service
+chmod 0644 ${BIN_PATH}/lib/systemd/system/bluetooth.service
+chmod 0755 ${BIN_PATH}/usr/local/bin/a2dp-autoconnect
+# Rotenc
+chmod 0644 ${BIN_PATH}/lib/systemd/system/rotenc.service
+# Udev
+chmod 0644 ${BIN_PATH}/etc/udev/rules.d/*
+# Localui
+chmod 0644 ${BIN_PATH}/lib/systemd/system/localui.service
+# SSH term server
+chmod 0644 ${BIN_PATH}/lib/systemd/system/shellinabox.service 
+#// sudo systemctl daemon-reload
+#// sudo systemctl disable bluealsa
+#// sudo systemctl disable mpd.service
+#// sudo systemctl disable mpd.socket
+#// sudo systemctl disable rotenc.service
+# The binaries will not have been installed yet, but let's disable the services here
+chmod 0644 ${BIN_PATH}/lib/systemd/system/squeezelite.service
+#// sudo systemctl disable squeezelite
+chmod 0644 ${BIN_PATH}/lib/systemd/system/upmpdcli.service
+#// sudo systemctl disable upmpdcli.service
+echo  Reset dir permissions for var local
+chmod -R 0755 ${BIN_PATH}/var/local/www
+chmod -R 0777 ${BIN_PATH}/var/local/www/db
+chmod -R ug-s ${BIN_PATH}/var/local/www
+echo  Initial permissions for certain files. These also get set during moOde Worker startup.
+chmod 0777 ${BIN_PATH}/var/local/www/playhistory.log
+chmod 0777 ${BIN_PATH}/var/local/www/currentsong.txt
+touch ${BIN_PATH}/var/local/www/libcache.json
+chmod 0777 ${BIN_PATH}/var/local/www/libcache.json
+echo  Some modification on official configuration files
+echo 'BUFFERTIME=20000' >> ${BIN_PATH}/etc/bluealsaaplay.conf
+sed -i 's|bluealsa-aplay --profile-a2dp|bluealsa-aplay --pcm-buffer-time=${BUFFERTIME} --profile-a2dp|g' ${BIN_PATH}/etc/systemd/system/bluealsa-aplay@.service
+
 # STEP 9 - Alsaequal
+#// sudo amixer -D alsaequal > /dev/null
+#// sudo chmod 0755 /usr/local/bin/alsaequal.bin
+#// sudo chown mpd:audio /usr/local/bin/alsaequal.bin
+#// sudo rm /usr/share/alsa/alsa.conf.d/equal.conf
+#// sudo mkdir /var/run/mpd
+#// sudo chown mpd:audio /var/run/mpd
+#// sudo /usr/local/bin/mpd /etc/mpd.conf
+#// mpc enable only 1
+#// mpc update
+#// sudo mpd --kill /etc/mpd.conf
+
 # STEP 10 - Optionally squash /var/www
 # STEP 12 - Launch and configure moOde!
 # STEP 13 - Final prep for image
+#// sudo rm /var/lib/dhcpcd5/*
+cp ${SRC_PATH}/moode-r44/rel-stretch/network/interfaces.default /etc/network/interfaces
+## NOTE: if you created a wpa_supplicant.conf file back in STEP 1 to run the
+## build over a WiFi connection then don't copy the wpa_supplicant.conf file. 
+cp ${SRC_PATH}/moode-r44/rel-stretch/network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
+cp ${SRC_PATH}/moode-r44/rel-stretch/network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
+cp ${SRC_PATH}/moode-r44/rel-stretch/network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
 
 # COMPONENT 1 - MiniDLNA
 build raspbian/minidlna-1.2.1
+#// sudo systemctl disable minidlna
 
 # COMPONENT 2 - Auto-shuffle
 build moode/ashuffle-1.1.2
 
 # COMPONENT 3 - MPD Audio Scrobblea
 build moode/mpdas-master
+cp ${SRC_PATH}/moode-r44/rel-stretch/usr/local/etc/mpdasrc.default ${BIN_PATH}/usr/local/etc/mpdasrc
+chmod 0755 ${BIN_PATH}/usr/local/etc/mpdasrc
 
 # COMPONENT 4A - Shairport-sync
 build moode/shairport-sync-3.3.0
+cp ${SRC_PATH}/moode-r44/rel-stretch/usr/local/etc/shairport-sync.conf ${BIN_PATH}/usr/local/etc
 
 # COMPONENT 4B - Librespot
 build moode/librespot-master
@@ -70,11 +229,21 @@ build moode/squeezelite-master
 # COMPONENT 6 - Upmpdcli
 build moode/upmpdcli-1.4.1
 build moode/libupnppsamples-master  
+#// sudo useradd upmpdcli
+cp ${SRC_PATH}/moode-r44/rel-stretch/lib/systemd/system/upmpdcli.service ${BIN_PATH}/lib/systemd/system
+cp ${SRC_PATH}/moode-r44/rel-stretch/etc/upmpdcli.conf ${BIN_PATH}/etc
+chmod 0644 ${BIN_PATH}/etc/upmpdcli.conf
+#// sudo systemctl daemon-reload
+#// sudo systemctl disable upmpdcli
 
 # COMPONENT 7 - Optionally install gmusicapi
 build python/gmusicapi-12.0.0
 
-# COMPONENT 8 - Local UI display 
+# COMPONENT 8 - Local UI display
+sed "s/allowed_users=console/allowed_users=anybody/" ${DISTOS_PATH}/etc/X11/Xwrapper.config > ${BIN_PATH}/etc/X11/Xwrapper.config
+#// sudo systemctl daemon-reload
+#// sudo systemctl disable localui
+
 # COMPONENT 9 - Allo Piano 2.1 Firmware
 # COMPONENT 10 - Broadcom Bluetooth devices firmwares
 #
