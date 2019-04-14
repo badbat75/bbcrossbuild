@@ -14,7 +14,7 @@ setup_python
 
 create_key_sscertificate
 
-install -d ${BIN_PATH}/boot ${BIN_PATH}/etc ${BIN_PATH}/home/pi ${BIN_PATH}/var/www ${BIN_PATH}/var/local/www
+mkdir -p ${BIN_PATH}/boot ${BIN_PATH}/etc
 touch ${BIN_PATH}/boot/ssh
 sed "s/init=.*//;s/quiet.*//;s/^/net.ifnames=0 /" ${DISTOS_PATH}/boot/cmdline.txt > ${BIN_PATH}/boot/cmdline.txt
 #// sudo systemctl daemon-reload
@@ -27,7 +27,7 @@ sed "s/raspberrypi/moode/" ${DISTOS_PATH}/etc/hosts > ${BIN_PATH}/etc/hosts
 
 # Download moode-sources
 build moode/moode-r44
-cp ${SRC_PATH}/moode-r44/boot/config.txt.default ${BIN_PATH}/boot/config.txt
+cp ${SRC_PATH}/moode-r44/rel-stretch/boot/config.txt.default ${BIN_PATH}/boot/config.txt
 
 #// sudo dphys-swapfile swapoff
 #// sudo update-rc.d dphys-swapfile remove
@@ -52,14 +52,14 @@ build raspbian/mediainfo-18.12-2
 
 # STEP 4 - Install enhanced networking and bluetooth stack
 build moode/bluez-5.50
-ln -fs /usr/libexec/bluetooth/bluetoothd ${BIN_PATH}/usr/sbin/bluetoothd
-ln -fs /usr/libexec/bluetooth/obexd ${BIN_PATH}/usr/sbin/obexd
+ln -s /usr/libexec/bluetooth/bluetoothd ${BIN_PATH}/usr/sbin/bluetoothd
+ln -s /usr/libexec/bluetooth/obexd ${BIN_PATH}/usr/sbin/obexd
 #// sudo systemctl disable bluetooth.service
 #// sudo systemctl disable hciuart.service
 build moode/bluez-alsa-1.3.1
 ### Install a2dp-volume branch of blue-alsa from joerg-krause
 #build moode/bluez-alsa-volume-1.2.0
-install -d ${BIN_PATH}/var/run/bluealsa
+mkdir -p ${BIN_PATH}/var/run/bluealsa
 
 # STEP 5 - Install Rotary encoder driver
 build moode/rotenc-moode-r44
@@ -68,16 +68,16 @@ build moode/rotenc-moode-r44
 build moode/mpd-0.21.6
 build moode/mpc-0.31
 #// sudo useradd mpd
-install -d ${BIN_PATH}/var/lib/mpd
-install -d ${BIN_PATH}/var/lib/mpd/music
-install -d ${BIN_PATH}/var/lib/mpd/playlists
+mkdir ${BIN_PATH}/var/lib/mpd
+mkdir ${BIN_PATH}/var/lib/mpd/music
+mkdir ${BIN_PATH}/var/lib/mpd/playlists
 touch ${BIN_PATH}/var/lib/mpd/state
 #// sudo chown -R mpd:audio /var/lib/mpd
-install -d ${BIN_PATH}/var/log/mpd
+mkdir ${BIN_PATH}/var/log/mpd
 touch ${BIN_PATH}/var/log/mpd/log
 chmod 644 ${BIN_PATH}/var/log/mpd/log
 #// sudo chown -R mpd:audio /var/log/mpd
-cp ${SRC_PATH}/moode-r44/mpd/mpd.conf.default ${BIN_PATH}/etc/mpd.conf
+cp ${SRC_PATH}/moode-r44/rel-stretch/mpd/mpd.conf.default ${BIN_PATH}/etc/mpd.conf
 #// sudo chown mpd:audio /etc/mpd.conf
 chmod 0666 ${BIN_PATH}/etc/mpd.conf
 rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.service
@@ -86,36 +86,36 @@ rm -f ${BIN_PATH}/usr/lib/systemd/user/mpd.service
 
 
 # STEP 7 - Create moOde runtime environment
-install -d ${BIN_PATH}/etc/sudoers.d
+mkdir ${BIN_PATH}/etc/sudoers.d
 echo -e 'www-data\tALL=(ALL) NOPASSWD: ALL' >> ${BIN_PATH}/etc/sudoers.d/010_www-data
 # Dirs
-install -d ${BIN_PATH}/var/local/www
-install -d ${BIN_PATH}/var/local/www/commandw
-install -d ${BIN_PATH}/var/local/www/imagesw
-install -d ${BIN_PATH}/var/local/www/imagesw/toggle
-install -d ${BIN_PATH}/var/local/www/db
+mkdir -p ${BIN_PATH}/var/local/www
+mkdir -p ${BIN_PATH}/var/local/www/commandw
+mkdir -p ${BIN_PATH}/var/local/www/imagesw
+mkdir -p ${BIN_PATH}/var/local/www/imagesw/toggle
+mkdir -p ${BIN_PATH}/var/local/www/db
 chmod -R 0755 ${BIN_PATH}/var/local/www
-install -d ${BIN_PATH}/var/lib/mpd/music/RADIO
+mkdir -p ${BIN_PATH}/var/lib/mpd/music/RADIO
 # Mount points
-install -d ${BIN_PATH}/mnt/NAS
-install -d ${BIN_PATH}/mnt/SDCARD
+mkdir -p ${BIN_PATH}/mnt/NAS
+mkdir -p ${BIN_PATH}/mnt/SDCARD
 # Symlinks
-ln -fs /mnt/NAS ${BIN_PATH}/var/lib/mpd/music/NAS
-ln -fs /mnt/SDCARD ${BIN_PATH}/var/lib/mpd/music/SDCARD
-ln -fs /media ${BIN_PATH}/var/lib/mpd/music/USB
+ln -s /mnt/NAS ${BIN_PATH}/var/lib/mpd/music/NAS
+ln -s /mnt/SDCARD ${BIN_PATH}/var/lib/mpd/music/SDCARD
+ln -s /media ${BIN_PATH}/var/lib/mpd/music/USB
 # Logs
 touch ${BIN_PATH}/var/log/moode.log
 chmod 0666 ${BIN_PATH}/var/log/moode.log
 touch ${BIN_PATH}/var/log/php_errors.log
 chmod 0666 ${BIN_PATH}/var/log/php_errors.log
 # Files
-cp ${SRC_PATH}/moode-r44/mpd/sticker.sql ${BIN_PATH}/var/lib/mpd
-cp -r "${SRC_PATH}/moode-r44/other/sdcard/Stereo Test/" ${BIN_PATH}/var/lib/mpd/music/SDCARD/
-cp ${SRC_PATH}/moode-r44/network/interfaces.default ${BIN_PATH}/etc/network/interfaces
-cp ${SRC_PATH}/moode-r44/network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
-cp ${SRC_PATH}/moode-r44/network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
-cp ${SRC_PATH}/moode-r44/network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
-cp ${SRC_PATH}/moode-r44/var/local/www/db/moode-sqlite3.db.default ${BIN_PATH}/var/local/www/db/moode-sqlite3.db
+cp ${SRC_PATH}/moode-r44/rel-stretch/mpd/sticker.sql ${BIN_PATH}/var/lib/mpd
+cp -r "${SRC_PATH}/moode-r44/rel-stretch/other/sdcard/Stereo Test/" ${BIN_PATH}/var/lib/mpd/music/SDCARD/
+cp ${SRC_PATH}/moode-r44/rel-stretch/network/interfaces.default ${BIN_PATH}/etc/network/interfaces
+cp ${SRC_PATH}/moode-r44/rel-stretch/network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
+cp ${SRC_PATH}/moode-r44/rel-stretch/network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
+cp ${SRC_PATH}/moode-r44/rel-stretch/network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
+cp ${SRC_PATH}/moode-r44/rel-stretch/var/local/www/db/moode-sqlite3.db.default ${BIN_PATH}/var/local/www/db/moode-sqlite3.db
 # Permissions
 chmod 0777 ${BIN_PATH}/var/lib/mpd/music/RADIO
 chmod -R 0777 ${BIN_PATH}/var/local/www/db
@@ -126,16 +126,16 @@ chmod -R 0777 ${BIN_PATH}/var/local/www/db
 # STEP 8 - Install moOde sources and configs
 #// sudo rm /var/lib/mpd/music/RADIO/*
 #// sudo rm /var/www/images/radio-logos/*
-cp ${SRC_PATH}/moode-r44/mpd/RADIO/* ${BIN_PATH}/var/lib/mpd/music/RADIO
-cp ${SRC_PATH}/moode-r44/mpd/playlists/* ${BIN_PATH}/var/lib/mpd/playlists
-cp -r ${SRC_PATH}/moode-r44/etc/* ${BIN_PATH}/etc
-cp -r ${SRC_PATH}/moode-r44/home/* ${BIN_PATH}/home/pi
+cp ${SRC_PATH}/moode-r44/rel-stretch/mpd/RADIO/* ${BIN_PATH}/var/lib/mpd/music/RADIO
+cp ${SRC_PATH}/moode-r44/rel-stretch/mpd/playlists/* ${BIN_PATH}/var/lib/mpd/playlists
+cp -r ${SRC_PATH}/moode-r44/rel-stretch/etc/* ${BIN_PATH}/etc
+cp -r ${SRC_PATH}/moode-r44/rel-stretch/home/* ${BIN_PATH}/home/pi
 mv ${BIN_PATH}/home/pi/dircolors ${BIN_PATH}/home/pi/.dircolors
 mv ${BIN_PATH}/home/pi/xinitrc.default ${BIN_PATH}/home/pi/.xinitrc
-cp -r ${SRC_PATH}/moode-r44/lib/* ${BIN_PATH}/lib
-cp -r ${SRC_PATH}/moode-r44/usr/* ${BIN_PATH}/usr
-cp -r ${SRC_PATH}/moode-r44/var/* ${BIN_PATH}/var
-cp -r ${SRC_PATH}/moode-r44/www/* ${BIN_PATH}/var/www
+cp -r ${SRC_PATH}/moode-r44/rel-stretch/lib/* ${BIN_PATH}/lib
+cp -r ${SRC_PATH}/moode-r44/rel-stretch/usr/* ${BIN_PATH}/usr
+cp -r ${SRC_PATH}/moode-r44/rel-stretch/var/* ${BIN_PATH}/var
+cp -r ${SRC_PATH}/moode-r44/rel-stretch/www/* ${BIN_PATH}/var/www
 chmod 0755 ${BIN_PATH}/home/pi/*.sh
 chmod 0755 ${BIN_PATH}/home/pi/*.php
 chmod 0755 ${BIN_PATH}/var/www/command/*
@@ -168,13 +168,16 @@ chmod 0644 ${BIN_PATH}/lib/systemd/system/squeezelite.service
 #// sudo systemctl disable squeezelite
 chmod 0644 ${BIN_PATH}/lib/systemd/system/upmpdcli.service
 #// sudo systemctl disable upmpdcli.service
+echo  Reset dir permissions for var local
 chmod -R 0755 ${BIN_PATH}/var/local/www
 chmod -R 0777 ${BIN_PATH}/var/local/www/db
 chmod -R ug-s ${BIN_PATH}/var/local/www
-#chmod 0777 ${BIN_PATH}/var/local/www/playhistory.log
+echo  Initial permissions for certain files. These also get set during moOde Worker startup.
+chmod 0777 ${BIN_PATH}/var/local/www/playhistory.log
 chmod 0777 ${BIN_PATH}/var/local/www/currentsong.txt
 touch ${BIN_PATH}/var/local/www/libcache.json
 chmod 0777 ${BIN_PATH}/var/local/www/libcache.json
+echo  Some modification on official configuration files
 echo 'BUFFERTIME=20000' >> ${BIN_PATH}/etc/bluealsaaplay.conf
 sed -i 's|bluealsa-aplay --profile-a2dp|bluealsa-aplay --pcm-buffer-time=${BUFFERTIME} --profile-a2dp|g' ${BIN_PATH}/etc/systemd/system/bluealsa-aplay@.service
 
@@ -183,7 +186,7 @@ sed -i 's|bluealsa-aplay --profile-a2dp|bluealsa-aplay --pcm-buffer-time=${BUFFE
 #// sudo chmod 0755 /usr/local/bin/alsaequal.bin
 #// sudo chown mpd:audio /usr/local/bin/alsaequal.bin
 #// sudo rm /usr/share/alsa/alsa.conf.d/equal.conf
-install -d ${BIN_PATH}/var/run/mpd
+#// sudo mkdir /var/run/mpd
 #// sudo chown mpd:audio /var/run/mpd
 #// sudo /usr/local/bin/mpd /etc/mpd.conf
 #// mpc enable only 1
@@ -194,12 +197,12 @@ install -d ${BIN_PATH}/var/run/mpd
 # STEP 12 - Launch and configure moOde!
 # STEP 13 - Final prep for image
 #// sudo rm /var/lib/dhcpcd5/*
-cp ${SRC_PATH}/moode-r44/network/interfaces.default ${BIN_PATH}/etc/network/interfaces
+cp ${SRC_PATH}/moode-r44/rel-stretch/network/interfaces.default /etc/network/interfaces
 ## NOTE: if you created a wpa_supplicant.conf file back in STEP 1 to run the
 ## build over a WiFi connection then don't copy the wpa_supplicant.conf file. 
-cp ${SRC_PATH}/moode-r44/network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
-cp ${SRC_PATH}/moode-r44/network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
-cp ${SRC_PATH}/moode-r44/network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
+cp ${SRC_PATH}/moode-r44/rel-stretch/network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
+cp ${SRC_PATH}/moode-r44/rel-stretch/network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
+cp ${SRC_PATH}/moode-r44/rel-stretch/network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
 
 # COMPONENT 1 - MiniDLNA
 build raspbian/minidlna-1.2.1
@@ -210,12 +213,12 @@ build moode/ashuffle-1.1.2
 
 # COMPONENT 3 - MPD Audio Scrobblea
 build moode/mpdas-master
-cp ${SRC_PATH}/moode-r44/usr/local/etc/mpdasrc.default ${BIN_PATH}/usr/local/etc/mpdasrc
+cp ${SRC_PATH}/moode-r44/rel-stretch/usr/local/etc/mpdasrc.default ${BIN_PATH}/usr/local/etc/mpdasrc
 chmod 0755 ${BIN_PATH}/usr/local/etc/mpdasrc
 
 # COMPONENT 4A - Shairport-sync
 build moode/shairport-sync-3.3.0
-cp ${SRC_PATH}/moode-r44/usr/local/etc/shairport-sync.conf ${BIN_PATH}/usr/local/etc
+cp ${SRC_PATH}/moode-r44/rel-stretch/usr/local/etc/shairport-sync.conf ${BIN_PATH}/usr/local/etc
 
 # COMPONENT 4B - Librespot
 build moode/librespot-master
@@ -227,8 +230,8 @@ build moode/squeezelite-master
 build moode/upmpdcli-1.4.1
 build moode/libupnppsamples-master  
 #// sudo useradd upmpdcli
-cp ${SRC_PATH}/moode-r44/lib/systemd/system/upmpdcli.service ${BIN_PATH}/lib/systemd/system
-cp ${SRC_PATH}/moode-r44/etc/upmpdcli.conf ${BIN_PATH}/etc
+cp ${SRC_PATH}/moode-r44/rel-stretch/lib/systemd/system/upmpdcli.service ${BIN_PATH}/lib/systemd/system
+cp ${SRC_PATH}/moode-r44/rel-stretch/etc/upmpdcli.conf ${BIN_PATH}/etc
 chmod 0644 ${BIN_PATH}/etc/upmpdcli.conf
 #// sudo systemctl daemon-reload
 #// sudo systemctl disable upmpdcli
@@ -237,7 +240,6 @@ chmod 0644 ${BIN_PATH}/etc/upmpdcli.conf
 build python/gmusicapi-12.0.0
 
 # COMPONENT 8 - Local UI display
-install -d ${BIN_PATH}/etc/X11
 sed "s/allowed_users=console/allowed_users=anybody/" ${DISTOS_PATH}/etc/X11/Xwrapper.config > ${BIN_PATH}/etc/X11/Xwrapper.config
 #// sudo systemctl daemon-reload
 #// sudo systemctl disable localui
@@ -249,53 +251,3 @@ sed "s/allowed_users=console/allowed_users=anybody/" ${DISTOS_PATH}/etc/X11/Xwra
 
 install_gcclibs
 #remove_devfiles
-
-cat <<-EOF > ${BIN_PATH}/home/pi/runme.sh
-	systemctl daemon-reload
-	systemctl set-default multi-user.target
-	rm /etc/init.d/resize2fs_once
-	echo "pi:moodeaudio" | sudo chpasswd
-	timedatectl set-timezone "Europe/Rome"
-	dphys-swapfile swapoff
-	update-rc.d dphys-swapfile remove
-	rm /var/swap
-	systemctl disable cron.service
-	systemctl enable rpcbind
-	systemctl disable shellinabox
-	systemctl disable hostapd
-	systemctl disable dnsmasq
-	systemctl disable bluetooth.service
-	systemctl disable hciuart.service
-	useradd mpd
-	chown -R mpd:audio /var/lib/mpd
-	chown -R mpd:audio /var/log/mpd
-	chown mpd:audio /etc/mpd.conf
-	rm -r /var/www/html
-	rm /etc/update-motd.d/10-uname
-	rm /var/lib/mpd/music/RADIO/*
-	rm /var/www/images/radio-logos/*
-	sqlite3 /var/local/www/db/moode-sqlite3.db "update cfg_system set value='Emerald' where param='accent_color'"
-	systemctl daemon-reload
-	systemctl disable bluealsa
-	systemctl disable mpd.service
-	systemctl disable mpd.socket
-	systemctl disable rotenc.service
-	systemctl disable squeezelite
-	systemctl disable upmpdcli.service
-	amixer -D alsaequal > /dev/null
-	chmod 0755 /usr/local/bin/alsaequal.bin
-	chown mpd:audio /usr/local/bin/alsaequal.bin
-	rm /usr/share/alsa/alsa.conf.d/equal.conf
-	chown mpd:audio /var/run/mpd
-	/usr/bin/mpd /etc/mpd.conf
-	mpc enable only 1
-	mpc update
-	mpd --kill /etc/mpd.conf
-	rm /var/lib/dhcpcd5/*
-	systemctl disable minidlna
-	useradd upmpdcli
-	systemctl daemon-reload
-	systemctl disable upmpdcli
-	systemctl daemon-reload
-	systemctl disable localui
-EOF
