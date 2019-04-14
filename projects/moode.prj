@@ -78,7 +78,6 @@ install -d ${BIN_PATH}/var/lib/mpd
 install -d ${BIN_PATH}/var/lib/mpd/music
 install -d ${BIN_PATH}/var/lib/mpd/playlists
 touch ${BIN_PATH}/var/lib/mpd/state
-sudo chown -R 900:29 ${BIN_PATH}/var/lib/mpd
 install -d ${BIN_PATH}/var/log/mpd
 touch ${BIN_PATH}/var/log/mpd/log
 chmod 644 ${BIN_PATH}/var/log/mpd/log
@@ -125,6 +124,7 @@ cp ${SRC_PATH}/moode-${MOODEREL}/var/local/www/db/moode-sqlite3.db.default ${BIN
 # Permissions
 chmod 0777 ${BIN_PATH}/var/lib/mpd/music/RADIO
 chmod -R 0777 ${BIN_PATH}/var/local/www/db
+sudo chown -R 900:29 ${BIN_PATH}/var/lib/mpd
 # Deletes
 #// sudo rm -r /var/www/html
 #// sudo rm /etc/update-motd.d/10-uname
