@@ -78,7 +78,7 @@ install -d ${BIN_PATH}/var/lib/mpd
 install -d ${BIN_PATH}/var/lib/mpd/music
 install -d ${BIN_PATH}/var/lib/mpd/playlists
 touch ${BIN_PATH}/var/lib/mpd/state
-chown -R 900:29 ${BIN_PATH}/var/lib/mpd
+sudo chown -R 900:29 ${BIN_PATH}/var/lib/mpd
 install -d ${BIN_PATH}/var/log/mpd
 touch ${BIN_PATH}/var/log/mpd/log
 chmod 644 ${BIN_PATH}/var/log/mpd/log
