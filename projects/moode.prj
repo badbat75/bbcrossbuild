@@ -17,6 +17,10 @@ setup_python
 create_key_sscertificate
 
 install -d ${BIN_PATH}/boot ${BIN_PATH}/etc ${BIN_PATH}/home/pi ${BIN_PATH}/var/www ${BIN_PATH}/var/local/www
+cp ${DISTOS_PATH}/etc/group ${BIN_PATH}/etc/
+cp ${DISTOS_PATH}/etc/passwd ${BIN_PATH}/etc/
+cp ${DISTOS_PATH}/etc/shadow ${BIN_PATH}/etc/
+
 touch ${BIN_PATH}/boot/ssh
 sed "s/init=.*//;s/quiet.*//;s/^/net.ifnames=0 /" ${DISTOS_PATH}/boot/cmdline.txt > ${BIN_PATH}/boot/cmdline.txt
 #// sudo systemctl daemon-reload
@@ -69,18 +73,20 @@ build moode/rotenc-moode-${MOODEREL}
 # STEP 6 - Compile and install MPD
 build moode/mpd-0.21.6
 build moode/mpc-0.31
-#// sudo useradd mpd
+echo "mpd:x:900:" >> ${BIN_PATH}/etc/group
+echo "mpd:x:900:900::/var/lib/mpd:" >> ${BIN_PATH}/etc/passwd           
+echo "mpd:!:17000:0:99999:7:::" >> ${BIN_PATH}/etc/shadow
 install -d ${BIN_PATH}/var/lib/mpd
 install -d ${BIN_PATH}/var/lib/mpd/music
 install -d ${BIN_PATH}/var/lib/mpd/playlists
 touch ${BIN_PATH}/var/lib/mpd/state
-#// sudo chown -R mpd:audio /var/lib/mpd
+#// sudo chown -R 900:29 /var/lib/mpd
 install -d ${BIN_PATH}/var/log/mpd
 touch ${BIN_PATH}/var/log/mpd/log
 chmod 644 ${BIN_PATH}/var/log/mpd/log
-#// sudo chown -R mpd:audio /var/log/mpd
+#// sudo chown -R 900:29 /var/log/mpd
 cp ${SRC_PATH}/moode-${MOODEREL}/mpd/mpd.conf.default ${BIN_PATH}/etc/mpd.conf
-#// sudo chown mpd:audio /etc/mpd.conf
+#// sudo chown 900:29 /etc/mpd.conf
 chmod 0666 ${BIN_PATH}/etc/mpd.conf
 rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.service
 rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.socket
@@ -183,10 +189,10 @@ sed -i 's|bluealsa-aplay --profile-a2dp|bluealsa-aplay --pcm-buffer-time=${BUFFE
 # STEP 9 - Alsaequal
 #// sudo amixer -D alsaequal > /dev/null
 #// sudo chmod 0755 /usr/local/bin/alsaequal.bin
-#// sudo chown mpd:audio /usr/local/bin/alsaequal.bin
+#// sudo chown 900:29 /usr/local/bin/alsaequal.bin
 #// sudo rm /usr/share/alsa/alsa.conf.d/equal.conf
 install -d ${BIN_PATH}/var/run/mpd
-#// sudo chown mpd:audio /var/run/mpd
+#// sudo chown 900:29 /var/run/mpd
 #// sudo /usr/local/bin/mpd /etc/mpd.conf
 #// mpc enable only 1
 #// mpc update
@@ -228,7 +234,9 @@ build moode/squeezelite-master
 # COMPONENT 6 - Upmpdcli
 build moode/upmpdcli-1.4.1
 build moode/libupnppsamples-master  
-#// sudo useradd upmpdcli
+echo "upmpdcli:x:901:" >> ${BIN_PATH}/etc/group
+echo "upmpdcli:x:901:901::/home/upmpdcli:" >> ${BIN_PATH}/etc/passwd           
+echo "upmpdcli:!:17000:0:99999:7:::" >> ${BIN_PATH}/etc/shadow
 cp ${SRC_PATH}/moode-${MOODEREL}/lib/systemd/system/upmpdcli.service ${BIN_PATH}/lib/systemd/system
 cp ${SRC_PATH}/moode-${MOODEREL}/etc/upmpdcli.conf ${BIN_PATH}/etc
 chmod 0644 ${BIN_PATH}/etc/upmpdcli.conf
@@ -268,10 +276,9 @@ cat <<-EOF > ${BIN_PATH}/home/pi/runme.sh
 	systemctl disable dnsmasq
 	systemctl disable bluetooth.service
 	systemctl disable hciuart.service
-	useradd mpd
-	chown -R mpd:audio /var/lib/mpd
-	chown -R mpd:audio /var/log/mpd
-	chown mpd:audio /etc/mpd.conf
+	chown -R 900:29 /var/lib/mpd
+	chown -R 900:29 /var/log/mpd
+	chown 900:29 /etc/mpd.conf
 	rm -r /var/www/html
 	rm /etc/update-motd.d/10-uname
 	rm /var/lib/mpd/music/RADIO/*
@@ -286,16 +293,15 @@ cat <<-EOF > ${BIN_PATH}/home/pi/runme.sh
 	systemctl disable upmpdcli.service
 	amixer -D alsaequal > /dev/null
 	chmod 0755 /usr/local/bin/alsaequal.bin
-	chown mpd:audio /usr/local/bin/alsaequal.bin
+	chown 900:29 /usr/local/bin/alsaequal.bin
 	rm /usr/share/alsa/alsa.conf.d/equal.conf
-	chown mpd:audio /var/run/mpd
+	chown 900:29 /var/run/mpd
 	/usr/bin/mpd /etc/mpd.conf
 	mpc enable only 1
 	mpc update
 	mpd --kill /etc/mpd.conf
 	rm /var/lib/dhcpcd5/*
 	systemctl disable minidlna
-	useradd upmpdcli
 	systemctl daemon-reload
 	systemctl disable upmpdcli
 	systemctl daemon-reload
