@@ -16,6 +16,8 @@ setup_python
 
 create_key_sscertificate
 
+clean_project
+
 install -d ${BIN_PATH}/boot ${BIN_PATH}/etc ${BIN_PATH}/home/pi ${BIN_PATH}/var/www ${BIN_PATH}/var/local/www
 cp ${DISTOS_PATH}/etc/group ${DISTOS_PATH}/etc/passwd ${DISTOS_PATH}/etc/shadow ${BIN_PATH}/etc/
 
@@ -255,9 +257,6 @@ sed "s/allowed_users=console/allowed_users=anybody/" ${DISTOS_PATH}/etc/X11/Xwra
 #
 # FINAL - Clean up
 
-install_gcclibs
-remove_devfiles
-
 cat <<-EOF > ${BIN_PATH}/home/pi/runme.sh
 	systemctl daemon-reload
 	systemctl set-default multi-user.target
@@ -301,3 +300,7 @@ cat <<-EOF > ${BIN_PATH}/home/pi/runme.sh
 	systemctl daemon-reload
 	systemctl disable localui
 EOF
+
+install_gcclibs
+remove_devfiles
+root_project

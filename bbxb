@@ -30,7 +30,4 @@ fi
 echo "Project path: ${DATA_PATH}/${PRJ_NAME}"
 echo
 
-
-cleanproject
 . $PRJ
-zipproject

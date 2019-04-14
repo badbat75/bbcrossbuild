@@ -3,18 +3,21 @@
 check_core_functions
 check_build_functions
 
-function cleanproject () {
-#	[ -d "${BIN_PATH}" ] && rm -rf "${BIN_PATH}"
-	[ -f "${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.tar.xz" ] && rm -f ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.tar.xz
+function clean_project () {
+	[ -d "${BIN_PATH}" ] && rm -rf "${BIN_PATH}"
+	[ -d "${STATUS_PATH}" ] && rm -rf "${STATUS_PATH}"
+ 	[ -f "${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.tar.xz" ] && rm -f ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.tar.xz
 }
 
-function rootproject () {
+function root_project () {
 	cd ${BIN_PATH}
-	sudo chown -R root:root *
+	sudo find -gid $(uid -g) -exec chgrp root {} \;
+	sudo find -uid $(uid -u) -exec chown root {} \;
+	#sudo chown -R root:root *
 	cd ${BB_HOME}
 }
 
-function zipproject () {
+function zip_project () {
 	cd ${BIN_PATH}
 	tar cf ../${PRJ_NAME}.tar --owner=0 --group=0 . &&
 	cd ${DATA_PATH}/${PRJ_NAME}
