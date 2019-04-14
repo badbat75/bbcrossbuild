@@ -17,9 +17,7 @@ setup_python
 create_key_sscertificate
 
 install -d ${BIN_PATH}/boot ${BIN_PATH}/etc ${BIN_PATH}/home/pi ${BIN_PATH}/var/www ${BIN_PATH}/var/local/www
-cp ${DISTOS_PATH}/etc/group ${BIN_PATH}/etc/
-cp ${DISTOS_PATH}/etc/passwd ${BIN_PATH}/etc/
-cp ${DISTOS_PATH}/etc/shadow ${BIN_PATH}/etc/
+cp ${DISTOS_PATH}/etc/group ${DISTOS_PATH}/etc/passwd ${DISTOS_PATH}/etc/shadow ${BIN_PATH}/etc/
 
 touch ${BIN_PATH}/boot/ssh
 sed "s/init=.*//;s/quiet.*//;s/^/net.ifnames=0 /" ${DISTOS_PATH}/boot/cmdline.txt > ${BIN_PATH}/boot/cmdline.txt
