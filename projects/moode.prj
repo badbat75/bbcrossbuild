@@ -81,9 +81,7 @@ touch ${BIN_PATH}/var/lib/mpd/state
 install -d ${BIN_PATH}/var/log/mpd
 touch ${BIN_PATH}/var/log/mpd/log
 chmod 644 ${BIN_PATH}/var/log/mpd/log
-chown -R 900:29 ${BIN_PATH}/var/log/mpd
 cp ${SRC_PATH}/moode-${MOODEREL}/mpd/mpd.conf.default ${BIN_PATH}/etc/mpd.conf
-chown 900:29 ${BIN_PATH}/etc/mpd.conf
 chmod 0666 ${BIN_PATH}/etc/mpd.conf
 rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.service
 rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.socket
@@ -180,6 +178,9 @@ sed -i 's|bluealsa-aplay --profile-a2dp|bluealsa-aplay --pcm-buffer-time=${BUFFE
 chmod 0777 ${BIN_PATH}/var/lib/mpd/music/RADIO
 chmod -R 0777 ${BIN_PATH}/var/local/www/db
 sudo chown -R 900:29 ${BIN_PATH}/var/lib/mpd
+sudo chown -R 900:29 ${BIN_PATH}/var/log/mpd
+sudo chown 900:29 ${BIN_PATH}/etc/mpd.conf
+
 # Deletes
 #// sudo rm -r /var/www/html
 #// sudo rm /etc/update-motd.d/10-uname
