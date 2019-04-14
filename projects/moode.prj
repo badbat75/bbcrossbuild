@@ -121,13 +121,6 @@ cp ${SRC_PATH}/moode-${MOODEREL}/network/wpa_supplicant.conf.default ${BIN_PATH}
 cp ${SRC_PATH}/moode-${MOODEREL}/network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
 cp ${SRC_PATH}/moode-${MOODEREL}/network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
 cp ${SRC_PATH}/moode-${MOODEREL}/var/local/www/db/moode-sqlite3.db.default ${BIN_PATH}/var/local/www/db/moode-sqlite3.db
-# Permissions
-chmod 0777 ${BIN_PATH}/var/lib/mpd/music/RADIO
-chmod -R 0777 ${BIN_PATH}/var/local/www/db
-sudo chown -R 900:29 ${BIN_PATH}/var/lib/mpd
-# Deletes
-#// sudo rm -r /var/www/html
-#// sudo rm /etc/update-motd.d/10-uname
 
 # STEP 8 - Install moOde sources and configs
 #// sudo rm /var/lib/mpd/music/RADIO/*
@@ -183,6 +176,13 @@ touch ${BIN_PATH}/var/local/www/libcache.json
 chmod 0777 ${BIN_PATH}/var/local/www/libcache.json
 echo 'BUFFERTIME=20000' >> ${BIN_PATH}/etc/bluealsaaplay.conf
 sed -i 's|bluealsa-aplay --profile-a2dp|bluealsa-aplay --pcm-buffer-time=${BUFFERTIME} --profile-a2dp|g' ${BIN_PATH}/etc/systemd/system/bluealsa-aplay@.service
+# Permissions
+chmod 0777 ${BIN_PATH}/var/lib/mpd/music/RADIO
+chmod -R 0777 ${BIN_PATH}/var/local/www/db
+sudo chown -R 900:29 ${BIN_PATH}/var/lib/mpd
+# Deletes
+#// sudo rm -r /var/www/html
+#// sudo rm /etc/update-motd.d/10-uname
 
 # STEP 9 - Alsaequal
 #// sudo amixer -D alsaequal > /dev/null
