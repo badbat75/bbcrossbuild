@@ -190,7 +190,7 @@ sudo chown 900:29 ${BIN_PATH}/etc/mpd.conf
 #// sudo chmod 0755 /usr/local/bin/alsaequal.bin
 #// sudo chown 900:29 /usr/local/bin/alsaequal.bin
 #// sudo rm /usr/share/alsa/alsa.conf.d/equal.conf
-install -o 900 -g 29 -d ${BIN_PATH}/var/run/mpd
+sudo install -o 900 -g 29 -d ${BIN_PATH}/var/run/mpd
 #// sudo /usr/local/bin/mpd /etc/mpd.conf
 #// mpc enable only 1
 #// mpc update
@@ -256,7 +256,7 @@ sed "s/allowed_users=console/allowed_users=anybody/" ${DISTOS_PATH}/etc/X11/Xwra
 # FINAL - Clean up
 
 install_gcclibs
-#remove_devfiles
+remove_devfiles
 
 cat <<-EOF > ${BIN_PATH}/home/pi/runme.sh
 	systemctl daemon-reload
