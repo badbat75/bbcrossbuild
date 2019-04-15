@@ -77,6 +77,8 @@ chmod 0755 ${BIN_PATH}/var/www/command/*
 # Bluetooth
 chmod 0666 ${BIN_PATH}/etc/bluealsaaplay.conf
 chmod 0755 ${BIN_PATH}/usr/local/bin/a2dp-autoconnect
+# Audio Scrobbler
+install -D -m 0755 usr/local/etc/mpdasrc.default ${BIN_PATH}/usr/local/etc/mpdasrc
 # Localui
 chmod -R 0755 ${BIN_PATH}/var/local/www
 chmod -R 0777 ${BIN_PATH}/var/local/www/db
