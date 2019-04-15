@@ -7,7 +7,6 @@ CONF_FLAGS="--with-dummy --with-stdout --with-pipe	--with-ssl=openssl --with-sox
 		--with-apple-alac --without-libdaemon"
 INST_CMD=install-strip
 PKG_DEPS="moode/alac-master raspbian/libconfig_1.5-0.4"
-PKG_POSTBUILD="install -D -m 0755 usr/local/etc/shairport-sync.conf ${BIN_PATH}/usr/local/etc"
 
 # Dependencies:
 # libasound2-dev libpopt-dev libconfig-dev avahi-daemon libavahi-client-dev libssl-dev libsoxr-dev
