@@ -84,8 +84,7 @@ build python/gmusicapi-12.0.0
 #
 # FINAL - Clean up
 
-cat <<-EOF > ${BIN_PATH}/home/pi/runme.sh
-
+cat <<-EOF > ${USERDATA_PATH}/startup.sh
 	# Start-up services
 	systemctl daemon-reload
 	systemctl set-default multi-user.target
@@ -152,8 +151,6 @@ cat <<-EOF > ${BIN_PATH}/home/pi/runme.sh
 	chown mpd:audio /usr/local/bin/alsaequal.bin
 	chown -R pi:pi ${BIN_PATH}/home/pi
 EOF
-chmod +x ${BIN_PATH}/home/pi/runme.sh
 
 install_gcclibs
-remove_devfiles
-#root_project
+#remove_devfiles
