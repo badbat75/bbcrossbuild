@@ -39,8 +39,8 @@ install -d ${BIN_PATH}/etc/avahi/services
 install -D etc/avahi/services/* ${BIN_PATH}/etc/avahi/services/
 install -d ${BIN_PATH}/etc/bluetooth
 install -D etc/bluetooth/* ${BIN_PATH}/etc/bluetooth/
-install -d ${BIN_PATH}/etc/dbus-1/systemd
-install -D etc/dbus-1/systemd/* ${BIN_PATH}/etc/dbus-1/systemd/
+install -d ${BIN_PATH}/etc/dbus-1/system.d
+install -D etc/dbus-1/system.d/* ${BIN_PATH}/etc/dbus-1/system.d/
 install -d ${BIN_PATH}/etc/default
 install -D etc/default/* ${BIN_PATH}/etc/default/
 install -d ${BIN_PATH}/etc/init.d
@@ -67,6 +67,7 @@ install -D home/dircolors ${BIN_PATH}/home/pi/.dircolors
 install -D home/xinitrc.default ${BIN_PATH}/home/pi/.xinitrc
 install -d ${BIN_PATH}/lib/systemd/system
 install -D -m 0644 lib/systemd/system/* ${BIN_PATH}/lib/systemd/system/
+install -d ${BIN_PATH}/usr
 cp -r usr/* ${BIN_PATH}/usr/
 install -d ${BIN_PATH}/var/local
 cp -r var/local/www ${BIN_PATH}/var/local/
