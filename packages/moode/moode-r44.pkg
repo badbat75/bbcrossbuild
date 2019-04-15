@@ -35,36 +35,33 @@ install -D var/local/www/db/moode-sqlite3.db.default ${BIN_PATH}/var/local/www/d
 install -D mpd/RADIO/* ${BIN_PATH}/var/lib/mpd/music/RADIO
 install -D mpd/playlists/* ${BIN_PATH}/var/lib/mpd/playlists
 install -D etc/* ${BIN_PATH}/etc
+install -D etc/avahi/services/* ${BIN_PATH}/etc/avahi/services/
+install -D etc/bluetooth/* ${BIN_PATH}/etc/bluetooth/
+install -D etc/dbus-1/systemd/* ${BIN_PATH}/etc/dbus-1/systemd/
+install -D etc/default/* ${BIN_PATH}/etc/default/
+install -D -m 0755 etc/init.d/* ${BIN_PATH}/etc/init.d/
+install -D etc/modprobe.d/* ${BIN_PATH}/etc/modprobe.d/
+install -D etc/nginx/* ${BIN_PATH}/etc/nginx/
+install -D etc/pam.d/* ${BIN_PATH}/etc/pam.d/
+install -D etc/php ${BIN_PATH}/etc/
+install -D etc/samba/* ${BIN_PATH}/etc/samba/
+install -D -m 0644 etc/systemd/system/* ${BIN_PATH}/etc/systemd/system/
+install -D -m 0644 etc/udev/rules.d/* ${BIN_PATH}/etc/udev/rules.d/
+install -D etc/update-motd.d/* ${BIN_PATH}/etc/update-motd.d/
 install -D -m 0755 home/*.sh ${BIN_PATH}/home/pi
 install -D -m 0755 home/*.php ${BIN_PATH}/home/pi
 install -D home/dircolors ${BIN_PATH}/home/pi/.dircolors
 install -D home/xinitrc.default ${BIN_PATH}/home/pi/.xinitrc
-install -D lib/* ${BIN_PATH}/lib
-install -D usr/* ${BIN_PATH}/usr
-install -D var/* ${BIN_PATH}/var
-install -D www/* ${BIN_PATH}/var/www
+install -D -m 0644 lib/systemd/system/* ${BIN_PATH}/lib/systemd/system/
+cp -r usr/* ${BIN_PATH}/usr/
+install -d ${BIN_PATH}/var/local
+cp -r var/local/www ${BIN_PATH}/var/local/
+cp -r www ${BIN_PATH}/var/
 chmod 0755 ${BIN_PATH}/var/www/command/*
-# MPD
-chmod 0755 ${BIN_PATH}/etc/init.d/mpd
-chmod 0644 ${BIN_PATH}/lib/systemd/system/mpd.service
-chmod 0644 ${BIN_PATH}/lib/systemd/system/mpd.socket
 # Bluetooth
 chmod 0666 ${BIN_PATH}/etc/bluealsaaplay.conf
-chmod 0644 ${BIN_PATH}/etc/systemd/system/bluealsa-aplay@.service
-chmod 0644 ${BIN_PATH}/etc/systemd/system/bluealsa.service
-chmod 0644 ${BIN_PATH}/lib/systemd/system/bluetooth.service
 chmod 0755 ${BIN_PATH}/usr/local/bin/a2dp-autoconnect
-# Rotenc
-chmod 0644 ${BIN_PATH}/lib/systemd/system/rotenc.service
-# Udev
-chmod 0644 ${BIN_PATH}/etc/udev/rules.d/*
 # Localui
-chmod 0644 ${BIN_PATH}/lib/systemd/system/localui.service
-# SSH term server
-chmod 0644 ${BIN_PATH}/lib/systemd/system/shellinabox.service 
-# The binaries will not have been installed yet, but let's disable the services here
-chmod 0644 ${BIN_PATH}/lib/systemd/system/squeezelite.service
-chmod 0644 ${BIN_PATH}/lib/systemd/system/upmpdcli.service
 chmod -R 0755 ${BIN_PATH}/var/local/www
 chmod -R 0777 ${BIN_PATH}/var/local/www/db
 chmod -R ug-s ${BIN_PATH}/var/local/www
