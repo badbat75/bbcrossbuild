@@ -26,7 +26,7 @@ install -D -m 0666 /dev/null ${BIN_PATH}/var/log/php_errors.log
 # Files
 install -D mpd/sticker.sql ${BIN_PATH}/var/lib/mpd
 install -d ${BIN_PATH}/mnt/SDCARD
-install -D \"other/sdcard/Stereo Test/*\" ${BIN_PATH}/mnt/SDCARD/
+install -D other/sdcard/Stereo\ Test/* ${BIN_PATH}/mnt/SDCARD/
 install -D network/interfaces.default ${BIN_PATH}/etc/network/interfaces
 install -D network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
 install -D network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
