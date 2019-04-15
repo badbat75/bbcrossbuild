@@ -32,8 +32,6 @@ install -D network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
 install -D network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
 install -D var/local/www/db/moode-sqlite3.db.default ${BIN_PATH}/var/local/www/db/moode-sqlite3.db
 # Moode sources and configs
-#// sudo rm /var/lib/mpd/music/RADIO/*
-#// sudo rm /var/www/images/radio-logos/*
 install -D mpd/RADIO/* ${BIN_PATH}/var/lib/mpd/music/RADIO
 install -D mpd/playlists/* ${BIN_PATH}/var/lib/mpd/playlists
 install -D etc/* ${BIN_PATH}/etc
@@ -46,7 +44,6 @@ install -D usr/* ${BIN_PATH}/usr
 install -D var/* ${BIN_PATH}/var
 install -D www/* ${BIN_PATH}/var/www
 chmod 0755 ${BIN_PATH}/var/www/command/*
-#// sudo  sqlite3 /var/local/www/db/moode-sqlite3.db "update cfg_system set value='Emerald' where param='accent_color'"
 # MPD
 chmod 0755 ${BIN_PATH}/etc/init.d/mpd
 chmod 0644 ${BIN_PATH}/lib/systemd/system/mpd.service
@@ -65,16 +62,9 @@ chmod 0644 ${BIN_PATH}/etc/udev/rules.d/*
 chmod 0644 ${BIN_PATH}/lib/systemd/system/localui.service
 # SSH term server
 chmod 0644 ${BIN_PATH}/lib/systemd/system/shellinabox.service 
-#// sudo systemctl daemon-reload
-#// sudo systemctl disable bluealsa
-#// sudo systemctl disable mpd.service
-#// sudo systemctl disable mpd.socket
-#// sudo systemctl disable rotenc.service
 # The binaries will not have been installed yet, but let's disable the services here
 chmod 0644 ${BIN_PATH}/lib/systemd/system/squeezelite.service
-#// sudo systemctl disable squeezelite
 chmod 0644 ${BIN_PATH}/lib/systemd/system/upmpdcli.service
-#// sudo systemctl disable upmpdcli.service
 chmod -R 0755 ${BIN_PATH}/var/local/www
 chmod -R 0777 ${BIN_PATH}/var/local/www/db
 chmod -R ug-s ${BIN_PATH}/var/local/www
@@ -87,9 +77,6 @@ sed -i 's|bluealsa-aplay --profile-a2dp|bluealsa-aplay --pcm-buffer-time=${BUFFE
 chmod 0777 ${BIN_PATH}/var/lib/mpd/music/RADIO
 chmod -R 0777 ${BIN_PATH}/var/local/www/db
 # Deletes
-#// sudo rm -r /var/www/html
-#// sudo rm /etc/update-motd.d/10-uname
-#// sudo rm /var/lib/dhcpcd5/*
 # Final prep for image
 install -D network/interfaces.default ${BIN_PATH}/etc/network/interfaces
 ## NOTE: if you created a wpa_supplicant.conf file back in STEP 1 to run the
