@@ -35,37 +35,37 @@ install -D var/local/www/db/moode-sqlite3.db.default ${BIN_PATH}/var/local/www/d
 # Moode sources and configs
 install -D mpd/RADIO/* ${BIN_PATH}/var/lib/mpd/music/RADIO
 install -D mpd/playlists/* ${BIN_PATH}/var/lib/mpd/playlists/
-install -D etc/* ${BIN_PATH}/etc
+install -D -m 0644 etc/* ${BIN_PATH}/etc
 install -d ${BIN_PATH}/etc/avahi/services
-install -D etc/avahi/services/* ${BIN_PATH}/etc/avahi/services/
+install -D -m 0644 etc/avahi/services/* ${BIN_PATH}/etc/avahi/services/
 install -d ${BIN_PATH}/etc/bluetooth
-install -D etc/bluetooth/* ${BIN_PATH}/etc/bluetooth/
+install -D -m 0644 etc/bluetooth/* ${BIN_PATH}/etc/bluetooth/
 install -d ${BIN_PATH}/etc/dbus-1/system.d
-install -D etc/dbus-1/system.d/* ${BIN_PATH}/etc/dbus-1/system.d/
+install -D -m 0644 etc/dbus-1/system.d/* ${BIN_PATH}/etc/dbus-1/system.d/
 install -d ${BIN_PATH}/etc/default
-install -D etc/default/* ${BIN_PATH}/etc/default/
+install -D -m 0644 etc/default/* ${BIN_PATH}/etc/default/
 install -d ${BIN_PATH}/etc/init.d
 install -D -m 0755 etc/init.d/* ${BIN_PATH}/etc/init.d/
 install -d ${BIN_PATH}/etc/modprobe.d
-install -D etc/modprobe.d/* ${BIN_PATH}/etc/modprobe.d/
+install -D -m 0644 etc/modprobe.d/* ${BIN_PATH}/etc/modprobe.d/
 install -d ${BIN_PATH}/etc/nginx
-install -D etc/nginx/* ${BIN_PATH}/etc/nginx/
+install -D -m 0644 etc/nginx/* ${BIN_PATH}/etc/nginx/
 install -d ${BIN_PATH}/etc/pam.d
-install -D etc/pam.d/* ${BIN_PATH}/etc/pam.d/
+install -D -m 0644 etc/pam.d/* ${BIN_PATH}/etc/pam.d/
 cp -r etc/php ${BIN_PATH}/etc/
 install -d ${BIN_PATH}/etc/samba
-install -D etc/samba/* ${BIN_PATH}/etc/samba/
+install -D -m 0644 etc/samba/* ${BIN_PATH}/etc/samba/
 install -d ${BIN_PATH}/etc/systemd/system
 install -D -m 0644 etc/systemd/system/* ${BIN_PATH}/etc/systemd/system/
 install -d ${BIN_PATH}/etc/udev/rules.d
 install -D -m 0644 etc/udev/rules.d/* ${BIN_PATH}/etc/udev/rules.d/
 install -d ${BIN_PATH}/etc/update-motd.d
-install -D etc/update-motd.d/* ${BIN_PATH}/etc/update-motd.d/
+install -D -m 0644 etc/update-motd.d/* ${BIN_PATH}/etc/update-motd.d/
 install -d ${BIN_PATH}/home/pi
 install -D -m 0755 home/*.sh ${BIN_PATH}/home/pi
 install -D -m 0755 home/*.php ${BIN_PATH}/home/pi
-install -D home/dircolors ${BIN_PATH}/home/pi/.dircolors
-install -D home/xinitrc.default ${BIN_PATH}/home/pi/.xinitrc
+install -D -m 0644 home/dircolors ${BIN_PATH}/home/pi/.dircolors
+install -D -m 0644 home/xinitrc.default ${BIN_PATH}/home/pi/.xinitrc
 install -d ${BIN_PATH}/lib/systemd/system
 install -D -m 0644 lib/systemd/system/* ${BIN_PATH}/lib/systemd/system/
 install -d ${BIN_PATH}/usr
@@ -91,9 +91,9 @@ chmod 0777 ${BIN_PATH}/var/lib/mpd/music/RADIO
 chmod -R 0777 ${BIN_PATH}/var/local/www/db
 # Deletes
 # Final prep for image
-install -D network/interfaces.default ${BIN_PATH}/etc/network/interfaces
+install -D -m 0644 network/interfaces.default ${BIN_PATH}/etc/network/interfaces
 ## NOTE: if you created a wpa_supplicant.conf file back in STEP 1 to run the
 ## build over a WiFi connection then don't copy the wpa_supplicant.conf file. 
-install -D network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
-install -D network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
-install -D network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf"
+install -D -m 0644 network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
+install -D -m 0644 network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
+install -D -m 0644 network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf"
