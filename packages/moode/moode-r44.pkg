@@ -3,7 +3,7 @@ PKG_URL="https://github.com/moode-player/moode/archive/r44prod.tar.gz"
 PKG_SRCDIR=moode-r44
 PATCHES="rotenc-makefile.patch"
 BUILD_PROCESS=downloadonly
-PKG_POSTBUILD="install -D boot/config.txt.default ${BIN_PATH}/boot/config.txt
+PKG_PREBUILD="install -D boot/config.txt.default ${BIN_PATH}/boot/config.txt
 install -d ${BIN_PATH}/etc/sudoers.d
 echo -e 'www-data\tALL=(ALL) NOPASSWD: ALL' >> ${BIN_PATH}/etc/sudoers.d/010_www-data
 # Dirs
