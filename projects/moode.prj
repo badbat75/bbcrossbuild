@@ -16,7 +16,7 @@ setup_python
 
 create_key_sscertificate
 
-clean_project
+#clean_project
 
 install -d ${BIN_PATH}/boot ${BIN_PATH}/etc ${BIN_PATH}/home/pi ${BIN_PATH}/var/www ${BIN_PATH}/var/local/www
 cp ${DISTOS_PATH}/etc/group ${DISTOS_PATH}/etc/passwd ${DISTOS_PATH}/etc/shadow ${BIN_PATH}/etc/
