@@ -3,3 +3,97 @@ PKG_URL="https://github.com/moode-player/moode/archive/r44prod.tar.gz"
 PKG_SRCDIR=moode-r44
 PATCHES="rotenc-makefile.patch"
 BUILD_PROCESS=downloadonly
+PKG_POSTBUILD="install -D boot/config.txt.default ${BIN_PATH}/boot/config.txt
+install -d ${BIN_PATH}/etc/sudoers.d
+echo -e 'www-data\tALL=(ALL) NOPASSWD: ALL' >> ${BIN_PATH}/etc/sudoers.d/010_www-data
+# Dirs
+install -m 0755 -d ${BIN_PATH}/var/local/www
+install -m 0755 -d ${BIN_PATH}/var/local/www/commandw
+install -m 0755 -d ${BIN_PATH}/var/local/www/imagesw
+install -m 0755 -d ${BIN_PATH}/var/local/www/imagesw/toggle
+install -m 0755 -d ${BIN_PATH}/var/local/www/db
+install -d ${BIN_PATH}/var/lib/mpd/music/RADIO
+# Mount points
+install -d ${BIN_PATH}/mnt/NAS
+install -d ${BIN_PATH}/mnt/SDCARD
+# Symlinks
+ln -fs /mnt/NAS ${BIN_PATH}/var/lib/mpd/music/NAS
+ln -fs /mnt/SDCARD ${BIN_PATH}/var/lib/mpd/music/SDCARD
+ln -fs /media ${BIN_PATH}/var/lib/mpd/music/USB
+# Logs
+install -D -m 0666 /dev/null ${BIN_PATH}/var/log/moode.log
+install -D -m 0666 /dev/null ${BIN_PATH}/var/log/php_errors.log
+# Files
+install -D mpd/sticker.sql ${BIN_PATH}/var/lib/mpd
+install -D "other/sdcard/Stereo Test/*" ${BIN_PATH}/var/lib/mpd/music/SDCARD/
+install -D network/interfaces.default ${BIN_PATH}/etc/network/interfaces
+install -D network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
+install -D network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
+install -D network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
+install -D var/local/www/db/moode-sqlite3.db.default ${BIN_PATH}/var/local/www/db/moode-sqlite3.db
+# Moode sources and configs
+#// sudo rm /var/lib/mpd/music/RADIO/*
+#// sudo rm /var/www/images/radio-logos/*
+install -D mpd/RADIO/* ${BIN_PATH}/var/lib/mpd/music/RADIO
+install -D mpd/playlists/* ${BIN_PATH}/var/lib/mpd/playlists
+install -D etc/* ${BIN_PATH}/etc
+install -D -m 0755 home/*.sh ${BIN_PATH}/home/pi
+install -D -m 0755 home/*.php ${BIN_PATH}/home/pi
+install -D home/dircolors ${BIN_PATH}/home/pi/.dircolors
+install -D home/xinitrc.default ${BIN_PATH}/home/pi/.xinitrc
+install -D lib/* ${BIN_PATH}/lib
+install -D usr/* ${BIN_PATH}/usr
+install -D var/* ${BIN_PATH}/var
+install -D www/* ${BIN_PATH}/var/www
+chmod 0755 ${BIN_PATH}/var/www/command/*
+#// sudo  sqlite3 /var/local/www/db/moode-sqlite3.db "update cfg_system set value='Emerald' where param='accent_color'"
+# MPD
+chmod 0755 ${BIN_PATH}/etc/init.d/mpd
+chmod 0644 ${BIN_PATH}/lib/systemd/system/mpd.service
+chmod 0644 ${BIN_PATH}/lib/systemd/system/mpd.socket
+# Bluetooth
+chmod 0666 ${BIN_PATH}/etc/bluealsaaplay.conf
+chmod 0644 ${BIN_PATH}/etc/systemd/system/bluealsa-aplay@.service
+chmod 0644 ${BIN_PATH}/etc/systemd/system/bluealsa.service
+chmod 0644 ${BIN_PATH}/lib/systemd/system/bluetooth.service
+chmod 0755 ${BIN_PATH}/usr/local/bin/a2dp-autoconnect
+# Rotenc
+chmod 0644 ${BIN_PATH}/lib/systemd/system/rotenc.service
+# Udev
+chmod 0644 ${BIN_PATH}/etc/udev/rules.d/*
+# Localui
+chmod 0644 ${BIN_PATH}/lib/systemd/system/localui.service
+# SSH term server
+chmod 0644 ${BIN_PATH}/lib/systemd/system/shellinabox.service 
+#// sudo systemctl daemon-reload
+#// sudo systemctl disable bluealsa
+#// sudo systemctl disable mpd.service
+#// sudo systemctl disable mpd.socket
+#// sudo systemctl disable rotenc.service
+# The binaries will not have been installed yet, but let's disable the services here
+chmod 0644 ${BIN_PATH}/lib/systemd/system/squeezelite.service
+#// sudo systemctl disable squeezelite
+chmod 0644 ${BIN_PATH}/lib/systemd/system/upmpdcli.service
+#// sudo systemctl disable upmpdcli.service
+chmod -R 0755 ${BIN_PATH}/var/local/www
+chmod -R 0777 ${BIN_PATH}/var/local/www/db
+chmod -R ug-s ${BIN_PATH}/var/local/www
+#chmod 0777 ${BIN_PATH}/var/local/www/playhistory.log
+chmod 0777 ${BIN_PATH}/var/local/www/currentsong.txt
+install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache.json
+echo 'BUFFERTIME=20000' >> ${BIN_PATH}/etc/bluealsaaplay.conf
+sed -i 's|bluealsa-aplay --profile-a2dp|bluealsa-aplay --pcm-buffer-time=${BUFFERTIME} --profile-a2dp|g' ${BIN_PATH}/etc/systemd/system/bluealsa-aplay@.service
+# Permissions
+chmod 0777 ${BIN_PATH}/var/lib/mpd/music/RADIO
+chmod -R 0777 ${BIN_PATH}/var/local/www/db
+# Deletes
+#// sudo rm -r /var/www/html
+#// sudo rm /etc/update-motd.d/10-uname
+#// sudo rm /var/lib/dhcpcd5/*
+# Final prep for image
+install -D network/interfaces.default ${BIN_PATH}/etc/network/interfaces
+## NOTE: if you created a wpa_supplicant.conf file back in STEP 1 to run the
+## build over a WiFi connection then don't copy the wpa_supplicant.conf file. 
+install -D network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
+install -D network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
+install -D network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf"

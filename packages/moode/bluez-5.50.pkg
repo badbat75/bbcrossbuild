@@ -4,3 +4,7 @@ BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-library --enable-deprecated"
 INST_CMD=install-strip
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/b/bluez/bluez_5.50-1.debian.tar.xz"
+PKG_POSTBUILD="ln -fs /usr/libexec/bluetooth/bluetoothd ${BIN_PATH}/usr/sbin/bluetoothd
+ln -fs /usr/libexec/bluetooth/obexd ${BIN_PATH}/usr/sbin/obexd
+#// sudo systemctl disable bluetooth.service
+#// sudo systemctl disable hciuart.service"

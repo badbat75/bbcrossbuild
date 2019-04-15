@@ -10,3 +10,14 @@ CONF_FLAGS="-Dalsa=enabled -Dcurl=enabled -Ddatabase=true -Ddsd=true -Dffmpeg=en
 	-Dsqlite=disabled -Dupnp=disabled -Dwildmidi=disabled -Dzzip=disabled -Ddbus=disabled -Dudisks=disabled"
 INST_CMD=install-strip
 PKG_DEPS="raspbian/libcdio-paranoia-10.2+0.94+2 raspbian/libid3tag_0.15.1b moode/libmpdclient-2.16"
+PKG_POSTBUILD="install -d ${BIN_PATH}/var/lib/mpd
+install -d ${BIN_PATH}/var/lib/mpd/music
+install -d ${BIN_PATH}/var/lib/mpd/playlists
+install -D -m 0644 /dev/null ${BIN_PATH}/var/lib/mpd/state
+install -d ${BIN_PATH}/var/log/mpd
+install -D -m 0644 /dev/null ${BIN_PATH}/var/log/mpd/log
+install -D -m 0666 mpd/mpd.conf.default ${BIN_PATH}/etc/mpd.conf
+install -d ${BIN_PATH}/var/run/mpd
+rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.service
+rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.socket
+rm -f ${BIN_PATH}/usr/lib/systemd/user/mpd.service"
