@@ -33,25 +33,39 @@ install -D network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
 install -D var/local/www/db/moode-sqlite3.db.default ${BIN_PATH}/var/local/www/db/moode-sqlite3.db
 # Moode sources and configs
 install -D mpd/RADIO/* ${BIN_PATH}/var/lib/mpd/music/RADIO
-install -D mpd/playlists/* ${BIN_PATH}/var/lib/mpd/playlists
+install -D mpd/playlists/* ${BIN_PATH}/var/lib/mpd/playlists/
 install -D etc/* ${BIN_PATH}/etc
+install -d ${BIN_PATH}/etc/avahi/services
 install -D etc/avahi/services/* ${BIN_PATH}/etc/avahi/services/
+install -d ${BIN_PATH}/etc/bluetooth
 install -D etc/bluetooth/* ${BIN_PATH}/etc/bluetooth/
+install -d ${BIN_PATH}/etc/dbus-1/systemd
 install -D etc/dbus-1/systemd/* ${BIN_PATH}/etc/dbus-1/systemd/
+install -d ${BIN_PATH}/etc/default
 install -D etc/default/* ${BIN_PATH}/etc/default/
+install -d ${BIN_PATH}/etc/init.d
 install -D -m 0755 etc/init.d/* ${BIN_PATH}/etc/init.d/
+install -d ${BIN_PATH}/etc/modprobe.d
 install -D etc/modprobe.d/* ${BIN_PATH}/etc/modprobe.d/
+install -d ${BIN_PATH}/etc/nginx
 install -D etc/nginx/* ${BIN_PATH}/etc/nginx/
+install -d ${BIN_PATH}/etc/pam.d
 install -D etc/pam.d/* ${BIN_PATH}/etc/pam.d/
-install -D etc/php ${BIN_PATH}/etc/
+cp -r etc/php ${BIN_PATH}/etc/
+install -d ${BIN_PATH}/etc/samba
 install -D etc/samba/* ${BIN_PATH}/etc/samba/
+install -d ${BIN_PATH}/etc/systemd/system
 install -D -m 0644 etc/systemd/system/* ${BIN_PATH}/etc/systemd/system/
+install -d ${BIN_PATH}/etc/udev/rules.d
 install -D -m 0644 etc/udev/rules.d/* ${BIN_PATH}/etc/udev/rules.d/
+install -d ${BIN_PATH}/etc/update-motd.d
 install -D etc/update-motd.d/* ${BIN_PATH}/etc/update-motd.d/
+install -d ${BIN_PATH}/home/pi
 install -D -m 0755 home/*.sh ${BIN_PATH}/home/pi
 install -D -m 0755 home/*.php ${BIN_PATH}/home/pi
 install -D home/dircolors ${BIN_PATH}/home/pi/.dircolors
 install -D home/xinitrc.default ${BIN_PATH}/home/pi/.xinitrc
+install -d ${BIN_PATH}/lib/systemd/system
 install -D -m 0644 lib/systemd/system/* ${BIN_PATH}/lib/systemd/system/
 cp -r usr/* ${BIN_PATH}/usr/
 install -d ${BIN_PATH}/var/local
