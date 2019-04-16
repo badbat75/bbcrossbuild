@@ -33,6 +33,31 @@ function zip_project () {
 	fi
 }
 
+function create_selfextracting_archive () {
+	zip_project
+	cat >${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx <<-EOF
+		#!/bin/bash
+		echo ""
+		echo "Self Extracting Installer"
+		echo ""
+
+		ARCHIVE=`awk '/^__ARCHIVE_BELOW__/ {print NR + 1; exit 0; }' $0`
+
+		tail -n+$ARCHIVE $0 | sudo tar xJf -C /
+
+		if [ -f /root/startup.sh ]
+		then
+			/root/startup.sh
+		fi
+
+		exit 0
+
+		__ARCHIVE_BELOW__
+	EOF
+	cat ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.tar.xz >> ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx
+	chmod +x ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx
+}
+
 function install_gcclibs () {
 	settoolflags
 	local GCCSEARCHLIBS="$(${HARCH:+${HARCH}-}gcc -print-search-dirs | grep 'libraries:' | sed 's/^libraries: =//;s/\:/ /g')"

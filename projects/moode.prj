@@ -155,9 +155,11 @@ cat <<-EOF > ${BIN_PATH}/root/startup.sh
 	/bin/chown -R pi:pi ${BIN_PATH}/home/pi
 
 	/bin/sed -i 's| init=/root/startup.sh||' /boot/cmdline.txt
+	/bin/sleep 10
 	/sbin/reboot
 EOF
+chmod +x ${BIN_PATH}/root/startup.sh
 
 install_gcclibs
 remove_devfiles
-zip_project
+create_selfextracting_archive
