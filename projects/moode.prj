@@ -84,73 +84,79 @@ build python/gmusicapi-12.0.0
 #
 # FINAL - Clean up
 
-cat <<-EOF > ${USERDATA_PATH}/startup.sh
+cp ${DISTOS_PATH}/boot/cmdline.txt ${BIN_PATH}/boot/cmdline.txt
+sed -i 's|init=/usr/lib/raspi-config/init_resize.sh|init=/root/startup.sh|' /boot/cmdline.txt
+cat <<-EOF > ${BIN_PATH}/root/startup.sh
 	# Start-up services
-	systemctl daemon-reload
-	systemctl set-default multi-user.target
-	systemctl disable cron.service
-	systemctl enable rpcbind
-	systemctl disable shellinabox
-	systemctl disable hostapd
-	systemctl disable dnsmasq
-	systemctl disable bluetooth.service
-	systemctl disable hciuart.service
-	systemctl disable bluealsa
-	systemctl disable mpd.service
-	systemctl disable mpd.socket
-	systemctl disable rotenc.service
-	systemctl disable squeezelite
-	systemctl disable upmpdcli.service
-	systemctl disable minidlna
-	systemctl disable upmpdcli
-	systemctl disable localui
+	/bin/systemctl daemon-reload
+	/bin/systemctl set-default multi-user.target
+	/bin/systemctl disable cron.service
+	/bin/systemctl enable rpcbind
+	/bin/systemctl disable shellinabox
+	/bin/systemctl disable hostapd
+	/bin/systemctl disable dnsmasq
+	/bin/systemctl disable bluetooth.service
+	/bin/systemctl disable hciuart.service
+	/bin/systemctl disable bluealsa
+	/bin/systemctl disable mpd.service
+	/bin/systemctl disable mpd.socket
+	/bin/systemctl disable rotenc.service
+	/bin/systemctl disable squeezelite
+	/bin/systemctl disable upmpdcli.service
+	/bin/systemctl disable minidlna
+	/bin/systemctl disable upmpdcli
+	/bin/systemctl disable localui
 
 	# Start-up configuration
-	touch /boot/ssh
-	sed -i "s/init=.*//;s/quiet.*//;s/^/net.ifnames=0 /" /boot/cmdline.txt
-	sed -i "s/raspberrypi/moode/" /etc/hostname
-	sed -i "s/raspberrypi/moode/" /etc/hosts
-	sed -i "s/allowed_users=console/allowed_users=anybody/" ${BIN_PATH}/etc/X11/Xwrapper.config
-	rm /etc/init.d/resize2fs_once
-	timedatectl set-timezone "Europe/Rome"
+	/usr/bin/touch /boot/ssh
+	/bin/sed -i 's| quiet.*||;s|^|net.ifnames=0 |' /boot/cmdline.txt
+	/bin/sed -i 's/raspberrypi/moode/' /etc/hostname
+	/bin/sed -i 's/raspberrypi/moode/' /etc/hosts
+	/bin/sed -i 's/allowed_users=console/allowed_users=anybody/' ${BIN_PATH}/etc/X11/Xwrapper.config
+	/bin/rm /etc/init.d/resize2fs_once
+	/usr/bin/timedatectl set-timezone "Europe/Rome"
 	dphys-swapfile swapoff
-	update-rc.d dphys-swapfile remove
-	rm /var/swap
-	rm -r /var/www/html
-	rm /etc/update-motd.d/10-uname
-	rm /var/lib/dhcpcd5/*
+	/usr/sbin/update-rc.d dphys-swapfile remove
+	/bin/rm /var/swap
+	/bin/rm -r /var/www/html
+	/bin/rm /etc/update-motd.d/10-uname
+	/bin/rm /var/lib/dhcpcd5/*
 
 	# Users and groups
-	groupadd -g 900 mpd
-	useradd -u 900 -g 900 mpd
-	groupadd -g 950 upmpdcli
-	useradd -u 950 -g 950 upmpdcli
-	echo "pi:moodeaudio" | sudo chpasswd
+	/usr/sbin/groupadd -g 900 mpd
+	/usr/sbin/useradd -u 900 -g 900 mpd
+	/usr/sbin/groupadd -g 950 upmpdcli
+	/usr/sbin/useradd -u 950 -g 950 upmpdcli
+	echo "pi:moodeaudio" | sudo /usr/sbin/chpasswd
 
 	# Moode configuration
-	rm /var/lib/mpd/music/RADIO/*
-	rm /var/www/images/radio-logos/*
-	sqlite3 /var/local/www/db/moode-sqlite3.db "update cfg_system set value='Emerald' where param='accent_color'"
+	/bin/rm /var/lib/mpd/music/RADIO/*
+	/bin/rm /var/www/images/radio-logos/*
+	/usr/bin/sqlite3 /var/local/www/db/moode-sqlite3.db "update cfg_system set value='Emerald' where param='accent_color'"
 
 	# AlsaEqual
-	amixer -D alsaequal > /dev/null
-	chmod 0755 /usr/local/bin/alsaequal.bin
-	rm /usr/share/alsa/alsa.conf.d/equal.conf
+	/usr/bin/amixer -D alsaequal > /dev/null
+	/bin/chmod 0755 /usr/local/bin/alsaequal.bin
+	/bin/rm /usr/share/alsa/alsa.conf.d/equal.conf
 	/usr/bin/mpd /etc/mpd.conf
 
 	# MPD configuration
-	mpc enable only 1
-	mpc update
-	mpd --kill /etc/mpd.conf
+	/usr/bin/mpc enable only 1
+	/usr/bin/mpc update
+	/usr/bin/mpd --kill /etc/mpd.conf
 
 	# File permissions
-	chown -R mpd:audio ${BIN_PATH}/var/lib/mpd
-	chown -R mpd:audio ${BIN_PATH}/var/log/mpd
-	chown mpd:audio ${BIN_PATH}/etc/mpd.conf
-	chown mpd:audio ${BIN_PATH}/var/run/mpd
-	chown mpd:audio /usr/local/bin/alsaequal.bin
-	chown -R pi:pi ${BIN_PATH}/home/pi
+	/bin/chown -R mpd:audio ${BIN_PATH}/var/lib/mpd
+	/bin/chown -R mpd:audio ${BIN_PATH}/var/log/mpd
+	/bin/chown mpd:audio ${BIN_PATH}/etc/mpd.conf
+	/bin/chown mpd:audio ${BIN_PATH}/var/run/mpd
+	/bin/chown mpd:audio /usr/local/bin/alsaequal.bin
+	/bin/chown -R pi:pi ${BIN_PATH}/home/pi
+
+	/bin/sed -i 's| init=/root/startup.sh||' /boot/cmdline.txt
+	/sbin/reboot
 EOF
 
 install_gcclibs
 #remove_devfiles
+zip_project
