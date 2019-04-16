@@ -159,5 +159,5 @@ cat <<-EOF > ${BIN_PATH}/root/startup.sh
 EOF
 
 install_gcclibs
-#remove_devfiles
+remove_devfiles
 zip_project
