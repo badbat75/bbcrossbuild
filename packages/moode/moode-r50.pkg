@@ -71,7 +71,7 @@ install -D -m 0644 lib/systemd/system/* ${BIN_PATH}/lib/systemd/system/
 install -d ${BIN_PATH}/usr/local/bin
 install -D -m 0755 usr/local/bin/* ${BIN_PATH}/usr/local/bin/
 #install -d ${BIN_PATH}/usr/local/etc
-install -D -m 0644 usr/local/etc/shairport-sync.conf ${BIN_PATH}/etc/
+install -D -m 0644 etc/shairport-sync.conf ${BIN_PATH}/etc/
 install -d ${BIN_PATH}/usr/lib/tmpfiles.d
 install -D -m 0644 usr/lib/tmpfiles.d/* ${BIN_PATH}/usr/lib/tmpfiles.d/
 install -d ${BIN_PATH}/usr/share
