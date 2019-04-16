@@ -87,7 +87,7 @@ build python/gmusicapi-12.0.0
 install -d ${BIN_PATH}/root
 cp ${DISTOS_PATH}/boot/cmdline.txt ${BIN_PATH}/boot/cmdline.txt
 #sed -i 's|init=/usr/lib/raspi-config/init_resize.sh|init=/root/startup.sh|' ${BIN_PATH}/boot/cmdline.txt
-sed -i 's|root=.*|root=/dev/mmcblk0p2|;s| quiet||' ${BIN_PATH}/boot/cmdline.txt
+sed -i 's|root=.* |root=/dev/mmcblk0p2 |;s| quiet||' ${BIN_PATH}/boot/cmdline.txt
 cat <<-EOF > ${BIN_PATH}/root/startup.sh
 	# Start-up services
 	/bin/systemctl daemon-reload
