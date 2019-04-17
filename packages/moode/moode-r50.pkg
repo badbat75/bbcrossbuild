@@ -99,12 +99,4 @@ echo 'BUFFERTIME=20000' >> ${BIN_PATH}/etc/bluealsaaplay.conf
 sed -i 's|bluealsa-aplay --profile-a2dp|bluealsa-aplay --pcm-buffer-time=${BUFFERTIME} --profile-a2dp|g' ${BIN_PATH}/etc/systemd/system/bluealsa-aplay@.service
 # Permissions
 chmod 0777 ${BIN_PATH}/var/lib/mpd/music/RADIO
-chmod -R 0777 ${BIN_PATH}/var/local/www/db
-# Deletes
-# Final prep for image
-install -D -m 0644 network/interfaces.default ${BIN_PATH}/etc/network/interfaces
-## NOTE: if you created a wpa_supplicant.conf file back in STEP 1 to run the
-## build over a WiFi connection then don't copy the wpa_supplicant.conf file. 
-install -D -m 0600 network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
-install -D -m 0664 network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
-install -D -m 0644 network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf"
+chmod -R 0777 ${BIN_PATH}/var/local/www/db"
