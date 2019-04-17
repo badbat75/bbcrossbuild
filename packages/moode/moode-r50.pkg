@@ -13,6 +13,7 @@ install -m 0755 -d ${BIN_PATH}/var/local/www/imagesw
 install -m 0755 -d ${BIN_PATH}/var/local/www/imagesw/toggle
 install -m 0755 -d ${BIN_PATH}/var/local/www/db
 install -d ${BIN_PATH}/var/lib/mpd/music/RADIO
+install -m 0755 -d ${BIN_PATH}/var/log/mpd
 # Mount points
 install -d ${BIN_PATH}/mnt/NAS
 install -d ${BIN_PATH}/mnt/SDCARD
@@ -21,9 +22,11 @@ ln -fs /mnt/NAS ${BIN_PATH}/var/lib/mpd/music/NAS
 ln -fs /mnt/SDCARD ${BIN_PATH}/var/lib/mpd/music/SDCARD
 ln -fs /media ${BIN_PATH}/var/lib/mpd/music/USB
 # Logs
+install -D -m 0644 /dev/null ${BIN_PATH}/var/log/mpd/log
 install -D -m 0666 /dev/null ${BIN_PATH}/var/log/moode.log
 install -D -m 0666 /dev/null ${BIN_PATH}/var/log/php_errors.log
 # Files
+install -D 0666 mpd/mpd.conf.default ${BIN_PATH}/etc/mpd.conf
 install -D mpd/sticker.sql ${BIN_PATH}/var/lib/mpd
 install -d ${BIN_PATH}/mnt/SDCARD
 install -D other/sdcard/Stereo\ Test/* ${BIN_PATH}/mnt/SDCARD/
