@@ -30,9 +30,9 @@ install -D -m 0666 mpd/mpd.conf.default ${BIN_PATH}/etc/mpd.conf
 install -D mpd/sticker.sql ${BIN_PATH}/var/lib/mpd
 install -d ${BIN_PATH}/mnt/SDCARD
 install -D other/sdcard/Stereo\ Test/* ${BIN_PATH}/mnt/SDCARD/
-install -D network/interfaces.default ${BIN_PATH}/etc/network/interfaces
+#install -D network/interfaces.default ${BIN_PATH}/etc/network/interfaces
 install -D network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
-install -D network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
+#install -D network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
 install -D network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
 install -D var/local/www/db/moode-sqlite3.db.default ${BIN_PATH}/var/local/www/db/moode-sqlite3.db
 # Moode sources and configs

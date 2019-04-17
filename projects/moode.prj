@@ -99,7 +99,7 @@ cat <<-EOF > ${BIN_PATH}/root/setup.sh
 	echo "pi:moodeaudio" | sudo /usr/sbin/chpasswd
 
 	# File permissions
-	/bin/chown root:netdev /etc/dhcpcd.conf
+	#/bin/chown root:netdev /etc/dhcpcd.conf
 	/bin/chown -R mpd:audio /var/lib/mpd
 	/bin/chown -R mpd:audio /var/log/mpd
 	/bin/chown mpd:audio /etc/mpd.conf
