@@ -80,6 +80,8 @@ install -d ${BIN_PATH}/var/local
 cp -r var/local/www ${BIN_PATH}/var/local/
 cp -r www ${BIN_PATH}/var/
 chmod 0755 ${BIN_PATH}/var/www/command/*
+# rc.local
+chmod 0755 ${BIN_PATH}/etc/rc.local
 # Bluetooth
 chmod 0666 ${BIN_PATH}/etc/bluealsaaplay.conf
 chmod 0755 ${BIN_PATH}/usr/local/bin/a2dp-autoconnect
