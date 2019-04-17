@@ -47,7 +47,7 @@ function create_selfextracting_archive () {
 
 		if [ -f /root/startup.sh ]
 		then
-			/root/startup.sh > /root/startup.log 2>&1
+			/root/startup.sh
 		fi
 
 		exit 0
