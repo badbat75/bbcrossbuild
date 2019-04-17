@@ -45,9 +45,9 @@ function create_selfextracting_archive () {
 
 		tail -n+\$ARCHIVE \$0 | sudo tar xJf - -C /
 
-		if [ -f /root/startup.sh ]
+		if [ -f /root/setup.sh ]
 		then
-			/root/startup.sh
+			/root/setup.sh
 		fi
 
 		exit 0
