@@ -43,11 +43,11 @@ function create_selfextracting_archive () {
 
 		ARCHIVE=\`awk '/^__ARCHIVE_BELOW__/ {print NR + 1; exit 0; }' \$0\`
 
-		tail -n+\$ARCHIVE \$0 | sudo tar xJf -C /
+		tail -n+\$ARCHIVE \$0 | sudo tar xJf - -C /
 
 		if [ -f /root/startup.sh ]
 		then
-			/root/startup.sh
+			/root/startup.sh > /root/startup.log 2>&1
 		fi
 
 		exit 0

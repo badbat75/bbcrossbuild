@@ -89,35 +89,16 @@ cp ${DISTOS_PATH}/boot/cmdline.txt ${BIN_PATH}/boot/cmdline.txt
 #sed -i 's|init=/usr/lib/raspi-config/init_resize.sh|init=/root/startup.sh|' ${BIN_PATH}/boot/cmdline.txt
 sed -i 's|root=[^ ]*|root=/dev/mmcblk0p2|;s| quiet||' ${BIN_PATH}/boot/cmdline.txt
 cat <<-EOF > ${BIN_PATH}/root/startup.sh
-	# Start-up services
-	/bin/systemctl daemon-reload
-	/bin/systemctl set-default multi-user.target
-	/bin/systemctl disable cron.service
-	/bin/systemctl enable rpcbind
-	/bin/systemctl disable shellinabox
-	/bin/systemctl disable hostapd
-	/bin/systemctl disable dnsmasq
-	/bin/systemctl disable bluetooth.service
-	/bin/systemctl disable hciuart.service
-	/bin/systemctl disable bluealsa
-	/bin/systemctl disable mpd.service
-	/bin/systemctl disable mpd.socket
-	/bin/systemctl disable rotenc.service
-	/bin/systemctl disable squeezelite
-	/bin/systemctl disable upmpdcli.service
-	/bin/systemctl disable minidlna
-	/bin/systemctl disable upmpdcli
-	/bin/systemctl disable localui
-
+	set +x
 	# Start-up configuration
 	/usr/bin/touch /boot/ssh
 	/bin/sed -i 's| quiet.*||;s|^|net.ifnames=0 |' /boot/cmdline.txt
 	/bin/sed -i 's/raspberrypi/moode/' /etc/hostname
 	/bin/sed -i 's/raspberrypi/moode/' /etc/hosts
 	/bin/sed -i 's/allowed_users=console/allowed_users=anybody/' /etc/X11/Xwrapper.config
-	/bin/rm /etc/init.d/resize2fs_once
+	#/bin/rm /etc/init.d/resize2fs_once
 	/usr/bin/timedatectl set-timezone "Europe/Rome"
-	dphys-swapfile swapoff
+	/sbin/dphys-swapfile swapoff
 	/usr/sbin/update-rc.d dphys-swapfile remove
 	/bin/rm /var/swap
 	/bin/rm -r /var/www/html
@@ -148,6 +129,7 @@ cat <<-EOF > ${BIN_PATH}/root/startup.sh
 	/usr/bin/mpd --kill /etc/mpd.conf
 
 	# File permissions
+	/bin/chown root:netdev /etc/dhcpcd.conf
 	/bin/chown -R mpd:audio /var/lib/mpd
 	/bin/chown -R mpd:audio /var/log/mpd
 	/bin/chown mpd:audio /etc/mpd.conf
@@ -156,6 +138,27 @@ cat <<-EOF > ${BIN_PATH}/root/startup.sh
 	/bin/chown -R pi:pi /home/pi
 
 	/bin/sed -i 's| init=/root/startup.sh||' /boot/cmdline.txt
+
+	# Start-up services
+	/bin/systemctl daemon-reload
+	/bin/systemctl set-default multi-user.target
+	/bin/systemctl disable cron.service
+	/bin/systemctl enable rpcbind
+	/bin/systemctl disable shellinabox
+	/bin/systemctl disable hostapd
+	/bin/systemctl disable dnsmasq
+	/bin/systemctl disable bluetooth.service
+	/bin/systemctl disable hciuart.service
+	/bin/systemctl disable bluealsa
+	/bin/systemctl disable mpd.service
+	/bin/systemctl disable mpd.socket
+	/bin/systemctl disable rotenc.service
+	/bin/systemctl disable squeezelite
+	/bin/systemctl disable upmpdcli.service
+	/bin/systemctl disable minidlna
+	/bin/systemctl disable upmpdcli
+	/bin/systemctl disable localui
+
 	/bin/sleep 10
 	/sbin/reboot
 EOF
