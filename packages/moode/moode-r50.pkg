@@ -7,7 +7,6 @@ PKG_PREBUILD="install -D boot/config.txt.default ${BIN_PATH}/boot/config.txt
 install -d ${BIN_PATH}/etc/sudoers.d
 echo -e 'www-data\tALL=(ALL) NOPASSWD: ALL' >> ${BIN_PATH}/etc/sudoers.d/010_www-data
 # Dirs
-install -m 0755 -d ${BIN_PATH}/etc
 install -m 0755 -d ${BIN_PATH}/var/local/www
 install -m 0755 -d ${BIN_PATH}/var/local/www/commandw
 install -m 0755 -d ${BIN_PATH}/var/local/www/imagesw
@@ -27,7 +26,7 @@ install -D -m 0644 /dev/null ${BIN_PATH}/var/log/mpd/log
 install -D -m 0666 /dev/null ${BIN_PATH}/var/log/moode.log
 install -D -m 0666 /dev/null ${BIN_PATH}/var/log/php_errors.log
 # Files
-install -D 0666 mpd/mpd.conf.default ${BIN_PATH}/etc/mpd.conf
+install -D -m 0666 mpd/mpd.conf.default ${BIN_PATH}/etc/mpd.conf
 install -D mpd/sticker.sql ${BIN_PATH}/var/lib/mpd
 install -d ${BIN_PATH}/mnt/SDCARD
 install -D other/sdcard/Stereo\ Test/* ${BIN_PATH}/mnt/SDCARD/
