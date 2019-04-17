@@ -90,6 +90,23 @@ cp ${DISTOS_PATH}/boot/cmdline.txt ${BIN_PATH}/boot/cmdline.txt
 sed -i 's|root=[^ ]*|root=/dev/mmcblk0p2|;s| quiet||' ${BIN_PATH}/boot/cmdline.txt
 cat <<-EOF > ${BIN_PATH}/root/startup.sh
 	set +x
+
+	# Users and groups
+	/usr/sbin/groupadd -g 900 mpd
+	/usr/sbin/useradd -u 900 -g 900 mpd
+	/usr/sbin/groupadd -g 950 upmpdcli
+	/usr/sbin/useradd -u 950 -g 950 upmpdcli
+	echo "pi:moodeaudio" | sudo /usr/sbin/chpasswd
+
+	# File permissions
+	/bin/chown root:netdev /etc/dhcpcd.conf
+	/bin/chown -R mpd:audio /var/lib/mpd
+	/bin/chown -R mpd:audio /var/log/mpd
+	/bin/chown mpd:audio /etc/mpd.conf
+	/bin/chown mpd:audio /var/run/mpd
+	/bin/chown mpd:audio /usr/local/bin/alsaequal.bin
+	/bin/chown -R pi:pi /home/pi
+
 	# Start-up configuration
 	/usr/bin/touch /boot/ssh
 	/bin/sed -i 's| quiet.*||;s|^|net.ifnames=0 |' /boot/cmdline.txt
@@ -104,13 +121,6 @@ cat <<-EOF > ${BIN_PATH}/root/startup.sh
 	/bin/rm -r /var/www/html
 	/bin/rm /etc/update-motd.d/10-uname
 	/bin/rm /var/lib/dhcpcd5/*
-
-	# Users and groups
-	/usr/sbin/groupadd -g 900 mpd
-	/usr/sbin/useradd -u 900 -g 900 mpd
-	/usr/sbin/groupadd -g 950 upmpdcli
-	/usr/sbin/useradd -u 950 -g 950 upmpdcli
-	echo "pi:moodeaudio" | sudo /usr/sbin/chpasswd
 
 	# Moode configuration
 	/bin/rm /var/lib/mpd/music/RADIO/*
@@ -127,17 +137,6 @@ cat <<-EOF > ${BIN_PATH}/root/startup.sh
 	/usr/bin/mpc enable only 1
 	/usr/bin/mpc update
 	/usr/bin/mpd --kill /etc/mpd.conf
-
-	# File permissions
-	/bin/chown root:netdev /etc/dhcpcd.conf
-	/bin/chown -R mpd:audio /var/lib/mpd
-	/bin/chown -R mpd:audio /var/log/mpd
-	/bin/chown mpd:audio /etc/mpd.conf
-	/bin/chown mpd:audio /var/run/mpd
-	/bin/chown mpd:audio /usr/local/bin/alsaequal.bin
-	/bin/chown -R pi:pi /home/pi
-
-	/bin/sed -i 's| init=/root/startup.sh||' /boot/cmdline.txt
 
 	# Start-up services
 	/bin/systemctl daemon-reload
