@@ -7,6 +7,7 @@ PKG_PREBUILD="install -D boot/config.txt.default ${BIN_PATH}/boot/config.txt
 install -d ${BIN_PATH}/etc/sudoers.d
 echo -e 'www-data\tALL=(ALL) NOPASSWD: ALL' >> ${BIN_PATH}/etc/sudoers.d/010_www-data
 # Dirs
+install -m 0755 -d ${BIN_PATH}/etc
 install -m 0755 -d ${BIN_PATH}/var/local/www
 install -m 0755 -d ${BIN_PATH}/var/local/www/commandw
 install -m 0755 -d ${BIN_PATH}/var/local/www/imagesw
