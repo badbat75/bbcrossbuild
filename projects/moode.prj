@@ -23,11 +23,11 @@ build moode/moode-${MOODEREL}
 
 # STEP 1 - Modify Raspbian Lite and create a new, base image
 #build moode/rpi-kernel-4.19-master
-#build raspbian/wpa_supplicant_2.7+git20190128+0c1e29f-3
-#build raspbian/hostapd_2.7+git20190128+0c1e29f-3
-#build raspbian/iw_5.0.1-1
+build raspbian/wpa_supplicant_2.7+git20190128+0c1e29f-3
+build raspbian/hostapd_2.7+git20190128+0c1e29f-3
+build raspbian/iw_5.0.1-1
 #build moode/crda_3.18-1
-#build moode/crda_4.14
+build moode/crda_4.14
 
 # STEP 2 - Expand the root partition to 3GB
 # STEP 3 - Install core packages
@@ -104,7 +104,6 @@ cat <<-EOF > ${BIN_PATH}/root/setup.sh
 	/bin/chown -R mpd:audio /var/log/mpd
 	/bin/chown mpd:audio /etc/mpd.conf
 	/bin/chown mpd:audio /var/run/mpd
-	/bin/chown mpd:audio /usr/local/bin/alsaequal.bin
 	/bin/chown -R pi:pi /home/pi
 
 	# Start-up configuration
@@ -114,29 +113,28 @@ cat <<-EOF > ${BIN_PATH}/root/setup.sh
 	/bin/sed -i 's/raspberrypi/moode/' /etc/hosts
 	/bin/sed -i 's/allowed_users=console/allowed_users=anybody/' /etc/X11/Xwrapper.config
 	#/bin/rm /etc/init.d/resize2fs_once
-	/usr/bin/timedatectl set-timezone "Europe/Rome"
+	/usr/bin/timedatectl set-timezone "America/Detroit"
 	/sbin/dphys-swapfile swapoff
 	/usr/sbin/update-rc.d dphys-swapfile remove
 	/bin/rm /var/swap
 	/bin/rm -r /var/www/html
 	/bin/rm /etc/update-motd.d/10-uname
-	/bin/rm /var/lib/dhcpcd5/*
+	#/bin/rm /var/lib/dhcpcd5/*
 
 	# Moode configuration
-	/bin/rm /var/lib/mpd/music/RADIO/*
-	/bin/rm /var/www/images/radio-logos/*
 	/usr/bin/sqlite3 /var/local/www/db/moode-sqlite3.db "update cfg_system set value='Emerald' where param='accent_color'"
 
 	# AlsaEqual
 	/usr/bin/amixer -D alsaequal > /dev/null
 	/bin/chmod 0755 /usr/local/bin/alsaequal.bin
+	/bin/chown mpd:audio /usr/local/bin/alsaequal.bin
 	/bin/rm /usr/share/alsa/alsa.conf.d/equal.conf
-	/usr/bin/mpd /etc/mpd.conf
 
 	# MPD configuration
-	/usr/bin/mpc enable only 1
-	/usr/bin/mpc update
-	/usr/bin/mpd --kill /etc/mpd.conf
+	/bin/su - mpd -c "/usr/bin/mpd /etc/mpd.conf"
+	/bin/su - mpd -c "/usr/bin/mpc enable only 1"
+	/bin/su - mpd -c "/usr/bin/mpc update"
+	/bin/su - mpd -c "/usr/bin/mpd --kill /etc/mpd.conf"
 
 	# Start-up services
 	/bin/systemctl daemon-reload
