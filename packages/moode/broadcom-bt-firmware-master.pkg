@@ -1,0 +1,5 @@
+# broadcom-bt-firmware-master
+PKG_URL="https://github.com/winterheart/broadcom-bt-firmware/archive/master.tar.gz"
+BUILD_PROCESS=downloadonly
+PKG_PREBUILD="install -d -m0755 ${BIN_PATH} &&
+install -m 0644 -D brcm/* ${BIN_PATH}/lib/firmware/brcm/"
