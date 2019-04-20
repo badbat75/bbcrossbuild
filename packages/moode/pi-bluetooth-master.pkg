@@ -1,0 +1,7 @@
+# pi-bluetooth-master
+PKG_URL="https://github.com/RPi-Distro/pi-bluetooth/archive/master.tar.gz"
+BUILD_PROCESS=downloadonly
+PKG_PREBUILD="install -d -m0755 ${BIN_PATH}\${BUILD_PREFIX}/bin &&
+install -d -m0755 ${BIN_PATH}\${BUILD_SYSCONFDIR}/systemd/system &&
+install -m 0755 -D usr/bin/btuart ${BIN_PATH}\${BUILD_PREFIX}/bin/ &&
+install -m 0644 -D debian/pi-bluetooth.hciuart.service ${BIN_PATH}\${BUILD_SYSCONFDIR}/systemd/system/hciuart.service"
