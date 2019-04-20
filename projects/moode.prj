@@ -130,6 +130,7 @@ cat <<-EOF > ${BIN_PATH}/root/setup.sh
 
 	# Moode configuration
 	/usr/bin/sqlite3 /var/local/www/db/moode-sqlite3.db "update cfg_system set value='Emerald' where param='accent_color'"
+	/usr/bin/sqlite3 /var/local/www/db/moode-sqlite3.db "update cfg_system set value='Default' where param='themename'"
 
 	# AlsaEqual
 	/usr/bin/amixer -D alsaequal > /dev/null
