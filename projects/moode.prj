@@ -110,7 +110,7 @@ cat <<-EOF > ${BIN_PATH}/root/setup.sh
 	/bin/chown -R mpd:audio /var/lib/mpd
 	/bin/chown -R mpd:audio /var/log/mpd
 	/bin/chown mpd:audio /etc/mpd.conf
-	/bin/chown mpd:audio /var/run/mpd
+	/bin/chown mpd:audio /run/mpd
 	/bin/chown -R pi:pi /home/pi
 
 	# Start-up configuration

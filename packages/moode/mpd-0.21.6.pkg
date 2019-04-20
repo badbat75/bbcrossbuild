@@ -17,7 +17,7 @@ install -D -m 0644 /dev/null ${BIN_PATH}/var/lib/mpd/state
 install -d ${BIN_PATH}/var/log/mpd
 install -D -m 0644 /dev/null ${BIN_PATH}/var/log/mpd/log
 install -D -m 0666 mpd/mpd.conf.default ${BIN_PATH}/etc/mpd.conf
-install -d ${BIN_PATH}/var/run/mpd
+install -d ${BIN_PATH}/run/mpd
 install -d ${BIN_PATH}/usr/local/bin
 ln -s /usr/bin/mpd ${BIN_PATH}/usr/local/bin/mpd
 rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.service
