@@ -5,7 +5,7 @@
  
  lib_cli_ldflags = \
 -	-module -avoid-version
-+	-module -avoid-version -lnl-cli-3 -Lsrc/lib/.libs -lnl-route-3 -lnl-3
++	-module -avoid-version -Llib/.libs -Lsrc/lib/.libs -lnl-3 -lnl-route-3 -lnl-cli-3
  
  lib_cli_cls_basic_la_CPPFLAGS       = $(lib_cppflags)
  lib_cli_cls_basic_la_LDFLAGS        = $(lib_cli_ldflags)
