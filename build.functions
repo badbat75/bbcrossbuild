@@ -651,7 +651,8 @@ function kernelbuild () {
 	make4kern modules &&
 	make ${HM:+ARCH=${HM}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_MOD_PATH=${BIN_PATH} ${INST_CMD} modules_install &&
 	rm ${BIN_PATH}/lib/modules/${KERN_VER}${KERN_EXTRAVERSION}/build &&
-	rm ${BIN_PATH}/lib/modules/${KERN_VER}${KERN_EXTRAVERSION}/source
+	rm ${BIN_PATH}/lib/modules/${KERN_VER}${KERN_EXTRAVERSION}/source &&
+	make ${HM:+ARCH=${HM}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_HDR_PATH=${BIN_PATH}${BUILD_PREFIX} headers_install 
 	local STATUS=${?}
 	if [ ${STATUS} -ne 0 ]
 	then
