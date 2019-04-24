@@ -36,22 +36,28 @@ function zip_project () {
 function create_selfextracting_archive () {
 	zip_project
 	cat >${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx <<-EOF
-		#!/bin/bash
+		#!/bin/sh -x
 		echo ""
 		echo "Self Extracting Installer"
 		echo ""
 
 		ARCHIVE=\`awk '/^__ARCHIVE_BELOW__/ {print NR + 1; exit 0; }' \$0\`
 
-		/bin/mount -oremount,rw /
-		/bin/mount /boot
+	EOF
+	if [ -f ${USERDATA_PATH}/pre.sfx ]
+	then
+			cat ${USERDATA_PATH}/pre.sfx >> ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx
+	fi
+	cat >>${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx <<-EOF
 
 		tail -n+\$ARCHIVE \$0 | sudo tar xJf - -C /
 
-		if [ -f /root/setup.sh ]
-		then
-			/root/setup.sh
-		fi
+	EOF
+	if [ -f ${USERDATA_PATH}/post.sfx ]
+	then
+			cat ${USERDATA_PATH}/post.sfx >> ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx
+	fi
+	cat >>${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx <<-EOF
 
 		exit 0
 
