@@ -22,9 +22,9 @@ create_key_sscertificate
 build moode/moode-${MOODEREL}
 
 # STEP 1 - Modify Raspbian Lite and create a new, base image
-#build moode/rpi-kernel-4.19-master
+build moode/rpi-kernel-4.19-master
 build raspbian/wpa_supplicant_2.7+git20190128+0c1e29f-3
-build moode/hostapd_2.8
+build moode/hostapd_2.7+git20190128+0c1e29f-3
 build raspbian/iw_5.0.1-1
 build moode/crda_3.18-1
 # Disabled due to python3 incompatibility
@@ -92,8 +92,12 @@ build firmwares/broadcom-bt-firmware-master
 # FINAL - Clean up
 
 cat <<-EOF > ${USERDATA_PATH}/pre.sfx
-		/bin/mount -oremount,rw /
-		/bin/mount /boot
+	/bin/mount -t proc proc /proc
+	/bin/mount -t sysfs sys /sys
+	/bin/mount -t tmpfs tmp /run
+	/bin/mkdir -p /run/systemd
+	/bin/mount -oremount,rw /dev/mmcblk0p2 /
+	/bin/mount /dev/mmcblk0p1 /boot
 EOF
 cat <<-EOF > ${USERDATA_PATH}/post.sfx
 	# Users and groups
@@ -162,11 +166,16 @@ cat <<-EOF > ${USERDATA_PATH}/post.sfx
 	/bin/systemctl disable upmpdcli
 	/bin/systemctl disable localui
 
-	sed -i 's|init=/root/moode.sfx ||' /boot/cmdline.txt
-	/bin/sleep 10
-	/sbin/shutdown -r now
+	sed -i ' s|init=/root/moode.sfx||' /boot/cmdline.txt
+	
+	/bin/umount /boot
+	/bin/mount -oremount,ro /dev/mmcblk0p2 /
+
+	echo b > /proc/sysrq-trigger
+	sleep 30
+	exit 0
 EOF
 
 install_gcclibs
-remove_devfiles
+#remove_devfiles
 create_selfextracting_archive
