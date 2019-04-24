@@ -43,6 +43,9 @@ function create_selfextracting_archive () {
 
 		ARCHIVE=\`awk '/^__ARCHIVE_BELOW__/ {print NR + 1; exit 0; }' \$0\`
 
+		/bin/mount -oremount,rw /
+		/bin/mount /boot
+
 		tail -n+\$ARCHIVE \$0 | sudo tar xJf - -C /
 
 		if [ -f /root/setup.sh ]
