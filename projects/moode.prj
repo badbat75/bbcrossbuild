@@ -162,6 +162,7 @@ cat <<-EOF > ${USERDATA_PATH}/post.sfx
 	/bin/systemctl disable upmpdcli
 	/bin/systemctl disable localui
 
+	sed -i 's|init=/root/moode.sfx ||' /boot/cmdline.txt
 	/bin/sleep 10
 	/sbin/shutdown -r now
 EOF
