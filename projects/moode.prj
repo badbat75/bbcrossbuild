@@ -124,7 +124,7 @@ cat <<-EOF > ${USERDATA_PATH}/post.sfx
 	/bin/sed -i 's/raspberrypi/moode/' /etc/hostname
 	/bin/sed -i 's/raspberrypi/moode/' /etc/hosts
 	/bin/sed -i 's/allowed_users=console/allowed_users=anybody/' /etc/X11/Xwrapper.config
-	#/bin/rm /etc/init.d/resize2fs_once
+	/bin/rm /etc/init.d/resize2fs_once
 	/usr/bin/timedatectl set-timezone "America/Detroit"
 	/sbin/dphys-swapfile swapoff
 	/usr/sbin/update-rc.d dphys-swapfile remove
