@@ -100,6 +100,7 @@ cat <<-EOF > ${USERDATA_PATH}/pre.sfx
 	/bin/mkdir -p /run/systemd
 	/bin/mount -oremount,rw /dev/mmcblk0p2 /
 	/bin/mount /dev/mmcblk0p1 /boot
+	/usr/bin/apt-get -y purge raspberrypi-kernel
 EOF
 cat <<-EOF > ${USERDATA_PATH}/post.sfx
 	# Users and groups
