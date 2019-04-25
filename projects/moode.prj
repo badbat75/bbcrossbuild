@@ -92,7 +92,7 @@ build firmwares/broadcom-bt-firmware-master
 # FINAL - Clean up
 
 cat <<-EOF > ${USERDATA_PATH}/pre.sfx
-	/bin/date -s "@\$(/usr/bin/stat -c %Y \$(/usr/bin/realpath \${0}))"
+	/bin/date -s "@$(date +%s)"
 	/bin/mount -t proc proc /proc
 	/bin/mount -t sysfs sys /sys
 	/bin/mount -t tmpfs tmp /run
