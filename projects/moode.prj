@@ -126,7 +126,7 @@ cat <<-EOF > ${USERDATA_PATH}/post.sfx
 	/usr/bin/timedatectl set-timezone "America/Detroit"
 	/sbin/dphys-swapfile swapoff
 	/usr/sbin/update-rc.d dphys-swapfile remove
-	/bin/rm /var/swap
+	#/bin/rm /var/swap
 	/bin/rm -r /var/www/html
 	/bin/rm /etc/update-motd.d/10-uname
 	#/bin/rm /var/lib/dhcpcd5/*
