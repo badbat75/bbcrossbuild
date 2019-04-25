@@ -93,89 +93,91 @@ build firmwares/broadcom-bt-firmware-master
 # FINAL - Clean up
 
 cat <<-EOF > ${USERDATA_PATH}/pre.sfx
-	/bin/date -s "@$(date +%s)"
-	/bin/mount -t proc proc /proc
-	/bin/mount -t sysfs sys /sys
-	/bin/mount -t tmpfs tmp /run
-	/bin/mkdir -p /run/systemd
-	/bin/mount -oremount,rw /dev/mmcblk0p2 /
-	/bin/mount /dev/mmcblk0p1 /boot
-	/usr/bin/apt-get -y purge raspberrypi-kernel
+	export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+	date -s "@$(date +%s)"
+	mount -t devpts devpts /dev/pts
+	mount -t proc proc /proc
+	mount -t sysfs sys /sys
+	mount -t tmpfs tmp /run
+	mkdir -p /run/systemd
+	mount -oremount,rw /dev/mmcblk0p2 /
+	mount /dev/mmcblk0p1 /boot
+	apt-get -y purge raspberrypi-kernel
 EOF
 cat <<-EOF > ${USERDATA_PATH}/post.sfx
 	# Users and groups
-	/usr/sbin/groupadd -g 900 mpd
-	/usr/sbin/useradd -u 900 -g 900 mpd
-	/usr/sbin/groupadd -g 950 upmpdcli
-	/usr/sbin/useradd -u 950 -g 950 upmpdcli
-	echo "pi:moodeaudio" | sudo /usr/sbin/chpasswd
+	groupadd -g 900 mpd
+	useradd -u 900 -g 900 mpd
+	groupadd -g 950 upmpdcli
+	useradd -u 950 -g 950 upmpdcli
+	echo "pi:moodeaudio" | chpasswd
 
 	# File permissions
-	#/bin/chown root:netdev /etc/dhcpcd.conf
-	/bin/chown -R mpd:audio /var/lib/mpd
-	/bin/chown -R mpd:audio /var/log/mpd
-	/bin/chown mpd:audio /etc/mpd.conf
-	/bin/chown mpd:audio /run/mpd
-	/bin/chown -R pi:pi /home/pi
+	#chown root:netdev /etc/dhcpcd.conf
+	chown -R mpd:audio /var/lib/mpd
+	chown -R mpd:audio /var/log/mpd
+	chown mpd:audio /etc/mpd.conf
+	chown mpd:audio /run/mpd
+	chown -R pi:pi /home/pi
 
 	# Start-up configuration
-	/usr/bin/touch /boot/ssh
-	/bin/sed -i 's| quiet.*||;s|^|net.ifnames=0 |' /boot/cmdline.txt
-	/bin/sed -i 's/raspberrypi/moode/' /etc/hostname
-	/bin/sed -i 's/raspberrypi/moode/' /etc/hosts
-	/bin/sed -i 's/allowed_users=console/allowed_users=anybody/' /etc/X11/Xwrapper.config
-	/bin/rm /etc/init.d/resize2fs_once
-	/usr/bin/timedatectl set-timezone "America/Detroit"
-	/sbin/dphys-swapfile swapoff
-	/usr/sbin/update-rc.d dphys-swapfile remove
-	#/bin/rm /var/swap
-	/bin/rm -r /var/www/html
-	/bin/rm /etc/update-motd.d/10-uname
-	#/bin/rm /var/lib/dhcpcd5/*
+	touch /boot/ssh
+	sed -i 's| quiet.*||;s|^|net.ifnames=0 |' /boot/cmdline.txt
+	sed -i 's/raspberrypi/moode/' /etc/hostname
+	sed -i 's/raspberrypi/moode/' /etc/hosts
+	sed -i 's/allowed_users=console/allowed_users=anybody/' /etc/X11/Xwrapper.config
+	rm /etc/init.d/resize2fs_once
+	timedatectl set-timezone "America/Detroit"
+	dphys-swapfile swapoff
+	update-rc.d dphys-swapfile remove
+	#rm /var/swap
+	rm -r /var/www/html
+	rm /etc/update-motd.d/10-uname
+	#rm /var/lib/dhcpcd5/*
 
 	# Moode configuration
-	/usr/bin/sqlite3 /var/local/www/db/moode-sqlite3.db "update cfg_system set value='Emerald' where param='accent_color'"
-	/usr/bin/sqlite3 /var/local/www/db/moode-sqlite3.db "update cfg_system set value='Default' where param='themename'"
+	sqlite3 /var/local/www/db/moode-sqlite3.db "update cfg_system set value='Emerald' where param='accent_color'"
+	sqlite3 /var/local/www/db/moode-sqlite3.db "update cfg_system set value='Default' where param='themename'"
 
 	# AlsaEqual
-	/usr/bin/amixer -D alsaequal > /dev/null
-	/bin/chmod 0755 /usr/local/bin/alsaequal.bin
-	/bin/chown mpd:audio /usr/local/bin/alsaequal.bin
-	/bin/rm /usr/share/alsa/alsa.conf.d/equal.conf
+	amixer -D alsaequal > /dev/null
+	chmod 0755 /usr/local/bin/alsaequal.bin
+	chown mpd:audio /usr/local/bin/alsaequal.bin
+	rm /usr/share/alsa/alsa.conf.d/equal.conf
 
 	# MPD configuration
-	/bin/su - mpd -c "/usr/bin/mpd /etc/mpd.conf"
-	/bin/su - mpd -c "/usr/bin/mpc enable only 1"
-	/bin/su - mpd -c "/usr/bin/mpc update"
-	/bin/su - mpd -c "/usr/bin/mpd --kill /etc/mpd.conf"
+	su - mpd -c "/usr/bin/mpd /etc/mpd.conf"
+	su - mpd -c "/usr/bin/mpc enable only 1"
+	su - mpd -c "/usr/bin/mpc update"
+	su - mpd -c "/usr/bin/mpd --kill /etc/mpd.conf"
 
 	# Start-up services
-	/bin/systemctl daemon-reload
-	/bin/systemctl set-default multi-user.target
-	/bin/systemctl disable cron.service
-	/bin/systemctl enable rpcbind
-	/bin/systemctl disable shellinabox
-	/bin/systemctl disable hostapd
-	/bin/systemctl disable dnsmasq
-	/bin/systemctl disable bluetooth.service
-	/bin/systemctl disable hciuart.service
-	/bin/systemctl disable bluealsa
-	/bin/systemctl disable mpd.service
-	/bin/systemctl disable mpd.socket
-	/bin/systemctl disable rotenc.service
-	/bin/systemctl disable squeezelite
-	/bin/systemctl disable upmpdcli.service
-	/bin/systemctl disable minidlna
-	/bin/systemctl disable upmpdcli
-	/bin/systemctl disable localui
+	systemctl daemon-reload
+	systemctl set-default multi-user.target
+	systemctl disable cron.service
+	systemctl enable rpcbind
+	systemctl disable shellinabox
+	systemctl disable hostapd
+	systemctl disable dnsmasq
+	systemctl disable bluetooth.service
+	systemctl disable hciuart.service
+	systemctl disable bluealsa
+	systemctl disable mpd.service
+	systemctl disable mpd.socket
+	systemctl disable rotenc.service
+	systemctl disable squeezelite
+	systemctl disable upmpdcli.service
+	systemctl disable minidlna
+	systemctl disable upmpdcli
+	systemctl disable localui
 
 	sed -i ' s|init=/root/moode.sfx||' /boot/cmdline.txt
 	
-	/bin/umount /boot
-	/bin/mount -oremount,ro /dev/mmcblk0p2 /
+	umount /boot
+	mount -oremount,ro /dev/mmcblk0p2 /
 
+	sleep 10
 	echo b > /proc/sysrq-trigger
-	sleep 30
 	exit 0
 EOF
 
