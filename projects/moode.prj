@@ -24,7 +24,7 @@ build moode/moode-${MOODEREL}
 # STEP 1 - Modify Raspbian Lite and create a new, base image
 build moode/rpi-kernel-4.19-master
 build raspbian/wpa_supplicant_2.7+git20190128+0c1e29f-3
-build moode/hostapd_2.7+git20190128+0c1e29f-3
+build raspbian/hostapd_2.7+git20190128+0c1e29f-3
 build raspbian/iw_5.0.1-1
 build moode/crda_3.18-1
 # Disabled due to python3 incompatibility
@@ -92,6 +92,7 @@ build firmwares/broadcom-bt-firmware-master
 # FINAL - Clean up
 
 cat <<-EOF > ${USERDATA_PATH}/pre.sfx
+	/bin/date -s "@$(/usr/bin/stat -c %Y $(/usr/bin/realpath ${0}))"
 	/bin/mount -t proc proc /proc
 	/bin/mount -t sysfs sys /sys
 	/bin/mount -t tmpfs tmp /run
