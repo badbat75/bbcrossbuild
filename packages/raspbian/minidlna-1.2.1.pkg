@@ -10,6 +10,7 @@ PKG_DEPS="raspbian/libexif-0.6.21-5.1 raspbian/libid3tag_0.15.1b"
 PKG_CFLAGS="-Wno-format-overflow"
 PKG_POSTBUILD="install -d ${BIN_PATH}/var/lib/minidlna &&
 install -d --mode=750 ${BIN_PATH}/var/cache/minidlna &&
+install -d ${BIN_PATH}/etc/logrotate.d &&
 install -d ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1 &&
 install -d ${BIN_PATH}\${BUILD_PREFIX}/share/man/man5 &&
 install -D \${PKG_SRCPATH}/debian/minidlna.default ${BIN_PATH}\${BUILD_SYSCONFDIR}/default &&
