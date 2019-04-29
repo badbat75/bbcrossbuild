@@ -12,13 +12,13 @@ PKG_POSTBUILD="install -d ${BIN_PATH}/var/lib/minidlna &&
 install -d --mode=750 ${BIN_PATH}/var/cache/minidlna &&
 install -d ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1 &&
 install -d ${BIN_PATH}\${BUILD_PREFIX}/share/man/man5 &&
-install -D debian/minidlna.default ${BIN_PATH}\${BUILD_SYSCONFDIR}/default &&
-install -D debian/minidlna.conf ${BIN_PATH}\${BUILD_SYSCONFDIR}/ &&
-install -D debian/minidlna.init ${BIN_PATH}\${BUILD_SYSCONFDIR}/init.d/minidlna &&
-install -D debian/minidlna.logrotate ${BIN_PATH}\${BUILD_SYSCONFDIR}/logrotate.d/ &&
-install -D debian/minidlnad.1 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1 && gzip -f ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1/minidlnad.1 &&
-install -D debian/minidlna.conf.5 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man5 && gzip -f ${BIN_PATH}\${BUILD_PREFIX}/share/man/man5/minidlna.conf.5 &&
-install -D debian/minidlna.1 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1 && gzip -f ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1/minidlna.1"
+install -D \${PKG_SRCPATH}/debian/minidlna.default ${BIN_PATH}\${BUILD_SYSCONFDIR}/default &&
+install -D \${PKG_SRCPATH}/debian/minidlna.conf ${BIN_PATH}\${BUILD_SYSCONFDIR}/ &&
+install -D \${PKG_SRCPATH}/debian/minidlna.init ${BIN_PATH}\${BUILD_SYSCONFDIR}/init.d/minidlna &&
+install -D \${PKG_SRCPATH}/debian/minidlna.logrotate ${BIN_PATH}\${BUILD_SYSCONFDIR}/logrotate.d/ &&
+install -D \${PKG_SRCPATH}/debian/minidlnad.1 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1 && gzip -f ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1/minidlnad.1 &&
+install -D \${PKG_SRCPATH}/debian/minidlna.conf.5 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man5 && gzip -f ${BIN_PATH}\${BUILD_PREFIX}/share/man/man5/minidlna.conf.5 &&
+install -D \${PKG_SRCPATH}/debian/minidlna.1 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1 && gzip -f ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1/minidlna.1"
 
 # Dependencies:
 # libavcodec-dev libavformat-dev libavutil-dev libflac-dev libogg-dev libvorbis-dev libsqlite3-dev libjpeg-turbo-dev
