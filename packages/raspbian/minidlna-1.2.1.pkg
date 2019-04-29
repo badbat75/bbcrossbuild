@@ -13,7 +13,7 @@ install -d --mode=750 ${BIN_PATH}/var/cache/minidlna &&
 install -d ${BIN_PATH}\${BUILD_SYSCONFDIR}/logrotate.d &&
 install -d ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1 &&
 install -d ${BIN_PATH}\${BUILD_PREFIX}/share/man/man5 &&
-install --mode=644 -D \${PKG_SRCPATH}/debian/minidlna.default ${BIN_PATH}\${BUILD_SYSCONFDIR}/default &&
+install --mode=644 -D \${PKG_SRCPATH}/debian/minidlna.default ${BIN_PATH}\${BUILD_SYSCONFDIR}/default/minidlna &&
 install --mode=644 -D \${PKG_SRCPATH}/debian/minidlna.conf ${BIN_PATH}\${BUILD_SYSCONFDIR}/ &&
 install -D \${PKG_SRCPATH}/debian/minidlna.init ${BIN_PATH}\${BUILD_SYSCONFDIR}/init.d/minidlna &&
 install --mode=644 -D \${PKG_SRCPATH}/debian/minidlna.logrotate ${BIN_PATH}\${BUILD_SYSCONFDIR}/logrotate.d/ &&
