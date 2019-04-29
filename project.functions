@@ -50,7 +50,7 @@ function create_selfextracting_archive () {
 	fi
 	cat >>${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx <<-EOF
 
-		tail -n+\$ARCHIVE \$0 | sudo tar xJf - -C /
+		tail -n+\$ARCHIVE \$0 | tar xJf - -C /
 
 	EOF
 	if [ -f ${USERDATA_PATH}/post.sfx ]
