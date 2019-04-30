@@ -154,7 +154,7 @@ cat <<-EOF > ${USERDATA_PATH}/post.sfx
 	#su - mpd -c "/usr/bin/mpd --kill /etc/mpd.conf"
 
 	# Start-up services
-	systemctl daemon-reload
+	#systemctl daemon-reload
 	systemctl set-default multi-user.target
 	systemctl disable cron.service
 	systemctl enable rpcbind
