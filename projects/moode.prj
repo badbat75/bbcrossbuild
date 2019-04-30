@@ -132,7 +132,7 @@ cat <<-EOF > ${USERDATA_PATH}/post.sfx
 	[ ! -d /var/run/dbus ] && mkdir -p /var/run/dbus
 	dbus-daemon --system --systemd-activation
 	timedatectl set-timezone "America/Detroit"
-	kill \$(cat /var/run/dbus/pid) && rm -rf /var/run/dbus
+	kill \$(cat /var/run/dbus/pid)
 	dphys-swapfile swapoff
 	update-rc.d dphys-swapfile remove
 	#rm /var/swap
