@@ -36,7 +36,7 @@ function zip_project () {
 function create_selfextracting_archive () {
 	zip_project
 	cat >${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx <<-EOF
-		#!/bin/sh -x
+		#!/bin/sh -e -x
 		echo ""
 		echo "Self Extracting Installer"
 		echo ""

@@ -107,9 +107,9 @@ cat <<-EOF > ${USERDATA_PATH}/pre.sfx
 EOF
 cat <<-EOF > ${USERDATA_PATH}/post.sfx
 	# Users and groups
-	useradd --system --group --gecos "MediaPlayer Daemon" --home /var/lib/mpd --no-create-home mpd
-	useradd --system --group --gecos "UPnP Media Renderer Client" --home /var/lib/upmpdcli --no-create-home upmpdcli
-	useradd --system --group --gecos "MiniDLNA server" --home /var/lib/minidlna --no-create-home minidlna
+	adduser --system --group --gecos "MediaPlayer Daemon" --home /var/lib/mpd --no-create-home mpd
+	adduser --system --group --gecos "UPnP Media Renderer Client" --home /var/lib/upmpdcli --no-create-home upmpdcli
+	adduser --system --group --gecos "MiniDLNA server" --home /var/lib/minidlna --no-create-home minidlna
 	echo "pi:moodeaudio" | chpasswd
 
 	# File permissions
