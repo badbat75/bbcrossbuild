@@ -133,8 +133,8 @@ cat <<-EOF > ${USERDATA_PATH}/post.sfx
 	dphys-swapfile swapoff
 	update-rc.d dphys-swapfile remove
 	#rm /var/swap
-	rm -r /var/www/html
-	rm /etc/update-motd.d/10-uname
+	[ -d /var/www/html ] && rm -r /var/www/html
+	[ -f /etc/update-motd.d/10-uname ] && rm /etc/update-motd.d/10-uname
 	#rm /var/lib/dhcpcd5/*
 
 	# Moode configuration
@@ -145,7 +145,7 @@ cat <<-EOF > ${USERDATA_PATH}/post.sfx
 	amixer -D alsaequal > /dev/null
 	chmod 0755 /usr/local/bin/alsaequal.bin
 	chown mpd:audio /usr/local/bin/alsaequal.bin
-	rm /usr/share/alsa/alsa.conf.d/equal.conf
+	[ -f /usr/share/alsa/alsa.conf.d/equal.conf ] && rm /usr/share/alsa/alsa.conf.d/equal.conf
 
 	# MPD configuration
 	#su - mpd -c "/usr/bin/mpd /etc/mpd.conf"
