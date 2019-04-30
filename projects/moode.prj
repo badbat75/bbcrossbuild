@@ -129,8 +129,9 @@ cat <<-EOF > ${USERDATA_PATH}/post.sfx
 	sed -i 's/raspberrypi/moode/' /etc/hosts
 	sed -i 's/allowed_users=console/allowed_users=anybody/' /etc/X11/Xwrapper.config
 	[ -f /etc/init.d/resize2fs_once ] && rm /etc/init.d/resize2fs_once
-	dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation
+	dbus-daemon --system --systemd-activation
 	timedatectl set-timezone "America/Detroit"
+	kill $(cat /run/dbus/pid) && rm /run/dbus/pid
 	dphys-swapfile swapoff
 	update-rc.d dphys-swapfile remove
 	#rm /var/swap
