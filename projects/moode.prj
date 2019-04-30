@@ -148,10 +148,10 @@ cat <<-EOF > ${USERDATA_PATH}/post.sfx
 	rm /usr/share/alsa/alsa.conf.d/equal.conf
 
 	# MPD configuration
-	su - mpd -c "/usr/bin/mpd /etc/mpd.conf"
-	su - mpd -c "/usr/bin/mpc enable only 1"
-	su - mpd -c "/usr/bin/mpc update"
-	su - mpd -c "/usr/bin/mpd --kill /etc/mpd.conf"
+	#su - mpd -c "/usr/bin/mpd /etc/mpd.conf"
+	#su - mpd -c "/usr/bin/mpc enable only 1"
+	#su - mpd -c "/usr/bin/mpc update"
+	#su - mpd -c "/usr/bin/mpd --kill /etc/mpd.conf"
 
 	# Start-up services
 	systemctl daemon-reload
