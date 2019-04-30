@@ -107,9 +107,9 @@ cat <<-EOF > ${USERDATA_PATH}/pre.sfx
 EOF
 cat <<-EOF > ${USERDATA_PATH}/post.sfx
 	# Users and groups
-	adduser --system --group --gecos "MediaPlayer Daemon" --home /var/lib/mpd --no-create-home mpd
-	adduser --system --group --gecos "UPnP Media Renderer Client" --home /var/lib/upmpdcli --no-create-home upmpdcli
-	adduser --system --group --gecos "MiniDLNA server" --home /var/lib/minidlna --no-create-home minidlna
+	[ ! $(getent passwd mpd) ] && adduser --system --group --gecos "MediaPlayer Daemon" --home /var/lib/mpd --no-create-home mpd
+	[ ! $(getent passwd upmpdcli) ] && adduser --system --group --gecos "UPnP Media Renderer Client" --home /var/lib/upmpdcli --no-create-home upmpdcli
+	[ ! $(getent passwd minidlna) ] && adduser --system --group --gecos "MiniDLNA server" --home /var/lib/minidlna --no-create-home minidlna
 	echo "pi:moodeaudio" | chpasswd
 
 	# File permissions
@@ -128,7 +128,8 @@ cat <<-EOF > ${USERDATA_PATH}/post.sfx
 	sed -i 's/raspberrypi/moode/' /etc/hostname
 	sed -i 's/raspberrypi/moode/' /etc/hosts
 	sed -i 's/allowed_users=console/allowed_users=anybody/' /etc/X11/Xwrapper.config
-	rm /etc/init.d/resize2fs_once
+	[ -f /etc/init.d/resize2fs_once ] && rm /etc/init.d/resize2fs_once
+	dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation
 	timedatectl set-timezone "America/Detroit"
 	dphys-swapfile swapoff
 	update-rc.d dphys-swapfile remove
