@@ -54,9 +54,23 @@ function create_sysroot() {
 	echo -n "Creating sysroot with ${1}..."
 	if [ ! -d ${DISTOS_PATH} ]
 	then
+		local ARCHIVE_DIRS="./boot ./bin ./lib ./usr/bin ./usr/include ./usr/lib ./usr/share ./usr/local/bin ./usr/local/include ./usr/local/lib ./etc ./opt"
 		mkdir -p ${DISTOS_PATH}
 		[ ! -d ${LOG_PATH} ] && mkdir ${LOG_PATH}
-		tar xf ${IMG_PATH}/${1} -C${DISTOS_PATH} ./boot ./bin ./lib ./usr/bin ./usr/include ./usr/lib ./usr/share ./usr/local/bin ./usr/local/include ./usr/local/lib ./etc ./opt >> ${LOG_PATH}/sysroot.log 2>&1 &&
+		if [[ ${1} =~ ^http://|^https://|^ftp:// ]]
+		then
+			ARCHIVE_DIRS=${ARCHIVE_DIRS} download_uncompress ${1} ${DISTOS_PATH} >> ${LOG_PATH}/sysroot.log 2>&1
+			local STATUS=${?}
+		else
+			tar xf ${IMG_PATH}/${1} -C${DISTOS_PATH} ${ARCHIVE_DIRS} >> ${LOG_PATH}/sysroot.log 2>&1
+			local STATUS=${?}
+		fi
+		if [ ${STATUS} -neq 0 ]
+		then
+			echo "fail."
+			echo
+			return 1
+		fi
 		libraries_relink >> ${LOG_PATH}/sysroot.log 2>&1
 		local STATUS=${?}
 		if [ -f ${DISTOS_PATH}/usr/lib/${HARCH}/pkgconfig/libical.pc ]
@@ -121,14 +135,16 @@ function setup_rust () {
 
 function setup_python () {
 	function download_pyton () {
+		set -x
 		local PYTHONURL="https://www.python.org/ftp/python/${PYTHONVER}/Python-${PYTHONVER}.tar.xz"
 		if [ -d ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER} ]
 		then
 			rm -rf ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}
 		fi
 		mkdir -p ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}
-		curl -Ls ${PYTHONURL} | tar xJf - --strip-components=1 -C${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER} &&
-		curl -Ls https://bootstrap.pypa.io/get-pip.py -o ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}/get-pip.py
+		STRIPCOMPONENTS=1 download_uncompress ${PYTHONURL} ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER} &&
+		NODELETEDESTDIR=1 download_uncompress https://bootstrap.pypa.io/get-pip.py ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}
+		set +x
 		return $?
 	}
 
@@ -203,7 +219,7 @@ function setup_python () {
 			return 1
 		fi
 		echo -n "building..."
-		build_python > ${LOG_PATH}/toolchain_python${PYTHONBINVER}.log 2>&1
+		build_python >> ${LOG_PATH}/toolchain_python${PYTHONBINVER}.log 2>&1
 		if [ ${?} -ne 0 ]
 		then
 			echo "fail."

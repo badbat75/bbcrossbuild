@@ -1,0 +1,9 @@
+# bluez-alsa-1.3.1
+PKG_URL="https://github.com/Arkq/bluez-alsa/archive/v1.4.0.tar.gz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--with-alsaplugindir=\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX}/alsa-lib --enable-hcitop --enable-aac --enable-ldac"
+INST_CMD=install-strip
+#PKG_DEPS="raspbian/ncurses-6.1-20181013 raspbian/sbc-1.4 raspbian/libbsd-0.8.3 moode/libldac-master moode/fdk-aac-2.0.0"
+PKG_DEPS="raspbian/sbc-1.4 moode/libldac-master moode/fdk-aac-2.0.0"
+#PATCHES="bluez-alsa-config.patch"
+PKG_POSTBUILD="install -d ${BIN_PATH}/run/bluealsa"
