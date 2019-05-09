@@ -117,6 +117,9 @@ function build () (
 	fi	
 	local PKG_NAME=$(basename ${1})
 	echo "Package ${PKG_NAME}"
+	local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_NAME}}
+	local PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
+	local PKG_BLDPATH=${BLD_PATH}/${PKG_NAME}
 	if [ -f ${STATUS_PATH}/${PKG_NAME} ]
 	then
 		if [ "$(md5sum ${PKG_PATH}/${1}.pkg)" == "$(cat ${STATUS_PATH}/${PKG_NAME})" ]
@@ -126,12 +129,10 @@ function build () (
 			return 0
 		else
 			rm -f ${STATUS_PATH}/${PKG_NAME}
+			rm -rf ${PKG_SRCPATH}
 		fi
 	fi
 	# Build defaults
-	local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_NAME}}
-	local PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
-	local PKG_BLDPATH=${BLD_PATH}/${PKG_NAME}
 	if [ ! -d ${BLD_PATH} ]
 	then
 		mkdir -p ${BLD_PATH}
