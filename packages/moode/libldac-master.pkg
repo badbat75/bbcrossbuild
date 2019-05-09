@@ -1,5 +1,5 @@
 # libldac-master
-PKG_URL="https://android.googlesource.com/platform/external/libldac/+archive/refs/heads/master.tar.gz"
+PKG_URL="https://android.googlesource.com/platform/external/libldac/%2Barchive/refs/heads/master.tar.gz"
 BUILD_PROCESS=configmake
 # CONF_FLAGS=""
 INST_CMD=install-strip

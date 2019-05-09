@@ -202,29 +202,12 @@ function build () (
 function downloadsources () {
 	if [ ! -z ${PKG_URL} ]
 	then
-		local CTTYPE=$(curl -Ls "${PKG_URL}" | file -b -)
-		case "${CTTYPE}" in
-			"gzip compressed data"*)
-				TARFLAG="z"
-				;;
-			"XZ compressed data"*)
-				TARFLAG="J"
-				;;
-			"bzip2 compressed data"*)
-				TARFLAG="j"
-				;;
-			*)
-				echo "${CTTYPE}"
-				TARFLAG="z"
-				;;
-		esac
-		mkdir -p ${PKG_SRCPATH}
 		if [ ${MAKEDIR:-0} -eq 1 ]
 		then
-			curl -Ls "${PKG_URL}" | tar xf${TARFLAG} - -C${PKG_SRCPATH}
+			download_uncompress "${PKG_URL}" ${PKG_SRCPATH}
 			local STATUS=${?}
 		else
-			curl -Ls "${PKG_URL}" | tar xf${TARFLAG} - --strip-components=1 -C${PKG_SRCPATH} &&
+			STRIPCOMPONENTS=1 download_uncompress "${PKG_URL}" ${PKG_SRCPATH}
 			local STATUS=${?}
 		fi
 	else
@@ -243,7 +226,7 @@ function preparesources () {
 	then
 		echo -n "Retrieve DEB patch info..."
 		mkdir ${PKG_SRCPATH}/debian
-		curl -Ls "${PATCHDEB}" | tar xfJ - -C${PKG_SRCPATH}/debian --strip-components 1 debian >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
+		STRIPCOMPONENTS=1 ARCHIVEDIRS="debian" download_uncompress "${PATCHDEB}" ${PKG_SRCPATH}/debian >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
 			echo "Done." || echo "Fail."
 		for scanpatch in $(cat ${PKG_SRCPATH}/debian/patches/series)
 		do
@@ -301,7 +284,14 @@ function configmake () {
 	then
 		echo -n "AutoReconf ${PKG_NAME}..."
 		[ ! -z ${AUTOCONF_PATH} ] && cd ${AUTOCONF_PATH}
-		autoreconf -fi >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
+		autoreconf -fi >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		local STATUS=${?}
+		if [ ${STATUS} -ne 0 ]
+		then
+			echo "Fail."
+			set +x
+			return ${STATUS}
+		fi
 		echo "Done." || echo "Fail."
 	fi
 	if [ ${CONF_COPYSRC:-0} -eq 1 ] 
@@ -371,7 +361,6 @@ function simplemake () {
 	CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
 	CPP="${HARCH:+${HARCH}-}cpp ${SYSROOT_CFLAGS}" \
 	CPPFLAGS="${COMMON_CPPFLAGS}" \
-	LD="${HARCH:+${HARCH}-}ld.gold ${PKG_LDFLAGS}" \
 	LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 	AR=${HARCH:+${HARCH}-}gcc-ar \
 	AS=${HARCH:+${HARCH}-}as \
@@ -427,7 +416,6 @@ function cmakemake () {
         -DCMAKE_CXX_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}" \
         -DCMAKE_CPP_COMPILER=${HARCH:+${HARCH}-}cpp \
         -DCMAKE_CPP_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS}" \
-		-DCMAKE_LINKER=${HARCH:+${HARCH}-}ld.gold \
 		-DCMAKE_EXE_LINKER_FLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS}" \
         -DCMAKE_AR=${HARCH:+${HARCH}-}gcc-ar \
         -DCMAKE_NM=${HARCH:+${HARCH}-}gcc-nm \
@@ -435,7 +423,7 @@ function cmakemake () {
         -DCMAKE_CXX_COMPILER_RANLIB=${HARCH:+${HARCH}-}gcc-ranlib \
 		-DCMAKE_STRIP=${HARCH:+${HARCH}-}strip \
 		-DCMAKE_INSTALL_PREFIX=${BUILD_PREFIX} \
-		-DLIB_INSTALL_DIR=${BUILD_LIBDIR} \
+		-DLIB_INSTALL_DIR=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
 		-DLIB_SUFFIX=${BUILD_LIBSUFFIX} \
 		-DINCLUDE_INSTALL_DIR=${BUILD_INCLUDEDIR} \
 		-DSYSCONF_INSTALL_DIR=${BUILD_SYSCONFDIR} \

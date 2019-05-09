@@ -1,12 +1,13 @@
 # shairport-sync-3.3.0
-PKG_URL="https://github.com/mikebrady/shairport-sync/archive/3.3RC0.tar.gz"
+PKG_URL="https://github.com/mikebrady/shairport-sync/archive/3.3rc4.tar.gz"
 #PKG_URL="http://archive.raspbian.org/raspbian/pool/main/s/shairport-sync/shairport-sync_3.2.2.orig.tar.gz"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--with-dummy --with-stdout --with-pipe	--with-ssl=openssl --with-soxr --with-metadata \
 		--with-avahi --with-alsa --with-convolution --with-piddir=/run/shairport-sync --without-configfiles \
 		--with-apple-alac --without-libdaemon"
 INST_CMD=install-strip
-PKG_DEPS="moode/alac-master raspbian/libconfig_1.5-0.4"
+PKG_DEPS="raspbian/libsoxr_0.1.2-3 moode/alac-master raspbian/libconfig_1.5-0.4"
+#PKG_DEPS="raspbian/libsoxr_0.1.2-3 moode/alac-master raspbian/libdaemon_0.14-7 raspbian/libconfig_1.5-0.4"
 PKG_POSTBUILD="install -d ${BIN_PATH}/usr/local/bin &&
 install -d ${BIN_PATH}/usr/local/etc &&
 ln -s /usr/bin/shairport-sync ${BIN_PATH}/usr/local/bin/shairport-sync &&

@@ -1,0 +1,10 @@
+# libdaemon_0.14-7
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libd/libdaemon/libdaemon_0.14.orig.tar.gz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="ac_cv_func_setpgrp_void=yes"
+INST_CMD=install-strip
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libd/libdaemon/libdaemon_0.14-7.debian.tar.xz"
+PKG_DEPS=
+
+# Note:
+# Install autopoint in build host
