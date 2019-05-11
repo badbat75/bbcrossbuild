@@ -21,7 +21,7 @@ function zip_project () {
 	cd ${BIN_PATH}
 	[ -f ../${PRJ_NAME}.tar.xz ] && rm -f ../${PRJ_NAME}.tar.xz
 	tar cf ../${PRJ_NAME}.tar --owner=0 --group=0 . &&
-	cd ${DATA_PATH}/${PRJ_NAME}
+	cd ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}
 	xz -T0 ${PRJ_NAME}.tar
 	local BUILD_STATUS=${?}
 	cd ${BB_HOME}
@@ -35,7 +35,7 @@ function zip_project () {
 
 function create_selfextracting_archive () {
 	zip_project
-	cat >${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx <<-EOF
+	cat >${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx <<-EOF
 		#!/bin/sh -ex
 		echo ""
 		echo "Self Extracting Installer"
@@ -46,25 +46,25 @@ function create_selfextracting_archive () {
 	EOF
 	if [ -f ${USERDATA_PATH}/pre.sfx ]
 	then
-			cat ${USERDATA_PATH}/pre.sfx >> ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx
+			cat ${USERDATA_PATH}/pre.sfx >> ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx
 	fi
-	cat >>${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx <<-EOF
+	cat >>${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx <<-EOF
 
 		tail -n+\$ARCHIVE \$0 | tar xJf - -C /
 
 	EOF
 	if [ -f ${USERDATA_PATH}/post.sfx ]
 	then
-			cat ${USERDATA_PATH}/post.sfx >> ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx
+			cat ${USERDATA_PATH}/post.sfx >> ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx
 	fi
-	cat >>${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx <<-EOF
+	cat >>${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx <<-EOF
 
 		exit 0
 
 		__ARCHIVE_BELOW__
 	EOF
-	cat ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.tar.xz >> ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx
-	chmod +x ${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.sfx
+	cat ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.tar.xz >> ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx
+	chmod +x ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx
 }
 
 function install_gcclibs () {
