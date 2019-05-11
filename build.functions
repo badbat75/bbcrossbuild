@@ -129,7 +129,10 @@ function build () (
 			return 0
 		else
 			rm -f ${STATUS_PATH}/${PKG_NAME}
-			rm -rf ${PKG_SRCPATH}
+			if [ -d ${PKG_SRCPATH} ]
+			then
+				rm -rf ${PKG_SRCPATH}
+			fi
 		fi
 	fi
 	# Build defaults
@@ -194,6 +197,8 @@ function build () (
 	then
 		mkdir -p ${STATUS_PATH}
 	fi
+	rm -rf ${PKG_SRCPATH} &&
+	rm -rf ${PKG_BLDPATH} &&
 	md5sum ${PKG_PATH}/${1}.pkg > ${STATUS_PATH}/${PKG_NAME}
 	echo "Done."
 	echo
