@@ -18,9 +18,13 @@ download_uncompress () {
 	local URL=${1}
 	local URL_HASH=$(echo -n "${URL}" | md5sum -t | awk '{print $1}')
 	local DEST_DIR=${2}
-	local TARFLAGS="${STRIPCOMPONENTS:+--strip-components=${STRIPCOMPONENTS}}"
+	local STRIPCOMPONENTS=${STRIPCOMPONENTS:-1}
 	local NODELETEDESTDIR=${NODELETEDESTDIR:-0}
 	local STATUS=0
+	if [ ${STRIPCOMPONENTS} -gt 0 ]
+	then
+		local TARFLAGS="--strip-components=${STRIPCOMPONENTS}"
+	fi
 	if [ ! -d ${DOWNLOAD_PATH} ]
 	then
 		mkdir -p ${DOWNLOAD_PATH}

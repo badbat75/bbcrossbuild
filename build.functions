@@ -41,7 +41,6 @@ function settoolflags () {
 	COMMON_LDFLAGS+=" -Wl,-rpath-link,${BIN_PATH}/usr/lib${BUILD_LIBSUFFIX} -L${BIN_PATH}/usr/lib${BUILD_LIBSUFFIX}"
 	COMMON_PKG_CONFIG_LIBDIR="${BIN_PATH}/lib${BUILD_LIBSUFFIX}/pkgconfig"
 	COMMON_PKG_CONFIG_LIBDIR+=":${BIN_PATH}/usr/lib${BUILD_LIBSUFFIX}/pkgconfig:${BIN_PATH}/usr/share/pkgconfig"
-	export MAKEFLAGS="-j${NPROCS} ${MAKEFLAGS:+ ${MAKEFLAGS}}"
 	# Construct build tools flags
 	# Build Include search paths
 	if [ -d ${DISTOS_PATH}/usr/include ]
@@ -197,7 +196,7 @@ function build () (
 	then
 		mkdir -p ${STATUS_PATH}
 	fi
-	rm -rf ${PKG_SRCPATH} &&
+	#rm -rf ${PKG_SRCPATH} &&
 	rm -rf ${PKG_BLDPATH} &&
 	md5sum ${PKG_PATH}/${1}.pkg > ${STATUS_PATH}/${PKG_NAME}
 	echo "Done."
@@ -210,10 +209,10 @@ function downloadsources () {
 	then
 		if [ ${MAKEDIR:-0} -eq 1 ]
 		then
-			download_uncompress "${PKG_URL}" ${PKG_SRCPATH}
+			STRIPCOMPONENTS=0 download_uncompress "${PKG_URL}" ${PKG_SRCPATH}
 			local STATUS=${?}
 		else
-			STRIPCOMPONENTS=1 download_uncompress "${PKG_URL}" ${PKG_SRCPATH}
+			download_uncompress "${PKG_URL}" ${PKG_SRCPATH}
 			local STATUS=${?}
 		fi
 	else
@@ -232,7 +231,7 @@ function preparesources () {
 	then
 		echo -n "Retrieve DEB patch info..."
 		mkdir ${PKG_SRCPATH}/debian
-		STRIPCOMPONENTS=1 ARCHIVEDIRS="debian" download_uncompress "${PATCHDEB}" ${PKG_SRCPATH}/debian >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
+		ARCHIVEDIRS="debian" download_uncompress "${PATCHDEB}" ${PKG_SRCPATH}/debian >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
 			echo "Done." || echo "Fail."
 		for scanpatch in $(cat ${PKG_SRCPATH}/debian/patches/series)
 		do

@@ -3,6 +3,8 @@
 check_core_functions
 check_build_functions
 
+export MAKEFLAGS="-j${NPROCS} ${MAKEFLAGS:+ ${MAKEFLAGS}}"
+
 TOOLCHAIN_SRCPATH=${SRC_PATH}/toolchain
 TOOLCHAIN_BLDPATH=${BLD_PATH}/toolchain
 if [ ! -d ${TOOLCHAIN_PATH} ]
@@ -10,7 +12,7 @@ then
 	mkdir -p ${TOOLCHAIN_PATH}
 fi
 
-function create_sysroot() {
+function create_sysroot () {
 	function libraries_relink () {
 		while (( "$#" )); do
 			case ${1} in
@@ -59,13 +61,13 @@ function create_sysroot() {
 		[ ! -d ${LOG_PATH} ] && mkdir ${LOG_PATH}
 		if [[ ${1} =~ ^http://|^https://|^ftp:// ]]
 		then
-			ARCHIVE_DIRS=${ARCHIVE_DIRS} download_uncompress ${1} ${DISTOS_PATH} >> ${LOG_PATH}/sysroot.log 2>&1
+			ARCHIVE_DIRS=${ARCHIVE_DIRS} STRIP_COMPONENTS=0 download_uncompress ${1} ${DISTOS_PATH} >> ${LOG_PATH}/sysroot.log 2>&1
 			local STATUS=${?}
 		else
 			tar xf ${IMG_PATH}/${1} -C${DISTOS_PATH} ${ARCHIVE_DIRS} >> ${LOG_PATH}/sysroot.log 2>&1
 			local STATUS=${?}
 		fi
-		if [ ${STATUS} -neq 0 ]
+		if [ ${STATUS} -ne 0 ]
 		then
 			echo "fail."
 			echo
@@ -91,6 +93,171 @@ function create_sysroot() {
 		echo "already present."
 		echo
 		return 1
+	fi
+}
+
+function setup_gcc () {
+	function download_gcc () {
+		set -x
+		local GMPURL=https://gmplib.org/download/gmp/gmp-${GMPVER}.tar.xz
+		local MPFRURL=https://www.mpfr.org/mpfr-current/mpfr-${MPFRVER}.tar.xz
+		local MPCURL=https://ftp.gnu.org/gnu/mpc/mpc-${MPCVER}.tar.gz
+		local ISLURL=https://gcc.gnu.org/pub/gcc/infrastructure/isl-${ISLVER}.tar.bz2
+		local BINUTILSURL=https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILSVER}.tar.xz
+		local GCCURL=https://ftp.gnu.org/gnu/gcc/gcc-${GCCVER}/gcc-${GCCVER}.tar.xz
+		
+		download_uncompress ${BINUTILSURL} ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILSVER} &&
+		download_uncompress ${GCCURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCCVER} &&
+		NODELETEDESTDIR=1 download_uncompress ${GMPURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCCVER}/gmp &&
+		NODELETEDESTDIR=1 download_uncompress ${MPFRURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCCVER}/mpfr &&
+		NODELETEDESTDIR=1 download_uncompress ${MPCURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCCVER}/mpc &&
+		NODELETEDESTDIR=1 download_uncompress ${ISLURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCCVER}/isl
+		local STATUS=${?}
+		set +x
+		return ${STATUS}
+	}
+
+	function build_gcc () {
+		set -x
+		local GCCCOMMONCONFIG="--enable-languages=c,c++,lto --enable-shared --enable-linker-build-id --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --enable-checking=release --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-threads=posix --enable-initfini-array --enable-gnu-indirect-function --enable-multiarch \
+		--with-default-libstdcxx-abi=new \
+		--disable-option-checking --disable-libitm --disable-libmpx"
+		local GCCBUILDCONFIG="--disable-multilib --disable-bootstrap"
+		local GCCHOSTCONFIG="--with-arch-directory=${HM} --with-arch=${HMARCH}"
+		local BINUTILSCOMMONCONFIG="--enable-gold"
+		local BINUTILSBUILDCONFIG="--enable-64-bit-bfd"
+		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+		local STD_CC="${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc"
+		local STD_CXX="${CCWRAPPER:+${CCWRAPPER} }${BARCH}-g++"
+		local STD_CFLAGS="${COMMON_CFLAGS} ${OPTCOMP_FLAGS} -march=native"
+		local STD_CXXFLAGS="${STD_CFLAGS}"
+		local STD_LDFLAGS="${COMMON_LDFLAGS} ${OPTLINK_FLAGS}"
+		local STD_AR=${BARCH:+${BARCH}-}gcc-ar
+		local STD_AS=${BARCH:+${BARCH}-}as
+		local STD_NM=${BARCH:+${BARCH}-}gcc-nm
+		local STD_RANLIB=${BARCH:+${BARCH}-}gcc-ranlib
+		local STD_STRIP=${BARCH:+${BARCH}-}strip
+		local STD_OBJDUMP=${BARCH:+${BARCH}-}objdump
+		NATIVE=${NATIVE:-0}
+		if [ ${NATIVE} -eq 1 ]
+		then
+			(
+				### Build Native binutils
+				if [ -d ${TOOLCHAIN_BLDPATH}/binutils-${BINUTILSVER} ]
+				then
+					rm -rf ${TOOLCHAIN_BLDPATH}/binutils-${BINUTILSVER}
+				fi
+			) &&
+			mkdir -p ${TOOLCHAIN_BLDPATH}/binutils-${BINUTILSVER}
+			cd ${TOOLCHAIN_BLDPATH}/binutils-${BINUTILSVER} &&
+			CC="${STD_CC}" \
+			CXX="${STD_CXX}" \
+			CFLAGS="${STD_CFLAGS}" \
+			CXXFLAGS="${STD_CXXFLAGS}" \
+			LDFLAGS="${STD_LDFLAGS}" \
+			AR="${STD_AR}" \
+			AS="${STD_AS}" \
+			NM="${STD_NM}" \
+			RANLIB="${STD_RANLIB}" \
+			STRIP="${STD_STRIP}" \
+			OBJDUMP="${STD_OBJDUMP}" \
+			${TOOLCHAIN_SRCPATH}/binutils-${BINUTILSVER}/configure -v \
+				--build=${BARCH} --host=${BARCH} --target=${BARCH} \
+				--prefix=${TOOLCHAIN_PATH} --mandir=${TOOLCHAIN_PATH}/share/man --infodir=${TOOLCHAIN_PATH}/share/info \
+				${BINUTILSCOMMONCONFIG} ${BINUTILSBUILDCONFIG} &&
+			make V=${MAKEVERBOSE:-0} &&
+			make V=${MAKEVERBOSE:-0} install-strip &&
+			which ld &&
+			(
+				### Build Native GCC
+				if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCCVER} ]
+				then
+					rm -rf ${TOOLCHAIN_BLDPATH}/gcc-${GCCVER}
+				fi
+				mkdir -p ${TOOLCHAIN_BLDPATH}/gcc-${GCCVER}
+			) &&
+			cd ${TOOLCHAIN_BLDPATH}/gcc-${GCCVER} &&
+			CC_FOR_BUILD="${STD_CC}" \
+			CXX_FOR_BUILD="${STD_CXX}" \
+			CFLAGS_FOR_BUILD="${STD_CFLAGS}" \
+			CXXFLAGS_FOR_BUILD="${STD_CXXFLAGS}" \
+			LDFLAGS_FOR_BUILD="${STD_LDFLAGS}" \
+			AR_FOR_BUILD="${STD_AR}" \
+			AS_FOR_BUILD="${STD_AS}" \
+			NM_FOR_BUILD="${STD_NM}" \
+			RANLIB_FOR_BUILD="${STD_RANLIB}" \
+			STRIP_FOR_BUILD="${STD_STRIP}" \
+			OBJDUMP_FOR_BUILD="${STD_OBJDUMP}" \
+			CC="${STD_CC}" \
+			CXX="${STD_CXX}" \
+			CFLAGS="${STD_CFLAGS}" \
+			CXXFLAGS="${STD_CXXFLAGS}" \
+			LDFLAGS="${STD_LDFLAGS}" \
+			AR="${STD_AR}" \
+			AS="${STD_AS}" \
+			NM="${STD_NM}" \
+			RANLIB="${STD_RANLIB}" \
+			STRIP="${STD_STRIP}" \
+			OBJDUMP="${STD_OBJDUMP}" \
+			CC_FOR_TARGET="${STD_CC}" \
+			CXX_FOR_TARGET="${STD_CXX}" \
+			CFLAGS_FOR_TARGET="${STD_CFLAGS}" \
+			CXXFLAGS_FOR_TARGET="${STD_CXXFLAGS}" \
+			LDFLAGS_FOR_TARGET="${STD_LDFLAGS}" \
+			AR_FOR_TARGET="${STD_AR}" \
+			AS_FOR_TARGET="${STD_AS}" \
+			NM_FOR_TARGET="${STD_NM}" \
+			STRIP_FOR_TARGET="${STD_STRIP}" \
+			OBJDUMP_FOR_TARGET="${STD_OBJDUMP}" \
+			${TOOLCHAIN_SRCPATH}/gcc-${GCCVER}/configure -v \
+				--build=${BARCH} --host=${BARCH} --target=${BARCH} \
+				--prefix=${TOOLCHAIN_PATH} --mandir=${TOOLCHAIN_PATH}/share/man --infodir=${TOOLCHAIN_PATH}/share/info \
+				${GCCCOMMONCONFIG} ${GCCBUILDCONFIG} &&
+			make STAGE_CC_WRAPPER="${CCWRAPPER}" V=${MAKEVERBOSE:-0} \
+				AR_FOR_TARGET="${STD_AR}" \
+				NM_FOR_TARGET="${STD_NM}" \
+				RANLIB_FOR_TARGET="${STD_RANLIB}" &&
+			make V=${MAKEVERBOSE:-0} install-strip
+			local STATUS=${?}
+		else
+			echo "To be built"
+		fi
+		set +x
+		return ${STATUS}
+	}
+
+	echo -n "Setting up gcc"
+	local BINUTILSVER=2.32
+	local GCCVER=8.3.0
+	local GMPVER=6.1.2
+	local MPFRVER=4.0.2
+	local MPCVER=1.1.0
+	local ISLVER=0.18
+	echo -n "-${GCCVER}..."
+	
+	if ! ${TOOLCHAIN_PATH}/bin/${HARCH:+${HARCH}-}gcc > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH:+${HARCH}-}g++ -v > /dev/null 2>&1
+	then
+		echo -n "downloading..."
+		download_gcc > ${LOG_PATH}/toolchain_gcc${GCCVER}.log 2>&1
+		if [ ${?} -ne 0 ]
+		then
+			echo "fail."
+			echo
+			return 1
+		fi
+		echo -n "building..."
+		NATIVE=1 build_gcc >> ${LOG_PATH}/toolchain_gcc${GCCVER}.log 2>&1 &&
+		build_gcc >> ${LOG_PATH}/toolchain_gcc${GCCVER}.log 2>&1 &&
+		if [ ${?} -ne 0 ]
+		then
+			echo "fail."
+			echo
+			return 1
+		fi
+		echo "done."
+	else
+		echo "already there."
 	fi
 }
 
@@ -137,15 +304,11 @@ function setup_python () {
 	function download_pyton () {
 		set -x
 		local PYTHONURL="https://www.python.org/ftp/python/${PYTHONVER}/Python-${PYTHONVER}.tar.xz"
-		if [ -d ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER} ]
-		then
-			rm -rf ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}
-		fi
-		mkdir -p ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}
-		STRIPCOMPONENTS=1 download_uncompress ${PYTHONURL} ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER} &&
+		download_uncompress ${PYTHONURL} ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER} &&
 		NODELETEDESTDIR=1 download_uncompress https://bootstrap.pypa.io/get-pip.py ${TOOLCHAIN_SRCPATH}/bbxb-python-${PYTHONVER}
+		local STATUS=${?}
 		set +x
-		return $?
+		return ${STATUS}
 	}
 
 	function build_python () {
