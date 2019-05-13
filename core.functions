@@ -37,11 +37,13 @@ download_uncompress () {
 	# if download file does not exists in database download package
 	if [ -z ${DOWNLOAD_FILE} ]
 	then
-		local DOWNLOAD_FILE="$(basename $(curl -vLsI -o /dev/null "${URL}" 2>&1 | egrep -i '^< content-disposition:' | tr -d "\n\r" | sed -e 's/^.*filename="\?//;s/"\?$//'))"
+		local DOWNLOAD_FILE="$(curl -vLsI -o /dev/null "${URL}" 2>&1 | egrep -i '^< content-disposition:' | tr -d "\n\r" | sed -e 's/^.*filename="\?//;s/"\?$//')"
 		local STATUS=${?}	
 		if [ -z ${DOWNLOAD_FILE} ]
 		then
 			local DOWNLOAD_FILE="$(basename ${URL})"
+		else
+			local DOWNLOAD_FILE="$(basename ${DOWNLOAD_FILE})"
 		fi
 		echo "${URL_HASH} ${DOWNLOAD_FILE}" >> ${DOWNLOAD_PATH}/url2file.map
 	fi
@@ -73,6 +75,69 @@ download_uncompress () {
 	esac
 	set +x
 	return ${STATUS}
+}
+
+test_version () {
+	test -z ${3} && echo "I need 2 arguments to compare and an operator." && return 255
+
+	local SORTED="$(echo -e "${1}\n${3}" | sort -Vru -)"
+	local BIGGEST="$(echo -e "${SORTED}" | head -n1)"
+	local NO=$(echo -e "${SORTED}" | wc -l)
+
+	case ${2} in
+		-gt)
+			if [ "${BIGGEST}" == "${1}" ] && [ ${NO} -gt 1 ]
+			then
+					return 0
+			else
+					return 1
+			fi
+		;;
+		-ge)
+			if [ "${BIGGEST}" == "${1}" ]
+			then
+					return 0
+			else
+					return 1
+			fi
+		;;
+		-lt)
+			if [ "${BIGGEST}" != "${1}" ] && [ ${NO} -gt 1 ]
+			then
+					return 0
+			else
+					return 1
+			fi
+		;;
+		-le)
+			if [ "${BIGGEST}" != "${1}" ] || [ ${NO} -eq 1 ]
+			then
+					return 0
+			else
+					return 1
+			fi
+		;;
+		-eq)
+			if [ ${NO} -eq 1 ]
+			then
+					return 0
+			else
+					return 1
+			fi
+		;;
+		-ne)
+			if [ ${NO} -eq 2 ]
+			then
+					return 0
+			else
+					return 1
+			fi
+		;;
+		*)
+			echo "No valid operator specified!"
+			return 255
+		;;
+	esac	
 }
 
 BB_HOME=$(dirname $(realpath ${0}))
@@ -117,21 +182,6 @@ PRJ_PATH=${BB_HOME}/${PRJ_DIR:-projects}
 PKG_PATH=${BB_HOME}/${PKG_DIR:-packages}
 PATCH_PATH=${BB_HOME}/${PATCH_DIR:-patches}
 IMG_PATH=${BB_HOME}/${IMG_DIR:-images}
-
-# Check the toolchains
-gcc -v > /dev/null 2>&1
-if [ ! ${?} -eq 0 ]
-then
-	echo "The toolchain for host compile does not exist."
-	exit 1
-fi
-BARCH=$(gcc -dumpmachine)
-${HARCH}-gcc -v > /dev/null 2>&1
-if [ ! ${?} -eq 0 ]
-then
-	echo "The toolchain for cross-compile does not exist."
-	exit 1
-fi
 
 is_core_functions () {
 	return 0
