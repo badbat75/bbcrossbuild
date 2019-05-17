@@ -32,7 +32,7 @@ function settoolflags () {
 	BUILD_LIBSHARED=${BUILD_LIBSHARED:-1}
 	BUILD_LIBSTATIC=${BUILD_LIBSTATIC:-1}
 
-	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH} }${HMCPU:+-mtune=${HMCPU}}"
+	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}"
 	PLATFORM_RUSTFLAGS="${HMARCH_RUST:+-C target-feature=${HMARCH_RUST} }${HMCPU:+-C target-cpu=${HMCPU}}"
 	COMMON_CFLAGS="-I${BIN_PATH}/usr/include"
 	COMMON_CXXFLAGS="-I${BIN_PATH}/usr/include"
@@ -134,6 +134,7 @@ function build () (
 			fi
 		fi
 	fi
+	check_target_gcc
 	# Build defaults
 	if [ ! -d ${BLD_PATH} ]
 	then
@@ -672,20 +673,20 @@ function pythonbuild () {
 	set -x
 	cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 	cd ${PKG_BLDPATH}
-	local PYTHONBINVER=$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)
-	if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBINVER}m ]
+	local PYTHONBIN_VER=$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)
+	if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
 	then
-		COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBINVER}m"
-		COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBINVER}m"
+		COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
+		COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
 	fi
-	COMMON_LDFLAGS+=" -lpython${PYTHONBINVER}m"
+	COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 	then
 		CONF_FLAGS+=" --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX}"
 		if [ -f ${DISTOS_PATH}/etc/debian_version ]
 		then
-			CONF_FLAGS+=" --install-lib=${BUILD_LIBDIR}/python${PYTHONBINVER}/dist-packages"
+			CONF_FLAGS+=" --install-lib=${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
 		fi
 	fi
 	[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
