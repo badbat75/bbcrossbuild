@@ -99,71 +99,84 @@ function setup_gcc () {
 		NODELETEDESTDIR=1 download_uncompress ${MPCURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpc &&
 		NODELETEDESTDIR=1 download_uncompress ${ISLURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/isl
 		local STATUS=${?}
+		cd ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
+		find ../binutils-${BINUTILS_VER} -maxdepth 1 -type d -exec ln -s {} . \;
+		autoreconf2.64 -fiv
 		set +x
 		return ${STATUS}
 	}
 
 	function build_gcc () {
-		function create_binutils_lto_wrappers () {
-			mkdir -p ${BINUTILS_LTO_WRAPPERS_PATH}
-			cat > ${BINUTILS_LTO_WRAPPERS_PATH}/ar <<-EOF
-				#/bin/bash
-				PARAMS=\${1}
-				shift
-				REST_OF_PARAMS=\${@}
-
-				CMD="${TOOLCHAIN_PATH}/${1}/bin/ar \${PARAMS} --plugin=${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/gcc/liblto_plugin.so \${REST_OF_PARAMS}"
-
-				echo \${CMD}
-				eval \${CMD}
-			EOF
-			cat > ${BINUTILS_LTO_WRAPPERS_PATH}/nm <<-EOF
-				#/bin/bash
-				PARAMS=\${@}
-
-				CMD="${TOOLCHAIN_PATH}/${1}/bin/nm --plugin=${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/gcc/liblto_plugin.so \${PARAMS}"
-
-				echo \${CMD}
-				eval \${CMD}
-			EOF
-			cat > ${BINUTILS_LTO_WRAPPERS_PATH}/ranlib <<-EOF
-				#/bin/bash
-				PARAMS=\${@}
-
-				CMD="${TOOLCHAIN_PATH}/${1}/bin/ranlib --plugin=${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/gcc/liblto_plugin.so \${PARAMS}"
-
-				echo \${CMD}
-				eval \${CMD}
-			EOF
-			chmod +x ${BINUTILS_LTO_WRAPPERS_PATH}/ar ${BINUTILS_LTO_WRAPPERS_PATH}/nm ${BINUTILS_LTO_WRAPPERS_PATH}/ranlib
+		function gcc_binutils_build_patch () {
+			mkdir -p ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/gcc/../lib/gcc/${BUILD_ARCH}/${GCC_VER}/../../../../${BUILD_ARCH}/bin
+			ln -fs ../../gcc/liblto_plugin.so ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${BUILD_ARCH}/bin/				
+			ln -fs ../../binutils/nm-new ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${BUILD_ARCH}/bin/${BUILD_ARCH}-nm
+			ln -fs ../../binutils/nm-new ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${BUILD_ARCH}/bin/nm
+			ln -fs ../../binutils/ar ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${BUILD_ARCH}/bin/${BUILD_ARCH}-ar
+			ln -fs ../../binutils/ar ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${BUILD_ARCH}/bin/ar
+			ln -fs ../../binutils/ranlib ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${BUILD_ARCH}/bin/${BUILD_ARCH}-ranlib
+			ln -fs ../../binutils/ranlib ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${BUILD_ARCH}/bin/ranlib
+			#mkdir -p ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/binutils_lto_wrappers
+			#cat > ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/binutils_lto_wrappers/gcc-ar-new <<-EOF
+			#	#/bin/bash
+			#	PARAMS=\${1}
+			#	shift
+			#	REST_OF_PARAMS=\${@}
+			#	CMD="${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/binutils/ar \${PARAMS} --plugin=${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/gcc/liblto_plugin.so \${REST_OF_PARAMS}"
+			#	echo \${CMD}
+			#	eval \${CMD}
+			#EOF
+			#cat > ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/binutils_lto_wrappers/gcc-nm-new <<-EOF
+			#	#/bin/bash
+			#	REST_OF_PARAMS=\${@}
+			#	CMD="${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/binutils/nm-new --plugin=${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/gcc/liblto_plugin.so \${REST_OF_PARAMS}"
+			#	echo \${CMD}
+			#	eval \${CMD}
+			#EOF
+			#cat > ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/binutils_lto_wrappers/gcc-ranlib-new <<-EOF
+			#	#/bin/bash
+			#	REST_OF_PARAMS=\${@}
+			#	CMD="${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/binutils/ranlib --plugin=${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/gcc/liblto_plugin.so \${REST_OF_PARAMS}"
+			#	echo \${CMD}
+			#	eval \${CMD}
+			#EOF
+			#chmod +x ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/binutils_lto_wrappers/*
+			sed -i 's|^AR_FOR_TARGET=.*|AR_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-ar|' ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/Makefile
+			sed -i 's|^NM_FOR_TARGET=.*|NM_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-nm|' ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/Makefile
+			sed -i 's|^RANLIB_FOR_TARGET=.*|RANLIB_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-ranlib|' ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/Makefile
+			sed -i 's|^COMPILER_NM_FOR_TARGET=.*|COMPILER_NM_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-nm|' ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/Makefile
 		}
 
 		set -x
 		local BINUTILS_LTO_WRAPPERS_PATH=${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/binutils_lto_wrappers
+		local BUILD_ARCH=${1:-${HARCH}}
 		local GCC_LANGUAGES=${GCC_LANGUAGES:-c,c++,lto}
 		local GCC_COMMON_CONFIG="--enable-languages=${GCC_LANGUAGES} --enable-shared --enable-linker-build-id --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --enable-checking=release --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-threads=posix --enable-initfini-array --enable-gnu-indirect-function --enable-multiarch \
-		--with-default-libstdcxx-abi=new \
+		--with-default-libstdcxx-abi=new --with-system-zlib \
 		--disable-option-checking --disable-libitm --disable-libmpx"
 		local GCC_BUILD_CONFIG="--disable-multilib --disable-bootstrap"
 		local GCC_HOST_CONFIG="--with-arch-directory=${HM}${HMARCH:+ --with-arch=${HMARCH}}${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
-		local BINUTILS_COMMON_CONFIG="--enable-shared --enable-gold --enable-plugins --disable-option-checking"
+		local BINUTILS_COMMON_CONFIG="--enable-gold"
 		local BINUTILS_BUILD_CONFIG=""
 		local BINUTILS_HOST_CONFIG=""
 		local GCC_OPTCOMP_FLAGS="${GCC_OPTCOMP_FLAGS}${GCC_OPTLEVEL:+ -O${GCC_OPTLEVEL}}"
-		local NATIVE=${NATIVE:-0}
 		if [ ${GCC_LTOENABLE} -eq 1 ]
 		then
 			local GCC_OPTCOMP_FLAGS="${GCC_OPTCOMP_FLAGS} ${COMMON_LTOFLAGS}"
+			local TARGET_AR="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-ar-new"
+			local TARGET_NM="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-nm-new"
+			local TARGET_RANLIB="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-ranlib-new"
+			local TARGET_CONFIG_ARGS="AR_FOR_TARGET='${TARGET_AR}' NM_FOR_TARGET='${TARGET_NM}' RANLIB_FOR_TARGET='${TARGET_RANLIB}'"
 		fi
 		local HOST_CC="${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc"
 		local HOST_CXX="${CCWRAPPER:+${CCWRAPPER} }${BARCH}-g++"
-		local HOST_CFLAGS="${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS} -march=native"
-		local HOST_CXXFLAGS="${HOST_CFLAGS}"
-		local HOST_LDFLAGS="${COMMON_LDFLAGS} ${GCC_OPTLINK_FLAGS}"
 		local HOST_AR="${BARCH:+${BARCH}-}gcc-ar"
 		local HOST_NM="${BARCH:+${BARCH}-}gcc-nm"
 		local HOST_RANLIB="${BARCH:+${BARCH}-}gcc-ranlib"
-		if [ ${NATIVE} -eq 1 ]
+		local HOST_CFLAGS="${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS} -march=native"
+		local HOST_CXXFLAGS="${HOST_CFLAGS}"
+		local HOST_LDFLAGS="${COMMON_LDFLAGS} ${GCC_OPTLINK_FLAGS} -lgcc_s"
+		if [ "${BUILD_ARCH}" == "${BARCH}" ]
 		then
 			local GCC_CONFIG="${GCC_BUILD_CONFIG}"
 			local BINUTILS_CONFIG="${BINUTILS_BUILD_CONFIG}"
@@ -179,62 +192,31 @@ function setup_gcc () {
 			local TARGET_CXXFLAGS="${TARGET_CFLAGS}"
 			local TARGET_LDFLAGS="${COMMON_LDFLAGS} ${GCC_OPTLINK_FLAGS}"
 		fi
-		local TARGET_AR="${HARCH:+${HARCH}-}gcc-ar"
-		local TARGET_NM="${HARCH:+${HARCH}-}gcc-nm"
-		local TARGET_RANLIB="${HARCH:+${HARCH}-}gcc-ranlib"
-
-		local BUILD_CONFIG_ARGS="CC_FOR_BUILD='${HOST_CC}' CXX_FOR_BUILD='${HOST_CXX}' \
+		local BUILD_ENV_SHELL="CC_FOR_BUILD='${HOST_CC}' CXX_FOR_BUILD='${HOST_CXX}' AR_FOR_BUILD='${HOST_AR}' NM_FOR_BUILD='${HOST_NM}' RANLIB_FOR_BUILD='${HOST_RANLIB}' \
 			CFLAGS_FOR_BUILD='${HOST_CFLAGS}' CXXFLAGS_FOR_BUILD='${HOST_CXXFLAGS}' LDFLAGS_FOR_BUILD='${HOST_LDFLAGS}' \
-			AR_FOR_BUILD='${HOST_AR}' NM_FOR_BUILD='${HOST_NM}' RANLIB_FOR_BUILD='${HOST_RANLIB}'"
-		local HOST_CONFIG_ARGS="CC='${HOST_CC}' CXX='${HOST_CXX}' \
+			CC='${HOST_CC}' CXX='${HOST_CXX}' AR='${HOST_AR}' NM='${HOST_NM}' RANLIB='${HOST_RANLIB}' \
 			CFLAGS='${HOST_CFLAGS}' CXXFLAGS='${HOST_CXXFLAGS}' LDFLAGS='${HOST_LDFLAGS}' \
-			AR='${HOST_AR}' NM='${HOST_NM}' RANLIB='${HOST_RANLIB}'"
-		local TARGET_CONFIG_ARGS="CFLAGS_FOR_TARGET='${TARGET_CFLAGS}' CXXFLAGS_FOR_TARGET='${TARGET_CXXFLAGS}' LDFLAGS_FOR_TARGET='${TARGET_LDFLAGS}' \
-			AR_FOR_TARGET='${TARGET_AR}' NM_FOR_TARGET='${TARGET_NM}' RANLIB_FOR_TARGET='${TARGET_RANLIB}'"
+			CFLAGS_FOR_TARGET='${TARGET_CFLAGS}' CXXFLAGS_FOR_TARGET='${TARGET_CXXFLAGS}' LDFLAGS_FOR_TARGET='${TARGET_LDFLAGS}'"
 
-		### Build binutils
-		if [ -d ${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER} ]
-		then
-			rm -rf ${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}
-		fi
-		mkdir -p ${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}
-		cd ${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER} &&
-		eval "${BUILD_CONFIG_ARGS} ${HOST_CONFIG_ARGS} ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/configure -v \
-			--prefix=${TOOLCHAIN_PATH} --mandir=${TOOLCHAIN_PATH}/share/man --infodir=${TOOLCHAIN_PATH}/share/info \
-			${CONFIG_ARCH_PARAMS} ${BINUTILS_COMMON_CONFIG} ${BINUTILS_CONFIG}" &&
-		make V=${MAKEVERBOSE:-0} &&
-		make V=${MAKEVERBOSE:-0} install-strip
-		local STATUS=${?}
-		if [ ${STATUS} -ne 0 ]
-		then
-			set +x
-			return ${STATUS}
-		fi
-		#sed -i '/^LDFLAGS =/ s/$/ -static/' gold/Makefile &&
 		### Build GCC
 		if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ]
 		then
 			rm -rf ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 		fi
 		mkdir -p ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
-		if [  ${NATIVE} -eq 1 ]
-		then
-			if [ ${GCC_LTOENABLE} -eq 1 ]
-			then
-				create_binutils_lto_wrappers ${BARCH}
-				local TARGET_AR="${BINUTILS_LTO_WRAPPERS_PATH}/ar"
-				local TARGET_NM="${BINUTILS_LTO_WRAPPERS_PATH}/nm"
-				local TARGET_RANLIB="${BINUTILS_LTO_WRAPPERS_PATH}/ranlib"
-				local TARGET_CONFIG_ARGS="CFLAGS_FOR_TARGET='${TARGET_CFLAGS}' CXXFLAGS_FOR_TARGET='${TARGET_CXXFLAGS}' LDFLAGS_FOR_TARGET='${TARGET_LDFLAGS}' \
-					AR_FOR_TARGET='${TARGET_AR}' NM_FOR_TARGET='${TARGET_NM}' RANLIB_FOR_TARGET='${TARGET_RANLIB}'"
-			else
-				create_binutils_lto_wrappers ${HARCH}
-			fi
-		fi
 		cd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} &&
-		eval "${BUILD_CONFIG_ARGS} ${HOST_CONFIG_ARGS} ${TARGET_CONFIG_ARGS} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure -v \
+		eval "${BUILD_ENV_SHELL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure -v \
 			--prefix=${TOOLCHAIN_PATH} --mandir=${TOOLCHAIN_PATH}/share/man --infodir=${TOOLCHAIN_PATH}/share/info \
-			${CONFIG_ARCH_PARAMS} ${GCC_COMMON_CONFIG} ${GCC_CONFIG}" &&
+			${CONFIG_ARCH_PARAMS} ${BINUTILS_COMMON_CONFIG} ${BINUTILS_CONFIG} ${GCC_COMMON_CONFIG} ${GCC_CONFIG} ${TARGET_CONFIG_ARGS}" &&
+		#(
+		#	set -e
+		#	if [ ${GCC_LTOENABLE} -eq 1 ]
+		#	then
+		#		gcc_binutils_build_patch ${BARCH}
+		#	fi
+		#	set +e
+		#) &&
+		gcc_binutils_build_patch ${BARCH} &&
 		make STAGE_CC_WRAPPER="${CCWRAPPER}" V=${MAKEVERBOSE:-0} &&
 		make V=${MAKEVERBOSE:-0} install-strip
 		local STATUS=${?}
@@ -266,7 +248,7 @@ function setup_gcc () {
 		if ! ${TOOLCHAIN_PATH}/bin/${BARCH:+${BARCH}-}gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${BARCH:+${BARCH}-}g++ -v > /dev/null 2>&1
 		then
 			echo -n "native..."
-			NATIVE=1 build_gcc >> ${LOG_PATH}/toolchain_gcc${GCC_VER}.log 2>&1
+			build_gcc ${BARCH}>> ${LOG_PATH}/toolchain_gcc${GCC_VER}.log 2>&1
 			if [ ${?} -ne 0 ]
 			then
 				echo "fail."
@@ -275,7 +257,7 @@ function setup_gcc () {
 			fi
 		fi
 		echo -n "cross..."
-		build_gcc >> ${LOG_PATH}/toolchain_gcc${GCC_VER}.log 2>&1
+		build_gcc ${HARCH} >> ${LOG_PATH}/toolchain_gcc${GCC_VER}.log 2>&1
 		if [ ${?} -ne 0 ]
 		then
 			echo "fail."
