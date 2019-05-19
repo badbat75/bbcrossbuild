@@ -7,7 +7,7 @@ CONF_FLAGS="--libdir=\${BUILD_LIBDIR} --enable-recollq --enable-xadump --disable
 INST_CMD=install-strip
 PKG_DEPS=raspbian/xapian-core_1.4.3-2+deb9u3
 PKG_CXXFLAGS="-fno-strict-aliasing"
-PKG_LDFLAGS="-lpython${PYTHONBINVER}m"
+PKG_LDFLAGS="-lpython${PYTHONBIN_VER}m"
 
 # Note: Build-Depends: bison, debhelper (>= 11), dh-python, dpkg-dev (>= 1.16.1~),
 #       libqt5webkit5-dev, libx11-dev, libxapian-dev (>= 1.2.0), libz-dev,
