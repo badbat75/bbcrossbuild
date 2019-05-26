@@ -3,12 +3,6 @@ PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libs/libsoxr/libsoxr_0.1
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libs/libsoxr/libsoxr_0.1.2-3.debian.tar.xz"
 BUILD_PROCESS=cmakemake
 CONF_FLAGS="-DBUILD_TESTS=0 -DBUILD_EXAMPLES=1"
-if [ "${HMENDIAN}"="big" ]
-then 
-	CONF_FLAGS+=" -DHAVE_WORDS_BIGENDIAN_EXITCODE=0"
-else
-	CONF_FLAGS+=" -DHAVE_WORDS_BIGENDIAN_EXITCODE=1"
-fi
 PKG_MAKEVARS=-j1
 INST_CMD=install/strip
 

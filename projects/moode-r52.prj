@@ -186,3 +186,4 @@ EOF
 install_gcclibs
 remove_devfiles
 create_selfextracting_archive
+mv ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/moode.sfx
