@@ -101,4 +101,5 @@ chmod -R 0777 ${BIN_PATH}/var/local/www/db
 # BB customizations
 echo 'BUFFERTIME=20000' >> ${BIN_PATH}/etc/bluealsaaplay.conf
 sed -i 's|bluealsa-aplay --profile-a2dp|bluealsa-aplay --pcm-buffer-time=\${BUFFERTIME} --profile-a2dp|g' ${BIN_PATH}/etc/systemd/system/bluealsa-aplay@.service
-sed -i 's|^#!/usr/bin/python$|#!/usr/bin/python3|g' ${BIN_PATH}/var/www/command/bt-agent.py"
+sed -i 's|^#!/usr/bin/python$|#!/usr/bin/python3|g' ${BIN_PATH}/var/www/command/bt-agent.py
+sed -i 's|local/lib/python2.7/dist|lib/python3.5/dist|g' ${BIN_PATH}/var/www/upp-config.php"
