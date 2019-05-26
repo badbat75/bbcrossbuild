@@ -156,12 +156,22 @@ then
 else
 	echo "Platform file ${PLATFORM} does not exists!!! Proceeding as no platform specified."
 	PLATFORM=native
-	HARCH=$(gcc -dumpmachine)
+	HARCH=$(${TOOLCHAIN_CC} -dumpmachine)
 	HMARCH=native
 fi
 
+GLOBAL_SRC_PATH=${DATA_PATH}/${SRC_DIR:-sources}
+GLOBAL_BLD_PATH=${DATA_PATH}/${BLD_DIR:-builds}
+GLOBAL_LOG_PATH=${DATA_PATH}/${LOG_DIR:-logs}
+GLOBAL_TOOLCHAIN_PATH=${DATA_PATH}/${TOOLCHAIN_DIR:-toolchain}
+DOWNLOAD_PATH=${DATA_PATH}/${DOWNLOAD_DIR:-downloads}
+
+if [ ! -d ${GLOBAL_LOG_PATH} ]
+then
+	mkdir -p ${GLOBAL_LOG_PATH}
+fi
+
 DISTOS_PATH=${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${DISTOS_DIR:-distos}
-DOWNLOAD_PATH=${DATA_PATH}/${PRJ_NAME}/${DOWNLOAD_DIR:-downloads}
 SRC_PATH=${DATA_PATH}/${PRJ_NAME}/${SRC_DIR:-sources}
 BLD_PATH=${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${BLD_DIR:-builds}
 BIN_PATH=${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${BIN_DIR:-binaries}
@@ -175,7 +185,7 @@ then
 	mkdir -p ${LOG_PATH}
 fi
 
-export PATH=${TOOLCHAIN_PATH}/bin:${PATH}
+export PATH=${GLOBAL_TOOLCHAIN_PATH}/bin:${TOOLCHAIN_PATH}/bin:${PATH}
 export LD_LIBRARY_PATH=${TOOLCHAIN_PATH}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 
 PRJ_PATH=${BB_HOME}/${PRJ_DIR:-projects}
