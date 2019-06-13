@@ -1,11 +1,12 @@
 # crda_4.14
 PKG_URL="https://git.kernel.org/pub/scm/linux/kernel/git/mcgrof/crda.git/snapshot/crda-4.14.tar.gz"
-#PKG_CFLAGS="-I${BIN_PATH}\${BUILD_INCLUDEDIR}/libnl3"
+PKG_CFLAGS="-I${BIN_PATH}\${BUILD_INCLUDEDIR}/libnl3"
 PKG_LDFLAGS="-Wl,-rpath,/lib/crda"
 BUILD_PROCESS=simplemake
 PKG_DEPS="raspbian/libnl3_3.4.0-1 moode/wireless-regdb-2019-03-01"
 RUNTIME_PUBKEY_DIR=/lib/crda/pubkeys
 PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} LIBDIR=/lib/crda INCDIR=\${BUILD_INCLUDEDIR} REG_BIN=/lib/crda/regulatory.bin USE_OPENSSL=1 RUNTIME_PUBKEY_DIR=${RUNTIME_PUBKEY_DIR} RUNTIME_PUBKEY_ONLY=1 all_noverify"
+PKG_PREBUILD="sed -i '/^CFLAGS/ s/ -Werror\| -O2//' Makefile"
 PKG_POSTBUILD="install -d {BIN_PATH}${RUNTIME_PUBKEY_DIR} &&
 install -m 644 pubkeys/*.pem ${BIN_PATH}${RUNTIME_PUBKEY_DIR}/ &&
 install -m 644 ${USERDATA_PATH}/pki/${PKI_KEY_NAME}.x509.pem ${BIN_PATH}${RUNTIME_PUBKEY_DIR}/${PKI_KEY_NAME}.pem"

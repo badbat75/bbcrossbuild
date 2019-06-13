@@ -96,7 +96,7 @@ function build () (
 		if [ "x${PATCHDEB}" != "x" ]
 		then
 			echo -n "Retrieve DEB patch info..."
-			mkdir ${PKG_SRCPATH}/debian
+			[ ! -d ${PKG_SRCPATH}/debian ] && mkdir -p ${PKG_SRCPATH}/debian
 			ARCHIVEDIRS="debian" download_uncompress "${PATCHDEB}" ${PKG_SRCPATH}/debian >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
 				echo "Done." || echo "Fail."
 			for scanpatch in $(cat ${PKG_SRCPATH}/debian/patches/series)
@@ -166,19 +166,19 @@ function build () (
 			fi
 		fi
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc ${SYSROOT_CFLAGS} ${PKG_CFLAGS}" \
+		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS} ${PKG_CFLAGS}" \
 		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
-		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}g++ ${SYSROOT_CFLAGS} ${PKG_CXXFLAGS}" \
+		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS} ${PKG_CXXFLAGS}" \
 		CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-		CPP="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}cpp ${SYSROOT_CFLAGS}" \
+		CPP="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-cpp ${SYSROOT_CFLAGS}" \
 		CPPFLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS}" \
 		LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-		AR=${HARCH:+${HARCH}-}gcc-ar \
-		AS=${HARCH:+${HARCH}-}as \
-		NM=${HARCH:+${HARCH}-}gcc-nm \
-		RANLIB=${HARCH:+${HARCH}-}gcc-ranlib \
-		STRIP=${HARCH:+${HARCH}-}strip \
-		OBJDUMP=${HARCH:+${HARCH}-}objdump \
+		AR=${HARCH}-gcc-ar \
+		AS=${HARCH}-as \
+		NM=${HARCH}-gcc-nm \
+		RANLIB=${HARCH}-gcc-ranlib \
+		STRIP=${HARCH}-strip \
+		OBJDUMP=${HARCH}-objdump \
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
 		PATH=${PATH}:${BIN_PATH}${BUILD_EXECPREFIX}/bin${DISTOS_PATH:+:${DISTOS_PATH}/usr/bin} \
@@ -201,25 +201,25 @@ function build () (
 		cd ${PKG_BLDPATH}
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc ${SYSROOT_CFLAGS}" \
+		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
 		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
 		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
 		CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-		CPP="${HARCH:+${HARCH}-}cpp ${SYSROOT_CFLAGS}" \
+		CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
 		CPPFLAGS="${COMMON_CPPFLAGS}" \
 		LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-		AR=${HARCH:+${HARCH}-}gcc-ar \
-		AS=${HARCH:+${HARCH}-}as \
-		NM=${HARCH:+${HARCH}-}gcc-nm \
-		RANLIB=${HARCH:+${HARCH}-}gcc-ranlib \
-		STRIP=${HARCH:+${HARCH}-}strip \
-		OBJDUMP=${HARCH:+${HARCH}-}objdump \
+		AR=${HARCH}-gcc-ar \
+		AS=${HARCH}-as \
+		NM=${HARCH}-gcc-nm \
+		RANLIB=${HARCH}-gcc-ranlib \
+		STRIP=${HARCH}-strip \
+		OBJDUMP=${HARCH}-objdump \
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
 		make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} &&
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
-		STRIP=${HARCH:+${HARCH}-}strip \
+		STRIP=${HARCH}-strip \
 		make ${PKG_MAKEVARS} DESTDIR=${BIN_PATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}
 		local BUILD_STATUS=${?}
 		if [ ${BUILD_STATUS} -eq 0 ]
@@ -253,21 +253,21 @@ function build () (
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
 		cmake ${PKG_SRCPATH} \
 			-DCMAKE_BUILD_TYPE="Release" \
-			-DTOOLCHAIN_PREFIX=${HARCH:+${HARCH}-} \
+			-DTOOLCHAIN_PREFIX=${HARCH}- \
 			-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \
-			-DCMAKE_C_COMPILER=${HARCH:+${HARCH}-}gcc \
+			-DCMAKE_C_COMPILER=${HARCH}-gcc \
 			-DCMAKE_C_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}" \
 			-DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \
 			-DCMAKE_CXX_COMPILER="${HARCH}-g++" \
 			-DCMAKE_CXX_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}" \
-			-DCMAKE_CPP_COMPILER=${HARCH:+${HARCH}-}cpp \
+			-DCMAKE_CPP_COMPILER=${HARCH}-cpp \
 			-DCMAKE_CPP_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS}" \
 			-DCMAKE_EXE_LINKER_FLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS}" \
-			-DCMAKE_AR=${HARCH:+${HARCH}-}gcc-ar \
-			-DCMAKE_NM=${HARCH:+${HARCH}-}gcc-nm \
-			-DCMAKE_CC_COMPILER_RANLIB=${HARCH:+${HARCH}-}gcc-ranlib \
-			-DCMAKE_CXX_COMPILER_RANLIB=${HARCH:+${HARCH}-}gcc-ranlib \
-			-DCMAKE_STRIP=${HARCH:+${HARCH}-}strip \
+			-DCMAKE_AR=${HARCH}-gcc-ar \
+			-DCMAKE_NM=${HARCH}-gcc-nm \
+			-DCMAKE_CC_COMPILER_RANLIB=${HARCH}-gcc-ranlib \
+			-DCMAKE_CXX_COMPILER_RANLIB=${HARCH}-gcc-ranlib \
+			-DCMAKE_STRIP=${HARCH}-strip \
 			-DCMAKE_INSTALL_PREFIX=${BUILD_PREFIX} \
 			-DLIB_INSTALL_DIR=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
 			-DLIB_SUFFIX=${BUILD_LIBSUFFIX} \
@@ -315,17 +315,17 @@ function build () (
 				fi
 			fi
 			[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-			local CC="${HARCH:+${HARCH}-}gcc"
+			local CC="${HARCH}-gcc"
 			local CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}"
 			local CXX="${HARCH}-g++"
 			local CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}"
-			local CPP=${HARCH:+${HARCH}-}cpp
+			local CPP=${HARCH}-cpp
 			local CPPFLAGS="${COMMON_CPPFLAGS}"
 			local LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS}"
-			local AR=${HARCH:+${HARCH}-}gcc-ar
-			local NM=${HARCH:+${HARCH}-}gcc-nm
-			local RANLIB=${HARCH:+${HARCH}-}gcc-ranlib
-			local STRIP=${HARCH:+${HARCH}-}strip
+			local AR=${HARCH}-gcc-ar
+			local NM=${HARCH}-gcc-nm
+			local RANLIB=${HARCH}-gcc-ranlib
+			local STRIP=${HARCH}-strip
 			local C_ARGS=$(buildmesonargs "${CFLAGS}")
 			local CPP_ARGS=$(buildmesonargs "${CXXFLAGS}")
 			local C_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
@@ -377,18 +377,18 @@ function build () (
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -C opt-level=${OPTLEVEL}}"
 		[ ${CARGO_STRIP:-0} -eq 1 ] && local STRIP_FLAG=-s
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_RUSTFLAGS+=" -C lto"
-		cat > ${HARCH:+${HARCH}-}gcc <<-EOF
+		cat > ${HARCH}-gcc <<-EOF
 			#!/bin/bash
-			echo "$(which ${HARCH:+${HARCH}-}gcc) \${@} ${STRIP_FLAG} ${SYSROOT_CFLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS}" >> ${LOG_PATH}/${PKG_NAME}.log
-			exec $(which ${HARCH:+${HARCH}-}gcc) \${@} ${STRIP_FLAG} ${SYSROOT_CFLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS}
+			echo "$(which ${HARCH}-gcc) \${@} ${STRIP_FLAG} ${SYSROOT_CFLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS}" >> ${LOG_PATH}/${PKG_NAME}.log
+			exec $(which ${HARCH}-gcc) \${@} ${STRIP_FLAG} ${SYSROOT_CFLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS}
 			return \${?}
 		EOF
-		chmod +x ${HARCH:+${HARCH}-}gcc
+		chmod +x ${HARCH}-gcc
 		local CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
 		RUSTFLAGS="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} \
-			-C linker=${PKG_BLDPATH}/${HARCH:+${HARCH}-}gcc" \
+			-C linker=${PKG_BLDPATH}/${HARCH}-gcc" \
 			cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}
 		local BUILD_STATUS=${?}
 		if [ ${BUILD_STATUS} -eq 0 ]
@@ -413,15 +413,15 @@ function build () (
 				KERN_OPTCOMP_FLAGS+="${KERN_OPTLEVEL:+ -O${KERN_OPTLEVEL}}"
 				KERN_OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 				KBUILD_BUILD_TIMESTAMP='' make \
-				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc" \
+				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
 				LD="scripts/gcc-ld" \
-				AR="${HARCH:+${HARCH}-}gcc-ar" \
-				RANLIB="${HARCH:+${HARCH}-}gcc-ranlib" \
+				AR="${HARCH}-gcc-ar" \
+				RANLIB="${HARCH}-gcc-ranlib" \
 				KCFLAGS="${KERN_OPTCOMP_FLAGS} ${PLATFORM_KCFLAGS} ${PKG_CFLAGS}" \
 				KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 				LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 				ARCH=${HM} \
-				CROSS_COMPILE=${HARCH:+${HARCH}-} \
+				CROSS_COMPILE=${HARCH}- \
 				EXTRAVERSION=${KERN_EXTRAVERSION} \
 				${EXTRA_PARMS} \
 				DISABLE_LTO=-fno-lto \
@@ -429,12 +429,12 @@ function build () (
 				local STATUS=${?}
 			else
 				KBUILD_BUILD_TIMESTAMP='' make \
-				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc" \
+				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
 				KCFLAGS="${KERN_OPTCOMP_FLAGS} ${PLATFORM_KCFLAGS} ${PKG_CFLAGS}" \
 				KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 				LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 				ARCH=${HM} \
-				CROSS_COMPILE=${HARCH:+${HARCH}-} \
+				CROSS_COMPILE=${HARCH}- \
 				EXTRAVERSION=${KERN_EXTRAVERSION} \
 				${EXTRA_PARMS} \
 				${@} ${PKG_MAKEVARS}
@@ -530,21 +530,21 @@ function build () (
 			fi
 		fi
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-		local PYTHONPKG_DIR=
-		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH:+${HARCH}-}gcc ${SYSROOT_CFLAGS}" \
+		#local PYTHONPKG_DIR=
+		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
 		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
 		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
 		CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-		CPP="${HARCH:+${HARCH}-}cpp ${SYSROOT_CFLAGS}" \
+		CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
 		CPPFLAGS="${COMMON_CPPFLAGS} ${PKG_CFLAGS}" \
-		LD="${HARCH:+${HARCH}-}ld.gold ${PKG_LDFLAGS}" \
+		LD="${HARCH}-ld.gold ${PKG_LDFLAGS}" \
 		LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-		AR=${HARCH:+${HARCH}-}gcc-ar \
-		AS=${HARCH:+${HARCH}-}as \
-		NM=${HARCH:+${HARCH}-}gcc-nm \
-		RANLIB=${HARCH:+${HARCH}-}gcc-ranlib \
-		STRIP=${HARCH:+${HARCH}-}strip \
-		OBJDUMP=${HARCH:+${HARCH}-}objdump \
+		AR=${HARCH}-gcc-ar \
+		AS=${HARCH}-as \
+		NM=${HARCH}-gcc-nm \
+		RANLIB=${HARCH}-gcc-ranlib \
+		STRIP=${HARCH}-strip \
+		OBJDUMP=${HARCH}-objdump \
 		python setup.py build -j${NPROCS} &&
 		python setup.py install --root=${BIN_PATH} ${CONF_FLAGS}
 		local BUILD_STATUS=${?}
