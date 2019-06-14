@@ -1,6 +1,6 @@
-# moode-r53
-PKG_URL="https://github.com/moode-player/moode/archive/r53prod.tar.gz"
-PKG_SRCDIR=moode-r53
+# moode-r531
+PKG_URL="https://github.com/moode-player/moode/archive/r531prod.tar.gz"
+PKG_SRCDIR=moode-r531
 PATCHES="rotenc-makefile.patch"
 BUILD_PROCESS=downloadonly
 PKG_PREBUILD="install -D boot/config.txt.default ${BIN_PATH}/boot/config.txt
