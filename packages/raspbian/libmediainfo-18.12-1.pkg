@@ -1,6 +1,6 @@
 # libmediainfo-18.12-1
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libm/libmediainfo/libmediainfo_18.12.orig.tar.gz"
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libm/libmediainfo/libmediainfo_18.12-1.debian.tar.xz"
+#PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libm/libmediainfo/libmediainfo_18.12-1.debian.tar.xz"
 BUILD_PROCESS=configmake
 AUTOCONF_PATH=Project/GNU/Library
 CONF_COPYSRC=1

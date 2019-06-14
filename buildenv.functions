@@ -73,7 +73,7 @@ function create_sysroot () {
 	else
 		echo "already present. Run rm -rf ${DISTOS_PATH} if you want to update it."
 		echo
-		return 1
+		return 0
 	fi
 }
 
@@ -114,22 +114,21 @@ function setup_gcc () {
 
 	function build_gcc () {
 		function gcc_binutils_build_patch () {
-			mkdir -p ${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/gcc/../lib/gcc/${BUILD_ARCH}/${GCC_VER}/../../../../${BUILD_ARCH}/bin
-			ln -fs ../../gcc/liblto_plugin.so ${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${BUILD_ARCH}/bin/				
-			ln -fs ../../binutils/nm-new ${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${BUILD_ARCH}/bin/${BUILD_ARCH}-nm
-			ln -fs ../../binutils/nm-new ${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${BUILD_ARCH}/bin/nm
-			ln -fs ../../binutils/ar ${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${BUILD_ARCH}/bin/${BUILD_ARCH}-ar
-			ln -fs ../../binutils/ar ${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${BUILD_ARCH}/bin/ar
-			ln -fs ../../binutils/ranlib ${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${BUILD_ARCH}/bin/${BUILD_ARCH}-ranlib
-			ln -fs ../../binutils/ranlib ${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${BUILD_ARCH}/bin/ranlib
-			sed -i 's|^AR_FOR_TARGET=.*|AR_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-ar|' ${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/Makefile
-			sed -i 's|^NM_FOR_TARGET=.*|NM_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-nm|' ${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/Makefile
-			sed -i 's|^RANLIB_FOR_TARGET=.*|RANLIB_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-ranlib|' ${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/Makefile
-			sed -i 's|^COMPILER_NM_FOR_TARGET=.*|COMPILER_NM_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-nm|' ${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/Makefile
+			mkdir -p gcc/../lib/gcc/${BUILD_ARCH}/${GCC_VER}/../../../../${BUILD_ARCH}/bin
+			ln -fs ../../gcc/liblto_plugin.so ${BUILD_ARCH}/bin/				
+			ln -fs ../../binutils/nm-new ${BUILD_ARCH}/bin/${BUILD_ARCH}-nm
+			ln -fs ../../binutils/nm-new ${BUILD_ARCH}/bin/nm
+			ln -fs ../../binutils/ar ${BUILD_ARCH}/bin/${BUILD_ARCH}-ar
+			ln -fs ../../binutils/ar ${BUILD_ARCH}/bin/ar
+			ln -fs ../../binutils/ranlib ${BUILD_ARCH}/bin/${BUILD_ARCH}-ranlib
+			ln -fs ../../binutils/ranlib ${BUILD_ARCH}/bin/ranlib
+			sed -i 's|^AR_FOR_TARGET=.*|AR_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-ar|' Makefile
+			sed -i 's|^NM_FOR_TARGET=.*|NM_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-nm|' Makefile
+			sed -i 's|^RANLIB_FOR_TARGET=.*|RANLIB_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-ranlib|' Makefile
+			sed -i 's|^COMPILER_NM_FOR_TARGET=.*|COMPILER_NM_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-nm|' Makefile
 		}
 
 		set -x
-		local BINUTILS_LTO_WRAPPERS_PATH=${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/binutils_lto_wrappers
 		local BUILD_ARCH=${1:-${HARCH}}
 		local GCC_LANGUAGES=${GCC_LANGUAGES:-c,c++,lto}
 		local GCC_COMMON_CONFIG="--enable-languages=${GCC_LANGUAGES} --enable-shared --enable-linker-build-id --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --enable-checking=release --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-threads=posix --enable-initfini-array --enable-gnu-indirect-function --enable-multiarch \
@@ -141,14 +140,6 @@ function setup_gcc () {
 		local BINUTILS_BUILD_CONFIG=""
 		local BINUTILS_HOST_CONFIG=""
 		local GCC_OPTCOMP_FLAGS="${GCC_OPTCOMP_FLAGS}${GCC_OPTLEVEL:+ -O${GCC_OPTLEVEL}}"
-		if [ ${GCC_LTOENABLE} -eq 1 ]
-		then
-			local GCC_OPTCOMP_FLAGS="${GCC_OPTCOMP_FLAGS} ${COMMON_LTOFLAGS}"
-			local TARGET_AR="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-ar-new"
-			local TARGET_NM="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-nm-new"
-			local TARGET_RANLIB="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-ranlib-new"
-			local TARGET_CONFIG_ARGS="AR_FOR_TARGET='${TARGET_AR}' NM_FOR_TARGET='${TARGET_NM}' RANLIB_FOR_TARGET='${TARGET_RANLIB}'"
-		fi
 		local HOST_CC="${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc"
 		local HOST_CXX="${CCWRAPPER:+${CCWRAPPER} }${BARCH}-g++"
 		local HOST_AR="${BARCH}-gcc-ar"
@@ -159,6 +150,9 @@ function setup_gcc () {
 		local HOST_LDFLAGS="${COMMON_LDFLAGS} ${GCC_OPTLINK_FLAGS} -lgcc_s"
 		if [ "${BUILD_ARCH}" == "${BARCH}" ]
 		then
+			# If BUILD_ARCH then install in GLOBAL_TOOLCHAIN_PATH
+			local GCC_BUILD_PATH=${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
+			local GCC_INSTALL_PATH=${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}
 			local GCC_CONFIG="${GCC_BUILD_CONFIG}"
 			local BINUTILS_CONFIG="${BINUTILS_BUILD_CONFIG}"
 			local CONFIG_ARCH_PARAMS="--build=${BARCH} --host=${BARCH} --target=${BARCH}"
@@ -166,12 +160,24 @@ function setup_gcc () {
 			local TARGET_CXXFLAGS="${HOST_CXXFLAGS}"
 			local TARGET_LDFLAGS="${HOST_LDFLAGS}"
 		else
+			# if TARGET_ARCH then install in TOOLCHAIN_PATH
+			local GCC_BUILD_PATH=${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
+			local GCC_INSTALL_PATH=${TOOLCHAIN_PATH}
 			local GCC_CONFIG="${GCC_HOST_CONFIG}"
 			local BINUTILS_CONFIG="${BINUTILS_HOST_CONFIG}"
 			local CONFIG_ARCH_PARAMS="--build=${BARCH} --host=${BARCH} --target=${HARCH} --with-sysroot=${DISTOS_PATH}"
 			local TARGET_CFLAGS="${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS}${HMARCH:+ -march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}"
 			local TARGET_CXXFLAGS="${TARGET_CFLAGS}"
 			local TARGET_LDFLAGS="${COMMON_LDFLAGS} ${GCC_OPTLINK_FLAGS}"
+		fi
+		local BINUTILS_LTO_WRAPPERS_PATH=${GCC_BUILD_PATH}/gcc-${GCC_VER}/binutils_lto_wrappers
+		if [ ${GCC_LTOENABLE} -eq 1 ]
+		then
+			local GCC_OPTCOMP_FLAGS="${GCC_OPTCOMP_FLAGS} ${COMMON_LTOFLAGS}"
+			local TARGET_AR="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-ar-new"
+			local TARGET_NM="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-nm-new"
+			local TARGET_RANLIB="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-ranlib-new"
+			local TARGET_CONFIG_ARGS="AR_FOR_TARGET='${TARGET_AR}' NM_FOR_TARGET='${TARGET_NM}' RANLIB_FOR_TARGET='${TARGET_RANLIB}'"
 		fi
 		local BUILD_ENV_SHELL="CC_FOR_BUILD='${HOST_CC}' CXX_FOR_BUILD='${HOST_CXX}' AR_FOR_BUILD='${HOST_AR}' NM_FOR_BUILD='${HOST_NM}' RANLIB_FOR_BUILD='${HOST_RANLIB}' \
 			CFLAGS_FOR_BUILD='${HOST_CFLAGS}' CXXFLAGS_FOR_BUILD='${HOST_CXXFLAGS}' LDFLAGS_FOR_BUILD='${HOST_LDFLAGS}' \
@@ -180,18 +186,20 @@ function setup_gcc () {
 			CFLAGS_FOR_TARGET='${TARGET_CFLAGS}' CXXFLAGS_FOR_TARGET='${TARGET_CXXFLAGS}' LDFLAGS_FOR_TARGET='${TARGET_LDFLAGS}'"
 
 		### Build GCC
-		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ]
+		if [ -d ${GCC_BUILD_PATH} ]
 		then
-			rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
+			rm -rf ${GCC_BUILD_PATH}
 		fi
-		mkdir -p ${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
-		cd ${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} &&
+		mkdir -p ${GCC_BUILD_PATH}
+		cd ${GCC_BUILD_PATH} &&
 		eval "${BUILD_ENV_SHELL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure -v \
-			--prefix=${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER} --mandir=${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/share/man --infodir=${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/share/info \
+			--prefix=${GCC_INSTALL_PATH} --mandir=${GCC_INSTALL_PATH}/share/man --infodir=${GCC_INSTALL_PATH}/share/info \
 			${CONFIG_ARCH_PARAMS} ${BINUTILS_COMMON_CONFIG} ${BINUTILS_CONFIG} ${GCC_COMMON_CONFIG} ${GCC_CONFIG} ${TARGET_CONFIG_ARGS}" &&
 		gcc_binutils_build_patch ${BARCH} &&
 		make STAGE_CC_WRAPPER="${CCWRAPPER}" V=${MAKEVERBOSE:-0} &&
-		make V=${MAKEVERBOSE:-0} install-strip
+		make V=${MAKEVERBOSE:-0} install-strip &&
+		cd ${START_PWD} &&
+		rm -rf ${GCC_BUILD_PATH}
 		local STATUS=${?}
 		set +x
 		return ${STATUS}
@@ -208,10 +216,11 @@ function setup_gcc () {
 	export PATH=${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin:${PATH}
 	echo -n "-${GCC_VER}..."
 	
-	if ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${HARCH}-g++ -v > /dev/null 2>&1
+	if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1 || \
+		! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1
 	then
 		echo -n "downloading..."
-		download_gcc > ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}.log 2>&1
+		download_gcc > ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}.log 2>&1
 		if [ ${?} -ne 0 ]
 		then
 			echo "fail."
@@ -230,15 +239,20 @@ function setup_gcc () {
 				return 1
 			fi
 		fi
-		echo -n "cross..."
-		build_gcc ${HARCH} >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}.log 2>&1
-		if [ ${?} -ne 0 ]
+		if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1
 		then
-			echo "fail."
-			echo
-			return 1
+			echo -n "cross..."
+			build_gcc ${HARCH} >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}.log 2>&1
+			if [ ${?} -ne 0 ]
+			then
+				echo "fail."
+				echo
+				return 1
+			fi
 		fi
 		echo "done."
+		rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}
+		rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
 	else
 		echo "already there."
 	fi
@@ -314,7 +328,9 @@ function setup_python () {
 		make &&
 		make install &&
 		${BUILD_PYTHON} ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py &&
-		${BUILD_PYTHONPIP} install crossenv
+		${BUILD_PYTHONPIP} install crossenv &&
+		cd ${START_PWD} &&
+		rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
 		local STATUS=${?}
 		set +x
 		return ${STATUS}
@@ -386,6 +402,7 @@ function setup_python () {
 			return 1
 		fi
 		echo "done."
+		rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}
 	else
 		echo "already there."
 	fi

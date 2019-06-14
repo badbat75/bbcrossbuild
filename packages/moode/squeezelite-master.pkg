@@ -8,4 +8,4 @@ PKG_CFLAGS="-DRESAMPLE -DFFMPEG -DVISEXPORT -DDSD -DGPIO -DRPI -fPIC"
 PKG_LDFLAGS="-lasound -lpthread -lm -ldl -lrt -lwiringPi"
 PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} EXECUTABLE=squeezelite -f Makefile.rpi"
 PKG_POSTBUILD="install -d ${BIN_PATH}/usr/local/bin &&
-ln -s /usr/bin/squeezelite ${BIN_PATH}/usr/local/bin/squeezelite"
+ln -fs /usr/bin/squeezelite ${BIN_PATH}/usr/local/bin/squeezelite"
