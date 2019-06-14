@@ -20,7 +20,7 @@ install -d ${BIN_PATH}/mnt/SDCARD
 # Symlinks
 ln -fs /mnt/NAS ${BIN_PATH}/var/lib/mpd/music/NAS
 ln -fs /mnt/SDCARD ${BIN_PATH}/var/lib/mpd/music/SDCARD
-ln -fs /media ${BIN_PATH}/var/lib/mpd/music/USB
+[ ! -e ${BIN_PATH}/var/lib/mpd/music/USB ] && ln -fs /media ${BIN_PATH}/var/lib/mpd/music/USB
 # Logs
 install -D -m 0644 /dev/null ${BIN_PATH}/var/log/mpd/log
 install -D -m 0666 /dev/null ${BIN_PATH}/var/log/moode.log
@@ -37,8 +37,10 @@ install -D network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
 install -D var/local/www/db/moode-sqlite3.db.default ${BIN_PATH}/var/local/www/db/moode-sqlite3.db
 # Moode sources and configs
 install -D mpd/RADIO/* ${BIN_PATH}/var/lib/mpd/music/RADIO
+install -d ${BIN_PATH}/var/lib/mpd/music/RADIO
+install -d ${BIN_PATH}/var/lib/mpd/playlists/
 install -D mpd/playlists/* ${BIN_PATH}/var/lib/mpd/playlists/
-install -D -m 0644 etc/* ${BIN_PATH}/etc
+find etc -maxdepth 1 -type f -exec install -v -D -m 0644 {} ${BIN_PATH}/etc \;
 install -d ${BIN_PATH}/etc/avahi/services
 install -D -m 0644 etc/avahi/services/* ${BIN_PATH}/etc/avahi/services/
 install -d ${BIN_PATH}/etc/bluetooth
@@ -66,7 +68,7 @@ install -d ${BIN_PATH}/etc/update-motd.d
 install -D -m 0644 etc/update-motd.d/* ${BIN_PATH}/etc/update-motd.d/
 install -d ${BIN_PATH}/home/pi
 install -D -m 0755 home/*.sh ${BIN_PATH}/home/pi
-install -D -m 0755 home/*.php ${BIN_PATH}/home/pi
+#install -D -m 0755 home/*.php ${BIN_PATH}/home/pi
 install -D -m 0644 home/dircolors ${BIN_PATH}/home/pi/.dircolors
 install -D -m 0644 home/xinitrc.default ${BIN_PATH}/home/pi/.xinitrc
 install -d ${BIN_PATH}/lib/systemd/system

@@ -30,4 +30,6 @@ fi
 echo "Project path: ${DATA_PATH}/${PRJ_NAME}"
 echo
 
+trap 'STATUS=${?}; exit ${STATUS}' ERR
 . $PRJ
+trap ERR

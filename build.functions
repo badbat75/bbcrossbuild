@@ -95,20 +95,20 @@ function build () (
 		cd ${PKG_SRCPATH}
 		if [ "x${PATCHDEB}" != "x" ]
 		then
-			echo -n "Retrieve DEB patch info..."
+			echo -n "${SPACES}Retrieve DEB patch info..."
 			[ ! -d ${PKG_SRCPATH}/debian ] && mkdir -p ${PKG_SRCPATH}/debian
 			ARCHIVEDIRS="debian" download_uncompress "${PATCHDEB}" ${PKG_SRCPATH}/debian >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
 				echo "Done." || echo "Fail."
 			for scanpatch in $(cat ${PKG_SRCPATH}/debian/patches/series)
 			do
-				echo -n "Apply $scanpatch patch..."
+				echo -n "${SPACES}Apply $scanpatch patch..."
 				patch -p1 < ${PKG_SRCPATH}/debian/patches/${scanpatch} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
 							echo "Done." || echo "Fail."
 			done
 		fi
 		for scanpatch in ${PATCHES:-}
 		do
-			echo -n "Apply $scanpatch patch..."
+			echo -n "${SPACES}Apply $scanpatch patch..."
 			patch -p1 < ${PATCH_PATH}/$scanpatch >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
 						echo "Done." || echo "Fail."
 		done
@@ -116,6 +116,7 @@ function build () (
 		then
 			chmod +x ${PKG_SRCPATH}/${CONF_CMD}
 		fi
+		echo -n "${SPACES}"
 		cd ${BB_HOME}
 	}
 
@@ -128,7 +129,7 @@ function build () (
 		cd ${PKG_SRCPATH}
 		if [ ${AUTOCONF:-1} -eq 1 ]
 		then
-			echo -n "AutoReconf ${PKG_NAME}..."
+			echo -n "${SPACES}AutoReconf ${PKG_NAME}..."
 			[ ! -z ${AUTOCONF_PATH} ] && cd ${AUTOCONF_PATH}
 			autoreconf -fi >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 			local STATUS=${?}
@@ -581,33 +582,55 @@ function build () (
 		CARGO_BINLIST \
 		CARGO_LIBLIST \
 		CARGO_STRIP
-	if [ -f ${PKG_PATH}/${1}.pkg ]
+
+	if [ -z "${NUMSPACES}" ]
 	then
-		source ${PKG_PATH}/${1}.pkg
-		for deps in ${PKG_DEPS}
-		do
-			#echo "Called from ${1}"
-			build ${deps}
-			if [ ${?} -ne 0 ]
-			then
-				echo
-				return ${?} 
-			fi
-		done
-	else
+		local NUMSPACES=0
+	fi
+	
+	if [ ! -f ${PKG_PATH}/${1}.pkg ]
+	then
 		echo "Package ${1} does not exists."
 		echo
-	fi	
+		return 1
+	fi
+
+	source ${PKG_PATH}/${1}.pkg
+
+	trap 'local STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${LOG_PATH}/${PKG_NAME}.log ];
+		then \
+			echo "Log ${LOG_PATH}/${PKG_NAME}.log:"; \
+			echo; \
+			tail -n24 ${LOG_PATH}/${PKG_NAME}.log; \
+		fi;
+		return ${STATUS}' ERR
+
 	local PKG_NAME=$(basename ${1})
 	echo "Package ${PKG_NAME}"
+
+	for deps in ${PKG_DEPS}
+	do
+		local NUMSPACES=$((NUMSPACES+1))
+		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
+		echo -n "${SPACES}Requires "
+		#echo "Called from ${1}"
+		build ${deps}
+		local NUMSPACES=$((NUMSPACES-1))
+		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
+	done
+
 	local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_NAME}}
 	local PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
 	local PKG_BLDPATH=${BLD_PATH}/${PKG_NAME}
+
 	if [ -f ${STATUS_PATH}/${PKG_NAME} ]
 	then
 		if [ "$(md5sum ${PKG_PATH}/${1}.pkg)" == "$(cat ${STATUS_PATH}/${PKG_NAME})" ]
 		then
-			echo "Package ${PKG_NAME} already built."
+			echo "${SPACES}Package ${PKG_NAME} already built."
 			echo
 			return 0
 		else
@@ -618,7 +641,9 @@ function build () (
 			fi
 		fi
 	fi
+
 	check_target_gcc
+	echo -n "${SPACES}"
 	# Build defaults
 	if [ ! -d ${BLD_PATH} ]
 	then
@@ -633,11 +658,6 @@ function build () (
 	then
 		echo -n "Downloading ${PKG_NAME}..."
 		downloadsources >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-		if [ ${?} -ne 0 ]
-		then
-			echo "Fail."
-			return 1
-		fi
 		echo "Done."
 		preparesources
 	fi
@@ -650,32 +670,14 @@ function build () (
 	if [ ! -z "${PKG_PREBUILD}" ]
 	then
 		cd ${PKG_SRCPATH}
-		eval "set -x && ${PKG_PREBUILD} && set +x" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-		if [ ${?} -ne 0 ]
-		then
-			echo "Fail."
-			echo
-			return 1
-		fi
+		(eval "trap 'exit 1' ERR; set -x && ${PKG_PREBUILD} && set +x" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1)
 	fi
 	${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-	if [ ${?} -ne 0 ]
-	then
-		echo "Fail."
-		echo
-		return 1
-	fi
 
 	if [ ! -z "${PKG_POSTBUILD}" ]
 	then
 		cd ${PKG_BLDPATH}
 		eval "set -x && ${PKG_POSTBUILD} && set +x" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-		if [ ${?} -ne 0 ]
-		then
-			echo "Fail."
-			echo
-			return 1
-		fi
 	fi
 	if [ ! -d ${STATUS_PATH} ]
 	then
