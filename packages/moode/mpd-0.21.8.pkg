@@ -18,7 +18,7 @@ install -d ${BIN_PATH}/var/log/mpd
 install -D -m 0644 /dev/null ${BIN_PATH}/var/log/mpd/log
 install -d ${BIN_PATH}/run/mpd
 install -d ${BIN_PATH}/usr/local/bin
-ln -s /usr/bin/mpd ${BIN_PATH}/usr/local/bin/mpd
+ln -fs /usr/bin/mpd ${BIN_PATH}/usr/local/bin/mpd
 rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.service
 rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.socket
 rm -f ${BIN_PATH}/usr/lib/systemd/user/mpd.service"
