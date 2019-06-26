@@ -99,12 +99,23 @@ function build () (
 			[ ! -d ${PKG_SRCPATH}/debian ] && mkdir -p ${PKG_SRCPATH}/debian
 			ARCHIVEDIRS="debian" download_uncompress "${PATCHDEB}" ${PKG_SRCPATH}/debian >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
 				echo "Done." || echo "Fail."
-			for scanpatch in $(cat ${PKG_SRCPATH}/debian/patches/series)
-			do
-				echo -n "${SPACES}Apply $scanpatch patch..."
-				patch -p1 < ${PKG_SRCPATH}/debian/patches/${scanpatch} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
-							echo "Done." || echo "Fail."
-			done
+			if [ -f ${PKG_SRCPATH}/debian/patches/series ]
+			then
+				while read patch; do
+					if [[ ! "${patch}" =~ ^\#.*|^//.* ]]
+					then
+						local PATCHARRAY=(${patch})
+						if [ ! -z ${PATCHARRAY[0]} ]
+						then
+							echo -n "${SPACES}Apply ${PATCHARRAY[0]} patch..."
+							patch ${PATCHARRAY[1]:--p1} < ${PKG_SRCPATH}/debian/patches/${PATCHARRAY[0]} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1 &&
+								echo "Done." || echo "Fail."
+						fi
+					fi
+				done <${PKG_SRCPATH}/debian/patches/series
+			else
+				echo "\"series\" patch list file does not exist."
+			fi
 		fi
 		for scanpatch in ${PATCHES:-}
 		do
@@ -677,7 +688,7 @@ function build () (
 	if [ ! -z "${PKG_POSTBUILD}" ]
 	then
 		cd ${PKG_BLDPATH}
-		eval "set -x && ${PKG_POSTBUILD} && set +x" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		(eval "trap 'exit 1' ERR; set -x && ${PKG_POSTBUILD} && set +x" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1)
 	fi
 	if [ ! -d ${STATUS_PATH} ]
 	then
