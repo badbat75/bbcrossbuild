@@ -20,8 +20,10 @@ fi
 
 function create_sysroot () {
 	function libraries_relink () {
-		test -z "${DISTOS_PATH:-}" && echo "DISTOS_PATH not set" && exit 1
-		test -z "${HARCH:-}" && echo "HARCH not set" && exit 1
+		trap 'STATUS=${?}; \
+			set +x; \
+			trap ERR; \
+			return ${STATUS}' ERR
 
 		echo "DISTOS_PATH: ${DISTOS_PATH}"
 		echo
@@ -32,7 +34,20 @@ function create_sysroot () {
 			ln -f -s ../../..$(readlink $i) $i
 			echo "done."
 		done
+		trap ERR
 	}
+
+	trap 'STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${LOG_PATH}/sysroot.log ];
+		then \
+			echo "Log ${LOG_PATH}/sysroot.log:"; \
+			echo; \
+			tail -n24 ${LOG_PATH}/sysroot.log; \
+		fi;
+		trap ERR; \
+		return ${STATUS}' ERR
 
 	echo -n "Creating sysroot with $(basename ${1})..."
 	if [ ! -d ${DISTOS_PATH} ]
@@ -43,38 +58,21 @@ function create_sysroot () {
 		if [[ ${1} =~ ^http://|^https://|^ftp:// ]]
 		then
 			ARCHIVE_DIRS=${ARCHIVE_DIRS} STRIP_COMPONENTS=0 download_uncompress ${1} ${DISTOS_PATH} >> ${LOG_PATH}/sysroot.log 2>&1
-			local STATUS=${?}
 		else
 			tar xf ${IMG_PATH}/${1} -C${DISTOS_PATH} ${ARCHIVE_DIRS} >> ${LOG_PATH}/sysroot.log 2>&1
-			local STATUS=${?}
-		fi
-		if [ ${STATUS} -ne 0 ]
-		then
-			echo "fail."
-			echo
-			return 1
 		fi
 		libraries_relink >> ${LOG_PATH}/sysroot.log 2>&1
-		local STATUS=${?}
 		if [ -f ${DISTOS_PATH}/usr/lib/${HARCH}/pkgconfig/libical.pc ]
 		then
 			sed -i "s|/usr/lib/${HARCH:+${HARCH}/}libicu|${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}libicu|g" ${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}pkgconfig/libical.pc
 		fi
-		if [ ${STATUS} -eq 0 ]
-		then
-			echo "done."
-			echo
-			return 0
-		else
-			echo "fail."
-			echo
-			return 1
-		fi
+		echo "done."
+		echo
 	else
 		echo "already present. Run rm -rf ${DISTOS_PATH} if you want to update it."
 		echo
-		return 0
 	fi
+	trap ERR
 }
 
 function check_target_gcc () {
@@ -89,7 +87,13 @@ function check_target_gcc () {
 }
 
 function setup_gcc () {
+
 	function download_gcc () {
+		trap 'STATUS=${?}; \
+			set +x; \
+			trap ERR; \
+			return ${STATUS};' ERR
+
 		set -x
 		local GMPURL=https://gmplib.org/download/gmp/gmp-${GMP_VER}.tar.xz
 		local MPFRURL=https://www.mpfr.org/mpfr-current/mpfr-${MPFR_VER}.tar.xz
@@ -97,23 +101,29 @@ function setup_gcc () {
 		local ISLURL=https://gcc.gnu.org/pub/gcc/infrastructure/isl-${ISL_VER}.tar.bz2
 		local BINUTILSURL=https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz
 		local GCCURL=https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.xz
-		
-		download_uncompress ${BINUTILSURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER} &&
-		download_uncompress ${GCCURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} &&
-		NODELETEDESTDIR=1 download_uncompress ${GMPURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/gmp &&
-		NODELETEDESTDIR=1 download_uncompress ${MPFRURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpfr &&
-		NODELETEDESTDIR=1 download_uncompress ${MPCURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpc &&
-		NODELETEDESTDIR=1 download_uncompress ${ISLURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/isl
-		local STATUS=${?}
+
+		download_uncompress ${BINUTILSURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}
+		download_uncompress ${GCCURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
+		download_uncompress ${GMPURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/gmp
+		download_uncompress ${MPFRURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpfr
+		download_uncompress ${MPCURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpc
+		download_uncompress ${ISLURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/isl
 		cd ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
-		find ../binutils-${BINUTILS_VER} -maxdepth 1 -type d -exec ln -s {} . \;
-		autoreconf2.64 -fiv
+		find ../binutils-${BINUTILS_VER} -maxdepth 1 -type d -exec ln -fs {} . \;
+		autoreconf${AUTOCONF_VER} -fiv
 		set +x
-		return ${STATUS}
+		trap ERR
 	}
 
 	function build_gcc () {
+
 		function gcc_binutils_build_patch () {
+			trap 'STATUS=${?}; \
+				set +x; \
+				trap ERR; \
+				return ${STATUS}' ERR
+	
+			set -x
 			mkdir -p gcc/../lib/gcc/${BUILD_ARCH}/${GCC_VER}/../../../../${BUILD_ARCH}/bin
 			ln -fs ../../gcc/liblto_plugin.so ${BUILD_ARCH}/bin/				
 			ln -fs ../../binutils/nm-new ${BUILD_ARCH}/bin/${BUILD_ARCH}-nm
@@ -126,7 +136,14 @@ function setup_gcc () {
 			sed -i 's|^NM_FOR_TARGET=.*|NM_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-nm|' Makefile
 			sed -i 's|^RANLIB_FOR_TARGET=.*|RANLIB_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-ranlib|' Makefile
 			sed -i 's|^COMPILER_NM_FOR_TARGET=.*|COMPILER_NM_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-nm|' Makefile
+			set +x
+			trap ERR
 		}
+
+		trap 'STATUS=${?}; \
+			set +x; \
+			trap ERR; \
+			return ${STATUS}' ERR
 
 		set -x
 		local BUILD_ARCH=${1:-${HARCH}}
@@ -191,21 +208,33 @@ function setup_gcc () {
 			rm -rf ${GCC_BUILD_PATH}
 		fi
 		mkdir -p ${GCC_BUILD_PATH}
-		cd ${GCC_BUILD_PATH} &&
-		eval "${BUILD_ENV_SHELL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure -v \
+		cd ${GCC_BUILD_PATH}
+		(eval "trap 'exit ${?}' ERR; ${BUILD_ENV_SHELL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure -v \
 			--prefix=${GCC_INSTALL_PATH} --mandir=${GCC_INSTALL_PATH}/share/man --infodir=${GCC_INSTALL_PATH}/share/info \
-			${CONFIG_ARCH_PARAMS} ${BINUTILS_COMMON_CONFIG} ${BINUTILS_CONFIG} ${GCC_COMMON_CONFIG} ${GCC_CONFIG} ${TARGET_CONFIG_ARGS}" &&
-		gcc_binutils_build_patch ${BARCH} &&
-		make STAGE_CC_WRAPPER="${CCWRAPPER}" V=${MAKEVERBOSE:-0} &&
-		make V=${MAKEVERBOSE:-0} install-strip &&
+			${CONFIG_ARCH_PARAMS} ${BINUTILS_COMMON_CONFIG} ${BINUTILS_CONFIG} ${GCC_COMMON_CONFIG} ${GCC_CONFIG} ${TARGET_CONFIG_ARGS}")
+		gcc_binutils_build_patch ${BARCH}
+		make STAGE_CC_WRAPPER="${CCWRAPPER}" V=${MAKEVERBOSE:-0}
+		make V=${MAKEVERBOSE:-0} install-strip
 		cd ${START_PWD} &&
 		rm -rf ${GCC_BUILD_PATH}
-		local STATUS=${?}
 		set +x
-		return ${STATUS}
+		trap ERR;
 	}
 
+	trap 'STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}.log ];
+		then \
+			echo "Log ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}.log:"; \
+			echo; \
+			tail -n24 ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}.log; \
+		fi;
+		trap ERR; \
+		exit ${STATUS}' ERR
+
 	echo -n "Setting up gcc"
+
 	local BINUTILS_VER=${BINUTILS_VER:-2.32}
 	local GCC_VER=${GCC_VER:-8.3.0}
 	local GMP_VER=${GMP_VER:-6.1.2}
@@ -214,6 +243,24 @@ function setup_gcc () {
 	local ISL_VER=${ISL_VER:-0.18}
 	local GCC_LTOENABLE=${GCC_LTOENABLE:-0}
 	export PATH=${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin:${PATH}
+	local CURRENT_AUTOCONF_VER=$(autoconf -V | head -n1 | awk '{print $NF}')
+
+	# Determine autoconf version to use and set the right autoreconf suffix command
+	if $(test_version ${GCC_VER} -lt 9.0.0)
+	then
+		AUTOCONF_VER=2.64
+	fi
+
+	if $(test_version ${GCC_VER} -ge 9.0.0)
+	then
+		AUTOCONF_VER=2.69
+	fi
+
+	if [ ${CURRENT_AUTOCONF_VER} = ${AUTOCONF_VER} ]
+	then
+		unset AUTOCONF_VER
+	fi
+
 	echo -n "-${GCC_VER}..."
 	
 	if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1 || \
@@ -221,34 +268,16 @@ function setup_gcc () {
 	then
 		echo -n "downloading..."
 		download_gcc > ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}.log 2>&1
-		if [ ${?} -ne 0 ]
-		then
-			echo "fail."
-			echo
-			return 1
-		fi
 		echo -n "building "
 		if ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1
 		then
 			echo -n "native..."
 			build_gcc ${BARCH}>> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}.log 2>&1
-			if [ ${?} -ne 0 ]
-			then
-				echo "fail."
-				echo
-				return 1
-			fi
 		fi
 		if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1
 		then
 			echo -n "cross..."
 			build_gcc ${HARCH} >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}.log 2>&1
-			if [ ${?} -ne 0 ]
-			then
-				echo "fail."
-				echo
-				return 1
-			fi
 		fi
 		echo "done."
 		rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}
@@ -256,31 +285,35 @@ function setup_gcc () {
 	else
 		echo "already there."
 	fi
+	trap ERR
 }
 
 function setup_rust () {
 	check_target_gcc
+
+	trap 'STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${GLOBAL_LOG_PATH}/rust.log ];
+		then \
+			echo "Log ${GLOBAL_LOG_PATH}/rust.log:"; \
+			echo; \
+			tail -n24 ${GLOBAL_LOG_PATH}/rust.log; \
+		fi;
+		trap ERR; \
+		exit ${STATUS}' ERR
+
 	echo -n "Setting up RUST..."
 	export CARGO_HOME=${GLOBAL_TOOLCHAIN_PATH}
 	export RUSTUP_HOME=${GLOBAL_TOOLCHAIN_PATH}/var/rustup
 	if [ ! -x ${GLOBAL_TOOLCHAIN_PATH}/bin/cargo ] || [ ! -x ${GLOBAL_TOOLCHAIN_PATH}/bin/rustc ]
 	then
 		echo -n "downloading..."
-		curl -sSf https://sh.rustup.rs -o /tmp/rustup-init &&
-		if [ ${?} -ne 0 ]
-		then
-			echo "fail."
-			return 1
-		fi
+		curl -sSf https://sh.rustup.rs -o /tmp/rustup-init
 		echo -n "installing..."
 		chmod +x /tmp/rustup-init &&
-		/tmp/rustup-init -v -y --no-modify-path >> ${GLOBAL_LOG_PATH}/rust.log 2>&1 &&
+		/tmp/rustup-init -v -y --no-modify-path >> ${GLOBAL_LOG_PATH}/rust.log 2>&1
 		rm -f /tmp/rustup-init
-		if [ ${?} -ne 0 ]
-		then
-			echo "Fail."
-			return 1
-		fi
 		echo "done."
 	else
 		echo "already there."
@@ -288,28 +321,33 @@ function setup_rust () {
 	CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
 	echo -n "Adding ${CARGO_TARGET} libraries..."
 	rustup -v target add ${CARGO_TARGET} >> ${GLOBAL_LOG_PATH}/rust.log 2>&1
-	if [ ${?} -ne 0 ]
-	then
-		echo "fail."
-		echo
-		return 1
-	fi
 	echo "done."
 	echo
+
+	trap ERR
 }
 
 function setup_python () {
 	function download_pyton () {
+		trap 'STATUS=${?}; \
+			set +x; \
+			trap ERR; \
+			return ${STATUS}' ERR
+
 		set -x
 		local PYTHONURL="https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PYTHON_VER}.tar.xz"
 		download_uncompress ${PYTHONURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER} &&
-		NODELETEDESTDIR=1 download_uncompress https://bootstrap.pypa.io/get-pip.py ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}
-		local STATUS=${?}
+		curl -LsR -o ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py https://bootstrap.pypa.io/get-pip.py
 		set +x
-		return ${STATUS}
+		trap ERR
 	}
 
 	function build_python () {
+		trap 'STATUS=${?}; \
+			set +x; \
+			trap ERR; \
+			return ${STATUS}' ERR
+
 		set -x
 		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER} ]
 		then
@@ -324,37 +362,54 @@ function setup_python () {
 		NM="${BARCH}-gcc-nm" \
 		RANLIB="${BARCH}-gcc-ranlib" \
 		LDFLAGS="${OPTLINK_FLAGS}" \
-		${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER} --enable-shared &&
-		make &&
-		make install &&
-		${BUILD_PYTHON} ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py &&
-		${BUILD_PYTHONPIP} install crossenv &&
-		cd ${START_PWD} &&
+		${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER} --enable-shared
+		make
+		make install
+		${BUILD_PYTHON} ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py
+		${BUILD_PYTHONPIP} install crossenv
+		cd ${START_PWD}
 		rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
-		local STATUS=${?}
 		set +x
-		return ${STATUS}
+		trap ERR
 	}
+
 	function build_python_crossenv () {
+		trap 'STATUS=${?}; \
+			set +x; \
+			trap ERR; \
+			return ${STATUS}' ERR
+
 		set -x
 		settoolflags
 		#local LTO_PLUGIN_PATH="$(${BARCH}-gcc --print-prog-name=liblto_plugin.so)"
-		${BUILD_PYTHON} -m crossenv ${HOST_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH} &&
+		${BUILD_PYTHON} -m crossenv ${HOST_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH}
 		CC="${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc" \
 		CFLAGS="${OPTCOMP_FLAGS} ${COMMON_LTOFLAGS} -march=native" \
 		AR="${BARCH}-gcc-ar" \
 		NM="${BARCH}-gcc-nm" \
 		RANLIB="${BARCH}-gcc-ranlib" \
 		LDFLAGS="${OPTLINK_FLAGS}" \
-		${BUILD_PYTHONPIP} install --upgrade -t ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/lib/python${PYTHONBIN_VER}/site-packages --no-binary :all: cython m2crypto future pycryptodome &&
-		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate &&
-		STATUS=${?}
+		${BUILD_PYTHONPIP} install --upgrade -t ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/lib/python${PYTHONBIN_VER}/site-packages --no-binary :all: cython m2crypto future pycryptodome
+		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate
 		set +x
-		return ${STATUS}
+		trap ERR
 	}
 
 	check_target_gcc
-	echo -n "Setting up Pyton"
+
+	trap 'STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${GLOBAL_LOG_PATH}/python-${PYTHONBIN_VER}.log ];
+		then \
+			echo "Log ${GLOBAL_LOG_PATH}/python-${PYTHONBIN_VER}.log:"; \
+			echo; \
+			tail -n24 ${GLOBAL_LOG_PATH}/python-${PYTHONBIN_VER}.log; \
+		fi;
+		trap ERR; \
+		return ${STATUS}' ERR
+
+	echo -n "Setting up Python"
 	if [ -z ${1} ]
 	then
 		local PYTHON_VER=$(find ${DISTOS_PATH}/usr/include -maxdepth 1 -name 'python*' -exec grep '#define PY_VERSION ' {}/patchlevel.h \; | awk '{print $3}' | sed 's/\"//g' | sort -u | tail -n1)
@@ -387,20 +442,8 @@ function setup_python () {
 	then
 		echo -n "downloading..."
 		download_pyton > ${GLOBAL_LOG_PATH}/python-${PYTHONBIN_VER}.log 2>&1
-		if [ ${?} -ne 0 ]
-		then
-			echo "fail."
-			echo
-			return 1
-		fi
 		echo -n "building..."
 		build_python >> ${GLOBAL_LOG_PATH}/python-${PYTHONBIN_VER}.log 2>&1
-		if [ ${?} -ne 0 ]
-		then
-			echo "fail."
-			echo
-			return 1
-		fi
 		echo "done."
 		rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}
 	else
@@ -414,19 +457,31 @@ function setup_python () {
 	then
 		ln -s config-${PYTHONBIN_VER}m-${HARCH} ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m
 	fi
+	trap ERR
+	trap 'STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${LOG_PATH}/toolchain_python-crossenv.log ];
+		then \
+			echo "Log ${LOG_PATH}/toolchain_python-crossenv.log:"; \
+			echo; \
+			tail -n24 ${LOG_PATH}/toolchain_python-crossenv.log; \
+		fi;
+		trap ERR; \
+		return ${STATUS}' ERR
+
 	echo -n "Creating virtual cross environment..."
 	if [ ! -d ${TOOLCHAIN_PATH}/venv-${HARCH} ]
 	then
 		build_python_crossenv >> ${LOG_PATH}/toolchain_python-crossenv.log 2>&1
 		echo "done."
 		echo
-		return ${?}
 	else
 		echo "already there."
 		echo
 		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate >> ${LOG_PATH}/toolchain_python-crossenv.log 2>&1
-		return ${?}
 	fi
+	trap ERR
 }
 
 # Check the toolchains
