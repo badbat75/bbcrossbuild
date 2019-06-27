@@ -616,7 +616,8 @@ function build () (
 			echo "Log ${LOG_PATH}/${PKG_NAME}.log:"; \
 			echo; \
 			tail -n24 ${LOG_PATH}/${PKG_NAME}.log; \
-		fi;
+		fi; \
+		trap ERR; \
 		return ${STATUS}' ERR
 
 	local PKG_NAME=$(basename ${1})
@@ -699,7 +700,7 @@ function build () (
 	md5sum ${PKG_PATH}/${1}.pkg > ${STATUS_PATH}/${PKG_NAME}
 	echo "Done."
 	echo
-	return 0
+	trap ERR
 )
 
 function forge_la_libs () {
