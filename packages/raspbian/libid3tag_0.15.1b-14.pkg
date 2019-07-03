@@ -1,0 +1,11 @@
+# libid3tag_0.15.1b-14
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libi/libid3tag/libid3tag_0.15.1b.orig.tar.gz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libi/libid3tag/libid3tag_0.15.1b-14.debian.tar.xz"
+PATCHES="id3tag-pkgconfig.patch"
+PKG_PREBUILD="touch NEWS AUTHORS ChangeLog"
+BUILD_PROCESS=configmake
+# CONF_FLAGS=""
+INST_CMD=install
+PKGDEPS=
+# Note:
+# Depends on: cdbs (>= 0.4.93~), dh-autoreconf, quilt, debhelper (>= 9), gettext, zlib1g-dev, gperf

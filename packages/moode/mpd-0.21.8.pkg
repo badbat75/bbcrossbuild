@@ -9,7 +9,7 @@ CONF_FLAGS="-Dalsa=enabled -Dcurl=enabled -Ddatabase=true -Ddsd=true -Dffmpeg=en
 	-Dnfs=disabled -Doss=disabled -Dpulse=disabled -Dsidplay=disabled -Dsmbclient=disabled -Dsndfile=disabled \
 	-Dsqlite=disabled -Dupnp=disabled -Dwildmidi=disabled -Dzzip=disabled -Ddbus=disabled -Dudisks=disabled"
 INST_CMD=install-strip
-PKG_DEPS="raspbian/libsoxr_0.1.2-3 raspbian/libcdio-paranoia-10.2+0.94+2 raspbian/libid3tag_0.15.1b moode/libmpdclient-2.16"
+PKG_DEPS="moode/boost_1.68.0 raspbian/libsoxr_0.1.2-3 raspbian/libcdio-paranoia-10.2+0.94+2 raspbian/libid3tag_0.15.1b-14 moode/libmpdclient-2.16"
 PKG_POSTBUILD="install -d ${BIN_PATH}/var/lib/mpd
 install -d ${BIN_PATH}/var/lib/mpd/music
 install -d ${BIN_PATH}/var/lib/mpd/playlists

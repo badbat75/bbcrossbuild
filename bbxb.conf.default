@@ -61,7 +61,7 @@ KERN_OPTLINK_FLAGS=
 ######
 
 ###### Versions for GCC and its dependencies
-#GCC_VER=8.3.0
+#GCC_VER=9.1.0
 #BINUTILS_VER=2.32
 #GMP_VER=6.1.2
 #MPFR_VER=4.0.2

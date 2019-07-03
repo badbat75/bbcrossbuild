@@ -1,0 +1,12 @@
+# libatasmart_0.19-5
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/liba/libatasmart/libatasmart_0.19.orig.tar.xz"
+BUILD_PROCESS=configmake
+CONF_FLAGS='CPPFLAGS= BUILD_CFLAGS=-O3'
+INST_CMD=install-strip
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/liba/libatasmart/libatasmart_0.19-5.debian.tar.xz"
+PATCHES="libatasmart_crosscompile.patch"
+#PKG_CFLAGS=""
+#PKG_DEPS=""
+#PKG_POSTBUILD="install --mode=644 -D \${PKG_SRCPATH}/debian/  ${BIN_PATH}\${BUILD_SYSCONFDIR}/"
+
+# Note: Build-Depends: debhelper (>= 11), libudev-dev, pkg-config

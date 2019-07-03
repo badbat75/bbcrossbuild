@@ -58,6 +58,9 @@ function settoolflags () {
 		COMMON_PKG_CONFIG_LIBDIR+=":${DISTOS_PATH}/usr/lib${BUILD_LIBSUFFIX}/pkgconfig:${DISTOS_PATH}/usr/share/pkgconfig"
 		SYSROOT_CFLAGS="${DISTOS_PATH:+--sysroot=${DISTOS_PATH}}"
 		SYSROOT_LDFLAGS="${DISTOS_PATH:+-Wl,--sysroot=${DISTOS_PATH}}"
+	else
+		SYSROOT_CFLAGS="${BIN_PATH:+--sysroot=${BIN_PATH}}"
+		SYSROOT_LDFLAGS="${BIN_PATH:+-Wl,--sysroot=${BIN_PATH}}"
 	fi
 	# Build LDFLAGS search paths
 	if [ -d ${DISTOS_PATH}/etc/ld.so.conf.d ]
@@ -136,6 +139,10 @@ function build () (
 	}
 
 	function configmake () {
+		trap 'STATUS=${?}; \
+			set +x; \
+			trap ERR; \
+			return ${STATUS};' ERR
 		set -x
 		cd ${PKG_SRCPATH}
 		if [ ${AUTOCONF:-1} -eq 1 ]
@@ -194,17 +201,17 @@ function build () (
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
 		PATH=${PATH}:${BIN_PATH}${BUILD_EXECPREFIX}/bin${DISTOS_PATH:+:${DISTOS_PATH}/usr/bin} \
-		${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS} &&
-		make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD:-install}
-		##make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} &&
-		local BUILD_STATUS=${?}
-		if [ ${BUILD_STATUS} -eq 0 ]
+		${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS}
+		if [ ${PKG_TWOSTEPSBUILD:-0} -eq 1 ]
 		then
-			forge_la_libs ${PWD}
+			make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0}
 		fi
+		make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD:-
+		}
+		forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
-		return ${BUILD_STATUS}
+		trap ERR
 	}
 
 	function simplemake () {
@@ -432,7 +439,7 @@ function build () (
 				KCFLAGS="${KERN_OPTCOMP_FLAGS} ${PLATFORM_KCFLAGS} ${PKG_CFLAGS}" \
 				KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 				LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-				ARCH=${HM} \
+				ARCH=${KERN_ARCH} \
 				CROSS_COMPILE=${HARCH}- \
 				EXTRAVERSION=${KERN_EXTRAVERSION} \
 				${EXTRA_PARMS} \
@@ -445,7 +452,7 @@ function build () (
 				KCFLAGS="${KERN_OPTCOMP_FLAGS} ${PLATFORM_KCFLAGS} ${PKG_CFLAGS}" \
 				KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 				LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-				ARCH=${HM} \
+				ARCH=${KERN_ARCH} \
 				CROSS_COMPILE=${HARCH}- \
 				EXTRAVERSION=${KERN_EXTRAVERSION} \
 				${EXTRA_PARMS} \
@@ -458,17 +465,36 @@ function build () (
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
 		KERN_VER=$(make kernelversion)
-		make ${HM:+ARCH=${HM}} ${HARCH:+CROSS_COMPILE=${HARCH}-} ${KERN_DEFCONFIG} .config
+
+		# Config kernel build
+		make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} ${KERN_DEFCONFIG} .config
 		if [ "x${CONF_FLAGS}" != "x" ]
 		then
 			scripts/config ${CONF_FLAGS} &&
-			make ${HM:+ARCH=${HM}} ${HARCH:+CROSS_COMPILE=${HARCH}-} ${KERN_DEFCONFIG} oldconfig
+			make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} ${KERN_DEFCONFIG} oldconfig
 		fi
 		if [ ! -d ${BIN_PATH}/boot ]
 		then
 			mkdir -p ${BIN_PATH}/boot
 		fi
-		# Build kernel
+
+		# Install headers
+		make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_HDR_PATH=${BIN_PATH}${BUILD_PREFIX} headers_install 
+		local STATUS=${?}
+		if [ ${STATUS} -ne 0 ]
+		then
+			set +x
+			return ${STATUS}
+		fi
+
+		# Break if only headers installation required
+		if [ ${KERN_HDRS_ONLY:-0} -eq 1 ]
+		then
+			set +x
+			return ${STATUS}
+		fi
+
+		# Build and install kernel
 		make4kern ${KERN_IMAGE}
 		local STATUS=${?}
 		if [ ${STATUS} -ne 0 ]
@@ -479,12 +505,12 @@ function build () (
 		case ${KERN_NAME}
 		in
 			kernel*)
-				cp arch/${HM}/boot/${KERN_IMAGE} ${BIN_PATH}/boot/${KERN_NAME}
+				cp arch/${KERN_ARCH}/boot/${KERN_IMAGE} ${BIN_PATH}/boot/${KERN_NAME}
 				local STATUS=${?}
 				;;
 			*)
 				[ ! -d ${BIN_PATH}/boot ] && mkdir ${BIN_PATH}/boot
-				make ${HM:+ARCH=${HM}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_PATH=${BIN_PATH}/boot ${INST_CMD} install
+				make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_PATH=${BIN_PATH}/boot ${INST_CMD} install
 				local STATUS=${?}
 				;;
 		esac
@@ -493,19 +519,21 @@ function build () (
 			set +x
 			return ${STATUS}
 		fi
-		# Build modules
-		make4kern modules &&
-		make ${HM:+ARCH=${HM}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_MOD_PATH=${BIN_PATH} ${INST_CMD} modules_install &&
-		rm ${BIN_PATH}/lib/modules/${KERN_VER}${KERN_EXTRAVERSION}/build &&
-		rm ${BIN_PATH}/lib/modules/${KERN_VER}${KERN_EXTRAVERSION}/source &&
-		make ${HM:+ARCH=${HM}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_HDR_PATH=${BIN_PATH}${BUILD_PREFIX} headers_install 
+
+		# Build and install modules
+		make4kern modules
+		make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_MOD_PATH=${BIN_PATH} ${INST_CMD} modules_install
+		local KERNELRELEASE=$(cat include/config/kernel.release)
+		rm ${BIN_PATH}/lib/modules/${KERNELRELEASE}/build
+		rm ${BIN_PATH}/lib/modules/${KERNELRELEASE}/source
 		local STATUS=${?}
 		if [ ${STATUS} -ne 0 ]
 		then
 			set +x
 			return ${STATUS}
 		fi
-		# Build DTBS
+
+		# Build and install DTBS
 		if [ ${KERN_DTBS:-0} -eq 1 ] && [ ${STATUS} -eq 0 ]
 		then
 			if [ ! -d ${BIN_PATH}/boot/overlays ]
@@ -513,7 +541,7 @@ function build () (
 				mkdir -p ${BIN_PATH}/boot/overlays
 			fi
 			make4kern dtbs &&
-			make ${HM:+ARCH=${HM}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_DTBS_PATH=${BIN_PATH}/boot ${INST_CMD} dtbs_install
+			make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_DTBS_PATH=${BIN_PATH}/boot ${INST_CMD} dtbs_install
 			local STATUS=${?}
 		fi
 		cd ${BB_HOME}
@@ -565,6 +593,42 @@ function build () (
 		return ${BUILD_STATUS}
 	}
 
+	function boostbuild () {
+		set -x
+		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+		cd ${PKG_BLDPATH}
+		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
+		then
+			COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
+		fi
+		if [ ${MAKEVERBOSE} -eq 1 ]
+		then
+			local B2_FLAGS="-d+2"
+		else
+			local B2_FLAGS="-d+1"
+		fi
+		if [ ${BUILD_LIBSHARED} -eq 1 ]
+		then
+			local B2_FLAGS="${B2_FLAGS} link=shared runtime-link=shared"
+		else
+			local B2_FLAGS="${B2_FLAGS} link=static runtime-link=static"
+		fi
+		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+		local CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS} ${PKG_CXXFLAGS}"
+		local CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}"
+		local LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}"
+		./bootstrap.sh --prefix=${BIN_PATH}${BUILD_PREFIX} --exec-prefix=${BIN_PATH}${BUILD_EXECPREFIX} --libdir=${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BIN_PATH}${BUILD_INCLUDEDIR} --with-python-version=${PYTHONBIN_VER} &&
+		sed -i "s|using gcc ;|using gcc : ${HM} : ${CXX} ;|" project-config.jam &&
+		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
+		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
+		./b2 -j${NPROCS} -q ${B2_FLAGS} threading=multi toolset=gcc cxxflags="-fPIC ${CXXFLAGS}" linkflags="${LDFLAGS}" install
+		local BUILD_STATUS=${?}
+		cd ${BB_HOME}
+		set +x
+		return ${BUILD_STATUS}
+	}
+
 	unset PKG_URL \
 		GIT_URL \
 		PKG_SRCDIR \
@@ -588,6 +652,7 @@ function build () (
 		PKG_MAKEVARS \
 		PKG_PREBUILD \
 		PKG_POSTBUILD \
+		PKG_TWOSTEPSBUILD \
 		CARGO_BIN \
 		CARGO_LIB \
 		CARGO_BINLIST \
@@ -654,7 +719,10 @@ function build () (
 		fi
 	fi
 
-	check_target_gcc
+	if [ ${OVERRIDE_TARGET_GCC_CHECK:-0} -eq 0 ]
+	then
+		check_target_gcc
+	fi
 	echo -n "${SPACES}"
 	# Build defaults
 	if [ ! -d ${BLD_PATH} ]
@@ -696,8 +764,11 @@ function build () (
 		mkdir -p ${STATUS_PATH}
 	fi
 	#rm -rf ${PKG_SRCPATH} &&
-	rm -rf ${PKG_BLDPATH} &&
-	md5sum ${PKG_PATH}/${1}.pkg > ${STATUS_PATH}/${PKG_NAME}
+	rm -rf ${PKG_BLDPATH}
+	if [ ${PKG_SAVE_STATUS:-1} -eq 1 ]
+	then
+		md5sum ${PKG_PATH}/${1}.pkg > ${STATUS_PATH}/${PKG_NAME}
+	fi
 	echo "Done."
 	echo
 	trap ERR

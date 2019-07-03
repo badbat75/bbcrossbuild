@@ -1,0 +1,20 @@
+---
+ strpool/Makefile.am |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/strpool/Makefile.am b/strpool/Makefile.am
+index b041cea..5b335a5 100644
+--- a/strpool/Makefile.am
++++ b/strpool/Makefile.am
+@@ -17,8 +17,8 @@
+ # <http://www.gnu.org/licenses/>.
+ 
+ CC = @CC_FOR_BUILD@
+-AM_CFLAGS = @BUILD_CFLAGS@
+-AM_LDFLAGS = @BUILD_LDFLAGS@
++CFLAGS = @BUILD_CFLAGS@
++LDFLAGS = @BUILD_LDFLAGS@
+ 
+ noinst_PROGRAMS = \
+ 	strpool
+-- 

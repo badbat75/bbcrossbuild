@@ -75,6 +75,119 @@ function create_sysroot () {
 	trap ERR
 }
 
+function bootstrap_sysroot () {
+	trap 'STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${LOG_PATH}/sysroot.log ];
+		then \
+			echo "Log ${LOG_PATH}/sysroot.log:"; \
+			echo; \
+			tail -n24 ${LOG_PATH}/sysroot.log; \
+		fi;
+		trap ERR; \
+		return ${STATUS}' ERR
+
+	if [ -z ${1} ]
+	then
+		echo "Kernel package not specified!!!"
+		trap ERR
+		return 1
+	fi
+	if [ -z ${2} ]
+	then
+		echo "GLIBC package not specified!!!"
+		trap ERR
+		return 1
+	fi
+
+	local KERN_PACKAGE=${1}
+	local GLIBC_PACKAGE=${2}
+
+	#settoolflags
+	local MULTI_ARCH=${MULTIARCH:-1}
+	local BUILD_PREFIX="${BUILD_PREFIX:-/usr}"
+	local BUILD_EXECPREFIX="${BUILD_EXECPREFIX:-${BUILD_PREFIX}}"
+	local BUILD_INCLUDEDIR="${BUILD_INCLUDEDIR:-$(readlink -m ${BUILD_PREFIX}/include)}"
+	local BUILD_LIBDIR="${BUILD_LIBDIR:-$(readlink -m ${BUILD_EXECPREFIX}/lib)}"
+	local BUILD_SYSCONFDIR="${BUILD_SYSCONFDIR:-/etc}"
+	local BUILD_LOCALSTATEDIR="${BUILD_LOCALSTATEDIR:-/var}"
+	if [ ${MULTI_ARCH} -eq 1 ]
+	then
+		local BUILD_LIBSUFFIX="/${HARCH}"
+	fi
+
+	echo "Bootstrapping sysroot in ${BIN_PATH}..."
+	local SPACES="   "
+
+	# Build Kernel Headers
+	echo -n "${SPACES}"
+	if [ ! -f ${BIN_PATH}${BUILD_INCLUDEDIR}/linux/kernel.h ]
+	then
+		OVERRIDE_TARGET_GCC_CHECK=1 PKG_SAVE_STATUS=0 KERN_HDRS_ONLY=1 build ${KERN_PACKAGE}
+	else
+		echo "${KERN_PACKAGE} headers already installed."
+	fi
+	# Build gcc binary (GCC stage 1)
+	echo -n "${SPACES}"
+	if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1
+	then
+		setup_gcc stage1
+	else
+		echo "GCC stage1 (gcc) already installed."
+	fi
+	# Build glibc headers (requisite for GCC stage 1)
+	echo -n "${SPACES}"
+	if [ ! -f ${BIN_PATH}${BUILD_INCLUDEDIR}/gnu/libc-version.h ]
+	then
+		OVERRIDE_TARGET_GCC_CHECK=1 PKG_SAVE_STATUS=0 OVERRIDE_PKG_TWOSTEPSBUILD=0 OVERRIDE_INST_CMD="install-bootstrap-headers=yes install-headers" build ${GLIBC_PACKAGE}
+	else
+		echo "${GLIBC_PACKAGE} headers already installed."
+	fi
+	# Build gcc (GCC stage 2)
+	echo -n "${SPACES}"
+	if [ ! -f ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_VER}/libgcc.a ]
+	then
+		setup_gcc stage2
+	else
+		echo "GCC stage2 (libgcc) already installed."
+	fi
+	# Build glibc (requisite for GCC final)
+	echo -n "${SPACES}"
+	if [ ! -f ${BIN_PATH}/lib/libc.so.6 ] && [ ! -f ${BIN_PATH}/lib64/libc.so.6 ]
+	then
+		NUMSPACES=1 OVERRIDE_TARGET_GCC_CHECK=1 build ${GLIBC_PACKAGE}
+	else
+		echo "${GLIBC_PACKAGE} libraries already installed."
+	fi
+	# Build gcc final
+	echo -n "${SPACES}"
+	setup_gcc stage3
+
+	echo -n "   Copying libraries and headers..."
+	if [ ! -d ${TOOLCHAIN_PATH}/${HARCH}/include/c++ ]
+	then
+		if [ -d ${TOOLCHAIN_PATH}/${HARCH}/lib64 ]
+		then
+			cp -r ${TOOLCHAIN_PATH}/${HARCH}/lib64/* ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
+		else
+			cp -r ${TOOLCHAIN_PATH}/${HARCH}/lib/* ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
+		fi	
+		cp -r ${TOOLCHAIN_PATH}/${HARCH}/include/* ${BIN_PATH}${BUILD_INCLUDEDIR}
+		echo "Done."
+	else
+		echo "already installed."
+	fi
+
+	#echo -n "${SPACES}"
+	#install_gcclibs
+
+	echo "Done."
+	echo
+
+	trap ERR
+}
+
 function check_target_gcc () {
 	${HARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1
 	if [ ! ${?} -eq 0 ]
@@ -147,10 +260,19 @@ function setup_gcc () {
 
 		set -x
 		local BUILD_ARCH=${1:-${HARCH}}
-		local GCC_LANGUAGES=${GCC_LANGUAGES:-c,c++,lto}
-		local GCC_COMMON_CONFIG="--enable-languages=${GCC_LANGUAGES} --enable-shared --enable-linker-build-id --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --enable-checking=release --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-threads=posix --enable-initfini-array --enable-gnu-indirect-function --enable-multiarch \
-		--with-default-libstdcxx-abi=new --with-system-zlib \
-		--disable-option-checking --disable-libitm --disable-libmpx"
+		case ${GCC_STAGE} in
+			stage1 | stage2 )
+				local GCC_LANGUAGES=c
+				local GCC_COMMON_CONFIG="--enable-languages=${GCC_LANGUAGES} --disable-shared --enable-linker-build-id --disable-nls --enable-gnu-unique-object --disable-plugin --enable-checking=release --disable-libmudflap --disable-libgomp --disable-libssp --disable-lto --disable-threads --enable-multiarch \
+					--disable-option-checking --disable-libitm --disable-libmpx --without-headers --without-ppl"
+			;;
+			* )
+				local GCC_LANGUAGES=${GCC_LANGUAGES:-c,c++,lto}
+				local GCC_COMMON_CONFIG="--enable-languages=${GCC_LANGUAGES} --enable-shared --enable-linker-build-id --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --enable-checking=release --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-threads=posix --enable-initfini-array --enable-gnu-indirect-function --enable-multiarch \
+					--with-default-libstdcxx-abi=new --with-system-zlib \
+					--disable-option-checking --disable-libitm --disable-libmpx"
+			;;
+		esac
 		local GCC_BUILD_CONFIG="--disable-multilib --disable-bootstrap"
 		local GCC_HOST_CONFIG="--with-arch-directory=${HM}${HMARCH:+ --with-arch=${HMARCH}}${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
 		local BINUTILS_COMMON_CONFIG="--enable-gold"
@@ -162,7 +284,7 @@ function setup_gcc () {
 		local HOST_AR="${BARCH}-gcc-ar"
 		local HOST_NM="${BARCH}-gcc-nm"
 		local HOST_RANLIB="${BARCH}-gcc-ranlib"
-		local HOST_CFLAGS="${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS} -march=native"
+		local HOST_CFLAGS="${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS} -march=native -Wno-pedantic"
 		local HOST_CXXFLAGS="${HOST_CFLAGS}"
 		local HOST_LDFLAGS="${COMMON_LDFLAGS} ${GCC_OPTLINK_FLAGS} -lgcc_s"
 		if [ "${BUILD_ARCH}" == "${BARCH}" ]
@@ -182,7 +304,13 @@ function setup_gcc () {
 			local GCC_INSTALL_PATH=${TOOLCHAIN_PATH}
 			local GCC_CONFIG="${GCC_HOST_CONFIG}"
 			local BINUTILS_CONFIG="${BINUTILS_HOST_CONFIG}"
-			local CONFIG_ARCH_PARAMS="--build=${BARCH} --host=${BARCH} --target=${HARCH} --with-sysroot=${DISTOS_PATH}"
+			if [ -d ${DISTOS_PATH} ]
+			then
+				local GCC_SYSROOT_PATH=${DISTOS_PATH}
+			else
+				local GCC_SYSROOT_PATH=${BIN_PATH}
+			fi
+			local CONFIG_ARCH_PARAMS="--build=${BARCH} --host=${BARCH} --target=${HARCH} --with-sysroot=${GCC_SYSROOT_PATH}"
 			local TARGET_CFLAGS="${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS}${HMARCH:+ -march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}"
 			local TARGET_CXXFLAGS="${TARGET_CFLAGS}"
 			local TARGET_LDFLAGS="${COMMON_LDFLAGS} ${GCC_OPTLINK_FLAGS}"
@@ -203,32 +331,57 @@ function setup_gcc () {
 			CFLAGS_FOR_TARGET='${TARGET_CFLAGS}' CXXFLAGS_FOR_TARGET='${TARGET_CXXFLAGS}' LDFLAGS_FOR_TARGET='${TARGET_LDFLAGS}'"
 
 		### Build GCC
-		if [ -d ${GCC_BUILD_PATH} ]
+		if [ -d ${GCC_BUILD_PATH} ] && [[ ! "${GCC_STAGE}" =~ ^stage[24] ]]
 		then
+			echo "Removing build directory."
 			rm -rf ${GCC_BUILD_PATH}
 		fi
-		mkdir -p ${GCC_BUILD_PATH}
+		if [ ! -d ${GCC_BUILD_PATH} ]
+		then
+			mkdir -p ${GCC_BUILD_PATH}
+		fi
 		cd ${GCC_BUILD_PATH}
-		(eval "trap 'exit ${?}' ERR; ${BUILD_ENV_SHELL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure -v \
-			--prefix=${GCC_INSTALL_PATH} --mandir=${GCC_INSTALL_PATH}/share/man --infodir=${GCC_INSTALL_PATH}/share/info \
-			${CONFIG_ARCH_PARAMS} ${BINUTILS_COMMON_CONFIG} ${BINUTILS_CONFIG} ${GCC_COMMON_CONFIG} ${GCC_CONFIG} ${TARGET_CONFIG_ARGS}")
-		gcc_binutils_build_patch ${BARCH}
-		make STAGE_CC_WRAPPER="${CCWRAPPER}" V=${MAKEVERBOSE:-0}
-		make V=${MAKEVERBOSE:-0} install-strip
-		cd ${START_PWD} &&
-		rm -rf ${GCC_BUILD_PATH}
+		case ${GCC_STAGE} in
+			stage1 )
+				(eval "trap 'exit ${?}' ERR; ${BUILD_ENV_SHELL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure -v \
+					--prefix=${GCC_INSTALL_PATH} --mandir=${GCC_INSTALL_PATH}/share/man --infodir=${GCC_INSTALL_PATH}/share/info \
+					${CONFIG_ARCH_PARAMS} ${BINUTILS_COMMON_CONFIG} ${BINUTILS_CONFIG} ${GCC_COMMON_CONFIG} ${GCC_CONFIG} ${TARGET_CONFIG_ARGS}")
+				make STAGE_CC_WRAPPER="${CCWRAPPER}" V=${MAKEVERBOSE:-0} all-gcc
+				make V=${MAKEVERBOSE:-0} install-strip-ld install-strip-gold install-strip-gas install-strip-binutils install-strip-gcc
+			;;
+			stage2 )
+				make STAGE_CC_WRAPPER="${CCWRAPPER}" V=${MAKEVERBOSE:-0} all-target-libgcc
+				make V=${MAKEVERBOSE:-0} install-strip-target-libgcc
+			;;
+			* )
+				(eval "trap 'exit ${?}' ERR; ${BUILD_ENV_SHELL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure -v \
+					--prefix=${GCC_INSTALL_PATH} --mandir=${GCC_INSTALL_PATH}/share/man --infodir=${GCC_INSTALL_PATH}/share/info \
+					${CONFIG_ARCH_PARAMS} ${BINUTILS_COMMON_CONFIG} ${BINUTILS_CONFIG} ${GCC_COMMON_CONFIG} ${GCC_CONFIG} ${TARGET_CONFIG_ARGS}")
+				gcc_binutils_build_patch ${BARCH}
+				make STAGE_CC_WRAPPER="${CCWRAPPER}" V=${MAKEVERBOSE:-0}
+				make V=${MAKEVERBOSE:-0} install-strip
+			;;
+		esac
+		cd ${START_PWD}
+		if [ -d ${GCC_BUILD_PATH} ] && [[ ! "${GCC_STAGE}" =~ ^stage[1234] ]]
+		then
+			echo "Removing build directory."
+			rm -rf ${GCC_BUILD_PATH}
+		fi
 		set +x
 		trap ERR;
 	}
 
+	local GCC_STAGE=${1}
+
 	trap 'STATUS=${?}; \
 		echo "fail."; \
 		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}.log ];
+		if [ -f ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log ];
 		then \
-			echo "Log ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}.log:"; \
+			echo "Log ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log:"; \
 			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}.log; \
+			tail -n24 ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log; \
 		fi;
 		trap ERR; \
 		exit ${STATUS}' ERR
@@ -236,7 +389,7 @@ function setup_gcc () {
 	echo -n "Setting up gcc"
 
 	local BINUTILS_VER=${BINUTILS_VER:-2.32}
-	local GCC_VER=${GCC_VER:-8.3.0}
+	local GCC_VER=${GCC_VER:-9.1.0}
 	local GMP_VER=${GMP_VER:-6.1.2}
 	local MPFR_VER=${MPFR_VER:-4.0.2}
 	local MPC_VER=${MPC_VER:-1.1.0}
@@ -264,28 +417,63 @@ function setup_gcc () {
 	echo -n "-${GCC_VER}..."
 	
 	if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1 || \
-		! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1
+		! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1 || \
+		[[ "${GCC_STAGE}" =~ ^stage[4] ]]
 	then
-		echo -n "downloading..."
-		download_gcc > ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}.log 2>&1
+		> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log
+		if [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER} ] || [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
+		then
+			echo -n "downloading..."
+			download_gcc >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+		fi
 		echo -n "building "
 		if ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1
 		then
 			echo -n "native..."
-			build_gcc ${BARCH}>> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}.log 2>&1
+			build_gcc ${BARCH}>> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		fi
-		if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1
+		if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1 || \
+		[[ "${GCC_STAGE}" =~ ^stage[4] ]]
 		then
-			echo -n "cross..."
-			build_gcc ${HARCH} >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}.log 2>&1
+			echo -n "${GCC_STAGE:-cross}..."
+			build_gcc ${HARCH} >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		fi
 		echo "done."
-		rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}
-		rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
+		if [[ ! "${GCC_STAGE}" =~ ^stage[1234] ]]
+		then
+			echo "Removing sources."
+			rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}
+			rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
+		fi
 	else
 		echo "already there."
 	fi
 	trap ERR
+}
+
+function install_gcclibs () {
+	settoolflags
+	local GCCSEARCHLIBS="$(${HARCH:+${HARCH}-}gcc -print-search-dirs | grep 'libraries:' | sed 's/^libraries: =//;s/\:/ /g')"
+	local GCCCXXLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 -type f \( -name 'libstdc++.so.*' ! -name 'libstdc++.so.*-*.py' \)  -exec realpath {} \; 2>/dev/null | sort | tail -n1)
+	local GCCCXXLIBNAME=$(basename ${GCCCXXLIB})
+	local BASEGCCCXXLIBNAME=$(echo ${GCCCXXLIBNAME} | cut -d'.' -f1,2,3)
+	echo -n "Installing ${BASEGCCCXXLIBNAME} library..."
+	echo "GCCSEARCHLIBS: ${GCCSEARCHLIBS}" > ${LOG_PATH}/gcclibs.log
+	echo "GCCCXXLIB: ${GCCCXXLIB}" >> ${LOG_PATH}/gcclibs.log
+	echo "GCCCXXLIBNAME: ${GCCCXXLIBNAME}" >> ${LOG_PATH}/gcclibs.log
+	echo "BASEGCCCXXLIBNAME: ${BASEGCCCXXLIBNAME}" >> ${LOG_PATH}/gcclibs.log
+	cp -v ${GCCCXXLIB} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} >> ${LOG_PATH}/gcclibs.log 2>&1 &&
+	ln -fs ${GCCCXXLIBNAME} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/${BASEGCCCXXLIBNAME} >> ${LOG_PATH}/gcclibs.log 2>&1
+	local BUILD_STATUS=${?}
+	if [ ${BUILD_STATUS} -eq 0 ]
+	then
+		echo "done."
+		echo
+	else
+		echo "fail."
+		echo
+	fi
+	return ${BUILD_STATUS}
 }
 
 function setup_rust () {
