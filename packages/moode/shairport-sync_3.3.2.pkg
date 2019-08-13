@@ -1,4 +1,4 @@
-# shairport-sync-3.3.2
+# shairport-sync_3.3.2
 PKG_URL="https://github.com/mikebrady/shairport-sync/archive/3.3.2.tar.gz"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--with-dummy --with-stdout --with-pipe	--with-ssl=openssl --with-soxr --with-metadata \

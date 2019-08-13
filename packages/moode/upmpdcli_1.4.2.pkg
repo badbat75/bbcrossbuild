@@ -1,9 +1,9 @@
-# upmpdcli-1.4.1
-PKG_URL="https://www.lesbonscomptes.com/upmpdcli/downloads/upmpdcli-1.4.1.tar.gz"
+# upmpdcli_1.4.2
+PKG_URL="https://www.lesbonscomptes.com/upmpdcli/downloads/upmpdcli-1.4.2.tar.gz"
 PKG_PREBUILD="sed -i 's|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < web.tar.gz|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < \$(srcdir)/web.tar.gz|g' Makefile.am
 sed -i 's|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < rdpl2stream.tar.gz|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < \$(srcdir)/rdpl2stream.tar.gz|g' Makefile.am
 sed -i 's|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < uprclbottle.tar.gz|cd\ \$(DESTDIR)\$(pkgdatadir); tar xzf -) < \$(srcdir)/uprclbottle.tar.gz|g' Makefile.am"
 BUILD_PROCESS=configmake
 # CONF_FLAGS=""
 INST_CMD=install-strip
-PKG_DEPS="moode/libupnpp-0.17.0 raspbian/libmicrohttpd_0.9.62-1 raspbian/libjsoncpp_1.7.4-3 python/bottle-0.12.16"
+PKG_DEPS="moode/libupnpp_0.17.1 raspbian/libmicrohttpd_0.9.62-1 raspbian/libjsoncpp_1.7.4-3 python/bottle_0.12.17"

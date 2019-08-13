@@ -416,8 +416,8 @@ function setup_gcc () {
 
 	echo -n "-${GCC_VER}..."
 	
-	if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1 || \
-		! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1 || \
+	if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1 || \
+		! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1 || \
 		[[ "${GCC_STAGE}" =~ ^stage[4] ]]
 	then
 		> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log
@@ -427,12 +427,12 @@ function setup_gcc () {
 			download_gcc >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		fi
 		echo -n "building "
-		if ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1
+		if ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1
 		then
 			echo -n "native..."
 			build_gcc ${BARCH}>> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		fi
-		if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1 || \
+		if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1 || \
 		[[ "${GCC_STAGE}" =~ ^stage[4] ]]
 		then
 			echo -n "${GCC_STAGE:-cross}..."

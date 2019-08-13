@@ -1,0 +1,5 @@
+# lxml_4.4.1
+PKG_URL="https://github.com/lxml/lxml/archive/lxml-4.4.1.tar.gz"
+BUILD_PROCESS=pythonbuild
+# CONF_FLAGS=""
+PKG_DEPS=
