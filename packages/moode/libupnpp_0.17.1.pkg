@@ -4,4 +4,4 @@ PATCHES=
 BUILD_PROCESS=configmake
 # CONF_FLAGS=""
 INST_CMD=install-strip
-PKG_DEPS="raspbian/libupnp-1.6.25 moode/libmpdclient-2.16"
+PKG_DEPS="moode/libupnp_1.8.4 moode/libmpdclient-2.16"
