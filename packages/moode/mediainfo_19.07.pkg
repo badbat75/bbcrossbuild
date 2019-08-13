@@ -1,6 +1,6 @@
 # mediainfo_19.07
 PKG_URL="https://mediaarea.net/download/source/mediainfo/19.07/mediainfo_19.07.tar.xz"
-PKG_PREBUILD="sed -i 's/ -O2//g' Project/GNU/Library/configure.ac"
+PKG_PREBUILD="sed -i 's/ -O2//g' Project/GNU/CLI/configure.ac"
 BUILD_PROCESS=configmake
 AUTOCONF_PATH=Project/GNU/CLI
 CONF_COPYSRC=1
