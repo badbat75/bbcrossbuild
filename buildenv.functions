@@ -211,7 +211,7 @@ function setup_gcc () {
 		local GMPURL=https://gmplib.org/download/gmp/gmp-${GMP_VER}.tar.xz
 		local MPFRURL=https://www.mpfr.org/mpfr-current/mpfr-${MPFR_VER}.tar.xz
 		local MPCURL=https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VER}.tar.gz
-		local ISLURL=https://gcc.gnu.org/pub/gcc/infrastructure/isl-${ISL_VER}.tar.bz2
+		local ISLURL=http://isl.gforge.inria.fr/isl-${ISL_VER}.tar.xz
 		local BINUTILSURL=https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz
 		local GCCURL=https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.xz
 
@@ -389,11 +389,11 @@ function setup_gcc () {
 	echo -n "Setting up gcc"
 
 	local BINUTILS_VER=${BINUTILS_VER:-2.32}
-	local GCC_VER=${GCC_VER:-9.1.0}
+	local GCC_VER=${GCC_VER:-9.2.0}
 	local GMP_VER=${GMP_VER:-6.1.2}
 	local MPFR_VER=${MPFR_VER:-4.0.2}
 	local MPC_VER=${MPC_VER:-1.1.0}
-	local ISL_VER=${ISL_VER:-0.18}
+	local ISL_VER=${ISL_VER:-0.21}
 	local GCC_LTOENABLE=${GCC_LTOENABLE:-0}
 	export PATH=${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin:${PATH}
 	local CURRENT_AUTOCONF_VER=$(autoconf -V | head -n1 | awk '{print $NF}')
