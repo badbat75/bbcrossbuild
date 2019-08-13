@@ -1,0 +1,7 @@
+# libupnpp_0.17.1
+PKG_URL="https://www.lesbonscomptes.com/upmpdcli/downloads/libupnpp-0.17.1.tar.gz"
+PATCHES=
+BUILD_PROCESS=configmake
+# CONF_FLAGS=""
+INST_CMD=install-strip
+PKG_DEPS="raspbian/libupnp-1.6.25 moode/libmpdclient-2.16"

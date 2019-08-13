@@ -1,6 +1,0 @@
-# wpa_2.8
-PKG_URL="https://w1.fi/cgit/hostap/snapshot/hostap_2_8.tar.gz"
-#PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/w/wpa/wpa_2.7%2Bgit20190128%2B0c1e29f-3.debian.tar.xz"
-BUILD_PROCESS=downloadonly
-AUTOCONF=0
-#PATCHES="wpa2_getrandom.patch"
