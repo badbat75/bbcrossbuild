@@ -1,4 +1,4 @@
-# bluez-5.50        
+# bluez_5.50-1
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/b/bluez/bluez_5.50.orig.tar.xz"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-library --enable-deprecated"

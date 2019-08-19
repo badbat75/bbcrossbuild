@@ -15,3 +15,6 @@ sudo apt-get install -y libxml2-dev
 
 # for glib-dbus-1.0
 sudo apt-get install -y libdbus-glib-1-dev
+
+# for udevil
+sudo apt-get install -y intltool

@@ -1,0 +1,14 @@
+# mediainfo_19.09
+PKG_URL="https://mediaarea.net/download/source/mediainfo/19.09/mediainfo_19.09.tar.xz"
+PKG_PREBUILD="sed -i 's/ -O2//g' Project/GNU/CLI/configure.ac"
+BUILD_PROCESS=configmake
+AUTOCONF_PATH=Project/GNU/CLI
+CONF_COPYSRC=1
+CONF_PATH=Project/GNU/CLI
+# CONF_FLAGS=""
+INST_CMD=install-strip
+PKG_DEPS="moode/libmediainfo_19.09"
+
+# Note:
+# Dependencies: debhelper (>= 9), dh-autoreconf, libmediainfo-dev (>= 0.7.61),
+#               libzen-dev (>= 0.4.25), libwxgtk3.0-dev, zlib1g-dev, pkg-config, rename

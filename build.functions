@@ -206,8 +206,7 @@ function build () (
 		then
 			make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0}
 		fi
-		make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD:-
-		}
+		make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD:-}
 		forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
@@ -215,6 +214,10 @@ function build () (
 	}
 
 	function simplemake () {
+		trap 'STATUS=${?}; \
+		set +x; \
+		trap ERR; \
+		return ${STATUS};' ERR
 		set -x
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
@@ -235,19 +238,14 @@ function build () (
 		OBJDUMP=${HARCH}-objdump \
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
-		make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} &&
+			eval "make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0}"
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
-		STRIP=${HARCH}-strip \
-		make ${PKG_MAKEVARS} DESTDIR=${BIN_PATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}
-		local BUILD_STATUS=${?}
-		if [ ${BUILD_STATUS} -eq 0 ]
-		then
-			forge_la_libs ${PWD}
-		fi
+			eval "make ${PKG_MAKEVARS} DESTDIR=${BIN_PATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}"
+		forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
-		return ${BUILD_STATUS}
+		trap ERR
 	}
 
 	function cmakemake () {
@@ -614,16 +612,46 @@ function build () (
 		else
 			local B2_FLAGS="${B2_FLAGS} link=static runtime-link=static"
 		fi
+		case ${HM} in
+			arm)
+				local HMABI=aapcs
+				local HMADDRMOD=32
+				;;
+			aarch64)
+				local HMABI=aapcs
+				local HMADDRMOD=64
+				;;
+			i386|ppc32)
+				local HMABI=sysv
+				local HMADDRMOD=32
+				;;
+			x86_64|ppc64)
+				local HMABI=sysv
+				local HMADDRMOD=64
+				;;
+			mips1)
+				local HMABI=o32
+				local HMADDRMOD=32
+				;;
+		esac
+		case ${HOS} in
+			linux|android) local HMBINFMT=elf;;
+			windows) local HMBINFMT=pe;;
+			macosx|ios) local HMBINFMT=mach-o;;
+		esac
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 		local CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS} ${PKG_CXXFLAGS}"
 		local CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}"
 		local LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}"
 		./bootstrap.sh --prefix=${BIN_PATH}${BUILD_PREFIX} --exec-prefix=${BIN_PATH}${BUILD_EXECPREFIX} --libdir=${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BIN_PATH}${BUILD_INCLUDEDIR} --with-python-version=${PYTHONBIN_VER} &&
-		sed -i "s|using gcc ;|using gcc : ${HM} : ${CXX} ;|" project-config.jam &&
+		sed -i "s|using gcc ;|using gcc : : ${CXX} ;|" project-config.jam &&
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
-		./b2 -j${NPROCS} -q ${B2_FLAGS} threading=multi toolset=gcc cxxflags="-fPIC ${CXXFLAGS}" linkflags="${LDFLAGS}" install
+		./b2 -j${NPROCS} -q ${B2_FLAGS} \
+			architecture=${HM} address-model=${HMADDRMOD} binary-format=${HMBINFMT} abi=${HMABI} target-os=${HOS} \
+			toolset=gcc threading=multi cxxflags="-fPIC ${CXXFLAGS}" linkflags="${LDFLAGS}" install
 		local BUILD_STATUS=${?}
+		#a
 		cd ${BB_HOME}
 		set +x
 		return ${BUILD_STATUS}

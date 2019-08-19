@@ -17,24 +17,103 @@ function root_project () {
 	cd ${BB_HOME}
 }
 
-function zip_project () {
+function remove_devfiles () {
+	trap 'STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		set +x; \
+		trap ERR; \
+		return ${STATUS};' ERR
+
+	settoolflags
+	echo -n "Removing development files..."
+	local TMP_PATH=$(mktemp -d)
+	chmod 755 ${TMP_PATH}
 	cd ${BIN_PATH}
+	#mkdir -p ${TMP_PATH}/${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
+	TMP_PATH=${TMP_PATH} find . -type f -name '*.la' -exec sh -c \
+		'mkdir -p ${TMP_PATH}/$(dirname ${1}) && mv ${1} ${TMP_PATH}/${1}' \
+		sh {} \;
+	mv .${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig ${TMP_PATH}/${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig
+	mv .${BUILD_INCLUDEDIR} ${TMP_PATH}/$(dirname .${BUILD_INCLUDEDIR})
+	cd ${TMP_PATH}
+	tar -cf - . | xz -T0 > ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/devfiles.tar.xz
+	cd ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}
+	rm -rf ${TMP_PATH}
+	if [ ! "$(echo ${@} | grep -o no-exitstatus)" == "no-exitstatus" ]
+	then
+		echo "done."
+		echo
+	fi
+	trap ERR
+}
+
+function resume_devfiles () {
+	trap 'STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		set +x; \
+		trap ERR; \
+		return ${STATUS};' ERR
+
+	echo -n "Resuming development files..."
+	tar xf ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/devfiles.tar.xz -C${BIN_PATH}
+	rm -f ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/devfiles.tar.xz
+	if [ ! "$(echo ${@} | grep -o no-exitstatus)" == "no-exitstatus" ]
+	then
+		echo "done."
+		echo
+	fi
+	trap ERR
+}
+
+function zip_project () {
+	trap 'STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		set +x; \
+		trap ERR; \
+		return ${STATUS};' ERR
+
+	if [ "$(echo ${@} | grep -o remove_devfiles)" == "remove_devfiles" ]
+	then
+		remove_devfiles no-exitstatus
+	fi
+	echo -n "Creating compressed file ${PRJ_NAME}.tar.xz..."
+	cd ${BIN_PATH}	
 	[ -f ../${PRJ_NAME}.tar.xz ] && rm -f ../${PRJ_NAME}.tar.xz
-	tar cf ../${PRJ_NAME}.tar --owner=0 --group=0 . &&
+	tar cf ../${PRJ_NAME}.tar --owner=0 --group=0 .
 	cd ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}
 	xz -T0 ${PRJ_NAME}.tar
-	local BUILD_STATUS=${?}
 	cd ${BB_HOME}
-	if [ ${BUILD_STATUS} -ne 0 ]
+	if [ "$(echo ${@} | grep -o remove_devfiles)" == "remove_devfiles" ]
 	then
-		return ${BUILD_STATUS}
-	#	else
-	#	rm -rf ${BIN_PATH}
+		resume_devfiles no-exitstatus
 	fi
+	if [ ! "$(echo ${@} | grep -o no-exitstatus)" == "no-exitstatus" ]
+	then
+		echo "done."
+		echo
+	fi
+	trap ERR
 }
 
 function create_selfextracting_archive () {
-	zip_project
+	trap 'STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		set +x; \
+		trap ERR; \
+		return ${STATUS};' ERR
+
+	local ZIP_PARAMS=
+	if [ "$(echo ${@} | grep -o remove_devfiles)" == "remove_devfiles" ]
+	then
+		local ZIP_PARAMS=remove_devfiles
+	fi
+
+	zip_project ${ZIP_PARAMS} no-exitstatus
+	echo -n "Creating self-extracting file ${PRJ_NAME}.sfx..."
 	cat >${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx <<-EOF
 		#!/bin/sh -ex
 		echo ""
@@ -65,23 +144,7 @@ function create_selfextracting_archive () {
 	EOF
 	cat ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.tar.xz >> ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx
 	chmod +x ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx
-}
-
-function remove_devfiles () {
-	settoolflags
-	echo -n "Removing development files..."
-	#rm -rf ${STATUS_PATH} && echo "${STATUS_PATH} removed." &&
-	find ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -type f -name '*.la' -exec rm -f {} \; && echo "Removed .la files in ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}." &&
-	rm -rf ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig && echo "${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig removed." &&
-	rm -rf ${BIN_PATH}${BUILD_INCLUDEDIR} && echo "${BIN_PATH}${BUILD_INCLUDEDIR} removed."
-	local BUILD_STATUS=${?}
-	if [ ${BUILD_STATUS} -eq 0 ]
-	then
-		echo "done."
-		echo
-	else
-		echo "fail."
-		echo
-	fi
-	return ${BUILD_STATUS}
+	echo "done."
+	echo
+	trap ERR
 }

@@ -1,8 +1,8 @@
-# rotenc-moode_r60
-PKG_SRCDIR=moode_r60
+# rotenc-moode_r61
+PKG_SRCDIR=moode_r61
 BUILD_PROCESS=simplemake
 INST_CMD=install
-PKG_DEPS="moode/moode_r60 moode/wiringpi-master"
+PKG_DEPS="moode/${PKG_SRCDIR} moode/wiringpi_8d188fa"
 PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} -C other/rotenc"
 PKG_POSTBUILD="install -d ${BIN_PATH}/usr/local/bin &&
 ln -fs /usr/bin/rotenc ${BIN_PATH}/usr/local/bin/rotenc"
