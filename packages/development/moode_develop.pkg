@@ -1,7 +1,7 @@
-# moode-develop
-PKG_URL="https://github.com/moode-player/moode/archive/r600prod.zip"
-PKG_SRCDIR=moode-develop
-PATCHES="rotenc-makefile.patch"
+# moode_develop
+PKG_URL="https://github.com/moode-player/moode/archive/develop.tar.gz"
+PKG_SRCDIR=moode_develop
+PKG_DEPS="python/RPi.GPIO_0.7.0 python/python-musicpd_0.4.4"
 BUILD_PROCESS=downloadonly
 PKG_PREBUILD="install -D boot/config.txt.default ${BIN_PATH}/boot/config.txt
 install -d ${BIN_PATH}/etc/sudoers.d
@@ -92,6 +92,9 @@ chmod 0755 ${BIN_PATH}/etc/rc.local
 # Bluetooth
 chmod 0666 ${BIN_PATH}/etc/bluealsaaplay.conf
 chmod 0755 ${BIN_PATH}/usr/local/bin/a2dp-autoconnect
+# Rotenc
+cp other/rotenc/rotenc.py ${BIN_PATH}/usr/local/bin/rotenc
+ln -fs /usr/bin/rotenc ${BIN_PATH}/usr/local/bin/rotenc
 # Localui
 chmod -R 0755 ${BIN_PATH}/var/local/www
 chmod -R 0777 ${BIN_PATH}/var/local/www/db

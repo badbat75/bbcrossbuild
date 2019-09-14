@@ -1,11 +1,13 @@
 # squeezelite-master
 PKG_URL="https://github.com/ralph-irving/squeezelite/archive/master.tar.gz"
-PATCHES=squeezelite-makefile.patch
 BUILD_PROCESS=simplemake
-INST_CMD=install-strip
+INST_CMD=all
 #PKG_DEPS="raspbian/opusfile_0.9+20170913-1"
-PKG_CFLAGS="-DRESAMPLE -DFFMPEG -DVISEXPORT -DDSD -DGPIO -DRPI -fPIC -I${DISTOS_PATH}/\${BUILD_INCLUDEDIR}/opus"
-PKG_LDFLAGS="-lasound -lpthread -lm -ldl -lrt -lwiringPi"
-PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} EXECUTABLE=squeezelite -f Makefile.rpi"
-PKG_POSTBUILD="install -d ${BIN_PATH}/usr/local/bin &&
+PKG_DEPS="moode/wiringpi_8d188fa"
+PKG_CFLAGS="-fPIC -I${DISTOS_PATH}/\${BUILD_INCLUDEDIR}/opus -I${BIN_PATH}/\${BUILD_INCLUDEDIR}/alac"
+PKG_LDFLAGS="-lgomp"
+PKG_MAKEVARS='OPTS="-DOPUS -DALAC -DRESAMPLE -DFFMPEG -DVISEXPORT -DDSD -DGPIO -DRPI -DUSE_SSL -DLINKALL" PREFIX=${BUILD_PREFIX} EXECUTABLE=squeezelite'
+PKG_POSTBUILD="install -m 0755 -d ${BIN_PATH}\${BUILD_EXECPREFIX}/bin
+install -m 0755 squeezelite ${BIN_PATH}\${BUILD_EXECPREFIX}/bin/squeezelite
+install -d ${BIN_PATH}/usr/local/bin
 ln -fs /usr/bin/squeezelite ${BIN_PATH}/usr/local/bin/squeezelite"

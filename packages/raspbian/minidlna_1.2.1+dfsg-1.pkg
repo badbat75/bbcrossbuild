@@ -1,4 +1,4 @@
-# minidlna-1.2.1
+# minidlna_1.2.1+dfsg-1
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/m/minidlna/minidlna_1.2.1%2bdfsg.orig.tar.xz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/m/minidlna/minidlna_1.2.1%2bdfsg-1.debian.tar.xz"
 PATCHES="minidlna-copytemplates.patch"

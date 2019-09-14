@@ -9,4 +9,3 @@ PKG_DEPS="raspbian/libatasmart_0.19-5 raspbian/sg3-utils_1.44-1 raspbian/dbus-gl
 PKG_POSTBUILD="install --mode=644 -D \${PKG_SRCPATH}/debian/udisks-glue.conf ${BIN_PATH}\${BUILD_SYSCONFDIR}/"
 
 # Note: Build-Depends: debhelper (>= 8), dh-autoreconf, dpkg-dev (>= 1.16.1.1), libconfuse-dev, libdbus-glib-1-dev, libglib2.0-dev, pkg-config
-
