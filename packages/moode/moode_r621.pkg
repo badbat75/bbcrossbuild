@@ -1,6 +1,6 @@
-# moode_r62
-PKG_URL="https://github.com/moode-player/moode/archive/r620prod.tar.gz"
-PKG_SRCDIR=moode_r62
+# moode_r621
+PKG_URL="https://github.com/moode-player/moode/archive/r621prod.tar.gz"
+PKG_SRCDIR=moode_r621
 BUILD_PROCESS=downloadonly
 PKG_DEPS="python/RPi.GPIO_0.7.0 python/python-musicpd_0.4.4"
 PKG_PREBUILD="install -D boot/config.txt.default ${BIN_PATH}/boot/config.txt
