@@ -10,7 +10,7 @@ check_core_functions () {
 }
 
 download_uncompress () {
-	## check_download <URLs> <destination>
+	## download_uncompress <URLs> <destination> [files_to_extract]
 	## STRIPCOMPONENTS=<num>: Add strip --strip-components=<n> to tar command
 	## ARCHIVEDIRS=<str>: Specify what directories to extract
 	## NODELETEDESTDIR=<num>: if 1 don't delete ${DEST_DIR}
@@ -18,6 +18,8 @@ download_uncompress () {
 	local URL=${1}
 	local URL_HASH=$(echo -n "${URL}" | md5sum -t | awk '{print $1}')
 	local DEST_DIR=${2}
+	shift 2
+	local FILES2EXTRACT="${@}"
 	local STRIPCOMPONENTS=${STRIPCOMPONENTS:-1}
 	local NODELETEDESTDIR=${NODELETEDESTDIR:-0}
 	local STATUS=0
@@ -33,25 +35,29 @@ download_uncompress () {
 	then
 		touch "${DOWNLOAD_PATH}/url2file.map"
 	fi
-	DOWNLOAD_FILE=$(grep ${URL_HASH} "${DOWNLOAD_PATH}/url2file.map" | awk '{print $2}')
+	local HASH_ROW=$(grep ${URL_HASH} "${DOWNLOAD_PATH}/url2file.map")
 	# if download file does not exists in database download package
-	if [ -z ${DOWNLOAD_FILE} ]
+	if [ -z "${HASH_ROW}" ]
 	then
 		local DOWNLOAD_FILE="$(curl -vLsI -o /dev/null "${URL}" 2>&1 | egrep -i '^< content-disposition:' | tr -d "\n\r" | sed -e 's/^.*filename="\?//;s/"\?$//')"
 		local STATUS=${?}
 		if [ -z ${DOWNLOAD_FILE} ]
 		then
-			local DOWNLOAD_FILE="${URL_HASH}_$(basename ${URL})"
+			local DOWNLOAD_FILE="$(basename ${URL})"
 		else
-			local DOWNLOAD_FILE="${URL_HASH}_$(basename ${DOWNLOAD_FILE})"
+			local DOWNLOAD_FILE="$(basename ${DOWNLOAD_FILE})"
 		fi
+		local DOWNLOAD_HASH_FILE="${URL_HASH}_$(basename ${DOWNLOAD_FILE})"
 		echo "${URL_HASH} ${DOWNLOAD_FILE}" >> ${DOWNLOAD_PATH}/url2file.map
+	else
+	local DOWNLOAD_HASH_FILE=$(echo ${HASH_ROW} | awk '{print $1 "_" $2}')
+	local DOWNLOAD_FILE=$(echo ${HASH_ROW} | awk '{print $2}')
 	fi
 	# if download file does not exists in filesystem
-	if [ ! -f "${DOWNLOAD_PATH}/${DOWNLOAD_FILE}" ] && [ ${STATUS} -eq 0 ]
+	if [ ! -f "${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}" ] && [ ${STATUS} -eq 0 ]
 	then
 		echo -n "downloading..."
-		curl -LsR -o ${DOWNLOAD_PATH}/${DOWNLOAD_FILE} ${URL} &&
+		curl -LsR -o ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${URL} &&
 		local STATUS=${?}
 		if [ ${STATUS} -ne 0 ]
 		then
@@ -64,16 +70,25 @@ download_uncompress () {
 	then
 		rm -rf ${DEST_DIR}
 	fi
-	local DOWNLOAD_FILE_TYPE=$(file -i ${DOWNLOAD_PATH}/${DOWNLOAD_FILE} | awk '{print $2}' | sed 's/;$//' )
-	mkdir -p ${DEST_DIR}
+	local DOWNLOAD_FILE_TYPE=$(file -i ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} | awk '{print $2}' | sed 's/;$//' )
+	if [ ! -d ${DEST_DIR} ] ; then mkdir -p ${DEST_DIR} ; fi
 	echo -n "uncompressing..."
 	case ${DOWNLOAD_FILE_TYPE} in
 		application/x-xz|application/x-bzip2|application/gzip)	
-			tar xf ${DOWNLOAD_PATH}/${DOWNLOAD_FILE} ${TARFLAGS} -C ${DEST_DIR} ${ARCHIVE_DIRS}
+			tar xf ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${TARFLAGS} -C ${DEST_DIR} ${ARCHIVE_DIRS}
+			local STATUS=${?}
+			;;
+		application/zip)
+			if [ -z "${FILES2EXTRACT}" ]
+			then
+				unzip -n ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} -d ${DEST_DIR}
+			else
+				unzip -j -n ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} "${FILES2EXTRACT}" -d ${DEST_DIR}
+			fi
 			local STATUS=${?}
 			;;
 		*)
-			cp ${DOWNLOAD_PATH}/${DOWNLOAD_FILE} ${DEST_DIR}
+			cp ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${DEST_DIR}/${DOWNLOAD_FILE}
 			local STATUS=${?}
 			;;
 	esac
@@ -153,7 +168,7 @@ NPROCS=$(echo $(nproc)/2+1 | bc)
 
 umask 0022
 
-source ${BB_HOME}/bbxb.conf
+if [ -f ${BB_HOME}/bbxb.conf ] ; then source ${BB_HOME}/bbxb.conf ; fi
 
 # Check platform consistency
 PLATFORM=${BB_HOME}/${PLATFORM_DIR:-platforms}/${PLATFORM_NAME}.conf
@@ -168,6 +183,8 @@ else
 	HMARCH=native
 fi
 
+DATA_PATH=${DATA_PATH:-${HOME}/.bbxb}
+
 GLOBAL_SRC_PATH=${DATA_PATH}/${SRC_DIR:-sources}
 GLOBAL_BLD_PATH=${DATA_PATH}/${BLD_DIR:-builds}
 GLOBAL_LOG_PATH=${DATA_PATH}/${LOG_DIR:-logs}
@@ -179,18 +196,27 @@ then
 	mkdir -p ${GLOBAL_LOG_PATH}
 fi
 
-DISTOS_PATH=${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${DISTOS_DIR:-distos}
-SRC_PATH=${DATA_PATH}/${PRJ_NAME}/${SRC_DIR:-sources}
-BLD_PATH=${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${BLD_DIR:-builds}
-BIN_PATH=${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${BIN_DIR:-binaries}
-LOG_PATH=${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${LOG_DIR:-logs}
-STATUS_PATH=${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${STATUS_DIR:-status}
-TOOLCHAIN_PATH=${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${TOOLCHAIN_DIR:-toolchain}
-USERDATA_PATH=${DATA_PATH}/${PRJ_NAME}/${USERDATA_DIR:-data}
+PROJECT_PATH=${DATA_PATH}/${PRJ_NAME}
+PLATFORM_PATH=${PROJECT_PATH}/${PLATFORM_NAME}
+DISTOS_PATH=${PLATFORM_PATH}/${DISTOS_DIR:-distos}
+SRC_PATH=${PROJECT_PATH}/${SRC_DIR:-sources}
+BLD_PATH=${PLATFORM_PATH}/${BLD_DIR:-builds}
+test -z ${BIN_DIR} && BIN_DIR="binaries"
+BIN_PATH=${PLATFORM_PATH}/${BIN_DIR}
+LOG_PATH=${PLATFORM_PATH}/${LOG_DIR:-logs}
+STATUS_PATH=${PLATFORM_PATH}/${STATUS_DIR:-status}
+TOOLCHAIN_PATH=${PLATFORM_PATH}/${TOOLCHAIN_DIR:-toolchain}
+DISKIMAGES_PATH=${PLATFORM_PATH}/${DISKIMAGES_DIR:-diskimages}
+USERDATA_PATH=${PROJECT_PATH}/${USERDATA_DIR:-data}
 
 if [ ! -d ${LOG_PATH} ]
 then
 	mkdir -p ${LOG_PATH}
+fi
+
+if [ ! -d ${USERDATA_PATH} ]
+then
+	mkdir -p ${USERDATA_PATH}
 fi
 
 export PATH=${GLOBAL_TOOLCHAIN_PATH}/bin:${TOOLCHAIN_PATH}/bin:${PATH}

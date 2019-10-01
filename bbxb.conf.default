@@ -31,9 +31,12 @@ CCWRAPPER="ccache"
 ### Set make verbosity (0 disabled, 1 enabled)
 MAKEVERBOSE=0
 
+### Enable build of native GCC (host compiler) (0 disabled [default], 1 enabled)
+# BUILD_GCCNATIVE=0
+
 ###### Common flags and parameters for LTO building
 ### Default flags for LTO building
-COMMON_LTOFLAGS="-flto=jobserver -fno-fat-lto-objects -fuse-linker-plugin"
+COMMON_LTOFLAGS="-flto=${NPROCS} -fno-fat-lto-objects -fuse-linker-plugin"
 ######
 
 ###### Application toolchain flags and parameters
@@ -62,7 +65,7 @@ KERN_OPTLINK_FLAGS=
 
 ###### Versions for GCC and its dependencies
 #GCC_VER=9.2.0
-#BINUTILS_VER=2.32
+#BINUTILS_VER=2.33.1
 #GMP_VER=6.1.2
 #MPFR_VER=4.0.2
 #MPC_VER=1.1.0

@@ -4,4 +4,4 @@ BUILD_PROCESS=configmake
 CONF_FLAGS="--disable-cddb --disable-vcd-info"
 INST_CMD=install-strip
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libc/libcdio-paranoia/libcdio-paranoia_10.2%2b0.94%2b2-4.debian.tar.xz"
-PKG_DEPS="raspbian/libcdio-2.0.0"
+PKG_DEPS="raspbian/libcdio_2.0.0-2"

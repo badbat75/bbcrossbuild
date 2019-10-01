@@ -18,7 +18,7 @@ then
 	mkdir -p ${GLOBAL_TOOLCHAIN_PATH}
 fi
 
-BINUTILS_VER=${BINUTILS_VER:-2.32}
+BINUTILS_VER=${BINUTILS_VER:-2.33.1}
 GCC_VER=${GCC_VER:-9.2.0}
 GMP_VER=${GMP_VER:-6.1.2}
 MPFR_VER=${MPFR_VER:-4.0.2}
@@ -230,6 +230,12 @@ function setup_gcc () {
 		download_uncompress ${ISLURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/isl
 		cd ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
 		find ../binutils-${BINUTILS_VER} -maxdepth 1 -type d -exec ln -fs {} . \;
+		if $(test_version ${GCC_VER} -lt 10 && test_version ${BINUTILS_VER} -ge 2.33)
+		then
+			echo "GCC version older than 10 and BINUTILS 2.33 or earlier..."
+			cp -f ../binutils-${BINUTILS_VER}/configure.ac .
+			cp -f ../binutils-${BINUTILS_VER}/Makefile.* .
+		fi
 		autoreconf${AUTOCONF_VER} -fiv
 		set +x
 		trap ERR
@@ -282,7 +288,7 @@ function setup_gcc () {
 		esac
 		local GCC_BUILD_CONFIG="--disable-multilib --disable-bootstrap"
 		local GCC_HOST_CONFIG="--with-arch-directory=${HM}${HMARCH:+ --with-arch=${HMARCH}}${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
-		local BINUTILS_COMMON_CONFIG="--enable-gold"
+		local BINUTILS_COMMON_CONFIG="--enable-gold --enable-libctf"
 		local BINUTILS_BUILD_CONFIG=""
 		local BINUTILS_HOST_CONFIG=""
 		local GCC_OPTCOMP_FLAGS="${GCC_OPTCOMP_FLAGS}${GCC_OPTLEVEL:+ -O${GCC_OPTLEVEL}}"
@@ -417,9 +423,9 @@ function setup_gcc () {
 
 	echo -n "-${GCC_VER}..."
 	
-	if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1 || \
-		! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1 || \
-		[[ "${GCC_STAGE}" =~ ^stage[4] ]]
+	if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1 \
+		|| (( ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1 ) \
+		&& [ ${BUILD_GCCNATIVE:-0} -eq 1 ] )
 	then
 		> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log
 		if [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER} ] || [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
@@ -428,19 +434,19 @@ function setup_gcc () {
 			download_gcc >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		fi
 		echo -n "building "
-		if ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1
+		if ( ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1 ) \
+			&& [ ${BUILD_GCCNATIVE:-0} -eq 1 ]
 		then
 			echo -n "native..."
 			build_gcc ${BARCH}>> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		fi
-		if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1 || \
-		[[ "${GCC_STAGE}" =~ ^stage[4] ]]
+		if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1
 		then
 			echo -n "${GCC_STAGE:-cross}..."
 			build_gcc ${HARCH} >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		fi
 		echo "done."
-		if [[ ! "${GCC_STAGE}" =~ ^stage[1234] ]]
+		if [[ ! "${GCC_STAGE}" =~ ^stage[123] ]]
 		then
 			echo "Removing sources."
 			rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}

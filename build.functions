@@ -35,22 +35,17 @@ function settoolflags () {
 	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}"
 	PLATFORM_KCFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}"
 	PLATFORM_RUSTFLAGS="${HMARCH_RUST:+-C target-feature=${HMARCH_RUST} }${HMCPU:+-C target-cpu=${HMCPU}}"
-	COMMON_CFLAGS="-I${BIN_PATH}/usr/include"
-	COMMON_CXXFLAGS="-I${BIN_PATH}/usr/include"
-	COMMON_CPPFLAGS="-I${BIN_PATH}/usr/include"
+	COMMON_CFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
+	COMMON_CXXFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
+	COMMON_CPPFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
 	COMMON_LDFLAGS="-Wl,-rpath-link,${BIN_PATH}/lib${BUILD_LIBSUFFIX} -L${BIN_PATH}/lib${BUILD_LIBSUFFIX}"
-	COMMON_LDFLAGS+=" -Wl,-rpath-link,${BIN_PATH}/usr/lib${BUILD_LIBSUFFIX} -L${BIN_PATH}/usr/lib${BUILD_LIBSUFFIX}"
+	COMMON_LDFLAGS+=" -Wl,-rpath-link,${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -L${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
 	COMMON_PKG_CONFIG_LIBDIR="${BIN_PATH}/lib${BUILD_LIBSUFFIX}/pkgconfig"
-	COMMON_PKG_CONFIG_LIBDIR+=":${BIN_PATH}/usr/lib${BUILD_LIBSUFFIX}/pkgconfig:${BIN_PATH}/usr/share/pkgconfig"
+	COMMON_PKG_CONFIG_LIBDIR+=":${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig:${BIN_PATH}${BUILD_PREFIX}/share/pkgconfig"
 	# Construct build tools flags
 	# Build Include search paths
 	if [ -d ${DISTOS_PATH}/usr/include ]
 	then
-		#local STD_CFLAGS="-nostdinc -isystem ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include -isystem ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include-fixed"
-		#local STD_CXXFLAGS="-nostdinc -std=c++98 -I ${DISTOS_PATH}/usr/include/c++/6 -I ${DISTOS_PATH}/usr/include/${HARCH:+${HARCH}/}c++/6 -I ${DISTOS_PATH}/usr/include/c++/6/backward -I ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include -I ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include-fixed"
-		#local STD_CXXFLAGS+=" -include math.h -include bits/extc++.h"
-		#local STD_CPPFLAGS="-isystem ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include -isystem ${DISTOS_PATH}/usr/local/include -isystem ${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/include-fixed -isystem ${DISTOS_PATH}/usr/include/arm-linux-gnueabihf -isystem ${DISTOS_PATH}/usr/include"
-		#local STD_LDFLAGS+=" -Wl,-nostdlib -Wl,${DISTOS_PATH}/usr/lib/gcc/${HARCH:+${HARCH}/}6/libstdc++.so"
 		COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include${BUILD_LIBSUFFIX}}"
 		COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CXXFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include${BUILD_LIBSUFFIX}}"
 		COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CPPFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include${BUILD_LIBSUFFIX}}"
@@ -223,6 +218,25 @@ function build () (
 		cd ${PKG_BLDPATH}
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ]
+		then
+			CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
+			CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
+			CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
+			CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
+			CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
+			CPPFLAGS="${COMMON_CPPFLAGS}" \
+			LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+			AR=${HARCH}-gcc-ar \
+			AS=${HARCH}-as \
+			NM=${HARCH}-gcc-nm \
+			RANLIB=${HARCH}-gcc-ranlib \
+			STRIP=${HARCH}-strip \
+			OBJDUMP=${HARCH}-objdump \
+			PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
+			PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
+				eval "make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0}"
+		fi
 		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
 		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
 		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
@@ -238,9 +252,6 @@ function build () (
 		OBJDUMP=${HARCH}-objdump \
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
-			eval "make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0}"
-		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
 			eval "make ${PKG_MAKEVARS} DESTDIR=${BIN_PATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}"
 		forge_la_libs ${PWD}
 		cd ${BB_HOME}
@@ -249,8 +260,13 @@ function build () (
 	}
 
 	function cmakemake () {
+		trap 'STATUS=${?}; \
+		set +x; \
+		trap ERR; \
+		return ${STATUS};' ERR
+
 		set -x
-		mkdir -p ${PKG_BLDPATH}
+		mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 		cd ${PKG_BLDPATH}
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ ${BUILD_LIBSHARED} -eq 1 ]
@@ -272,35 +288,31 @@ function build () (
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DTOOLCHAIN_PREFIX=${HARCH}- \
 			-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \
-			-DCMAKE_C_COMPILER=${HARCH}-gcc \
-			-DCMAKE_C_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}" \
+			-DCMAKE_C_COMPILER="${HARCH}-gcc" \
+			-DCMAKE_C_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
 			-DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \
 			-DCMAKE_CXX_COMPILER="${HARCH}-g++" \
-			-DCMAKE_CXX_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}" \
-			-DCMAKE_CPP_COMPILER=${HARCH}-cpp \
+			-DCMAKE_CXX_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
+			-DCMAKE_CPP_COMPILER="${HARCH}-cpp" \
 			-DCMAKE_CPP_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS}" \
-			-DCMAKE_EXE_LINKER_FLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS}" \
-			-DCMAKE_AR=${HARCH}-gcc-ar \
+			-DCMAKE_EXE_LINKER_FLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+			-DCMAKE_AR=${TOOLCHAIN_PATH}/bin/${HARCH}-gcc-ar \
 			-DCMAKE_NM=${HARCH}-gcc-nm \
 			-DCMAKE_CC_COMPILER_RANLIB=${HARCH}-gcc-ranlib \
 			-DCMAKE_CXX_COMPILER_RANLIB=${HARCH}-gcc-ranlib \
 			-DCMAKE_STRIP=${HARCH}-strip \
 			-DCMAKE_INSTALL_PREFIX=${BUILD_PREFIX} \
-			-DLIB_INSTALL_DIR=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-			-DLIB_SUFFIX=${BUILD_LIBSUFFIX} \
-			-DINCLUDE_INSTALL_DIR=${BUILD_INCLUDEDIR} \
-			-DSYSCONF_INSTALL_DIR=${BUILD_SYSCONFDIR} \
-			${CONF_FLAGS} &&
-		make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0} &&
+			-D${VAR_INSTALL_LIBDIR:-"LIB_INSTALL_DIR"}=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+			-D${VAR_INSTALL_LIBSUFFIX:-"LIB_SUFFIX"}=${BUILD_LIBSUFFIX} \
+			-D${VAR_INSTALL_INCDIR:-"INCLUDE_INSTALL_DIR"}=${BUILD_INCLUDEDIR} \
+			-D${VAR_INSTALL_CONFDIR:-"SYSCONF_INSTALL_DIR"}=${BUILD_SYSCONFDIR} \
+			${CONF_FLAGS}
+		make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0}
 		make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD}
-		local BUILD_STATUS=${?}
-		if [ ${BUILD_STATUS} -eq 0 ]
-		then
-			forge_la_libs ${PWD}
-		fi
+		forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
-		return ${BUILD_STATUS}
+		trap ERR
 	}
 
 	function mesonninja () {
@@ -681,6 +693,10 @@ function build () (
 		PKG_PREBUILD \
 		PKG_POSTBUILD \
 		PKG_TWOSTEPSBUILD \
+		VAR_INSTALL_LIBDIR \
+		VAR_INSTALL_LIBSUFFIX \
+		VAR_INSTALL_INCDIR \
+		VAR_INSTALL_CONFDIR \
 		CARGO_BIN \
 		CARGO_LIB \
 		CARGO_BINLIST \
@@ -699,12 +715,13 @@ function build () (
 		return 1
 	fi
 
+	settoolflags
 	source ${PKG_PATH}/${1}.pkg
 
 	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
-		if [ -f ${LOG_PATH}/${PKG_NAME}.log ];
+		if [ -f ${LOG_PATH}/${PKG_NAME}.log ]; \
 		then \
 			echo "Log ${LOG_PATH}/${PKG_NAME}.log:"; \
 			echo; \
@@ -774,7 +791,6 @@ function build () (
 	then
 		rm -rf ${PKG_BLDPATH}
 	fi
-	settoolflags
 	if [ ! -z "${PKG_PREBUILD}" ]
 	then
 		cd ${PKG_SRCPATH}
@@ -822,7 +838,7 @@ function forge_la_libs () {
 			local SEARCH_STRING+="-name ${LIB_LA}"
 			local FIRST=0
 		done
-		find ${BIN_PATH}/lib ${BIN_PATH}/usr/lib \( ${SEARCH_STRING} \) -exec bash -c "forge_la_file {}" \;
+		find ${BIN_PATH}/lib ${BIN_PATH}${BUILD_LIBDIR} \( ${SEARCH_STRING} \) -exec bash -c "forge_la_file {}" \;
 	fi
 	set +x
 }

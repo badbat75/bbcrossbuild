@@ -98,7 +98,7 @@ function zip_project () {
 	trap ERR
 }
 
-function create_selfextracting_archive () {
+function create_sfx_archive () {
 	trap 'STATUS=${?}; \
 		echo "fail."; \
 		echo; \
@@ -125,7 +125,8 @@ function create_selfextracting_archive () {
 	EOF
 	if [ -f ${USERDATA_PATH}/pre.sfx ]
 	then
-			cat ${USERDATA_PATH}/pre.sfx >> ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx
+		cat ${USERDATA_PATH}/pre.sfx >> ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx
+		rm ${USERDATA_PATH}/pre.sfx
 	fi
 	cat >>${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx <<-EOF
 
@@ -134,7 +135,8 @@ function create_selfextracting_archive () {
 	EOF
 	if [ -f ${USERDATA_PATH}/post.sfx ]
 	then
-			cat ${USERDATA_PATH}/post.sfx >> ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx
+		cat ${USERDATA_PATH}/post.sfx >> ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx
+		rm ${USERDATA_PATH}/post.sfx
 	fi
 	cat >>${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx <<-EOF
 
@@ -144,6 +146,7 @@ function create_selfextracting_archive () {
 	EOF
 	cat ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.tar.xz >> ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx
 	chmod +x ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx
+
 	echo "done."
 	echo
 	trap ERR

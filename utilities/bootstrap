@@ -1,0 +1,24 @@
+#!/bin/bash
+sudo apt-get install -y curl ccache build-essential \
+    gawk bison flex cmake ninja-build \
+    autoconf autoconf-archive automake autopoint libtool \
+    git xmltoman docbook-utils swig doxygen
+
+# for meson-ninja
+sudo apt-get install python3-pip ninja-build
+pip3 install meson
+
+# for Python 3.7
+sudo apt-get install -y libssl-dev libffi-dev
+
+# for libid3tag
+sudo apt-get install -y gperf
+
+# for lxml
+sudo apt-get install -y libxml2-dev
+
+# for glib-dbus-1.0
+sudo apt-get install -y libdbus-glib-1-dev
+
+# for udevil
+sudo apt-get install -y intltool

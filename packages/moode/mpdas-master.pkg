@@ -12,5 +12,5 @@ install -D -m 644 mpdas.1 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1/mpdas.1 &&
 install -D -m 644 mpdasrc.example ${BIN_PATH}\${BUILD_SYSCONFDIR}/mpdasrc &&
 install -d ${BIN_PATH}/usr/local/bin &&
 install -d ${BIN_PATH}/usr/local/etc &&
-ln -s /usr/bin/mpdas ${BIN_PATH}/usr/local/bin/mpdas &&
-ln -s /etc/mpdasrc ${BIN_PATH}/usr/local/etc/mpdasrc"
+ln -fs /usr/bin/mpdas ${BIN_PATH}/usr/local/bin/mpdas &&
+ln -fs /etc/mpdasrc ${BIN_PATH}/usr/local/etc/mpdasrc"

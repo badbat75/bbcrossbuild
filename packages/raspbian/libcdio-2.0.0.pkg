@@ -1,9 +1,0 @@
-# libcdio-2.0.0
-PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libc/libcdio/libcdio_2.0.0.orig.tar.gz"
-BUILD_PROCESS=configmake
-CONF_FLAGS="--disable-cddb --disable-vcd-info"
-INST_CMD=install-strip
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libc/libcdio/libcdio_2.0.0-2.debian.tar.xz"
-PATCHES=libcdio-config.patch
-#PKG_DEPS="raspbian/ncurses-6.1-20181013"
-PKG_CFLAGS="-fno-strict-aliasing -Wno-sizeof-pointer-memaccess -Wno-format-truncation -Wno-stringop-overflow -Wno-lto-type-mismatch"

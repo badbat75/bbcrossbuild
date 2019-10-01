@@ -1,0 +1,8 @@
+# trx_0.4
+PKG_URL="http://www.pogo.org.uk/~mark/trx/releases/trx-0.4.tar.gz"
+PKG_CFLAGS=""
+PKG_LDFLAGS=""
+BUILD_PROCESS=simplemake
+PKG_DEPS=""
+PKG_MAKEVARS="PREFIX=${BINDIR}${BUILD_PREFIX}"
+PKG_PREBUILD=""

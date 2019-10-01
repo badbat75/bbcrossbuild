@@ -1,8 +1,0 @@
-# rotenc-moode-r52
-PKG_SRCDIR=moode-r52
-BUILD_PROCESS=simplemake
-INST_CMD=install
-PKG_DEPS="moode/moode-r52 moode/wiringpi-master"
-PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} -C other/rotenc"
-PKG_POSTBUILD="install -d ${BIN_PATH}/usr/local/bin &&
-ln -s /usr/bin/rotenc ${BIN_PATH}/usr/local/bin/rotenc"

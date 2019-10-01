@@ -3,7 +3,7 @@
 check_core_functions
 
 function create_key_sscertificate () {
-if [ ! -d ${USERDATA_PATH}/pki ]
+	if [ ! -d ${USERDATA_PATH}/pki ]
 	then
 		mkdir -p ${USERDATA_PATH}/pki
 	fi
