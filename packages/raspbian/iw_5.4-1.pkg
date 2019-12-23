@@ -1,6 +1,6 @@
-# iw_5.3-1
-PKG_URL="http://archive.raspbian.org/raspbian/pool/main/i/iw/iw_5.3.orig.tar.xz"
-#PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/i/iw/iw_5.3-1.debian.tar.xz"
+# iw_5.4-1
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/i/iw/iw_5.4.orig.tar.xz"
+#PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/i/iw/iw_5.4-1.debian.tar.xz"
 LTOENABLE=0
 PKG_CFLAGS='-DNETNS_RUN_DIR=\"/run/netns\"'
 PKG_LDFLAGS=
