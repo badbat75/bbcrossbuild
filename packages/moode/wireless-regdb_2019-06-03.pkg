@@ -1,8 +1,0 @@
-# wireless-regdb_2019-06-03
-PKG_URL="https://git.kernel.org/pub/scm/linux/kernel/git/sforshee/wireless-regdb.git/snapshot/wireless-regdb-master-2019-06-03.tar.gz"
-BUILD_PROCESS=simplemake
-PKG_TWOSTEPSBUILD=0
-INST_CMD=install
-#PKG_DEPS=
-#PKG_PREBUILD=""
-PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} CRDA_PATH=/lib/crda CRDA_KEY_PATH=/lib/crda/pubkeys FIRMWARE_PATH=/lib/firmware MANDIR=\${BUILD_PREFIX}/share/man"
