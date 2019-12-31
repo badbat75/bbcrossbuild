@@ -1,7 +1,7 @@
 # libwebsockets_2.0.3-3
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libw/libwebsockets/libwebsockets_2.0.3.orig.tar.gz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libw/libwebsockets/libwebsockets_2.0.3-3.debian.tar.xz"
-PKG_DEPS="raspbian/libev_4.27-1 raspbian/libuv_0.10.36-3"
+PKG_DEPS="raspbian/libev_4.31-1 raspbian/libuv_0.10.36-3"
 BUILD_PROCESS=cmakemake
 CONF_FLAGS="-DLWS_WITHOUT_DAEMONIZE=OFF \
 	-DLWS_WITH_LIBEV=ON -DLWS_WITH_LIBUV=ON \

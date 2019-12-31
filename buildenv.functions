@@ -196,7 +196,7 @@ function bootstrap_sysroot () {
 }
 
 function check_target_gcc () {
-	${HARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1
+	${HARCH}-gcc -v > /dev/null 2>&1
 	if [ ! ${?} -eq 0 ]
 	then
 		echo "The toolchain for cross-compile does not exist."
@@ -231,7 +231,7 @@ function setup_gcc () {
 		download_uncompress ${ISLURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/isl
 		cd ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
 		find ../binutils-${BINUTILS_VER} -maxdepth 1 -type d -exec ln -fs {} . \;
-		if $(test_version ${GCC_VER} -lt 10 && test_version ${BINUTILS_VER} -ge 2.33)
+		if $(test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -lt 10 && test_version ${BINUTILS_VER} -ge 2.33)
 		then
 			echo "GCC version older than 10 and BINUTILS 2.33 or earlier..."
 			cp -f ../binutils-${BINUTILS_VER}/configure.ac .
@@ -251,7 +251,8 @@ function setup_gcc () {
 				return ${STATUS}' ERR
 	
 			set -x
-			mkdir -p gcc/../lib/gcc/${BUILD_ARCH}/${GCC_VER}/../../../../${BUILD_ARCH}/bin
+			local GCC_REALVER=$(cat ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/gcc/BASE-VER)
+			mkdir -p gcc/../lib/gcc/${BUILD_ARCH}/${GCC_REALVER}/../../../../${BUILD_ARCH}/bin
 			ln -fs ../../gcc/liblto_plugin.so ${BUILD_ARCH}/bin/				
 			ln -fs ../../binutils/nm-new ${BUILD_ARCH}/bin/${BUILD_ARCH}-nm
 			ln -fs ../../binutils/nm-new ${BUILD_ARCH}/bin/nm
@@ -389,6 +390,7 @@ function setup_gcc () {
 	local GCC_STAGE=${1}
 
 	trap 'STATUS=${?}; \
+		set +x; \
 		echo "fail."; \
 		echo; \
 		if [ -f ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log ];
@@ -402,17 +404,18 @@ function setup_gcc () {
 
 	echo -n "Setting up gcc"
 
+	#set -x
 	local GCC_LTOENABLE=${GCC_LTOENABLE:-0}
 	export PATH=${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin:${PATH}
 	local CURRENT_AUTOCONF_VER=$(autoconf -V | head -n1 | awk '{print $NF}')
 
 	# Determine autoconf version to use and set the right autoreconf suffix command
-	if $(test_version ${GCC_VER} -lt 9.0.0)
+	if $(test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -lt 9)
 	then
 		AUTOCONF_VER=2.64
 	fi
 
-	if $(test_version ${GCC_VER} -ge 9.0.0)
+	if $(test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -ge 9)
 	then
 		AUTOCONF_VER=2.69
 	fi
@@ -421,10 +424,12 @@ function setup_gcc () {
 	then
 		unset AUTOCONF_VER
 	fi
+	#set +x
 
 	echo -n "-${GCC_VER}..."
 	
-	if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1 \
+	#set -x
+	if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1 \
 		|| (( ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1 ) \
 		&& [ ${BUILD_GCCNATIVE:-0} -eq 1 ] )
 	then
@@ -441,7 +446,7 @@ function setup_gcc () {
 			echo -n "native..."
 			build_gcc ${BARCH}>> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		fi
-		if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1
+		if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1
 		then
 			echo -n "${GCC_STAGE:-cross}..."
 			build_gcc ${HARCH} >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
@@ -456,6 +461,7 @@ function setup_gcc () {
 	else
 		echo "already there."
 	fi
+	#set +x
 	trap ERR
 }
 
