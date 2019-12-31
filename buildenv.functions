@@ -19,7 +19,7 @@ then
 fi
 
 BINUTILS_VER=${BINUTILS_VER:-2.33.1}
-GCC_VER=${GCC_VER:-9.2.0}
+GCC_VER=${GCC_VER:-9_2_0-release}
 GMP_VER=${GMP_VER:-6.1.2}
 MPFR_VER=${MPFR_VER:-4.0.2}
 MPC_VER=${MPC_VER:-1.1.0}
@@ -220,7 +220,8 @@ function setup_gcc () {
 		local MPCURL=https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VER}.tar.gz
 		local ISLURL=http://isl.gforge.inria.fr/isl-${ISL_VER}.tar.xz
 		local BINUTILSURL=https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz
-		local GCCURL=https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.xz
+		#local GCCURL=https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.xz
+		local GCCURL=https://github.com/gcc-mirror/gcc/archive/gcc-${GCC_VER}.tar.gz
 
 		download_uncompress ${BINUTILSURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}
 		download_uncompress ${GCCURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
