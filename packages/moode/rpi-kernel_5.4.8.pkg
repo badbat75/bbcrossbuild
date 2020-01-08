@@ -1,0 +1,5 @@
+# rpi-kernel_5.4.8
+PKG_URL="https://github.com/raspberrypi/linux/archive/805439ce4d99506639a709874963e64a05c6a977.tar.gz"
+#PATCHES="http://ck.kolivas.org/patches/5.0/5.4/5.4-ck1/patch-5.4-ck1.xz"
+BUILD_PROCESS=kernelbuild
+INST_CMD="INSTALL_MOD_STRIP=1"
