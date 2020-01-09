@@ -76,19 +76,19 @@ download_uncompress () {
 		application/x-tar)
 			tar xf ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${TARFLAGS} -C ${DEST_DIR} ${ARCHIVE_DIRS}
 			;;
-		application/zip)
-			if [ -z "${FILES2EXTRACT}" ]
-			then
-				unzip -n ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} -d ${DEST_DIR}
-			else
-				unzip -j -n ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} "${FILES2EXTRACT}" -d ${DEST_DIR}
-			fi
-			;;
 		*)
 			case ${DOWNLOAD_FILE_TYPE} in
 				application/x-xz)
 					cp ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${DEST_DIR}/${DOWNLOAD_FILE}
 					xz --uncompress ${DEST_DIR}/${DOWNLOAD_FILE}
+					;;
+				application/zip)
+					if [ -z "${FILES2EXTRACT}" ]
+					then
+						unzip -n ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} -d ${DEST_DIR}
+					else
+						unzip -j -n ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} "${FILES2EXTRACT}" -d ${DEST_DIR}
+					fi
 					;;
 				*)
 					cp ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${DEST_DIR}/${DOWNLOAD_FILE}
