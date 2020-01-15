@@ -69,7 +69,7 @@ KERN_OPTLINK_FLAGS=
 #GMP_VER=6.1.2
 #MPFR_VER=4.0.2
 #MPC_VER=1.1.0
-#ISL_VER=0.21
+#ISL_VER=0.22
 ### Kernel optimization level (s, 0, 1, 2, 3). Set -O options to compiler
 GCC_OPTLEVEL=3
 ### Optional gcc compiler flags
