@@ -1,4 +1,4 @@
 .vscode
 bbxb.conf
 images
-projects/test.prj
+projects/test*.prj
