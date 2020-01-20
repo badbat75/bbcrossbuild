@@ -1,5 +1,5 @@
-# mpd_0.21.18
-PKG_URL="http://www.musicpd.org/download/mpd/0.21/mpd-0.21.18.tar.xz"
+# mpd_0.21.19
+PKG_URL="http://www.musicpd.org/download/mpd/0.21/mpd-0.21.19.tar.xz"
 BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Dalsa=enabled -Dcurl=enabled -Ddatabase=true -Ddsd=true -Dffmpeg=enabled -Dfaad=enabled -Dflac=enabled \
 	-Dhttpd=true -Did3tag=enabled -Dlame=enabled -Dlibmpdclient=enabled -Dmad=enabled -Dmpg123=enabled \
