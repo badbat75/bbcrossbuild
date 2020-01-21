@@ -1,5 +1,0 @@
-# rpi-kernel_5.4.11
-PKG_URL="https://github.com/raspberrypi/linux/archive/0005d9b5e5823dbb15df2c48a5038f381b928312.tar.gz"
-#PATCHES="http://ck.kolivas.org/patches/muqss/5.0/5.4/0001-MultiQueue-Skiplist-Scheduler-v0.196.patch"
-BUILD_PROCESS=kernelbuild
-INST_CMD="INSTALL_MOD_STRIP=1"
