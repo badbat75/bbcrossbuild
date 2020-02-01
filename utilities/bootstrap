@@ -2,7 +2,7 @@
 sudo apt-get install -y curl ccache build-essential \
     gawk bison flex cmake ninja-build \
     autoconf autoconf2.64 autoconf-archive automake autopoint libtool \
-    git xmltoman docbook-utils swig doxygen
+    git xmltoman docbook-utils swig doxygen texinfo
 
 # for meson-ninja
 sudo apt-get install python3-pip ninja-build
