@@ -1,0 +1,4 @@
+# rpi-kernel_4.19.97
+PKG_URL="https://github.com/raspberrypi/linux/archive/66efd042c561586ff52c289a3e520393f528234e.tar.gz"
+BUILD_PROCESS=kernelbuild
+INST_CMD="INSTALL_MOD_STRIP=1"
