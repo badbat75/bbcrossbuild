@@ -197,7 +197,8 @@ IMGRESIZE=2:3G mount_from https://downloads.raspberrypi.org/raspbian_lite/images
 run_on_root_dir temp root "apt-get update --allow-releaseinfo-change"
 run_on_root_dir temp root "apt-get -y purge --autoremove \
 	triggerhappy bluez libbluetooth-dev libbluetooth3 gcc build-essential \
-	aptitude libxapian30 wpasupplicant iw"
+	aptitude libxapian30 wpasupplicant iw ibverbs-providers libcephfs2 libibverbs1* libnl-3-200 libnl-route-3-200 librados2 \
+	libboost-atomic1.67.0 libboost-iostreams1.58.0 libboost-iostreams1.67.0 libboost-regex1.67.0 libboost-system1.67.0 libboost-thread1.67.0"
 run_on_root_dir temp root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
 run_on_root_dir temp root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
 	php-fpm nginx sqlite3 php-sqlite3 php7.3-gd \
