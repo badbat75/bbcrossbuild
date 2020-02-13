@@ -1,0 +1,16 @@
+# mpdas-master
+PKG_URL="http://www.volkerschatz.com/noise/alsacap.tgz"
+#PATCHES=
+BUILD_PROCESS=simplemake
+INST_CMD=all
+PKG_DEPS=
+PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX}"
+PKG_PREBUILD="sed -i '/PREFIX =/i CC ?= gcc' Makefile &&
+sed -i 's/PREFIX = /PREFIX ?= /g' Makefile &&
+sed -i 's/gcc -o/$(CC) \$(CFLAGS) \$(LDFLAGS) -o/g' Makefile"
+PKG_POSTBUILD="install -d ${BIN_PATH}\${BUILD_PREFIX}/bin &&
+install -d ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1 &&
+install -D -m 755 -s --strip-program=${HARCH:+${HARCH}-}strip alsacap ${BIN_PATH}\${BUILD_PREFIX}/bin &&
+install -D -m 644 alsacap.1 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1/alsacap.1
+install -d ${BIN_PATH}/usr/local/bin &&
+ln -fs /usr/bin/alsacap ${BIN_PATH}/usr/local/bin/alsacap"
