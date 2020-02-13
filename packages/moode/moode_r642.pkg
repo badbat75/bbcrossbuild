@@ -1,5 +1,5 @@
-# moode_r641
-PKG_URL="https://github.com/moode-player/moode/archive/r641prod.tar.gz"
+# moode_r642
+PKG_URL="https://github.com/moode-player/moode/archive/r642prod.tar.gz"
 PKG_SRCDIR=moode_r641
 BUILD_PROCESS=downloadonly
 PKG_DEPS="python/RPi.GPIO_0.7.0 python/python-musicpd_0.4.4"
