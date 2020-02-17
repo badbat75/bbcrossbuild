@@ -1,0 +1,8 @@
+# libupnpp_0.18
+PKG_URL="https://www.lesbonscomptes.com/upmpdcli/downloads/libupnpp-0.18.tar.gz"
+PATCHES=
+BUILD_PROCESS=configmake
+# CONF_FLAGS=""
+PKG_CXXFLAGS="-D_FILE_OFFSET_BITS=64"
+INST_CMD=install-strip
+PKG_DEPS="moode/linpupnp_2.0.1 moode/libmpdclient-2.18"
