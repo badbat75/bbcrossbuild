@@ -423,6 +423,12 @@ function build () (
 	}
 
 	function cargobuild () {
+		trap 'STATUS=${?}; \
+		set +x; \
+		trap ERR; \
+		return ${STATUS};' ERR
+		set -x
+	
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -C opt-level=${OPTLEVEL}}"
@@ -441,20 +447,25 @@ function build () (
 		RUSTFLAGS="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} \
 			-C linker=${PKG_BLDPATH}/${HARCH}-gcc" \
 			cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}
-		local BUILD_STATUS=${?}
-		if [ ${BUILD_STATUS} -eq 0 ]
-		then
-			for file in ${CARGO_BINLIST}
-			do
-				cp -p target/${CARGO_TARGET}/release/${file} ${BIN_PATH}${CARGO_BIN}/${file}
-			done
-			for file in ${CARGO_LIBLIST}
-			do
-				cp -p target/${CARGO_TARGET}/release/${file} ${BIN_PATH}${CARGO_LIB}/${file}
-			done
-		fi
+		for file in ${CARGO_BINLIST}
+		do
+			if [ ! -d ${BIN_PATH}${CARGO_BIN} ]
+			then
+				mkdir -p ${BIN_PATH}${CARGO_BIN}
+			fi
+			cp -p target/${CARGO_TARGET}/release/${file} ${BIN_PATH}${CARGO_BIN}/${file}
+		done
+		for file in ${CARGO_LIBLIST}
+		do
+			if [ ! -d ${BIN_PATH}${CARGO_LIB} ]
+			then
+				mkdir -p ${BIN_PATH}${CARGO_LIB}
+			fi
+			cp -p target/${CARGO_TARGET}/release/${file} ${BIN_PATH}${CARGO_LIB}/${file}
+		done
 		cd ${BB_HOME}
-		return ${BUILD_STATUS}
+		set +x
+		trap ERR
 	}
 
 	function kernelbuild () {
