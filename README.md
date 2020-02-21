@@ -4,9 +4,6 @@ This is a framework to cross-compile defined packages using an optional predefin
 
  - Tested only ARM cross-compile projects. Other platforms will need
    adjustments and integration
- - Only RPi platform defined
- - Only one project to build: [Moode
-   Audio](http://moodeaudio.org/)
 
 ## QuickStart
 **Prepare your environment**
