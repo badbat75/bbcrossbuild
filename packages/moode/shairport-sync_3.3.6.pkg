@@ -1,0 +1,18 @@
+# shairport-sync_3.3.6
+PKG_URL="https://github.com/mikebrady/shairport-sync/archive/3.3.6.tar.gz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--with-dummy --with-stdout --with-pipe	--with-ssl=openssl --with-soxr --with-metadata \
+		--with-avahi --with-alsa --with-convolution --with-piddir=/run/shairport-sync --without-configfiles \
+		--with-apple-alac --without-libdaemon --with-mqtt-client --with-systemd --with-dbus-interface"
+INST_CMD=install-strip
+PKG_DEPS="raspbian/libsoxr_0.1.3-1 moode/alac-master raspbian/libconfig_1.5-0.4 raspbian/mosquitto_1.6.7-1"
+PKG_PREBUILD="sed -i '/AC_PROG_INSTALL/a AM_PROG_AR' configure.ac
+	sed -i 's/^\tgetent/#\tgetent/g' Makefile.am
+	sed -i 's| org.gnome.ShairportSync.xml| \$(VPATH)/org.gnome.ShairportSync.xml|g' Makefile.am"
+PKG_POSTBUILD="install -d ${BIN_PATH}/usr/local/bin &&
+install -d ${BIN_PATH}/usr/local/etc &&
+ln -fs /usr/bin/shairport-sync ${BIN_PATH}/usr/local/bin/shairport-sync &&
+ln -fs /etc/shairport-sync.conf ${BIN_PATH}/usr/local/etc/shairport-sync.conf"
+
+# Dependencies:
+# libasound2-dev libpopt-dev libconfig-dev avahi-daemon libavahi-client-dev libssl-dev libsoxr-dev
