@@ -1,0 +1,8 @@
+# wiringpi_2.50
+PKG_URL="https://github.com/WiringPi/WiringPi/releases/tag/final_official_2.50"
+PATCHES="wiringpi-makefiles.patch"
+BUILD_PROCESS=simplemake
+INST_CMD=install
+PKG_DEPS=
+PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} HARCH=${HARCH}"
+PKG_CFLAGS="-I."
