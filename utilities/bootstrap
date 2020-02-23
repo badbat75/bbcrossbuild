@@ -22,3 +22,6 @@ sudo apt-get install -y libdbus-glib-1-dev
 
 # for udevil
 sudo apt-get install -y intltool
+
+# for dlc-daemon
+sudo apt-get install -y pandoc
