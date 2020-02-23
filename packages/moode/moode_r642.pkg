@@ -112,4 +112,4 @@ echo -e '#!/bin/bash\necho udisks-glue no more supported' > ${BIN_PATH}/usr/bin/
 chmod +x ${BIN_PATH}/usr/bin/udisks-glue
 sed -i 's|^#!/usr/bin/python$|#!/usr/bin/python3|g' ${BIN_PATH}/var/www/command/bt-agent.py
 sed -i 's|local/lib/python2.7/dist|lib/python${PYTHONBIN_VER}/dist|g' ${BIN_PATH}/var/www/upp-config.php
-sed -i 's|/usr/local/lib/python3.7/dist-packages/|/usr/lib/python3.7/dist-packages/|g' ${BIN_PATH}/var/www/command/sysinfo.sh"
+sed -i 's|/usr/local/lib/python${PYTHONBIN_VER}/dist-packages/|/usr/lib/python${PYTHONBIN_VER}/dist-packages/|g' ${BIN_PATH}/var/www/command/sysinfo.sh"
