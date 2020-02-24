@@ -44,6 +44,9 @@ COMMON_LTOFLAGS="-flto=${NPROCS} -fno-fat-lto-objects -fuse-linker-plugin"
 OPTLEVEL=3
 ### Optional gcc compiler flags
 OPTCOMP_FLAGS="-pipe"
+### Optional gcc compiler flags to enable profiling
+#OPTCOMP_FLAGS="${OPTCOMP_FLAGS} -fprofile-generate=/tmp/pgo"
+#OPTCOMP_FLAGS="${OPTCOMP_FLAGS} -fprofile-use=/tmp/pgo -fprofile-correction -Wno-error=coverage-mismatch"
 ### Optional rustc compiler flags
 OPTCOMP_RUSTFLAGS=
 ### Optional gcc-ld linker flags
