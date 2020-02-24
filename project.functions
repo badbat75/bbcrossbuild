@@ -34,8 +34,22 @@ function remove_devfiles () {
 	TMP_PATH=${TMP_PATH} find . -type f -name '*.la' -exec sh -c \
 		'mkdir -p ${TMP_PATH}/$(dirname ${1}) && mv ${1} ${TMP_PATH}/${1}' \
 		sh {} \;
-	mv .${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig ${TMP_PATH}/${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig
-	mv .${BUILD_INCLUDEDIR} ${TMP_PATH}/$(dirname .${BUILD_INCLUDEDIR})
+	if [ -d .${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig ]
+	then
+		if [ ! -d ${TMP_PATH}/${BUILD_LIBDIR}${BUILD_LIBSUFFIX} ]
+		then
+			mkdir -p ${TMP_PATH}/${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
+		fi
+		mv .${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig ${TMP_PATH}/${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig
+	fi
+	if [ -d .${BUILD_INCLUDEDIR} ]
+	then
+		if [ ! -d ${TMP_PATH}/$(dirname .${BUILD_INCLUDEDIR}) ]
+		then
+			mkdir -p ${TMP_PATH}/$(dirname .${BUILD_INCLUDEDIR})
+		fi
+		mv .${BUILD_INCLUDEDIR} ${TMP_PATH}/$(dirname .${BUILD_INCLUDEDIR})
+	fi
 	cd ${TMP_PATH}
 	tar -cf - . | xz -T0 > ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/devfiles.tar.xz
 	cd ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}
