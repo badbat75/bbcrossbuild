@@ -44,50 +44,50 @@ TBC
 
 #### Package definition
 
-##### PKG_URL: (*)
+**PKG_URL: (*)**
 URL where download the sources.
 
 `PKG_URL="http://packages.org/package"`
 
-##### PKG_DEPS
+**PKG_DEPS:**
 define dependencies to build and install before building this
 
 `PKG_DEPS="dir1/package1.pkg dir1/package2.pkg dir2/package3.pkg"`
 
 #### Prebuild process
 
-##### PATCHDEB:
+**PATCHDEB:**
 URL where to download Debian package that contains patches
 
 `PATCHDEB="http://packages.org/debian_patches"`
 
-##### PATCHES:
+**PATCHES:**
 Patch filename under bbxb/patches directory
 
 `PATCHES="patch1.patch patch2.patch"`
 
-##### AUTOCONF:
+**AUTOCONF:**
 By default "autoreconf -fi" is applied before configure process (1). 0 to disable
 
 `AUTOCONF=0|1`
 
-##### AUTOCONF_PATH:
+**AUTOCONF_PATH:**
 Specify source subdirectory where to run autoreconf
 
 `AUTOCONF_PATH=subdir1/subdir2`
 
-##### PKG_PREBUILD:
+**PKG_PREBUILD:**
 Runs commands on source files before autoreconf and configuration on source directory
 `PKG_PREBUILD="command1; command2 && command3"`
 
 #### Build process
 
-##### CONF_COPYSRC:
+**CONF_COPYSRC:**
 Copy sources in the build directory (often needed for buggy build processes). Not enabled by default on configmake (0), enabled on other build processes (1).
 
 `CONF_COPYSRC=1`
 
-##### BUILD_PROCESS: (*)
+**BUILD_PROCESS: (*)**
 Define what build process to use
 `downloadonly`: it only downloads the package and creates the source directory
 `configmake`: it downloads, creates source directory and run a standard configure/make build process
@@ -100,47 +100,47 @@ Define what build process to use
 
 `BUILD_PROCESS=downloadonly|configmake|mesonninja|simplemake|pythonbuild|kernelbuild`
 
-##### CONF_CMD:
+**CONF_CMD:**
 Override configure command. "configure" by default
 
 `CONF_CMD="configure_new"`
 
-##### CONF_FLAGS:
+**CONF_FLAGS:**
 Specify configure, cmake or meson parameters
 
 `CONF_FLAGS="--disable-feature or -DENABLE_FEATURE"`
 
-##### AUTOCONF_PATH:
+**AUTOCONF_PATH:**
 Specify source subdirectory where to run the build
 `CONF_PATH=subdir1/subdir2`
 
-##### PKG_TWOSTEPSBUILD
+**PKG_TWOSTEPSBUILD:**
 Define if make is run directly with install or there should be a make all phase and an installation phase after. Disabled in configmake (0), enabled in simplemake (1) by default
 `PKG_TWOSTEPSBUILD=1`
 
-##### PKG_CFLAGS/PKG_CXXFLAGS/PKG_LDFLAGS:
+**PKG_CFLAGS/PKG_CXXFLAGS/PKG_LDFLAGS:**
 Permits to specify additional c/c++/ld compiler flags to build with:
 
 `PKG_CFLAGS="-f<parameter> -W<parameter>"`
 `PKG_CXXFLAGS="-f<parameter> -W<parameter>"`
 `PKG_LDFLAGS="-l<library>"`
 
-##### LTOENABLE:
+**LTOENABLE:**
 Override LTOENABLE environment variable that can be specified at bbxb.conf, project or package level by default (1) if not specified anywhere
 
 `LTOENABLE=0`
 
-##### PKG_CONFIG_SYSROOT_DIR:
+**PKG_CONFIG_SYSROOT_DIR:**
 Override PKG_CONFIG_SYSROOT_DIR variable that is by default set on DISTOS path
 
 `PKG_CONFIG_SYSROOT_DIR=${BIN_PATH}`
 
-##### PKG_MAKEVARS:
+**PKG_MAKEVARS:**
 Define make parameters or variabes to pass to Makefile
 
 `PKG_MAKEVARS="-j1 VARIABLE1=value VARIABLE2=value2"`
 
-##### CARGO_BIN/CARGO_LIB/CARGO_BINLIST/CARGO_STRIP:
+**CARGO_BIN/CARGO_LIB/CARGO_BINLIST/CARGO_STRIP:**
 Override installation path for binary
 
 `CARGO_BIN=${BUILD_EXECPREFIX}/sbin`
@@ -163,14 +163,14 @@ Specify if the binaries should be stripped out of unneeded symbols
 
 #### Install process
 
-##### INST_CMD:
+**INST_CMD:**
 command to use for make install command. Most commons defined in package's Makefile are install or install-strip but you can pass also different make parameters in. i.e: "all check install-strip"
 
 `INST_CMD=install|install-strip`
 
 #### Post build process
 
-##### PKG_POSTBUILD:
+**PKG_POSTBUILD:**
 Runs commands on source files after build and installation on build directory
 `PKG_POSTBUILD="command1; command2 && command3"`
 
