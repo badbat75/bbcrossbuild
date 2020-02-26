@@ -88,15 +88,15 @@ Copy sources in the build directory (often needed for buggy build processes). No
 `CONF_COPYSRC=1`
 
 **BUILD_PROCESS: (*)**
-Define what build process to use
-`downloadonly`: it only downloads the package and creates the source directory
-`configmake`: it downloads, creates source directory and run a standard configure/make build process
-`cmakemake`: it downloads, creates source directory and run a standard cmake/make build process
-`mesonninja`: it downloads, creates source directory and run a standard meson/ninja build process
-`cargobuild`: it downloads, creates source directory and run a standard Rust cargo build process
-`simplemake`: it downloads, creates source directory, copy to build directory and run a standard make process
-`pythonbuild`: it downloads, creates source directory and run a standard python module build
-`kernelbuild`: it downloads, creates source directory and run a standard kernel build process using configuration provided in platform directory configuration file.
+Define what build process to use:  
+`downloadonly`: it only downloads the package and creates the source directory  
+`configmake`: it downloads, creates source directory and run a standard configure/make build process  
+`cmakemake`: it downloads, creates source directory and run a standard cmake/make build process  
+`mesonninja`: it downloads, creates source directory and run a standard meson/ninja build process  
+`cargobuild`: it downloads, creates source directory and run a standard Rust cargo build process  
+`simplemake`: it downloads, creates source directory, copy to build directory and run a standard make process  
+`pythonbuild`: it downloads, creates source directory and run a standard python module build  
+`kernelbuild`: it downloads, creates source directory and run a standard kernel build process using configuration   provided in platform directory configuration file.
 
 `BUILD_PROCESS=downloadonly|configmake|mesonninja|simplemake|pythonbuild|kernelbuild`
 
@@ -175,16 +175,16 @@ Runs commands on source files after build and installation on build directory
 `PKG_POSTBUILD="command1; command2 && command3"`
 
 #### Environment variables
-The following environemnt variables can be used to create your package and default values
+The following environemnt variables can be used to create your package and default values are:
 
-BIN_PATH: ${HOME}/.bbxb/< projectname >/< platformname >/binaries (destination of build)
-DISTOS_PATH: ${HOME}/.bbxb/< projectname >/< platformname >/distos (source of distribution libraries)
-BUILD_PREFIX: /usr
-BUILD_EXECPREFIX: /usr
-BUILD_INCLUDEDIR: /usr/include
-BUILD_LIBDIR: /usr/lib or /usr/lib/(MULTIARCH suffix)
-BUILD_SYSCONFDIR: /usr/etc
-BUILD_LOCALSTATEDIR:/var
+BIN_PATH: ${HOME}/.bbxb/< projectname >/< platformname >/binaries (destination of build)  
+DISTOS_PATH: ${HOME}/.bbxb/< projectname >/< platformname >/distos (source of distribution libraries)  
+BUILD_PREFIX: /usr  
+BUILD_EXECPREFIX: /usr  
+BUILD_INCLUDEDIR: /usr/include  
+BUILD_LIBDIR: /usr/lib or /usr/lib/(MULTIARCH suffix)  
+BUILD_SYSCONFDIR: /usr/etc  
+BUILD_LOCALSTATEDIR:/var  
 
 **: mandatory information*
 
