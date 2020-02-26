@@ -1,4 +1,4 @@
-# bbcrossbuild 0.9 Beta
+# bbcrossbuild 1.0
 This is a framework to cross-compile defined packages using an optional predefined sysroot directory.
 ## Current Limitations
 
