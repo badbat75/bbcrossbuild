@@ -432,6 +432,8 @@ function build () (
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -C opt-level=${OPTLEVEL}}"
+		local CARGO_BIN=${CARGO_BIN:-${BUILD_EXECPREFIX}/bin}
+		local CARGO_LIB=${CARGO_LIB:-${BUILD_LIBDIR}${BUILD_LIBSUFFIX}}
 		[ ${CARGO_STRIP:-0} -eq 1 ] && local STRIP_FLAG=-s
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_RUSTFLAGS+=" -C lto"
 		cat > ${HARCH}-gcc <<-EOF
