@@ -34,13 +34,9 @@ Run your build using the predefined projects
 
 ### Define your project
 
-TBC
+TBD
 
-### Define your package**
-
-TBC
-
-### Define your platform**
+### Define your package
 
 #### Package definition
 
@@ -144,7 +140,7 @@ Specify if the binaries should be stripped out of unneeded symbols
 #### Install process
 
 **INST_CMD:**
-command to use for make install command. Most commons defined in package's Makefile are install or install-strip but you can pass also different make parameters in. i.e: "all check install-strip"
+command to use for make install command. Most commons defined in package's Makefile are install or install-strip but you can pass also different make parameters in. i.e: "all check install-strip".  
 `INST_CMD=install|install-strip`
 
 #### Post build process
@@ -156,17 +152,21 @@ Runs commands on source files after build and installation on build directory:
 #### Environment variables
 The following environemnt variables can be used to create your package and default values are:
 
-BIN_PATH: ${HOME}/.bbxb/< projectname >/< platformname >/binaries (destination of build)  
-DISTOS_PATH: ${HOME}/.bbxb/< projectname >/< platformname >/distos (source of distribution libraries)  
-BUILD_PREFIX: /usr  
-BUILD_EXECPREFIX: /usr  
-BUILD_INCLUDEDIR: /usr/include  
-BUILD_LIBDIR: /usr/lib or /usr/lib/(MULTIARCH suffix)  
-BUILD_SYSCONFDIR: /usr/etc  
-BUILD_LOCALSTATEDIR:/var  
+`BIN_PATH`: ${HOME}/.bbxb/< projectname >/< platformname >/binaries (destination of build)  
+`DISTOS_PATH`: ${HOME}/.bbxb/< projectname >/< platformname >/distos (source of distribution libraries)  
+`BUILD_PREFIX`: /usr  
+`BUILD_EXECPREFIX`: /usr  
+`BUILD_INCLUDEDIR`: /usr/include  
+`BUILD_LIBDIR`: /usr/lib or /usr/lib/(MULTIARCH suffix)  
+`BUILD_SYSCONFDIR`: /usr/etc  
+`BUILD_LOCALSTATEDIR`:/var  
 
 **: mandatory information*
 
+### Define your platform
+
+TBD
+
 ### Create your sysroot
 
-TBC
+TBD
