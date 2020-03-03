@@ -25,25 +25,52 @@ MPFR_VER=${MPFR_VER:-4.0.2}
 MPC_VER=${MPC_VER:-1.1.0}
 ISL_VER=${ISL_VER:-0.22}
 
-function create_sysroot () {
-	function libraries_relink () {
-		trap 'STATUS=${?}; \
-			set +x; \
-			trap ERR; \
-			return ${STATUS}' ERR
+function prepare_sysroot () {
+	trap 'STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${LOG_PATH}/sysroot.log ];
+		then \
+			echo "Log ${LOG_PATH}/sysroot.log:"; \
+			echo; \
+			tail -n24 ${LOG_PATH}/sysroot.log; \
+		fi;
+		trap ERR; \
+		return ${STATUS}' ERR
 
-		echo "DISTOS_PATH: ${DISTOS_PATH}"
-		echo
+	echo -n "Preparing sysroot..."
+	if [ -d ${DISTOS_PATH} ]
+	then
+		if [ ! $(stat -c '%u' ${DISTOS_PATH}) -eq $(id -u) ]
+		then
+			local SUDO_CMD='sudo'
+		fi
+
+		echo "DISTOS_PATH: ${DISTOS_PATH}" >> ${LOG_PATH}/sysroot.log 2>&1
+		echo >> ${LOG_PATH}/sysroot.log 2>&1
 
 		for i in $(find -L ${DISTOS_PATH}/usr/lib/${HARCH} -lname "/lib/${HARCH}*");
 		do
-			echo -n "Relinking $i... "
-			ln -f -s ../../..$(readlink $i) $i
-			echo "done."
+			echo -n "Relinking $i... " >> ${LOG_PATH}/sysroot.log 2>&1
+			eval ${SUDO_CMD} ln -f -s ../../..$(readlink $i) $i >> ${LOG_PATH}/sysroot.log 2>&1
+			echo "done." >> ${LOG_PATH}/sysroot.log 2>&1
 		done
-		trap ERR
-	}
 
+		if [ -f ${DISTOS_PATH}/usr/lib/${HARCH}/pkgconfig/libical.pc ]
+		then
+			eval ${SUDO_CMD} sed -i "s|/usr/lib/${HARCH:+${HARCH}/}libicu|${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}libicu|g" ${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}pkgconfig/libical.pc
+		fi
+		echo "done."
+		echo
+	else
+		echo "fail. No image mounted."
+		return 1
+	fi
+
+	trap ERR
+}
+
+function create_sysroot () {
 	trap 'STATUS=${?}; \
 		echo "fail."; \
 		echo; \
@@ -68,11 +95,7 @@ function create_sysroot () {
 		else
 			tar xf ${IMG_PATH}/${1} -C${DISTOS_PATH} ${ARCHIVE_DIRS} >> ${LOG_PATH}/sysroot.log 2>&1
 		fi
-		libraries_relink >> ${LOG_PATH}/sysroot.log 2>&1
-		if [ -f ${DISTOS_PATH}/usr/lib/${HARCH}/pkgconfig/libical.pc ]
-		then
-			sed -i "s|/usr/lib/${HARCH:+${HARCH}/}libicu|${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}libicu|g" ${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}pkgconfig/libical.pc
-		fi
+		prepare_sysroot
 		echo "done."
 		echo
 	else
@@ -655,14 +678,18 @@ function setup_python () {
 		rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}
 	else
 		echo "already there."
+	fi	
+	if [ ! $(stat -c '%u' ${DISTOS_PATH}) -eq $(id -u) ]
+	then
+		local SUDO_CMD='sudo'
 	fi
 	if [ -f ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/plat-${HARCH}/_sysconfigdata_m.py ]
 	then
-		mv ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/plat-${HARCH}/_sysconfigdata_m.py ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/_sysconfigdata.py
+		eval ${SUDO_CMD} mv ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/plat-${HARCH}/_sysconfigdata_m.py ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/_sysconfigdata.py
 	fi
 	if [ -d ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m-${HARCH} ] && [ ! -L ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m ]
 	then
-		ln -s config-${PYTHONBIN_VER}m-${HARCH} ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m
+		eval ${SUDO_CMD} ln -s config-${PYTHONBIN_VER}m-${HARCH} ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m
 	fi
 	trap ERR
 	trap 'STATUS=${?}; \
