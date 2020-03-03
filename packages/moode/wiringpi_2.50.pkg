@@ -1,8 +1,13 @@
 # wiringpi_2.50
-PKG_URL="https://github.com/WiringPi/WiringPi/releases/tag/final_official_2.50"
+PKG_URL="https://github.com/WiringPi/WiringPi/archive/final_official_2.50.tar.gz"
 PATCHES="wiringpi-makefiles.patch"
 BUILD_PROCESS=simplemake
 INST_CMD=install
 PKG_DEPS=
 PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} HARCH=${HARCH}"
 PKG_CFLAGS="-I."
+
+#PKG_PREBUILD="sed -i '/\$Q \$(LDCONFIG)/d' wiringPi/Makefile
+#sed -i 's|\$(DESTDIR)/lib|\$(DESTDIR)\$(PREFIX)/lib|g' wiringPi/Makefile
+#sed -i 's|\$(DESTDIR)\$(PREFIX)/lib|\$(DESTDIR)\$(PREFIX)/lib${BUILD_LIBSUFFIX}|g' wiringPi/Makefile"
+#CONF_PATH=wiringPi

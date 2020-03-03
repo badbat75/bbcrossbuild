@@ -237,7 +237,7 @@ function build () (
 		return ${STATUS};' ERR
 		set -x
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
-		cd ${PKG_BLDPATH}
+		cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ]

@@ -95,7 +95,7 @@ Override configure command. "configure" by default
 Specify configure, cmake or meson parameters  
 `CONF_FLAGS="--disable-feature or -DENABLE_FEATURE"`
 
-**AUTOCONF_PATH:**
+**CONF_PATH:**
 Specify source subdirectory where to run the build  
 `CONF_PATH=subdir1/subdir2`
 
