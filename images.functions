@@ -13,6 +13,7 @@ function mount_image () {
 	local MOUNT_DIR=${2}
 	shift 2
 	local MOUNTPOINTSLIST="${@}"
+	LODEVIMAGES[${MOUNTPOINTROOT}]=${IMAGEFILE_PATH}
 
 	if [ -z "${MOUNTPOINTSLIST}" ]
 	then
@@ -157,7 +158,6 @@ function mount_from () {
 	IMGRESIZE="${IMGRESIZE}" mount_image ${DISKIMAGES_PATH}/${IMGFILE} ${PLATFORM_PATH}/${MOUNTPOINTROOT} ${MOUNTPOINTSLIST}
 	echo "done."
 	echo
-
 	#set +x
 	trap ERR
 }
@@ -171,9 +171,26 @@ function unmount_dir () {
 		return ${STATUS};' ERR
 	#set -x
 
+	local ACTION=""
+
+	case ${1} in
+		--finalize)
+			local ACTION="finalize"
+			shift
+			;;
+		--nofinalize)
+			shift
+			;;
+	esac
+
 	local MOUNTPOINTROOT=${1}
 
 	unmount_image ${PLATFORM_PATH}/${MOUNTPOINTROOT}
+
+	case "${ACTION}" in
+		"finalize")	mv ${LODEVIMAGES[${MOUNTPOINTROOT}]} ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.img
+					;;
+	esac
 
 	echo
 
@@ -248,12 +265,15 @@ function inject_into_root_dir () {
 	case ${OBJECT} in
 		sfx_archive)
 			local TARGET_FILE=${PRJ_NAME}.sfx
+			local SOURCE_PATH=${PLATFORM_PATH}
 			;;
 		archive)
 			local TARGET_FILE=${PRJ_NAME}.tar.xz
+			local SOURCE_PATH=${PLATFORM_PATH}
 			;;
 		*)
-			local TARGET_FILE=${OBJECT}
+			local TARGET_FILE=$(basename ${OBJECT})
+			local SOURCE_PATH=$(dirname ${OBJECT})
 			;;
 	esac
 
@@ -268,7 +288,7 @@ function inject_into_root_dir () {
 			sudo chown ${4} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 		fi
 	fi
-	sudo cp ${PLATFORM_PATH}/${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+	sudo cp ${SOURCE_PATH}/${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	if [ ! -z ${TARGET_OWNER} ]
 	then
 		echo -n "setting ownership of ${TARGET_OWNER} on ${TARGET_FILE}..."
@@ -282,4 +302,6 @@ function inject_into_root_dir () {
 }
 
 unset MOUNTPOINTS
+unset LODEVIMAGES
 declare -A MOUNTPOINTS
+declare -A LODEVIMAGES
