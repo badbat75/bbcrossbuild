@@ -86,6 +86,7 @@ function mount_image () {
 		sudo mount -t tmpfs -o nosuid,nodev,mode=755 /run ${MOUNT_DIR}/run >> ${LOG_PATH}/images_${MOUNTPOINTNAME}.log 2>&1
 		sudo mount -t devpts /dev/pts ${MOUNT_DIR}/dev/pts >> ${LOG_PATH}/images_${MOUNTPOINTNAME}.log 2>&1
 		sudo mount -t proc /proc ${MOUNT_DIR}/proc >> ${LOG_PATH}/images_${MOUNTPOINTNAME}.log 2>&1
+
 		if [ ! -d ${MOUNT_DIR}/tmp/bbxb ]
 		then
 			mkdir -p ${MOUNT_DIR}/tmp/bbxb
@@ -349,6 +350,11 @@ function inject_into_root_dir () {
 			local TARGET_FILE=${PRJ_NAME}.tar.xz
 			local SOURCE_PATH=${PLATFORM_PATH}
 			;;
+		binaries)
+			local TARGET_FILE=*
+			local SOURCE_PATH=${PLATFORM_PATH}/binaries
+			local TARGET_OWNER=
+			;;
 		*)
 			local TARGET_FILE=$(basename ${OBJECT})
 			local SOURCE_PATH=$(dirname ${OBJECT})
@@ -366,7 +372,7 @@ function inject_into_root_dir () {
 			sudo chown ${4} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 		fi
 	fi
-	sudo cp ${SOURCE_PATH}/${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+	sudo cp -frv ${SOURCE_PATH}/${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	if [ ! -z ${TARGET_OWNER} ]
 	then
 		echo -n "setting ownership of ${TARGET_OWNER} on ${TARGET_FILE}..."
