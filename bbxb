@@ -31,6 +31,7 @@ fi
 echo "Project path: ${DATA_PATH}/${PRJ_NAME}"
 echo
 
-trap 'STATUS=${?}; unmount_all; exit ${STATUS}' ERR
+trap 'STATUS=${?}; echo; check_images_functions && unmount_all || true; exit ${STATUS}' ERR SIGINT
 . $PRJ
-trap ERR
+check_images_functions && unmount_all || true
+trap ERR SIGINT

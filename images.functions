@@ -2,6 +2,15 @@
 
 check_core_functions
 
+check_images_functions () {
+	is_core_functions 2>/dev/null
+	if [ ! ${?} ]
+	then
+		echo "Core functions not loaded"
+		exit 1
+	fi
+}
+
 function mount_image () {
 	trap 'STATUS=${?}; \
 		set +x; \
@@ -174,6 +183,7 @@ function unmount_dir () {
 		set +x; \
 		trap ERR; \
 		return ${STATUS};' ERR
+
 	#set -x
 
 	local ACTION=""
@@ -189,7 +199,7 @@ function unmount_dir () {
 	esac
 
 	local MOUNTPOINTNAME=${1}
-	echo -n "Unmounting ${image}..."
+	echo -n "Unmounting ${MOUNTPOINTNAME}..."
 	unmount_image ${PLATFORM_PATH}/${MOUNTPOINTNAME}
 
 	case "${ACTION}" in
@@ -327,3 +337,7 @@ declare -A MOUNTPOINTS
 declare -A LODEVIMAGES
 
 MOUNTED_IMAGES=""
+
+is_images_functions () {
+	return 0
+}

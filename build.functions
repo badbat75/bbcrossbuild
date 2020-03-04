@@ -71,8 +71,14 @@ function build () (
 	function downloadsources () {
 		trap 'STATUS=${?}; \
 			set +x; \
-			trap ERR; \
+			trap ERR SIGINT; \
 			return ${STATUS};' ERR
+	
+		trap 'set +x; \
+			trap ERR SIGINT; \
+			[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH} || true;
+			return 100' SIGINT
+
 		set -x
 		if [ ! -z ${PKG_URL} ]
 		then
@@ -89,15 +95,21 @@ function build () (
 			fi
 		fi
 		set +x
-		trap ERR
+		trap ERR SIGINT
 	}
 
 	function preparesources () {
 		trap 'STATUS=${?}; \
 			echo "Fail."; \
 			set +x; \
-			trap ERR; \
+			trap ERR SIGINT; \
+			[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH} || true; \
 			return ${STATUS};' ERR
+
+		trap 'set +x; \
+			trap ERR SIGINT; \
+			[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH} || true;
+			return 100' SIGINT
 
 		cd ${PKG_SRCPATH}
 		if [ "x${PATCHDEB}" != "x" ]
@@ -148,7 +160,7 @@ function build () (
 		fi
 		echo -n "${SPACES}"
 		cd ${BB_HOME}
-		trap ERR
+		trap ERR SIGINT
 	}
 
 	function downloadonly () {

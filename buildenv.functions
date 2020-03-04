@@ -55,10 +55,9 @@ function prepare_sysroot () {
 			eval ${SUDO_CMD} ln -f -s ../../..$(readlink $i) $i >> ${LOG_PATH}/sysroot.log 2>&1
 			echo "done." >> ${LOG_PATH}/sysroot.log 2>&1
 		done
-
 		if [ -f ${DISTOS_PATH}/usr/lib/${HARCH}/pkgconfig/libical.pc ]
 		then
-			eval ${SUDO_CMD} sed -i "s|/usr/lib/${HARCH:+${HARCH}/}libicu|${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}libicu|g" ${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}pkgconfig/libical.pc
+			eval ${SUDO_CMD} sed -i "s#/usr/lib/${HARCH:+${HARCH}/}libicu#${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}libicu#g" ${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}pkgconfig/libical.pc
 		fi
 		echo "done."
 		echo
