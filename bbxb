@@ -31,7 +31,8 @@ fi
 echo "Project path: ${DATA_PATH}/${PRJ_NAME}"
 echo
 
-trap 'STATUS=${?}; echo; check_images_functions && unmount_all || true; exit ${STATUS}' ERR SIGINT
+trap 'STATUS=${?}; echo; echo "ERR received."; echo; check_images_functions && unmount_all --kill || true; trap - ERR SIGINT; exit ${STATUS}' ERR
+trap 'echo; echo "SIGINT received."; trap - ERR SIGINT; echo; check_images_functions && unmount_all --kill || true; exit 0' SIGINT
 . $PRJ
 check_images_functions && unmount_all || true
-trap ERR SIGINT
+trap - ERR SIGINT

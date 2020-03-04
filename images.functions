@@ -3,10 +3,10 @@
 check_core_functions
 
 check_images_functions () {
-	is_core_functions 2>/dev/null
+	is_images_functions 2>/dev/null
 	if [ ! ${?} ]
 	then
-		echo "Core functions not loaded"
+		echo "Images functions not loaded"
 		exit 1
 	fi
 }
@@ -14,7 +14,7 @@ check_images_functions () {
 function mount_image () {
 	trap 'STATUS=${?}; \
 		set +x; \
-		trap ERR; \
+		trap - ERR; \
 		unmount_dir ${MOUNT_DIR}
 		return ${STATUS};' ERR
 
@@ -91,7 +91,7 @@ function mount_image () {
 			mkdir -p ${MOUNT_DIR}/tmp/bbxb
 		fi
 		sudo mount -o bind $(readlink -m ${MOUNT_DIR}/..) ${MOUNT_DIR}/tmp/bbxb
-		MOUNTPOINTS[${MOUNT_DIR}]="${MOUNT_DIR}/tmp/bbxb ${MOUNT_DIR}/proc ${MOUNT_DIR}/dev/pts ${MOUNT_DIR}/run ${MOUNTPOINTS[${MOUNT_DIR}]}"
+		MOUNTPOINTS[${MOUNT_DIR}]="${MOUNT_DIR}/proc ${MOUNT_DIR}/dev/pts ${MOUNT_DIR}/run ${MOUNT_DIR}/tmp/bbxb ${MOUNTPOINTS[${MOUNT_DIR}]}"
 	fi
 	echo "Done."
 	MOUNTED_IMAGES="${MOUNTED_IMAGES} ${MOUNTPOINTNAME}"
@@ -101,15 +101,11 @@ function mount_image () {
 	sudo mv ${MOUNT_DIR}/etc/resolv.conf ${MOUNT_DIR}/etc/resolv.conf.bbxb >> ${LOG_PATH}/images_${MOUNTPOINTNAME}.log 2>&1
 	sudo cp /etc/resolv.conf ${MOUNT_DIR}/etc/resolv.conf >> ${LOG_PATH}/images_${MOUNTPOINTNAME}.log 2>&1
 	echo "Done."
-	trap ERR
+	trap - ERR
 }
 
 function unmount_image () {
-	trap 'STATUS=${?}; \
-		set +x; \
-		trap ERR; \
-		return ${STATUS};' ERR
-
+	trap - ERR
 	#set -x
 	local MOUNT_DIR=${1}
 
@@ -124,7 +120,25 @@ function unmount_image () {
 	echo -n "Unmount all partitions..."
 	if [ "x${MOUNTPOINTS[${MOUNT_DIR}]}" != "x" ]
 	then
-		sudo umount ${MOUNTPOINTS[${MOUNT_DIR}]} >> ${LOG_PATH}/images_${MOUNTPOINTNAME}.log 2>&1
+		for dir in ${MOUNTPOINTS[${MOUNT_DIR}]}
+		do
+			echo -n "Unmounting ${dir}..." >> ${LOG_PATH}/images_${MOUNTPOINTNAME}.log 2>&1
+			local STATUS=1
+			while [ ! ${STATUS} -eq 0 ]
+			do
+				sudo umount -f ${dir} >> ${LOG_PATH}/images_${MOUNTPOINTNAME}.log 2>&1
+				local STATUS=${?}
+				case ${STATUS} in
+				    0)
+						echo "done." >> ${LOG_PATH}/images_${MOUNTPOINTNAME}.log 2>&1
+						;;
+					*)
+						echo "failed ${STATUS}, sleeping..." >> ${LOG_PATH}/images_${MOUNTPOINTNAME}.log 2>&1
+						sleep 1
+						;;
+				esac
+			done
+		done
 	fi
 	MOUNTED_IMAGES=$(echo ${MOUNTED_IMAGES} | sed "s/ *${MOUNTPOINTNAME}//")
 	# Delete the loopback devices
@@ -133,13 +147,12 @@ function unmount_image () {
 	echo "Done."
 
 	#set +x
-	trap ERR
 }
 
 function mount_from () {
 	# mount_from <URL> <Image2Mount> <MountPointName> <partnumber1:/> [<partnumber2:mountpoint2]...[<partnumbern:mountpointn]
 	trap 'STATUS=${?}; \
-		echo "fail."; \
+		echo "$0 fail."; \
 		echo; \
 		if [ -f ${LOG_PATH}/images_${MOUNTPOINTNAME}.log ];
 		then \
@@ -148,7 +161,7 @@ function mount_from () {
 			tail -n24 ${LOG_PATH}/images_${MOUNTPOINTNAME}.log; \
 		fi; \
 		set +x; \
-		trap ERR; \
+		trap - ERR; \
 		return ${STATUS};' ERR
 	#set -x
 
@@ -173,15 +186,15 @@ function mount_from () {
 	echo "done."
 	echo
 	#set +x
-	trap ERR
+	trap - ERR
 }
 
 function unmount_dir () {
 	trap 'STATUS=${?}; \
-		echo "fail."; \
+		echo "$0 fail [unmount_dir]."; \
 		echo; \
 		set +x; \
-		trap ERR; \
+		trap - ERR; \
 		return ${STATUS};' ERR
 
 	#set -x
@@ -190,16 +203,35 @@ function unmount_dir () {
 
 	case ${1} in
 		--finalize)
-			local ACTION="finalize"
 			shift
+			local ACTION="finalize"
 			;;
 		--nofinalize)
 			shift
+			;;
+		--kill)
+			shift
+			local ACTION="kill"
 			;;
 	esac
 
 	local MOUNTPOINTNAME=${1}
 	echo -n "Unmounting ${MOUNTPOINTNAME}..."
+
+	case "${ACTION}" in
+		"kill")
+			echo -n "killing processes using filesystem..."
+			local PROC="$(lsof -t -w ${PLATFORM_PATH}/${MOUNTPOINTNAME} | xargs)"
+			while [ ! "${PROC}" == "" ]
+			do
+				echo -n "killing ${PROC}"
+				sudo kill -9 ${PROC}
+				sleep 1
+				local PROC="$(lsof -t -w ${PLATFORM_PATH}/${MOUNTPOINTNAME} | xargs)"
+			done
+			;;
+	esac
+
 	unmount_image ${PLATFORM_PATH}/${MOUNTPOINTNAME}
 
 	case "${ACTION}" in
@@ -208,40 +240,55 @@ function unmount_dir () {
 	esac
 	echo
 	#set +x
-	trap ERR
+	trap - ERR
 }
 
 function unmount_all () {
 	trap 'STATUS=${?}; \
-		echo "fail."; \
+		echo "fail [unmount_all]."; \
 		echo; \
 		set +x; \
-		trap ERR; \
+		trap - ERR; \
 		return ${STATUS};' ERR
 	#set -x
 
+	case ${1} in
+		--finalize)
+			shift
+			local ACTION="--finalize"
+			;;
+		--nofinalize)
+			shift
+			;;
+		--kill)
+			shift
+			local ACTION="--kill"
+			;;
+	esac
+
 	for image in ${MOUNTED_IMAGES}
 	do
-		unmount_dir ${image}
+		unmount_dir ${ACTION} ${image}
 	done
 	#set +x
-	trap ERR
+	trap - ERR
 }
 
 function run_on_root_dir () {
 	trap 'STATUS=${?}; \
-		echo "fail. Unmounting ${CHROOT_DIR}."; \
+		echo; \
+		echo "fail [run_on_root_dir]." >> ${LOG_PATH}/images_${CHROOT_DIR}.log; \
 		echo; \
 		set +x; \
-		trap ERR; \
-		if [ -f ${LOG_PATH}/images_${MOUNTPOINTNAME}.log ];
+		trap - ERR; \
+		if [ -f ${LOG_PATH}/images_${CHROOT_DIR}.log ];
 		then \
-			echo "Log ${LOG_PATH}/images_${MOUNTPOINTNAME}.log:"; \
+			echo "Log ${LOG_PATH}/images_${CHROOT_DIR}.log:"; \
 			echo; \
-			tail -n24 ${LOG_PATH}/images_${MOUNTPOINTNAME}.log; \
+			tail -n24 ${LOG_PATH}/images_${CHROOT_DIR}.log; \
 		fi; \
-		unmount_dir ${CHROOT_DIR}; \
 		return ${STATUS};' ERR
+			
 	#set -x
 
 	local CHROOT_DIR=${1}
@@ -261,11 +308,12 @@ function run_on_root_dir () {
 		local CHROOT_PROMPT+='$ '
 	fi
 	echo "${CHROOT_PROMPT}${CHROOT_COMMAND}" >> ${LOG_PATH}/images_${CHROOT_DIR}.log 2>&1
-	sudo chroot ${PLATFORM_PATH}/${CHROOT_DIR} su - ${CHROOT_USER} -c "${CHROOT_COMMAND}" >> ${LOG_PATH}/images_${CHROOT_DIR}.log 2>&1
+	sudo chroot ${PLATFORM_PATH}/${CHROOT_DIR} su - --pty ${CHROOT_USER} -c \
+		"${CHROOT_COMMAND}" >> ${LOG_PATH}/images_${CHROOT_DIR}.log 2>&1
 	echo >> ${LOG_PATH}/images_${CHROOT_DIR}.log 2>&1
 
 	#set +x
-	trap ERR
+	trap - ERR
 }
 
 function inject_into_root_dir () {
@@ -273,7 +321,7 @@ function inject_into_root_dir () {
 		echo "fail. Unmounting ${ROOT_DIR}."; \
 		echo; \
 		set +x; \
-		trap ERR; \
+		trap - ERR; \
 		if [ -f ${LOG_PATH}/images_${ROOT_DIR}.log ];
 		then \
 			echo "Log ${LOG_PATH}/images_${ROOT_DIR}.log:"; \
@@ -328,7 +376,7 @@ function inject_into_root_dir () {
 	echo
 
 	#set +x
-	trap ERR
+	trap - ERR
 }
 
 unset MOUNTPOINTS

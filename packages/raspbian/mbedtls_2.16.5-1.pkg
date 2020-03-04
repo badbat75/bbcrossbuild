@@ -1,6 +1,6 @@
-# mbedtls_2.16.4-1
-PKG_URL="http://archive.raspbian.org/raspbian/pool/main/m/mbedtls/mbedtls_2.16.4.orig.tar.xz"
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/m/mbedtls/mbedtls_2.16.4-1.debian.tar.xz"
+# mbedtls_2.16.5-1
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/m/mbedtls/mbedtls_2.16.5.orig.tar.xz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/m/mbedtls/mbedtls_2.16.5-1.debian.tar.xz"
 PKG_DEPS=""
 BUILD_PROCESS=cmakemake
 CONF_FLAGS="-DUSE_SHARED_MBEDTLS_LIBRARY=ON"
