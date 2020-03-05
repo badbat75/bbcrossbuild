@@ -330,14 +330,13 @@ function inject_into_root_dir () {
 			echo; \
 			tail -n24 ${LOG_PATH}/images_${ROOT_DIR}.log; \
 		fi; \
-		unmount_dir ${ROOT_DIR}; \
 		return ${STATUS};' ERR
 	#set -x
 
 	local ROOT_DIR=${1}
 	local OBJECT=${2}
 	local TARGET_DIR=${3}
-	local TARGET_OWNER=${4}
+	local TARGET_OWNER=${4:-"root:root"}
 
 	local ROOT_DIR=$(echo ${ROOT_DIR} | sed 's/^//g')
 	local TARGET_DIR=$(echo ${TARGET_DIR} | sed 's/^//g')
@@ -354,7 +353,6 @@ function inject_into_root_dir () {
 		binaries)
 			local TARGET_FILE=*
 			local SOURCE_PATH=${PLATFORM_PATH}/binaries
-			local TARGET_OWNER=
 			;;
 		*)
 			local TARGET_FILE=$(basename ${OBJECT})
@@ -363,22 +361,22 @@ function inject_into_root_dir () {
 	esac
 
 	echo -n "Injecting ${TARGET_FILE} into ${TARGET_DIR}"...
-
 	if [ ! -d ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} ]
 	then
 		sudo mkdir -p ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-		if [ ! -z ${TARGET_OWNER} ]
-		then
-			echo -n "setting ownership of ${TARGET_OWNER} on ${TARGET_DIR}..."
-			sudo chown ${4} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-		fi
+		echo -n "setting ownership of ${TARGET_OWNER} on ${TARGET_DIR}..."
+		sudo chown -h ${TARGET_OWNER} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	fi
-	sudo cp -frv ${SOURCE_PATH}/${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-	if [ ! -z ${TARGET_OWNER} ]
-	then
-		echo -n "setting ownership of ${TARGET_OWNER} on ${TARGET_FILE}..."
-		sudo chown -R ${4} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}/${TARGET_FILE} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-	fi
+	sudo cp -fr --preserve=mode,timestamps ${SOURCE_PATH}/${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+	echo -n "setting ownership of ${TARGET_OWNER} on ${TARGET_FILE}..."
+	case ${OBJECT} in
+		binaries)
+			find ${BIN_PATH} -printf "${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}%P\n" | xargs -d'\n' -n1 -P${NPROCS} sudo chown -h ${TARGET_OWNER}
+			;;
+		*)
+			sudo chown -hR ${TARGET_OWNER} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}/${TARGET_FILE} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+			;;
+	esac
 	echo "done."
 	echo
 
