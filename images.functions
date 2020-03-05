@@ -333,6 +333,15 @@ function inject_into_root_dir () {
 		return ${STATUS};' ERR
 	#set -x
 
+	local ACTION=""
+
+	case ${1} in
+		--remove_devfiles)
+			shift
+			local ACTION="remove_devfiles"
+			;;
+	esac
+
 	local ROOT_DIR=${1}
 	local OBJECT=${2}
 	local TARGET_DIR=${3}
@@ -360,7 +369,10 @@ function inject_into_root_dir () {
 			;;
 	esac
 
-	echo -n "Injecting ${TARGET_FILE} into ${TARGET_DIR}"...
+	echo -n "Injecting ${TARGET_FILE} into ${TARGET_DIR:-/}..."
+	case ${ACTION} in
+		remove_devfiles) remove_devfiles no-exitstatus ;;
+	esac
 	if [ ! -d ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} ]
 	then
 		sudo mkdir -p ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
@@ -376,6 +388,9 @@ function inject_into_root_dir () {
 		*)
 			sudo chown -hR ${TARGET_OWNER} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}/${TARGET_FILE} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 			;;
+	esac
+	case ${ACTION} in
+		remove_devfiles) resume_devfiles no-exitstatus ;;
 	esac
 	echo "done."
 	echo
