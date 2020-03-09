@@ -1,8 +1,0 @@
-# wiringpi_8d188fa
-PKG_URL="http://bbb-build-artifacts.s3-eu-west-1.amazonaws.com/moode/3rdparty/wiringPi-8d188fa.tar.gz"
-PATCHES="wiringpi-makefiles.patch"
-BUILD_PROCESS=simplemake
-INST_CMD=install
-PKG_DEPS=
-PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} HARCH=${HARCH}"
-PKG_CFLAGS="-I."
