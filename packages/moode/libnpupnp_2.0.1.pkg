@@ -1,4 +1,4 @@
-# linpupnp_2.0.1
+# libnpupnp_2.0.1
 PKG_URL="https://www.lesbonscomptes.com/upmpdcli/downloads/libnpupnp-2.0.1.tar.gz"
 PATCHES=
 BUILD_PROCESS=configmake
