@@ -1,5 +1,5 @@
 # moode_r650
-PKG_URL="https://github.com/moode-player/moode/archive/774cab9ca9b4616371bfeb422fd5844cd5e85f5e.tar.gz"
+PKG_URL="https://github.com/moode-player/moode/archive/5ed5b36057a0a1d9a32448631439f46313f3e39e.tar.gz"
 #PKG_URL="https://github.com/moode-player/moode/archive/r650prod.tar.gz"
 PKG_SRCDIR=moode_r650
 BUILD_PROCESS=downloadonly
