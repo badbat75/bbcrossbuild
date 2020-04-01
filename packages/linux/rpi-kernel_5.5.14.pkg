@@ -1,0 +1,4 @@
+# rpi-kernel_5.5.14
+PKG_URL="https://github.com/raspberrypi/linux/archive/f7e0d1321931f3858826f970f262fb3cfa9e1bce.tar.gz"
+BUILD_PROCESS=kernelbuild
+INST_CMD="INSTALL_MOD_STRIP=1"
