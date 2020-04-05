@@ -150,7 +150,7 @@ function build () (
 			for file in $(find ${PKG_SRCPATH}/bbxb_patches -type f)
 			do
 				echo -n "Applying ${file} patch..."
-				patch -p1 < ${file} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+				patch -f -p1 < ${file} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 				echo "Done."
 				rm ${file}
 			done
