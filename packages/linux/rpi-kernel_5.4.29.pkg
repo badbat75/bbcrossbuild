@@ -1,4 +1,4 @@
 # rpi-kernel_5.4.29
-PKG_URL="https://github.com/raspberrypi/linux/archive/8a8e4f3e023685d169a4a32c9fc36d4d599d9823.tar.gz"
+PKG_URL="https://github.com/raspberrypi/linux/archive/dc11cb9f890197f976033255e09023c28c988b76.tar.gz"
 BUILD_PROCESS=kernelbuild
 INST_CMD="INSTALL_MOD_STRIP=1"
