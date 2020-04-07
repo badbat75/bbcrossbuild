@@ -1,11 +1,10 @@
 # bluez_5.54
 PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-5.54.tar.xz"
-PATCHES="https://git.kernel.org/pub/scm/bluetooth/bluez.git/patch/?id=66f4c241beb46e4eb3e0627650b3e984f01a7ff5"
+#PATCHES="https://git.kernel.org/pub/scm/bluetooth/bluez.git/patch/?id=66f4c241beb46e4eb3e0627650b3e984f01a7ff5"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-library --enable-deprecated"
 INST_CMD="libexecdir=\$(sbindir) install-strip"
 #PATCHDEB=""
-#PKG_PREBUILD="curl -s https://git.kernel.org/pub/scm/bluetooth/bluez.git/patch/?id=f710439ed27668f4f0bc97e3f094bf722ee9a3eb | patch -f -R -p1"
 # Moode directory location search for bluetoothd and obexd
 PKG_POSTBUILD="ln -fs bluetooth/bluetoothd ${BIN_PATH}/usr/sbin/bluetoothd
 ln -fs bluetooth/obexd ${BIN_PATH}/usr/sbin/obexd"
