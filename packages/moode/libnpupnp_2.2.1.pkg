@@ -1,5 +1,5 @@
-# libnpupnp_2.1.1
-PKG_URL="https://www.lesbonscomptes.com/upmpdcli/downloads/libnpupnp-2.1.1.tar.gz"
+# libnpupnp_2.2.1
+PKG_URL="https://www.lesbonscomptes.com/upmpdcli/downloads/libnpupnp-2.2.1.tar.gz"
 PATCHES=
 BUILD_PROCESS=configmake
 # CONF_FLAGS=""

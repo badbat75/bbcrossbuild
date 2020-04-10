@@ -1,5 +1,5 @@
 # moode_r650
-PKG_URL="https://github.com/moode-player/moode/archive/0cc1468b7f72d036f944a2b0bf4cf67d9fd21eb8.tar.gz"
+PKG_URL="https://github.com/moode-player/moode/archive/9115d2ecf9de60cfba2d4d5140b18dd9701db14c.tar.gz"
 #PKG_URL="https://github.com/moode-player/moode/archive/r650prod.tar.gz"
 PKG_SRCDIR=moode_r650
 BUILD_PROCESS=downloadonly
@@ -117,4 +117,4 @@ sed -i 's|/usr/local/lib/python${PYTHONBIN_VER}/dist-packages/|/usr/lib/python${
 sed -i '/^ExecStart/ s/-p a2dp-sink$/-p a2dp-sink --sbc-xq --ldac-abr/g' ${BIN_PATH}/etc/systemd/system/bluealsa.service
 echo '### Only for bluez > 5.52'
 sed -i 's/ATTR{name}==\"\*:\*:\*:\*:\*:\*\"/ATTR{name}==\"*(AVCRP)\"/' ${BIN_PATH}/etc/udev/rules.d/10-a2dp-autoconnect.rules
-sed -i 's/^BTMAC=.*/BTMAC=00:00:00:00:00:00' ${BIN_PATH}/usr/local/bin/a2dp-autoconnect"
+sed -i 's/^BTMAC=.*/BTMAC=00:00:00:00:00:00/' ${BIN_PATH}/usr/local/bin/a2dp-autoconnect"
