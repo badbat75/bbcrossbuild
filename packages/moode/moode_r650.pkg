@@ -1,6 +1,6 @@
 # moode_r650
-PKG_URL="https://github.com/moode-player/moode/archive/7af774973102aa97ab0f7d789fd30fb4b3eb2bc4.tar.gz"
-#PKG_URL="https://github.com/moode-player/moode/archive/r650prod.tar.gz"
+#PKG_URL="https://github.com/moode-player/moode/archive/bbba5cabc890621e7ad6cb15c7e2ec6877de0c40.tar.gz"
+PKG_URL="https://github.com/moode-player/moode/archive/r650prod.tar.gz"
 PKG_SRCDIR=moode_r650
 BUILD_PROCESS=downloadonly
 PKG_DEPS="python/RPi.GPIO_0.7.0 python/python-musicpd_0.4.4"
