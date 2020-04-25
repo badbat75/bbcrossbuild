@@ -5,11 +5,11 @@ CONF_COPYSRC=1
 #CONF_FLAGS=""
 INST_CMD=install-strip
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/u/udevil/udevil_0.4.4-2.debian.tar.xz"
-PKG_CFLAGS=""
 PKG_DEPS=""
 PKG_PREBUILD="sed -i 's/-o root -g root //g' src/Makefile.am"
 PKG_POSTBUILD="install -m 0755 -d \${BIN_PATH}/media
     chmod 4755 \${BIN_PATH}/usr/bin/udevil
+    mkdir -p ${BIN_PATH}/lib/systemd/system
     mv \${BIN_PATH}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX}/systemd/system/devmon@.service \${BIN_PATH}/lib/systemd/system/
     rm -rf \${BIN_PATH}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX}/systemd
     install -d ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1

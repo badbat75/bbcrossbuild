@@ -7,6 +7,7 @@ INST_CMD=all
 PKG_POSTBUILD="install -D -m 0755 libuv.so ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libuv.so.0.10
 	ln -fs libuv.so.0.10 ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libuv.so.0
 	ln -fs libuv.so.0.10 ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libuv.so
+	install -d -m 0755 ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig
 	install -D -m 0644 debian/libuv.pc ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig
 	sed -i 's|/@DEB_HOST_MULTIARCH@|${BUILD_LIBSUFFIX}|g;s|@DEB_VERSION_UPSTREAM@|0.10|g' ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig/libuv.pc
 	install -D -m 0644 include/uv.h ${BIN_PATH}${BUILD_INCLUDEDIR}

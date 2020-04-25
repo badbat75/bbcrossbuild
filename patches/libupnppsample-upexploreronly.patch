@@ -1,10 +1,10 @@
 --- libupnppsamples-master/Makefile.am.orig	2019-02-28 17:36:42.493104200 +0100
 +++ libupnppsamples-master/Makefile.am	2019-02-28 17:37:23.604399600 +0100
-@@ -3,24 +3,6 @@
+@@ -3,25 +3,6 @@
  
- LDADD = -lupnpp -lpthread -lrt
+ LDADD = -lupnpp -lpthread
  
--bin_PROGRAMS = typedservice ohsender ohradio upexplorer multirdr \
+-bin_PROGRAMS = conman typedservice ohsender ohradio upexplorer multirdr \
 -             upsend uplistdir dumpXML \
 -             rdcvolume myrdcvolume hellodevice helloctl
 +bin_PROGRAMS = upexplorer
@@ -18,6 +18,7 @@
 -rdcvolume_SOURCES = src/rdcvolume.cpp
 -myrdcvolume_SOURCES = src/myrdcvolume.cpp
 -dumpXML_SOURCES = src/dumpXML.cpp
+-conman_SOURCES = src/conman.cpp
 -hellodevice_SOURCES = hello_src/hellodevice.cpp
 -helloctl_SOURCES = hello_src/helloctl.cpp
 -

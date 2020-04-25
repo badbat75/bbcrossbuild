@@ -1,8 +1,0 @@
-# libupnp_1.10.1
-PKG_URL="https://github.com/mrjimenez/pupnp/archive/26c32338323422c280da0da656ca911b9879f3c2.tar.gz"
-#PATCHDEB=""
-BUILD_PROCESS=configmake
-CONF_FLAGS="--without-documentation --disable-samples --enable-ipv6 --disable-test"
-INST_CMD=install
-PKG_LDFLAGS="-Wl,-z,defs -Wl,--as-needed"
-PKGDEPS=

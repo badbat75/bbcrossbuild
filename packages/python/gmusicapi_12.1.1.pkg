@@ -2,4 +2,4 @@
 PKG_URL="https://github.com/simon-weber/gmusicapi/archive/12.1.1.tar.gz"
 BUILD_PROCESS=pythonbuild
 # CONF_FLAGS=""
-PKG_DEPS="python/lxml_4.4.2 moode/recoll_1.26.3 python/mutagen-1.43.0"
+PKG_DEPS="python/lxml_4.5.0 moode/recoll_1.26.5 python/mutagen-1.44.0"

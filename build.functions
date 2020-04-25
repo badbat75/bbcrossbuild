@@ -71,8 +71,14 @@ function build () (
 	function downloadsources () {
 		trap 'STATUS=${?}; \
 			set +x; \
-			trap ERR; \
+			trap - ERR SIGINT; \
 			return ${STATUS};' ERR
+	
+		trap 'set +x; \
+			trap - ERR SIGINT; \
+			[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH} || true;
+			return 100' SIGINT
+
 		set -x
 		if [ ! -z ${PKG_URL} ]
 		then
@@ -89,15 +95,22 @@ function build () (
 			fi
 		fi
 		set +x
-		trap ERR
+		trap - ERR
+		trap - SIGINT
 	}
 
 	function preparesources () {
 		trap 'STATUS=${?}; \
 			echo "Fail."; \
 			set +x; \
-			trap ERR; \
+			trap - ERR SIGINT; \
+			[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH} || true; \
 			return ${STATUS};' ERR
+
+		trap 'set +x; \
+			trap - ERR SIGINT; \
+			[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH} || true;
+			return 100' SIGINT
 
 		cd ${PKG_SRCPATH}
 		if [ "x${PATCHDEB}" != "x" ]
@@ -121,7 +134,7 @@ function build () (
 					fi
 				done <${PKG_SRCPATH}/debian/patches/series
 			else
-				echo "\"series\" patch list file does not exist."
+				echo "${SPACES}\"series\" patch list file does not exist."
 			fi
 		fi
 		for scanpatch in ${PATCHES:-}
@@ -136,8 +149,8 @@ function build () (
 			fi
 			for file in $(find ${PKG_SRCPATH}/bbxb_patches -type f)
 			do
-				echo -n "${SPACES}Applying ${file} patch..."
-				patch -p1 < ${file} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+				echo -n "Applying ${file} patch..."
+				patch -f -p1 < ${file} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 				echo "Done."
 				rm ${file}
 			done
@@ -148,7 +161,8 @@ function build () (
 		fi
 		echo -n "${SPACES}"
 		cd ${BB_HOME}
-		trap ERR
+		trap - ERR
+		trap - SIGINT
 	}
 
 	function downloadonly () {
@@ -158,7 +172,7 @@ function build () (
 	function configmake () {
 		trap 'STATUS=${?}; \
 			set +x; \
-			trap ERR; \
+			trap - ERR; \
 			return ${STATUS};' ERR
 		set -x
 		cd ${PKG_SRCPATH}
@@ -227,17 +241,17 @@ function build () (
 		forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
-		trap ERR
+		trap - ERR
 	}
 
 	function simplemake () {
 		trap 'STATUS=${?}; \
 		set +x; \
-		trap ERR; \
+		trap - ERR; \
 		return ${STATUS};' ERR
 		set -x
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
-		cd ${PKG_BLDPATH}
+		cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ]
@@ -278,13 +292,13 @@ function build () (
 		forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
-		trap ERR
+		trap - ERR
 	}
 
 	function cmakemake () {
 		trap 'STATUS=${?}; \
 		set +x; \
-		trap ERR; \
+		trap - ERR; \
 		return ${STATUS};' ERR
 
 		set -x
@@ -334,7 +348,7 @@ function build () (
 		forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
-		trap ERR
+		trap - ERR
 	}
 
 	function mesonninja () {
@@ -423,9 +437,17 @@ function build () (
 	}
 
 	function cargobuild () {
+		trap 'STATUS=${?}; \
+		set +x; \
+		trap - ERR; \
+		return ${STATUS};' ERR
+		set -x
+	
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -C opt-level=${OPTLEVEL}}"
+		local CARGO_BIN=${CARGO_BIN:-${BUILD_EXECPREFIX}/bin}
+		local CARGO_LIB=${CARGO_LIB:-${BUILD_LIBDIR}${BUILD_LIBSUFFIX}}
 		[ ${CARGO_STRIP:-0} -eq 1 ] && local STRIP_FLAG=-s
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_RUSTFLAGS+=" -C lto"
 		cat > ${HARCH}-gcc <<-EOF
@@ -441,20 +463,25 @@ function build () (
 		RUSTFLAGS="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} \
 			-C linker=${PKG_BLDPATH}/${HARCH}-gcc" \
 			cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}
-		local BUILD_STATUS=${?}
-		if [ ${BUILD_STATUS} -eq 0 ]
-		then
-			for file in ${CARGO_BINLIST}
-			do
-				cp -p target/${CARGO_TARGET}/release/${file} ${BIN_PATH}${CARGO_BIN}/${file}
-			done
-			for file in ${CARGO_LIBLIST}
-			do
-				cp -p target/${CARGO_TARGET}/release/${file} ${BIN_PATH}${CARGO_LIB}/${file}
-			done
-		fi
+		for file in ${CARGO_BINLIST}
+		do
+			if [ ! -d ${BIN_PATH}${CARGO_BIN} ]
+			then
+				mkdir -p ${BIN_PATH}${CARGO_BIN}
+			fi
+			cp -p target/${CARGO_TARGET}/release/${file} ${BIN_PATH}${CARGO_BIN}/${file}
+		done
+		for file in ${CARGO_LIBLIST}
+		do
+			if [ ! -d ${BIN_PATH}${CARGO_LIB} ]
+			then
+				mkdir -p ${BIN_PATH}${CARGO_LIB}
+			fi
+			cp -p target/${CARGO_TARGET}/release/${file} ${BIN_PATH}${CARGO_LIB}/${file}
+		done
 		cd ${BB_HOME}
-		return ${BUILD_STATUS}
+		set +x
+		trap - ERR
 	}
 
 	function kernelbuild () {
@@ -749,7 +776,7 @@ function build () (
 			echo; \
 			tail -n24 ${LOG_PATH}/${PKG_NAME}.log; \
 		fi; \
-		trap ERR; \
+		trap - ERR; \
 		return ${STATUS}' ERR
 
 	local PKG_NAME=$(basename ${1})
@@ -837,7 +864,7 @@ function build () (
 	fi
 	echo "Done."
 	echo
-	trap ERR
+	trap - ERR
 )
 
 function forge_la_libs () {

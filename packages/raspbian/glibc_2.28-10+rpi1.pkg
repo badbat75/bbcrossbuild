@@ -1,0 +1,21 @@
+# glibc_2.28-10+rpi1
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/g/glibc/glibc_2.28.orig.tar.xz"
+BUILD_PROCESS=configmake
+AUTOCONF=0
+LTOENABLE=0
+#CONF_COPYSRC=1
+CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}\${BUILD_INCLUDEDIR} --disable-werror \
+	--disable-sanity-checks --enable-hacker-mode --without-selinux --enable-stackguard-randomization \
+	--enable-stack-protector=strong --enable-obsolete-rpc --enable-obsolete-nsl --enable-pt_chown \
+	libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes"
+#--with-headers=${BIN_PATH}${BUILD_INCLUDEDIR} 
+INST_CMD="${OVERRIDE_INST_CMD:-install}"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/g/glibc/glibc_2.28-10%2Brpi1.debian.tar.xz"
+#PKG_DEPS=
+PKG_POSTBUILD="if [ ! -f ${BIN_PATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h ];
+	then touch ${BIN_PATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h; \
+	fi" \
+PKG_TWOSTEPSBUILD=${OVERRIDE_PKG_TWOSTEPSBUILD:-1}
+PKG_MAKEVARS="ARCH=${KERN_ARCH} cross-compiling=yes"
+
+# Note:
