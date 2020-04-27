@@ -490,7 +490,7 @@ function build () (
 			then
 				KERN_OPTCOMP_FLAGS+="${KERN_OPTLEVEL:+ -O${KERN_OPTLEVEL}}"
 				KERN_OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-				KBUILD_BUILD_TIMESTAMP='' make \
+				KBUILD_BUILD_TIMESTAMP='' make V=${MAKEVERBOSE:-0} \
 				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
 				LD="scripts/gcc-ld" \
 				AR="${HARCH}-gcc-ar" \
@@ -506,7 +506,7 @@ function build () (
 				${@} ${PKG_MAKEVARS}
 				local STATUS=${?}
 			else
-				KBUILD_BUILD_TIMESTAMP='' make \
+				KBUILD_BUILD_TIMESTAMP='' make V=${MAKEVERBOSE:-0} \
 				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
 				KCFLAGS="${KERN_OPTCOMP_FLAGS} ${PLATFORM_KCFLAGS} ${PKG_CFLAGS}" \
 				KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
@@ -526,7 +526,7 @@ function build () (
 		KERN_VER=$(make kernelversion)
 
 		# Config kernel build
-		make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} ${KERN_DEFCONFIG} .config
+		make V=${MAKEVERBOSE:-0} ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} ${KERN_DEFCONFIG} .config
 		if [ "x${CONF_FLAGS}" != "x" ]
 		then
 			scripts/config ${CONF_FLAGS} &&
@@ -538,7 +538,7 @@ function build () (
 		fi
 
 		# Install headers
-		make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_HDR_PATH=${BIN_PATH}${BUILD_PREFIX} headers_install 
+		make V=${MAKEVERBOSE:-0} ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_HDR_PATH=${BIN_PATH}${BUILD_PREFIX} headers_install 
 		local STATUS=${?}
 		if [ ${STATUS} -ne 0 ]
 		then

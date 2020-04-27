@@ -619,6 +619,7 @@ function setup_python () {
 		RANLIB="${BARCH}-gcc-ranlib" \
 		LDFLAGS="${OPTLINK_FLAGS}" \
 		${BUILD_PYTHONPIP} install --upgrade -t ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/lib/python${PYTHONBIN_VER}/site-packages --no-binary :all: cython m2crypto future pycryptodome
+		#${BUILD_PYTHONPIP} install --upgrade -t ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/lib/python${PYTHONBIN_VER}/site-packages cython m2crypto future pycryptodome
 		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate
 		set +x
 		trap ERR
