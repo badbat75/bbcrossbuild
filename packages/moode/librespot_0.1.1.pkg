@@ -2,6 +2,7 @@
 PKG_URL="https://github.com/librespot-org/librespot/archive/v0.1.1.tar.gz"
 BUILD_PROCESS=cargobuild
 CONF_FLAGS="--features alsa-backend"
+PKG_RUSTFLAGS="-Ccodegen-units=1"
 PKG_DEPS="raspbian/portaudio19_19.6.0-1"
 #CARGO_BIN=/usr/bin
 #CARGO_LIB=/usr/lib/${HARCH}

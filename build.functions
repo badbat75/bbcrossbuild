@@ -461,7 +461,7 @@ function build () (
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
 		RUSTFLAGS="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} \
-			-C linker=${PKG_BLDPATH}/${HARCH}-gcc" \
+			-C linker=${PKG_BLDPATH}/${HARCH}-gcc ${PKG_RUSTFLAGS}" \
 			cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}
 		for file in ${CARGO_BINLIST}
 		do
@@ -738,6 +738,7 @@ function build () (
 		PKG_CFLAGS \
 		PKG_CXXFLAGS \
 		PKG_LDFLAGS \
+		PKG_RUSTFLAGS \
 		PKG_MAKEVARS \
 		PKG_PREBUILD \
 		PKG_POSTBUILD \
