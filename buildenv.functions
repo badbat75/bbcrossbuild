@@ -323,9 +323,24 @@ function setup_gcc () {
 		local GCC_OPTCOMP_FLAGS="${GCC_OPTCOMP_FLAGS}${GCC_OPTLEVEL:+ -O${GCC_OPTLEVEL}}"
 		local HOST_CC="${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc"
 		local HOST_CXX="${CCWRAPPER:+${CCWRAPPER} }${BARCH}-g++"
-		local HOST_AR="${BARCH}-gcc-ar"
-		local HOST_NM="${BARCH}-gcc-nm"
-		local HOST_RANLIB="${BARCH}-gcc-ranlib"
+		if which ${BARCH}-gcc-ar > /dev/null 2>&1
+		then
+			local HOST_AR="${BARCH}-gcc-ar"
+		else
+			local HOST_AR="gcc-ar"
+		fi
+		if which ${BARCH}-gcc-nm > /dev/null 2>&1
+		then
+			local HOST_NM="${BARCH}-gcc-nm"
+		else
+			local HOST_NM="gcc-nm"
+		fi
+		if which ${BARCH}-gcc-ranlib > /dev/null 2>&1
+		then
+			local HOST_RANLIB="${BARCH}-gcc-ranlib"
+		else
+			local HOST_RANLIB="gcc-ranlib"
+		fi
 		local HOST_CFLAGS="${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS} -march=native -Wno-pedantic"
 		local HOST_CXXFLAGS="${HOST_CFLAGS}"
 		local HOST_LDFLAGS="${COMMON_LDFLAGS} ${GCC_OPTLINK_FLAGS} -lgcc_s"
@@ -585,11 +600,29 @@ function setup_python () {
 		mkdir -p ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
 		#local LTO_PLUGIN_PATH="$(${BARCH}-gcc --print-prog-name=liblto_plugin.so)"
 		cd ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER} &&
+		if which ${BARCH}-gcc-ar > /dev/null 2>&1
+		then
+			local HOST_AR="${BARCH}-gcc-ar"
+		else
+			local HOST_AR="gcc-ar"
+		fi
+		if which ${BARCH}-gcc-nm > /dev/null 2>&1
+		then
+			local HOST_NM="${BARCH}-gcc-nm"
+		else
+			local HOST_NM="gcc-nm"
+		fi
+		if which ${BARCH}-gcc-ranlib > /dev/null 2>&1
+		then
+			local HOST_RANLIB="${BARCH}-gcc-ranlib"
+		else
+			local HOST_RANLIB="gcc-ranlib"
+		fi
 		CC="${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc" \
 		CFLAGS="${OPTCOMP_FLAGS} ${COMMON_LTOFLAGS} -march=native" \
-		AR="${BARCH}-gcc-ar" \
-		NM="${BARCH}-gcc-nm" \
-		RANLIB="${BARCH}-gcc-ranlib" \
+		AR="${HOST_AR}" \
+		NM="${HOST_NM}" \
+		RANLIB="${HOST_RANLIB}" \
 		LDFLAGS="${OPTLINK_FLAGS}" \
 		${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER} --enable-shared
 		make

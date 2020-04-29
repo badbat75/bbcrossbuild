@@ -1,0 +1,31 @@
+#!/bin/bash
+sudo dnf install -y gcc g++ binutils ccache \
+    curl gawk bison flex cmake ninja-build \
+    autoconf autoconf-archive automake gettext-devel libtool \
+    git xmltoman docbook-utils swig doxygen texinfo
+
+#autoconf2.64
+
+# For Image emulation
+sudo dnf install -y qemu-user-static
+
+# for meson-ninja
+sudo dnf install python3-pip ninja-build meson
+
+# for Python 3.7
+sudo dnf install -y openssl-devel libffi-devel
+
+# for libid3tag
+sudo dnf install -y gperf
+
+# for lxml
+sudo dnf install -y libxml2-devel
+
+# for glib-dbus-1.0
+sudo dnf install -y dbus-glib-devel
+
+# for udevil
+sudo dnf install -y intltool
+
+# for dlc-daemon
+sudo dnf install -y pandoc
