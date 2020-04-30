@@ -1,7 +1,7 @@
 #!/bin/bash
 sudo dnf install -y gcc g++ binutils ccache \
     curl gawk bison flex cmake ninja-build \
-    autoconf autoconf-archive automake gettext-devel libtool \
+	autoconf autoconf-archive automake gettext-devel libtool \
     git xmltoman docbook-utils swig doxygen texinfo
 
 #autoconf2.64
@@ -11,12 +11,19 @@ sudo dnf install -y qemu-user-static
 
 # for meson-ninja
 sudo dnf install python3-pip ninja-build meson
+#sudo pip3 install meson ninja
 
 # for Python 3.7
 sudo dnf install -y openssl-devel libffi-devel
 
+# for wpa-supplicant
+sudo dnf install -y docbook-utils-pdf
+
 # for libid3tag
 sudo dnf install -y gperf
+
+# for zziplib
+sudo dnf install -y python2
 
 # for lxml
 sudo dnf install -y libxml2-devel

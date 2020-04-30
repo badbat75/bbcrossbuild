@@ -27,7 +27,7 @@ PKI_SUBJECT="/C=IT/ST=Bologna/L=Bologna/O=BadBat75 LTD/CN=badbat75/emailAddress=
 ######
 
 ### Enable and set if you are using a gcc wrapper like ccache or distcc
-CCWRAPPER="ccache"
+# CCWRAPPER="ccache"
 ### Set make verbosity (0 disabled, 1 enabled)
 MAKEVERBOSE=0
 
@@ -48,7 +48,7 @@ OPTCOMP_FLAGS="-pipe"
 #OPTCOMP_FLAGS="${OPTCOMP_FLAGS} -fprofile-generate=/tmp/pgo --coverage"
 #OPTCOMP_FLAGS="${OPTCOMP_FLAGS} -fprofile-use=/tmp/pgo -fprofile-correction -Wno-error=coverage-mismatch -Wno-error=missing-profile"
 ### Optional rustc compiler flags
-OPTCOMP_RUSTFLAGS=
+OPTCOMP_RUSTFLAGS="-C codegen-units=1"
 ### Optional gcc-ld linker flags
 OPTLINK_FLAGS="-fuse-ld=gold -Wl,-z,relro"
 ### Enable LTO building for the applications (can be set up in the project definition)

@@ -4,5 +4,6 @@ PKG_URL="http://archive.raspbian.org/raspbian/pool/main/t/tinyxml2/tinyxml2_7.0.
 BUILD_PROCESS=cmakemake
 # CONF_FLAGS=""
 INST_CMD=install/strip
+VAR_INSTALL_LIBDIR=CMAKE_INSTALL_LIBDIR
 
 # Note:
