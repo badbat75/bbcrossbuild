@@ -46,3 +46,10 @@ cp wpa_supplicant/doc/docbook/wpa_cli.8 ${BIN_PATH}\${BUILD_PREFIX}/share/man/ma
 cp wpa_supplicant/doc/docbook/wpa_passphrase.8 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8/ && gzip -f ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8/wpa_passphrase.8
 cp wpa_supplicant/doc/docbook/wpa_supplicant.8 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8/ && gzip -f ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8/wpa_supplicant.8
 cp wpa_supplicant/doc/docbook/wpa_supplicant.conf.5 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man5/ && gzip -f ${BIN_PATH}\${BUILD_PREFIX}/share/man/man5/wpa_supplicant.conf.5"
+
+# Bug in Fedora OpenJade
+if test_version $(cat /dev/null | openjade -vh 2>&1 | head -n 1 | awk '{print $4}' | sed 's|\"||g') -le 1.3.2
+then
+    PKG_PREBUILD="sed -i 's/mv index.html/mv r1.html/' wpa_supplicant/doc/docbook/Makefile
+        ${PKG_PREBUILD}"
+fi
