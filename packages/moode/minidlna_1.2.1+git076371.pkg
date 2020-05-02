@@ -1,0 +1,13 @@
+# minidlna_1.2.1+git076371
+PKG_URL="https://sourceforge.net/code-snapshots/git/m/mi/minidlna/git.git/minidlna-git-0763719f2776f91114bc5564919896f28e078c77.zip"
+BUILD_PROCESS=configmake
+# CONF_FLAGS=""
+INST_CMD=install-strip
+PKG_DEPS="raspbian/libexif-0.6.21-5.1 raspbian/libid3tag_0.15.1b-14"
+#PKG_DEPS="raspbian/libjpeg-turbo-1.5.2 raspbian/sqlite3-3.26.0 raspbian/libexif-0.6.21-5.1"
+PKG_CFLAGS="-Wno-format-overflow"
+PKG_PREBUILD"sed -i '/^.tmpl:/a \tcp -r \$(srcdir)/linux .' Makefile.am"
+
+# Dependencies:
+# libavcodec-dev libavformat-dev libavutil-dev libflac-dev libogg-dev libvorbis-dev libsqlite3-dev libjpeg-turbo-dev
+# Notes: requires gettext and autopoint on build host
