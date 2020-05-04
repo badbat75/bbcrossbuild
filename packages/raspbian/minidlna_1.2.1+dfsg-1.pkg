@@ -1,13 +1,13 @@
 # minidlna_1.2.1+dfsg-1
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/m/minidlna/minidlna_1.2.1%2bdfsg.orig.tar.xz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/m/minidlna/minidlna_1.2.1%2bdfsg-1.debian.tar.xz"
-PATCHES="minidlna-copytemplates.patch"
 BUILD_PROCESS=configmake
 # CONF_FLAGS=""
 INST_CMD=install-strip
 PKG_DEPS="raspbian/libexif-0.6.21-5.1 raspbian/libid3tag_0.15.1b-14"
 #PKG_DEPS="raspbian/libjpeg-turbo-1.5.2 raspbian/sqlite3-3.26.0 raspbian/libexif-0.6.21-5.1"
 PKG_CFLAGS="-Wno-format-overflow"
+PKG_PREBUILD="sed -i '/^.tmpl:/a \\\\tcp -r \$(srcdir)/linux .' Makefile.am"
 PKG_POSTBUILD="install -d ${BIN_PATH}/var/lib/minidlna &&
 install -d --mode=750 ${BIN_PATH}/var/cache/minidlna &&
 install -d ${BIN_PATH}\${BUILD_SYSCONFDIR}/logrotate.d &&

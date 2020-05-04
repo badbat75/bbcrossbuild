@@ -1,7 +1,7 @@
-# moode_r651
-#PKG_URL="https://github.com/moode-player/moode/archive/f2e40cf0c7aba9c1e4a37d692b481a7eb95a8155.tar.gz"
-PKG_URL="https://github.com/moode-player/moode/archive/r651prod.tar.gz"
-PKG_SRCDIR=moode_r651
+# moode_r652
+#PKG_URL="https://github.com/moode-player/moode/archive/bd5b507ed68b9dd69096f0e09115b0f2c2ed8a21.tar.gz"
+PKG_URL="https://github.com/moode-player/moode/archive/r652prod.tar.gz"
+PKG_SRCDIR=moode_r652
 BUILD_PROCESS=downloadonly
 PKG_DEPS="python/RPi.GPIO_0.7.0 python/python-musicpd_0.4.4"
 PKG_PREBUILD="install -D boot/config.txt.default ${BIN_PATH}/boot/config.txt

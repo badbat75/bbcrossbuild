@@ -1,5 +1,5 @@
-# mpd_0.21.22
-PKG_URL="http://www.musicpd.org/download/mpd/0.21/mpd-0.21.22.tar.xz"
+# mpd_0.21.23
+PKG_URL="http://www.musicpd.org/download/mpd/0.21/mpd-0.21.23.tar.xz"
 BUILD_PROCESS=mesonninja
 export BOOST_ROOT=${BIN_PATH}
 export BOOST_INCLUDEDIR=${BIN_PATH}${BUILD_INCLUDEDIR}

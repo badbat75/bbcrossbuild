@@ -52,6 +52,7 @@ function mount_image () {
 	echo -n "Creating loop devices..."
 	sudo losetup -f -P ${IMAGEFILE_PATH} >> ${LOG_PATH}/images_${MOUNTPOINTNAME}.log 2>&1
 	LOOPDEV=$(sudo losetup -j ${IMAGEFILE_PATH} | awk '{print $1}' | sed 's/.$//g') >> ${LOG_PATH}/images_${MOUNTPOINTNAME}.log 2>&1
+	sudo partprobe ${LOOPDEV} >> ${LOG_PATH}/images_${MOUNTPOINTNAME}.log 2>&1
 	echo "Done."
 
 	if [ ! -z ${IMGRESIZE} ]

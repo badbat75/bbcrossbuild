@@ -11,7 +11,7 @@ This is a framework to cross-compile defined packages using an optional predefin
     $ git clone https://github.com/badbat75/bbcrossbuild.git
     $ cd bbcrossbuild
     $ cp bbxb.conf.default bbxb.conf
-    $ ./bootstrap
+    $ utilities/bootstrap.<fedora|ubuntu>
 `bootstrap`  installs all the dependencies on the build host *(the script is not complete, yet)*.
 
 **Customization**
