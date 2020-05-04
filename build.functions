@@ -92,6 +92,10 @@ function build () (
 			if [ ! -z ${GIT_URL} ]
 			then
 				git clone --single-branch ${GIT_URL} ${PKG_SRCPATH}
+				if  [ ! -z ${GIT_COMMIT} ]
+				then
+					git -C ${PKG_SRCPATH} checkout ${GIT_COMMIT}
+				fi
 			fi
 		fi
 		set +x
@@ -721,6 +725,7 @@ function build () (
 
 	unset PKG_URL \
 		GIT_URL \
+		GIT_COMMIT \
 		PKG_SRCDIR \
 		BUILD_PROCESS \
 		STD_CONF_FLAGS \
@@ -845,14 +850,14 @@ function build () (
 	if [ ! -z "${PKG_PREBUILD}" ]
 	then
 		cd ${PKG_SRCPATH}
-		(eval "trap 'exit 1' ERR; set -x && ${PKG_PREBUILD} && set +x" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1)
+		(eval "trap 'exit 1' ERR; set -x && ${PKG_PREBUILD} 2>&1 && set +x") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 	fi
 	${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 
 	if [ ! -z "${PKG_POSTBUILD}" ]
 	then
 		cd ${PKG_BLDPATH}
-		(eval "trap 'exit 1' ERR; set -x && ${PKG_POSTBUILD} && set +x" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1)
+		(eval "trap 'exit 1' ERR; set -x && ${PKG_POSTBUILD} 2>&1 && set +x") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 	fi
 	if [ ! -d ${STATUS_PATH} ]
 	then
