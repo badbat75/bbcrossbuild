@@ -1,5 +1,5 @@
 # moode_r652
-#PKG_URL="https://github.com/moode-player/moode/archive/dfa6998e2a3107ecda16c51b657c4153ac066b5b.tar.gz"
+#PKG_URL="https://github.com/moode-player/moode/archive/bd5b507ed68b9dd69096f0e09115b0f2c2ed8a21.tar.gz"
 PKG_URL="https://github.com/moode-player/moode/archive/r652prod.tar.gz"
 PKG_SRCDIR=moode_r652
 BUILD_PROCESS=downloadonly
