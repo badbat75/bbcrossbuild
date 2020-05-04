@@ -10,6 +10,8 @@ PKG_DEPS="raspbian/libexif-0.6.21-5.1 raspbian/libid3tag_0.15.1b-14"
 PKG_CFLAGS="-Wno-format-overflow"
 PKG_PREBUILD="sed -i '/^.tmpl:/a \\\\tcp -r \$(srcdir)/linux .' Makefile.am
 	sed -i 's/VERSION \\\"1.2.1\\\"/VERSION \\\"1.2.1+git${GIT_COMMIT}\\\"/' upnpglobalvars.h"
+PKG_POSTBUILD="install -d ${BIN_PATH}/var/lib/minidlna &&
+install -d --mode=750 ${BIN_PATH}/var/cache/minidlna"
 
 # Dependencies:
 # libavcodec-dev libavformat-dev libavutil-dev libflac-dev libogg-dev libvorbis-dev libsqlite3-dev libjpeg-turbo-dev
