@@ -8,7 +8,7 @@ CONF_FLAGS="-Dalsa=enabled -Dcurl=enabled -Ddatabase=true -Ddsd=true -Dffmpeg=en
 	-Dhttpd=true -Did3tag=enabled -Dlame=enabled -Dlibmpdclient=enabled -Dmad=enabled -Dmpg123=enabled \
 	-Dpipe=true -Drecorder=true -Dshout=enabled -Dsoundcloud=enabled -Dsoxr=enabled -Dvorbis=enabled \
 	-Dwave_encoder=true -Dwavpack=enabled -Dzzip=enabled -Dzeroconf=avahi -Dao=disabled -Daudiofile=disabled -Dbzip2=enabled \
-	-Dexpat=disabled -Dfluidsynth=disabled -Dgme=disabled -Dipv6=disabled -Djack=disabled -Dlibsamplerate=disabled \
+	-Dexpat=disabled -Dfluidsynth=disabled -Dgme=disabled -Dipv6=enabled -Djack=disabled -Dlibsamplerate=disabled \
 	-Dnfs=disabled -Doss=disabled -Dpulse=disabled -Dsidplay=disabled -Dsmbclient=disabled -Dsndfile=disabled \
 	-Dsqlite=disabled -Dupnp=disabled -Dwildmidi=disabled -Ddbus=disabled -Dudisks=disabled"
 INST_CMD=install-strip
