@@ -311,8 +311,9 @@ function setup_gcc () {
 			* )
 				local GCC_LANGUAGES=${GCC_LANGUAGES:-c,c++,lto}
 				local GCC_COMMON_CONFIG="--enable-languages=${GCC_LANGUAGES} --enable-shared --enable-linker-build-id --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --enable-checking=release --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-threads=posix --enable-initfini-array --enable-gnu-indirect-function --enable-multiarch \
-					--with-default-libstdcxx-abi=new --with-system-zlib \
+					--with-default-libstdcxx-abi=new \
 					--disable-option-checking --disable-libitm --disable-libmpx"
+					#--with-system-zlib
 			;;
 		esac
 		local GCC_BUILD_CONFIG="--disable-multilib --disable-bootstrap"
@@ -341,7 +342,7 @@ function setup_gcc () {
 		else
 			local HOST_RANLIB="gcc-ranlib"
 		fi
-		local HOST_CFLAGS="${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS} -march=native -Wno-pedantic"
+		local HOST_CFLAGS="${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS} -fPIC -march=native -Wno-pedantic"
 		local HOST_CXXFLAGS="${HOST_CFLAGS}"
 		local HOST_LDFLAGS="${COMMON_LDFLAGS} ${GCC_OPTLINK_FLAGS} -lgcc_s"
 		if [ "${BUILD_ARCH}" == "${BARCH}" ]

@@ -1,6 +1,11 @@
-# moode_r642
-PKG_URL="https://github.com/moode-player/moode/archive/r642prod.tar.gz"
-PKG_SRCDIR=moode_r642
+# moode-dynamicver_1.0
+if [ -z "${MOODEDEVCOMMIT}" ]
+then
+    PKG_URL="https://github.com/moode-player/moode/archive/${MOODEREL}prod.tar.gz"
+else
+    PKG_URL="https://github.com/moode-player/moode/archive/${MOODEDEVCOMMIT}.tar.gz"
+fi
+PKG_SRCDIR=moode_${MOODEREL}
 BUILD_PROCESS=downloadonly
 PKG_DEPS="python/RPi.GPIO_0.7.0 python/python-musicpd_0.4.4"
 PKG_PREBUILD="install -D boot/config.txt.default ${BIN_PATH}/boot/config.txt
@@ -115,5 +120,5 @@ sed -i 's|local/lib/python2.7/dist|lib/python${PYTHONBIN_VER}/dist|g' ${BIN_PATH
 sed -i 's|/usr/local/lib/python${PYTHONBIN_VER}/dist-packages/|/usr/lib/python${PYTHONBIN_VER}/dist-packages/|g' ${BIN_PATH}/var/www/command/sysinfo.sh
 sed -i '/^ExecStart/ s/-p a2dp-sink$/-p a2dp-sink --sbc-xq --ldac-abr/g' ${BIN_PATH}/etc/systemd/system/bluealsa.service
 echo '### Only for bluez > 5.52'
-sed -i 's/ATTR{name}==\"\*:\*:\*:\*:\*:\*\"/ATTR{name}==\"*(AVCRP)\"/' ${BIN_PATH}/etc/udev/rules.d/10-a2dp-autoconnect.rules
+sed -i 's/ATTR{name}==\"\*:\*:\*:\*:\*:\*\"/ATTR{name}==\"*(AVRCP)\"/' ${BIN_PATH}/etc/udev/rules.d/10-a2dp-autoconnect.rules
 sed -i 's/^BTMAC=.*/BTMAC=00:00:00:00:00:00/' ${BIN_PATH}/usr/local/bin/a2dp-autoconnect"

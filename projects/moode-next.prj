@@ -1,6 +1,7 @@
 # Build recipe for moode mediacenter
 
-MOODEREL=r652
+MOODEREL=r660
+MOODEDEVCOMMIT=96f989c3a4af2e69ea822c1b286353b8cfeff00b
 RASPBIAN_IMAGE=2020-02-13-raspbian-buster-lite
 RASPBIAN_URL=https://downloads.raspberrypi.org/raspbian_lite/images/raspbian_lite-2020-02-14/
 
@@ -45,10 +46,10 @@ setup_python
 #clean_project
 
 # Download moode-sources
-build moode/moode_${MOODEREL}
+build moode/moode-dynamic-ver_1.0
 
 # STEP 1 - Modify Raspbian Lite and create a new, base image
-build linux/rpi-kernel_5.6.7
+build linux/rpi-kernel_5.6.10
 build raspbian/iw_5.4-1
 build moode/wireless-regdb_651e39de
 build raspbian/wpa_supplicant_2.9.0-12
