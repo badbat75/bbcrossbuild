@@ -1,7 +1,7 @@
 # Build recipe for moode mediacenter
 
 MOODEREL=r660
-MOODEDEVCOMMIT=96f989c3a4af2e69ea822c1b286353b8cfeff00b
+MOODEDEVCOMMIT=9c9d9830fa4527e7b45a15b9f3cbdb6f7bbf5b77
 RASPBIAN_IMAGE=2020-02-13-raspbian-buster-lite
 RASPBIAN_URL=https://downloads.raspberrypi.org/raspbian_lite/images/raspbian_lite-2020-02-14/
 
@@ -188,9 +188,6 @@ run_on_root_dir temp root "systemctl disable dphys-swapfile"
 run_on_root_dir temp root "[ -d /var/www/html ] && rm -r /var/www/html || true"
 run_on_root_dir temp root "rm /etc/update-motd.d/10-uname || true"
 #run_on_root_dir temp root "rm /var/lib/dhcpcd5/*"
-# Moode configuration
-run_on_root_dir temp root "sqlite3 /var/local/www/db/moode-sqlite3.db \"CREATE TRIGGER ro_columns BEFORE UPDATE OF param, value, [action] ON cfg_hash FOR EACH ROW BEGIN SELECT RAISE(ABORT, 'read only'); END;\""
-run_on_root_dir temp root "sqlite3 /var/local/www/db/moode-sqlite3.db \"update cfg_system set value='Emerald' where param='accent_color'\""
 # Start-up services
 #run_on_root_dir temp root "systemctl daemon-reload"
 run_on_root_dir temp root "systemctl set-default multi-user.target"
@@ -221,8 +218,11 @@ run_on_root_dir temp root "systemctl disable upmpdcli"
 run_on_root_dir temp root "systemctl disable localui"
 run_on_root_dir temp root "systemctl disable udisks2"
 run_on_root_dir temp root "systemctl disable triggerhappy"
-# Replace standard mpd binaries
-run_on_root_dir temp root "cp -f /usr/bin/mpd /var/www/inc/mpd-0.21.22"
+## Customizations
+# Moode DB customizations
+run_on_root_dir temp root "sqlite3 /var/local/www/db/moode-sqlite3.db \"
+	INSERT INTO cfg_system (param,value) VALUES ('library_thumbnail_columns','6/2');
+\""
 
 # Create firstboot script
 run_on_root_dir temp root "cat <<-EOF > /root/firstboot

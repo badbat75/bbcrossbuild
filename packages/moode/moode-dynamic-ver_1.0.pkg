@@ -1,9 +1,9 @@
 # moode-dynamicver_1.0
 if [ -z "${MOODEDEVCOMMIT}" ]
 then
-    PKG_URL="https://github.com/moode-player/moode/archive/${MOODEREL}prod.tar.gz"
+	PKG_URL="https://github.com/moode-player/moode/archive/${MOODEREL}prod.tar.gz"
 else
-    PKG_URL="https://github.com/moode-player/moode/archive/${MOODEDEVCOMMIT}.tar.gz"
+	PKG_URL="https://github.com/moode-player/moode/archive/${MOODEDEVCOMMIT}.tar.gz"
 fi
 PKG_SRCDIR=moode_${MOODEREL}
 BUILD_PROCESS=downloadonly
@@ -122,10 +122,12 @@ sed -i '/^ExecStart/ s/-p a2dp-sink$/-p a2dp-sink --sbc-xq --ldac-abr/g' ${BIN_P
 echo '### Only for bluez > 5.52'
 sed -i 's/ATTR{name}==\"\*:\*:\*:\*:\*:\*\"/ATTR{name}==\"*(AVRCP)\"/' ${BIN_PATH}/etc/udev/rules.d/10-a2dp-autoconnect.rules
 sed -i 's/^BTMAC=.*/BTMAC=00:00:00:00:00:00/' ${BIN_PATH}/usr/local/bin/a2dp-autoconnect
-echo '### Enable IPv6 in nginx'
+echo '### Substitute default mpd binary ###'
+cp -f ${BIN_PATH}/usr/bin/mpd ${BIN_PATH}/var/www/inc/mpd-0.21.23"
+echo '### Changes on core configuration files'
 sed -i 's/listen 80;/listen [::]:80 ipv6only=off;/' ${BIN_PATH}/etc/nginx/nginx.conf
-sqlite3 /var/local/www/db/moode-sqlite3.db \"update cfg_hash set value='$(md5sum -z ${BIN_PATH}/etc/nginx/nginx.conf | awk '{print \$1}')' where param='/etc/nginx/nginx.conf'\"
-## moode_db intergation for outdated moodedb template
-sqlite3 /var/local/www/db/moode-sqlite3.db \"update cfg_system set param='extra_tags', value='track,disc,date,composer,encoded' where param='xtagdisp'\"
-sqlite3 /var/local/www/db/moode-sqlite3.db \"insert into cfg_system (param,value) values ('appearance_modal_state','1,1,1,0'),('font_size','Normal'),('volume_step_limit','10'),('volume_mpd_max','100')('library_thumbnail_columns','6/2')\"
+sqlite3 ${BIN_PATH}/var/local/www/db/moode-sqlite3.db \"
+	UPDATE cfg_hash SET value='$(md5sum -z ${BIN_PATH}/etc/nginx/nginx.conf | awk '{print $1}')' WHERE param='/etc/nginx/nginx.conf';
+	CREATE TRIGGER ro_columns BEFORE UPDATE OF param, value, [action] ON cfg_hash FOR EACH ROW BEGIN SELECT RAISE(ABORT, 'read only'); END;
+	\"
 "
