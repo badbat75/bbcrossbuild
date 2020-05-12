@@ -121,4 +121,11 @@ sed -i 's|/usr/local/lib/python${PYTHONBIN_VER}/dist-packages/|/usr/lib/python${
 sed -i '/^ExecStart/ s/-p a2dp-sink$/-p a2dp-sink --sbc-xq --ldac-abr/g' ${BIN_PATH}/etc/systemd/system/bluealsa.service
 echo '### Only for bluez > 5.52'
 sed -i 's/ATTR{name}==\"\*:\*:\*:\*:\*:\*\"/ATTR{name}==\"*(AVRCP)\"/' ${BIN_PATH}/etc/udev/rules.d/10-a2dp-autoconnect.rules
-sed -i 's/^BTMAC=.*/BTMAC=00:00:00:00:00:00/' ${BIN_PATH}/usr/local/bin/a2dp-autoconnect"
+sed -i 's/^BTMAC=.*/BTMAC=00:00:00:00:00:00/' ${BIN_PATH}/usr/local/bin/a2dp-autoconnect
+echo '### Enable IPv6 in nginx'
+sed -i 's/listen 80;/listen [::]:80 ipv6only=off;/' ${BIN_PATH}/etc/nginx/nginx.conf
+sqlite3 /var/local/www/db/moode-sqlite3.db \"update cfg_hash set value='$(md5sum -z ${BIN_PATH}/etc/nginx/nginx.conf | awk '{print \$1}')' where param='/etc/nginx/nginx.conf'\"
+## moode_db intergation for outdated moodedb template
+sqlite3 /var/local/www/db/moode-sqlite3.db \"update cfg_system set param='extra_tags', value='track,disc,date,composer,encoded' where param='xtagdisp'\"
+sqlite3 /var/local/www/db/moode-sqlite3.db \"insert into cfg_system (param,value) values ('appearance_modal_state','1,1,1,0'),('font_size','Normal'),('volume_step_limit','10'),('volume_mpd_max','100')('library_thumbnail_columns','6/2')\"
+"

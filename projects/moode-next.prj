@@ -67,7 +67,7 @@ build raspbian/udevil_0.4.4-2
 
 # STEP 4 - Install enhanced networking and bluetooth stack
 build moode/pi-bluetooth-master
-build moode/bluez-alsa_2.1.0
+build moode/bluez-alsa_2.1.0+49ad348
 
 # STEP 6 - Compile and install MPD
 build moode/mpd_0.21.23
@@ -191,9 +191,6 @@ run_on_root_dir temp root "rm /etc/update-motd.d/10-uname || true"
 # Moode configuration
 run_on_root_dir temp root "sqlite3 /var/local/www/db/moode-sqlite3.db \"CREATE TRIGGER ro_columns BEFORE UPDATE OF param, value, [action] ON cfg_hash FOR EACH ROW BEGIN SELECT RAISE(ABORT, 'read only'); END;\""
 run_on_root_dir temp root "sqlite3 /var/local/www/db/moode-sqlite3.db \"update cfg_system set value='Emerald' where param='accent_color'\""
-## moode_db intergation for outdated moodedb template
-run_on_root_dir temp root "sqlite3 /var/local/www/db/moode-sqlite3.db \"update cfg_system set param='extra_tags', value='track,disc,date,composer,encoded' where param='xtagdisp'\""
-run_on_root_dir temp root "sqlite3 /var/local/www/db/moode-sqlite3.db \"insert into cfg_system (param,value) values ('appearance_modal_state','1,1,1,0'),('font_size','Normal'),('volume_step_limit','10'),('volume_mpd_max','100')('library_thumbnail_columns','6/2')\""
 # Start-up services
 #run_on_root_dir temp root "systemctl daemon-reload"
 run_on_root_dir temp root "systemctl set-default multi-user.target"
