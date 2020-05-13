@@ -7,9 +7,12 @@ CONF_FLAGS="-DWITH_SYSTEMD=ON -DWITH_SYSTEMD_JOURNAL=ON -DWITH_MAN=ON -DWITH_DLT
     -DSYSTEMD_LIBRARY=${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
 VAR_INSTALL_CONFDIR="CMAKE_INSTALL_SYSCONFDIR"
 VAR_INSTALL_LIBDIR="CMAKE_INSTALL_LIBDIR"
-
 #PKG_LDFLAGS="-lssl -lcrypto -lpthread -luv -lev -lz -lsystemd"
 INST_CMD=install/strip
+
+### GCC 10 Workaround ####
+test_version ${GCC_VER} -ge 10 && PKG_CFLAGS+=" -fcommon" || true
+##########################
 
 # Note:
 # Dependencies: cmake, doxygen, python, libwebsocket, dlt-daemon

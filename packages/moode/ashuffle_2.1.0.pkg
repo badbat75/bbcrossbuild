@@ -6,3 +6,7 @@ INST_CMD=install-strip
 PKG_DEPS=
 PKG_POSTBUILD="install -d ${BIN_PATH}/usr/local/bin &&
 ln -fs /usr/bin/ashuffle ${BIN_PATH}/usr/local/bin/ashuffle"
+
+### GCC 10 Workaround ####
+test_version ${GCC_VER} -ge 10 && PKG_CFLAGS+=" -fcommon" || true
+##########################

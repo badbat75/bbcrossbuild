@@ -3,3 +3,7 @@ PKG_URL="https://files.pythonhosted.org/packages/cb/88/d3817eb11fc77a8d9a63abeab
 BUILD_PROCESS=pythonbuild
 # CONF_FLAGS=""
 # PKG_DEPS=""
+
+### GCC 10 Workaround ####
+test_version ${GCC_VER} -ge 10 && PKG_CFLAGS+=" -fcommon" || true
+##########################

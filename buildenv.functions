@@ -519,6 +519,10 @@ function install_gcclibs () {
 	echo "GCCCXXLIB: ${GCCCXXLIB}" >> ${LOG_PATH}/gcclibs.log
 	echo "GCCCXXLIBNAME: ${GCCCXXLIBNAME}" >> ${LOG_PATH}/gcclibs.log
 	echo "BASEGCCCXXLIBNAME: ${BASEGCCCXXLIBNAME}" >> ${LOG_PATH}/gcclibs.log
+	if [ ! -d ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} ]
+	then
+		mkdir -p ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
+	fi
 	cp -v ${GCCCXXLIB} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} >> ${LOG_PATH}/gcclibs.log 2>&1 &&
 	ln -fs ${GCCCXXLIBNAME} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/${BASEGCCCXXLIBNAME} >> ${LOG_PATH}/gcclibs.log 2>&1
 	local BUILD_STATUS=${?}

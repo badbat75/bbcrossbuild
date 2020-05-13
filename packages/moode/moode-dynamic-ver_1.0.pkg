@@ -5,9 +5,13 @@ then
 else
 	PKG_URL="https://github.com/moode-player/moode/archive/${MOODEDEVCOMMIT}.tar.gz"
 fi
+if [ -z "${MPDVER}" ]
+then
+	MPDVER=0.21.23
+fi
 PKG_SRCDIR=moode_${MOODEREL}
 BUILD_PROCESS=downloadonly
-PKG_DEPS="python/RPi.GPIO_0.7.0 python/python-musicpd_0.4.4"
+PKG_DEPS="python/RPi.GPIO_0.7.0 python/python-musicpd_0.4.4 moode/mpd_${MPDVER}"
 PKG_PREBUILD="install -D boot/config.txt.default ${BIN_PATH}/boot/config.txt
 install -d ${BIN_PATH}/etc/sudoers.d
 echo -e 'www-data\tALL=(ALL) NOPASSWD: ALL' >> ${BIN_PATH}/etc/sudoers.d/010_www-data
@@ -123,7 +127,7 @@ echo '### Only for bluez > 5.52'
 sed -i 's/ATTR{name}==\"\*:\*:\*:\*:\*:\*\"/ATTR{name}==\"*(AVRCP)\"/' ${BIN_PATH}/etc/udev/rules.d/10-a2dp-autoconnect.rules
 sed -i 's/^BTMAC=.*/BTMAC=00:00:00:00:00:00/' ${BIN_PATH}/usr/local/bin/a2dp-autoconnect
 echo '### Substitute default mpd binary ###'
-cp -f ${BIN_PATH}/usr/bin/mpd ${BIN_PATH}/var/www/inc/mpd-0.21.23"
+cp -f ${BIN_PATH}/usr/bin/mpd ${BIN_PATH}/var/www/inc/mpd-${MPDVER}
 echo '### Changes on core configuration files'
 sed -i 's/listen 80;/listen [::]:80 ipv6only=off;/' ${BIN_PATH}/etc/nginx/nginx.conf
 sqlite3 ${BIN_PATH}/var/local/www/db/moode-sqlite3.db \"
@@ -131,3 +135,4 @@ sqlite3 ${BIN_PATH}/var/local/www/db/moode-sqlite3.db \"
 	CREATE TRIGGER ro_columns BEFORE UPDATE OF param, value, [action] ON cfg_hash FOR EACH ROW BEGIN SELECT RAISE(ABORT, 'read only'); END;
 	\"
 "
+
