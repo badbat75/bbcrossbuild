@@ -7,12 +7,18 @@ sudo apt-get install -y curl ccache build-essential \
 # For Image emulation
 sudo apt-get install -y qemu-user-static
 
+# for moode
+sudo apt install -y sqlite3
+
 # for meson-ninja
-sudo apt-get install python3-pip ninja-build
+sudo apt-get install -y python3-pip ninja-build
 pip3 install meson
 
 # for Python 3.7
 sudo apt-get install -y libssl-dev libffi-dev
+
+# for zziplib
+sudo apt install -y python2
 
 # for libid3tag
 sudo apt-get install -y gperf
