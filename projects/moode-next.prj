@@ -223,6 +223,7 @@ run_on_root_dir temp root "systemctl disable triggerhappy"
 run_on_root_dir temp root "sqlite3 /var/local/www/db/moode-sqlite3.db \"
 	INSERT INTO cfg_system VALUES (138, 'library_thumbnail_columns', '6/2');
 	INSERT INTO cfg_system VALUES (139, 'library_encoded_at', 'No');
+	INSERT INTO cfg_system VALUES (140, 'first_use_help', 'y,y');
 \""
 
 # Create firstboot script
