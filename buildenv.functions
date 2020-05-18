@@ -369,7 +369,7 @@ function setup_gcc () {
 				local GCC_SYSROOT_PATH=${BIN_PATH}
 			fi
 			local CONFIG_ARCH_PARAMS="--build=${BARCH} --host=${BARCH} --target=${HARCH} --with-sysroot=${GCC_SYSROOT_PATH}"
-			local TARGET_CFLAGS="${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS}${HMARCH:+ -march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}"
+			local TARGET_CFLAGS="${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS}${HMARCH:+ -march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
 			local TARGET_CXXFLAGS="${TARGET_CFLAGS}"
 			local TARGET_LDFLAGS="${COMMON_LDFLAGS} ${GCC_OPTLINK_FLAGS}"
 		fi
