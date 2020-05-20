@@ -317,7 +317,7 @@ function setup_gcc () {
 			;;
 		esac
 		local GCC_BUILD_CONFIG="--disable-multilib --disable-bootstrap"
-		local GCC_HOST_CONFIG="--with-arch-directory=${HM}${HMARCH:+ --with-arch=${HMARCH}}${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
+		local GCC_HOST_CONFIG="--with-multilib=default --with-arch-directory=${HM}${HMARCH:+ --with-arch=${HMARCH}}${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
 		local BINUTILS_COMMON_CONFIG="--enable-gold --enable-libctf"
 		local BINUTILS_BUILD_CONFIG=""
 		local BINUTILS_HOST_CONFIG=""
