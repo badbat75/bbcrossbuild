@@ -1,4 +1,4 @@
-# libupnppsamples-master       
+# libupnppsamples-master (deprecated)
 GIT_URL="http://@opensourceprojects.eu/git/p/libupnppsamples/code"
 GIT_BRANCH=
 PATCHES=libupnppsample-upexploreronly.patch

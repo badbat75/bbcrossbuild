@@ -1,0 +1,6 @@
+# rpi-kernel_5.7.0-rc6
+PKG_URL="https://github.com/raspberrypi/linux/archive/2035cf8209f4a7d6e17979eaa4a6082876a69bce.tar.gz"
+BUILD_PROCESS=kernelbuild
+INST_CMD="INSTALL_MOD_STRIP=1"
+# Enable preemptive/realtime kernel
+#CONF_FLAGS="-d CONFIG_PREEMPT_NONE -d CONFIG_PREEMPT_VOLUNTARY -e CONFIG_PREEMPT"

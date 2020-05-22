@@ -1,6 +1,6 @@
 #!/bin/bash
 GCC_TC_PATH=${HOME}/.bbxb/gcc-toolkits
-AVAIL_ARCHS=$(ls ${GCC_TC_PATH} | grep -v source)
+AVAIL_ARCHS=$(ls ${GCC_TC_PATH} | grep -Ev "data|source")
 
 function set_arch_paths () {
 	if [ -d ${GCC_TC_PATH}/${1} ]
@@ -28,7 +28,7 @@ case "${1}" in
 		echo ${AVAIL_ARCHS}
 		echo
 	;;
-	"*")
+	*)
 		set_arch_paths ${1}
 	;;
 esac

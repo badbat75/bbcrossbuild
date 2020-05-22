@@ -33,8 +33,7 @@ function settoolflags () {
 	BUILD_LIBSTATIC=${BUILD_LIBSTATIC:-1}
 
 	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
-	PLATFORM_KCFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
-	PLATFORM_RUSTFLAGS="${HMARCH_RUST:+-C target-feature=${HMARCH_RUST} }${HMCPU:+-C target-cpu=${HMCPU}}"
+		PLATFORM_RUSTFLAGS="${HMARCH_RUST:+-C target-feature=${HMARCH_RUST} }${HMCPU:+-C target-cpu=${HMCPU}}"
 	COMMON_CFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
 	COMMON_CXXFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
 	COMMON_CPPFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
@@ -493,14 +492,13 @@ function build () (
 		function make4kern () {
 			if [ ${KERN_LTOENABLE:-0} -eq 1 ] 
 			then
-				KERN_OPTCOMP_FLAGS+="${KERN_OPTLEVEL:+ -O${KERN_OPTLEVEL}}"
 				KERN_OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 				KBUILD_BUILD_TIMESTAMP='' make V=${MAKEVERBOSE:-0} \
 				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
 				LD="scripts/gcc-ld" \
 				AR="${HARCH}-gcc-ar" \
 				RANLIB="${HARCH}-gcc-ranlib" \
-				KCFLAGS="${KERN_OPTCOMP_FLAGS} ${PLATFORM_KCFLAGS} ${PKG_CFLAGS}" \
+				KCFLAGS="${PKG_CFLAGS}" \
 				KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 				LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 				ARCH=${KERN_ARCH} \
@@ -511,10 +509,9 @@ function build () (
 				${@} ${PKG_MAKEVARS}
 				local STATUS=${?}
 			else
-				KERN_OPTCOMP_FLAGS+="${KERN_OPTLEVEL:+ -O${KERN_OPTLEVEL}}"
 				KBUILD_BUILD_TIMESTAMP='' make V=${MAKEVERBOSE:-0} \
 				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
-				KCFLAGS="${KERN_OPTCOMP_FLAGS} ${PLATFORM_KCFLAGS} ${PKG_CFLAGS}" \
+				KCFLAGS="${PKG_CFLAGS}" \
 				KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 				LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 				ARCH=${KERN_ARCH} \
@@ -533,11 +530,25 @@ function build () (
 
 		# Config kernel build
 		make V=${MAKEVERBOSE:-0} ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} ${KERN_DEFCONFIG} .config
+
+		case ${KERN_OPTLEVEL:-null} in
+			s|S)	scripts/config -e CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3
+			;;
+			2)	scripts/config -d CC_OPTIMIZE_FOR_SIZE -e CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3
+			;;
+			3)	# Patch kernel to build with -O3 flag
+				sed -i '/depends on ARC$/d' init/Kconfig
+				scripts/config -d CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -e CC_OPTIMIZE_FOR_PERFORMANCE_O3
+			;;
+		esac
+
 		if [ "x${CONF_FLAGS}" != "x" ]
 		then
-			scripts/config ${CONF_FLAGS} &&
-			make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} ${KERN_DEFCONFIG} oldconfig
+			scripts/config ${CONF_FLAGS}
 		fi
+
+		make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} oldconfig
+	
 		if [ ! -d ${BIN_PATH}/boot ]
 		then
 			mkdir -p ${BIN_PATH}/boot
