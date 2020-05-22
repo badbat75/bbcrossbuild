@@ -224,6 +224,30 @@ run_on_root_dir temp root "sqlite3 /var/local/www/db/moode-sqlite3.db \"
 	INSERT INTO cfg_system VALUES (138, 'library_thumbnail_columns', '6/2');
 	INSERT INTO cfg_system VALUES (139, 'library_encoded_at', 'No');
 	INSERT INTO cfg_system VALUES (140, 'first_use_help', 'y,y');
+	
+	PRAGMA foreign_keys = 0;
+	CREATE TABLE sqlitestudio_temp_table AS SELECT *
+		FROM cfg_radio;
+	DROP TABLE cfg_radio;
+	CREATE TABLE cfg_radio (
+		id          INTEGER    PRIMARY KEY,
+		station     CHAR (128),
+		name        CHAR (128),
+		type        CHAR (8),
+		logo        CHAR (128),
+		genre       CHAR (32),
+		broadcaster CHAR (32),
+		language    CHAR (32),
+		country     CHAR (32),
+		region      CHAR (32),
+		bitrate     CHAR (32),
+		format      CHAR (32)
+	);
+	INSERT INTO cfg_radio (id, station, name, type, logo)
+        SELECT id, station, name, type, logo
+        FROM sqlitestudio_temp_table;
+	DROP TABLE sqlitestudio_temp_table;
+	PRAGMA foreign_keys = 1;
 \""
 
 # Create firstboot script
