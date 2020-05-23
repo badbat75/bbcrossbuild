@@ -1,7 +1,7 @@
 # Build recipe for moode mediacenter
 
 MOODEREL=r660
-MOODEDEVCOMMIT=813ea56ee570486fc8ab9ee584746d1ccb555ca6
+MOODEDEVCOMMIT=a81ccb41ed5a19a0a75b23168c88232f5cd20d18
 RASPBIAN_IMAGE=2020-02-13-raspbian-buster-lite
 RASPBIAN_URL=https://downloads.raspberrypi.org/raspbian_lite/images/raspbian_lite-2020-02-14/
 
