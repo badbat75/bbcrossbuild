@@ -1,6 +1,7 @@
 # pi-bluetooth-master
 PKG_URL="https://github.com/RPi-Distro/pi-bluetooth/archive/master.tar.gz"
 BUILD_PROCESS=downloadonly
+PKG_DEPS="moode/bluez_5.54"
 PKG_PREBUILD="sed -i '/^ExecStart=/i ExecStartPre=/bin/sleep 2' debian/pi-bluetooth.bthelper@.service
 install -d -m0755 ${BIN_PATH}\${BUILD_PREFIX}/bin
 install -d -m0755 ${BIN_PATH}\${BUILD_SYSCONFDIR}/systemd/system
