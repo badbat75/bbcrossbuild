@@ -11,8 +11,8 @@ sudo apt-get install -y qemu-user-static
 sudo apt install -y sqlite3
 
 # for meson-ninja
-sudo apt-get install -y python3-pip ninja-build
-pip3 install meson
+sudo apt-get install -y python3-pip
+sudo pip3 install --system meson ninja
 
 # for Python 3.7
 sudo apt-get install -y libssl-dev libffi-dev

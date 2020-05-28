@@ -1,7 +1,7 @@
 # upexplorer-moode
 PKG_SRCDIR=moode_${MOODEREL}
 BUILD_PROCESS=configmake
-PKG_DEPS="moode/moode-dynamic-ver_1.0 moode/libupnpp_0.18.0"
+PKG_DEPS="moode/moode-dynamic-ver_1.0 moode/libupnpp_0.19.1"
 # CONF_FLAGS=""
 AUTOCONF_PATH=other/libupnppsamples-code
 CONF_PATH=other/libupnppsamples-code
