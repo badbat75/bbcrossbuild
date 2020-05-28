@@ -27,6 +27,12 @@ function remove_devfiles () {
 
 	settoolflags
 	echo -n "Removing development files..."
+	if [ ! -d ${BIN_PATH} ]
+	then
+		echo "No binaries directory present. Nothing to do."
+		trap ERR
+		exit 0
+	fi
 	local TMP_PATH=$(mktemp -d)
 	chmod 755 ${TMP_PATH}
 	cd ${BIN_PATH}

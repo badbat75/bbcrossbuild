@@ -1,9 +1,9 @@
 # Build recipe for moode mediacenter
 
 MOODEREL=r660
-MOODEDEVCOMMIT=a81ccb41ed5a19a0a75b23168c88232f5cd20d18
-RASPBIAN_IMAGE=2020-02-13-raspbian-buster-lite
-RASPBIAN_URL=https://downloads.raspberrypi.org/raspbian_lite/images/raspbian_lite-2020-02-14/
+MOODEDEVCOMMIT=6e0ae28ab307af80e82be5d3dd57f35852bf7754
+RASPBIAN_IMAGE=2020-05-27-raspios-buster-lite-armhf
+RASPBIAN_URL=http://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2020-05-28/
 
 ## Enable shared libraries (default) but disable static ones
 BUILD_LIBSHARED=1
@@ -21,9 +21,9 @@ run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
 	libc6-dev libpython3-dev libsqlite3-dev \
 	libortp-dev libasound2-dev \
 	libusb-dev libglib2.0-dev libudev-dev libical-dev libreadline-dev libdbus-1-dev \
-	libbsd-dev libncurses5-dev libsndfile1-dev libdaemon-dev \
+	libbsd-dev libncurses5-dev libsndfile1-dev \
 	\
-	libmad0-dev libmpg123-dev libflac-dev libvorbis-dev libopus-dev libopusfile-dev libaudiofile-dev libfaad-dev libwavpack-dev libavcodec-dev libavformat-dev libmp3lame-dev libcurl4-gnutls-dev libasound2-dev libshout3-dev libyajl-dev libavahi-client-dev libsystemd-dev libwrap0-dev libicu-dev libglib2.0-dev \
+	libcdio-paranoia-dev libmad0-dev libmpg123-dev libflac-dev libvorbis-dev libopus-dev libopusfile-dev libaudiofile-dev libfaad-dev libwavpack-dev libavcodec-dev libavformat-dev libmp3lame-dev libcurl4-gnutls-dev libasound2-dev libshout3-dev libyajl-dev libavahi-client-dev libsystemd-dev libwrap0-dev libicu-dev libglib2.0-dev \
 	\
 	libasound2-dev libpopt-dev libavahi-client-dev libssl-dev \
 	libexpat1-dev libxml2-dev libxslt1-dev \
@@ -36,7 +36,7 @@ run_on_root_dir distos root "apt-get -y purge --autoremove bluez wpasupplicant i
 run_on_root_dir distos root "apt-get clean"
 prepare_sysroot
 
-#create_sysroot http://bbb-build-artifacts.s3-eu-west-1.amazonaws.com/moode/20200209-163629-moode-r60-empty-dev.tar.xz
+#create_sysroot http://<url>/<rootfs.tar.gz>
 setup_gcc
 setup_rust
 setup_python
@@ -100,7 +100,7 @@ build moode/librespot_0.1.1
 build moode/squeezelite-master
 
 # COMPONENT 6 - Upmpdcli
-build moode/upmpdcli_1.4.7
+build moode/upmpdcli_1.4.10
 build moode/upexplorer-moode
 
 # COMPONENT 7 - Optionally install gmusicapi
