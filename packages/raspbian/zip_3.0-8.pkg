@@ -1,0 +1,9 @@
+# zip_3.0-8
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/z/zip/zip_3.0.orig.tar.gz"
+BUILD_PROCESS=configmake
+INST_CMD="install-strip"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/z/zip/zip_3.0-8.debian.tar.gz"
+#PKG_CFLAGS=""
+#PKG_DEPS=""
+#PKG_PREBUILD=""
+#PKG_POSTBUILD=""

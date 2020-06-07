@@ -1,7 +1,7 @@
 # Build recipe for moode mediacenter
 
 MOODEREL=r660
-MOODEDEVCOMMIT=6e0ae28ab307af80e82be5d3dd57f35852bf7754
+MOODEDEVCOMMIT=0a66fad4d1aaf00ccdd712f3331b28d525107c75
 RASPBIAN_IMAGE=2020-05-27-raspios-buster-lite-armhf
 RASPBIAN_URL=http://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2020-05-28/
 
@@ -220,35 +220,36 @@ run_on_root_dir temp root "systemctl disable udisks2"
 run_on_root_dir temp root "systemctl disable triggerhappy"
 ## Customizations
 # Moode DB customizations
-run_on_root_dir temp root "sqlite3 /var/local/www/db/moode-sqlite3.db \"
-	INSERT INTO cfg_system VALUES (138, 'library_thumbnail_columns', '6/2');
-	INSERT INTO cfg_system VALUES (139, 'library_encoded_at', 'No');
-	INSERT INTO cfg_system VALUES (140, 'first_use_help', 'y,y');
-	
-	PRAGMA foreign_keys = 0;
-	CREATE TABLE sqlitestudio_temp_table AS SELECT *
-		FROM cfg_radio;
-	DROP TABLE cfg_radio;
-	CREATE TABLE cfg_radio (
-		id          INTEGER    PRIMARY KEY,
-		station     CHAR (128),
-		name        CHAR (128),
-		type        CHAR (8),
-		logo        CHAR (128),
-		genre       CHAR (32),
-		broadcaster CHAR (32),
-		language    CHAR (32),
-		country     CHAR (32),
-		region      CHAR (32),
-		bitrate     CHAR (32),
-		format      CHAR (32)
-	);
-	INSERT INTO cfg_radio (id, station, name, type, logo)
-        SELECT id, station, name, type, logo
-        FROM sqlitestudio_temp_table;
-	DROP TABLE sqlitestudio_temp_table;
-	PRAGMA foreign_keys = 1;
-\""
+#run_on_root_dir temp root "sqlite3 /var/local/www/db/moode-sqlite3.db \"
+#	INSERT INTO cfg_system VALUES (138, 'library_thumbnail_columns', '6/2');
+#	INSERT INTO cfg_system VALUES (139, 'library_encoded_at', 'No');
+#	INSERT INTO cfg_system VALUES (140, 'first_use_help', 'y,y');
+#	
+#	PRAGMA foreign_keys = 0;
+#	CREATE TABLE sqlitestudio_temp_table AS SELECT *
+#		FROM cfg_radio;
+#	DROP TABLE cfg_radio;
+#	CREATE TABLE cfg_radio (
+#		id          INTEGER    PRIMARY KEY,
+#		station     CHAR (128),
+#		name        CHAR (128),
+#		type        CHAR (8),
+#		logo        CHAR (128),
+#		genre       CHAR (32),
+#		broadcaster CHAR (32),
+#		language    CHAR (32),
+#		country     CHAR (32),
+#		region      CHAR (32),
+#		bitrate     CHAR (32),
+#		format      CHAR (32)
+#	);
+#	INSERT INTO cfg_radio (id, station, name, type, logo)
+#	SELECT id, station, name, type, logo
+#		FROM sqlitestudio_temp_table;
+#	DROP TABLE sqlitestudio_temp_table;
+#	PRAGMA foreign_keys = 1;
+#\"
+"
 
 # Create firstboot script
 run_on_root_dir temp root "cat <<-EOF > /root/firstboot

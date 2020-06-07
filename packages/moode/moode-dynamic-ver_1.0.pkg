@@ -11,7 +11,7 @@ then
 fi
 PKG_SRCDIR=moode_${MOODEREL}
 BUILD_PROCESS=downloadonly	
-PKG_DEPS="python/RPi.GPIO_0.7.0 python/python-musicpd_0.4.4 moode/mpd_${MPDVER}"
+PKG_DEPS="python/RPi.GPIO_0.7.0 python/python-musicpd_0.4.4 moode/mpd_${MPDVER} moode/zip_3.0-8"
 PKG_PREBUILD="install -D boot/config.txt.default ${BIN_PATH}/boot/config.txt
 install -d ${BIN_PATH}/etc/sudoers.d
 echo -e 'www-data\tALL=(ALL) NOPASSWD: ALL' >> ${BIN_PATH}/etc/sudoers.d/010_www-data
