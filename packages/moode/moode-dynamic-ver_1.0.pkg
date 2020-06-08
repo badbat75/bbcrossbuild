@@ -11,7 +11,7 @@ then
 fi
 PKG_SRCDIR=moode_${MOODEREL}
 BUILD_PROCESS=downloadonly	
-PKG_DEPS="python/RPi.GPIO_0.7.0 python/python-musicpd_0.4.4 moode/mpd_${MPDVER} moode/zip_3.0-8"
+PKG_DEPS="python/RPi.GPIO_0.7.0 python/python-musicpd_0.4.4 moode/mpd_${MPDVER} raspbian/zip_3.0-8"
 PKG_PREBUILD="install -D boot/config.txt.default ${BIN_PATH}/boot/config.txt
 install -d ${BIN_PATH}/etc/sudoers.d
 echo -e 'www-data\tALL=(ALL) NOPASSWD: ALL' >> ${BIN_PATH}/etc/sudoers.d/010_www-data
@@ -134,6 +134,7 @@ echo '### Changes on core configuration files'
 sed -i 's/listen 80;/listen [::]:80 ipv6only=off;/' ${BIN_PATH}/etc/nginx/nginx.conf
 sqlite3 ${BIN_PATH}/var/local/www/db/moode-sqlite3.db \"
 	UPDATE cfg_hash SET value='\$(md5sum -z ${BIN_PATH}/etc/nginx/nginx.conf | awk '{print \$1}')' WHERE param='/etc/nginx/nginx.conf';
+	UPDATE cfg_hash SET value='\$(md5sum -z ${BIN_PATH}/etc/php/7.3/fpm/php.ini | awk '{print \$1}')' WHERE param='/etc/php/7.3/fpm/php.ini';
 	CREATE TRIGGER ro_columns BEFORE UPDATE OF param, value, [action] ON cfg_hash FOR EACH ROW BEGIN SELECT RAISE(ABORT, 'read only'); END;
 	\"
 # Patch for libupnpsamples-code

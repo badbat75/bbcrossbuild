@@ -53,12 +53,12 @@ build moode/moode-dynamic-ver_1.0
 # STEP 1 - Modify Raspbian Lite and create a new, base image
 build raspbian/iw_5.4-1
 build moode/wireless-regdb_651e39de
-build raspbian/wpa_supplicant_2.9.0-12
-build raspbian/hostapd_2.9.0-12
+build raspbian/wpa_supplicant_2.9.0-13
+build raspbian/hostapd_2.9.0-13
 
 # STEP 2 - Expand the root partition to 3GB
 # STEP 3 - Install core packages
-build moode/mediainfo_19.09
+build moode/mediainfo_20.03
 
 build moode/alsacap
 
@@ -221,35 +221,7 @@ run_on_root_dir temp root "systemctl disable triggerhappy"
 ## Customizations
 # Moode DB customizations
 #run_on_root_dir temp root "sqlite3 /var/local/www/db/moode-sqlite3.db \"
-#	INSERT INTO cfg_system VALUES (138, 'library_thumbnail_columns', '6/2');
-#	INSERT INTO cfg_system VALUES (139, 'library_encoded_at', 'No');
-#	INSERT INTO cfg_system VALUES (140, 'first_use_help', 'y,y');
-#	
-#	PRAGMA foreign_keys = 0;
-#	CREATE TABLE sqlitestudio_temp_table AS SELECT *
-#		FROM cfg_radio;
-#	DROP TABLE cfg_radio;
-#	CREATE TABLE cfg_radio (
-#		id          INTEGER    PRIMARY KEY,
-#		station     CHAR (128),
-#		name        CHAR (128),
-#		type        CHAR (8),
-#		logo        CHAR (128),
-#		genre       CHAR (32),
-#		broadcaster CHAR (32),
-#		language    CHAR (32),
-#		country     CHAR (32),
-#		region      CHAR (32),
-#		bitrate     CHAR (32),
-#		format      CHAR (32)
-#	);
-#	INSERT INTO cfg_radio (id, station, name, type, logo)
-#	SELECT id, station, name, type, logo
-#		FROM sqlitestudio_temp_table;
-#	DROP TABLE sqlitestudio_temp_table;
-#	PRAGMA foreign_keys = 1;
-#\"
-"
+#\""
 
 # Create firstboot script
 run_on_root_dir temp root "cat <<-EOF > /root/firstboot
@@ -289,7 +261,7 @@ run_on_root_dir temp root "cat <<-EOF > /root/firstboot
 EOF"
 run_on_root_dir temp root "chmod +x /root/firstboot"
 
-[ -f ~/Git/moode/moodecfg.txt ] && inject_into_root_dir temp ~/Git/moode/moodecfg.txt /boot || true
+[ -f ~/moodecfg.txt ] && inject_into_root_dir temp ~/moodecfg.txt /boot || true
 
 # Uncomment it to navigate in the temp filesystem
 #read -p "Press [Enter] key to carry on..."
