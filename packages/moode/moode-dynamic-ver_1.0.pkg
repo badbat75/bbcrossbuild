@@ -7,7 +7,7 @@ else
 fi
 if [ -z "${MPDVER}" ]
 then
-	MPDVER=0.21.23
+	MPDVER=0.21.24
 fi
 PKG_SRCDIR=moode_${MOODEREL}
 BUILD_PROCESS=downloadonly	
