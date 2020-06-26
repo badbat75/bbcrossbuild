@@ -1,4 +1,4 @@
-# squeezelite-master+59fea82
+# squeezelite_master+59fea82
 PKG_URL="https://github.com/ralph-irving/squeezelite/archive/59fea822893f94f54c141d0b07019ec45e7fa095.tar.gz"
 BUILD_PROCESS=simplemake
 INST_CMD=all

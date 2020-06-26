@@ -97,11 +97,11 @@ build moode/shairport-sync_3.3.6
 build moode/librespot_0.1.1
 
 # COMPONENT 5 - Squeezelite
-build moode/squeezelite-master+59fea82
+build moode/squeezelite_master+59fea82
 
 # COMPONENT 6 - Upmpdcli
 build moode/upmpdcli_1.4.12
-build moode/upexplorer-moode
+build moode/libupnppsamples_master+2a6e7a
 
 # COMPONENT 7 - Optionally install gmusicapi
 build python/gmusicapi_12.1.1
