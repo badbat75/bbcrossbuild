@@ -1,7 +1,7 @@
 # Build recipe for moode mediacenter
 
 MOODEREL=r660
-MOODEDEVCOMMIT=0a66fad4d1aaf00ccdd712f3331b28d525107c75
+MOODEDEVCOMMIT=2f57a42a8acb46b7361f4cf804bf2441dc8a040c
 RASPBIAN_IMAGE=2020-05-27-raspios-buster-lite-armhf
 RASPBIAN_URL=http://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2020-05-28/
 
@@ -45,7 +45,7 @@ setup_python
 
 #clean_project
 
-build linux/rpi-kernel_5.7.3
+build linux/rpi-kernel_5.7.6
 
 # Download and install moode-sources and pre-build environment
 build moode/moode-dynamic-ver_1.0
