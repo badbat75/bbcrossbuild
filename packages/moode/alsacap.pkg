@@ -1,4 +1,4 @@
-# mpdas-master
+# alsacap
 PKG_URL="http://www.volkerschatz.com/noise/alsacap.tgz"
 #PATCHES=
 BUILD_PROCESS=simplemake
