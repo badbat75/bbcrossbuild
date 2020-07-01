@@ -1,5 +1,5 @@
 # rpi-kernel_5.7.6
-PKG_URL="https://github.com/raspberrypi/linux/archive/b21bf15638251939206a78c6e6c8ca4b10f5ed0b.tar.gz"
+PKG_URL="https://github.com/raspberrypi/linux/archive/856dd811b407f8b8e6ffb49b69ced82e05d2f5a3.tar.gz"
 BUILD_PROCESS=kernelbuild
 INST_CMD="INSTALL_MOD_STRIP=1"
 # Enable preemptive/realtime kernel
