@@ -1,0 +1,10 @@
+# upmpdcli_1.4.12+6c71a41
+PKG_URL="https://framagit.org/medoc92/upmpdcli/-/archive/6c71a41e8d2df939a290ed7c6a4e5319ee07d923/upmpdcli-6c71a41e8d2df939a290ed7c6a4e5319ee07d923.tar.bz2"
+PKG_PREBUILD="sed -i 's|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < web.tar.gz|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < \$(srcdir)/web.tar.gz|g' Makefile.am
+sed -i 's|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < rdpl2stream.tar.gz|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < \$(srcdir)/rdpl2stream.tar.gz|g' Makefile.am
+sed -i 's|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < uprclbottle.tar.gz|cd\ \$(DESTDIR)\$(pkgdatadir); tar xzf -) < \$(srcdir)/uprclbottle.tar.gz|g' Makefile.am"
+BUILD_PROCESS=configmake
+# CONF_FLAGS=""
+PKG_CXXFLAGS="-D_FILE_OFFSET_BITS=64"
+INST_CMD=install-strip
+PKG_DEPS="moode/libupnpp_0.19.1 raspbian/libmicrohttpd_0.9.66-1 raspbian/libjsoncpp_1.7.4-3 python/bottle_0.12.18"
