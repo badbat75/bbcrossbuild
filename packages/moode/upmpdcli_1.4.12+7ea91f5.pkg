@@ -1,5 +1,5 @@
-# upmpdcli_1.4.12+6c71a41
-PKG_URL="https://framagit.org/medoc92/upmpdcli/-/archive/6c71a41e8d2df939a290ed7c6a4e5319ee07d923/upmpdcli-6c71a41e8d2df939a290ed7c6a4e5319ee07d923.tar.bz2"
+# upmpdcli_1.4.12+7ea91f5
+PKG_URL="https://framagit.org/medoc92/upmpdcli/-/archive/7ea91f5da38eb3c4b319c12c7fbf57005d703b8a/upmpdcli-7ea91f5da38eb3c4b319c12c7fbf57005d703b8a.tar.bz2"
 PKG_PREBUILD="sed -i 's|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < web.tar.gz|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < \$(srcdir)/web.tar.gz|g' Makefile.am
 sed -i 's|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < rdpl2stream.tar.gz|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < \$(srcdir)/rdpl2stream.tar.gz|g' Makefile.am
 sed -i 's|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < uprclbottle.tar.gz|cd\ \$(DESTDIR)\$(pkgdatadir); tar xzf -) < \$(srcdir)/uprclbottle.tar.gz|g' Makefile.am"

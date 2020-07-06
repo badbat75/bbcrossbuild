@@ -138,13 +138,13 @@ sqlite3 ${BIN_PATH}/var/local/www/db/moode-sqlite3.db \"
 	CREATE TRIGGER ro_columns BEFORE UPDATE OF param, value, [action] ON cfg_hash FOR EACH ROW BEGIN SELECT RAISE(ABORT, 'read only'); END;
 	\"
 # Patch for libupnpsamples-code
-sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/upexplo.cpp
-sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/typedservice.cpp
-sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/dumpXML.cpp
-sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/rdcvolume.cpp
-sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/myrdcvolume.cpp
-sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/typedservice.cpp
-sed -i '/^#include \"log.h\"/ s|log.h|libupnpp/log.h|' other/libupnppsamples-code/upsend_src/workqueue.h
-sed -i '/^#include \"config.h\"/ s|config.h|../src/localconfig.h|' other/libupnppsamples-code/upsend_src/wav.cpp
-sed -i '/^#include \"config.h\"/ s|config.h|../src/localconfig.h|' other/libupnppsamples-code/upsend_src/streamer.cpp
+#sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/upexplo.cpp
+#sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/typedservice.cpp
+#sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/dumpXML.cpp
+#sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/rdcvolume.cpp
+#sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/myrdcvolume.cpp
+#sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/typedservice.cpp
+#sed -i '/^#include \"log.h\"/ s|log.h|libupnpp/log.h|' other/libupnppsamples-code/upsend_src/workqueue.h
+#sed -i '/^#include \"config.h\"/ s|config.h|../src/localconfig.h|' other/libupnppsamples-code/upsend_src/wav.cpp
+#sed -i '/^#include \"config.h\"/ s|config.h|../src/localconfig.h|' other/libupnppsamples-code/upsend_src/streamer.cpp
 "

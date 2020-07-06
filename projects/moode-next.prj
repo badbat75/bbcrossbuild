@@ -1,7 +1,7 @@
 # Build recipe for moode mediacenter
 
 MOODEREL=r660
-MOODEDEVCOMMIT=940c13c642d0e4eb8b81d296201d5cd1988440d9
+MOODEDEVCOMMIT=de543279c7fce2eb5a12017d3c757c46497cfa1d
 RASPBIAN_IMAGE=2020-05-27-raspios-buster-lite-armhf
 RASPBIAN_URL=http://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2020-05-28/
 
@@ -100,8 +100,8 @@ build moode/librespot_0.1.1
 build moode/squeezelite_master+59fea82
 
 # COMPONENT 6 - Upmpdcli
-build moode/upmpdcli_1.4.12+6c71a41
-build moode/libupnppsamples_master+2a6e7a
+build moode/upmpdcli_1.4.12+7ea91f5
+#build moode/libupnppsamples_master+2a6e7a
 
 # COMPONENT 7 - Optionally install gmusicapi
 build python/gmusicapi_12.1.1
