@@ -133,6 +133,7 @@ cat >${BIN_PATH}/etc/dbus-1/system.d/bluealsa.conf <<-EOF
 	<!-- Only user root can own the BlueAlsa service -->
 	<policy user="root">
 	   <allow own="org.bluealsa"/>
+	   <allow send_destination="org.bluealsa"/>
 	</policy>
 
 	</busconfig>
