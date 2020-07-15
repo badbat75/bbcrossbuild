@@ -1,0 +1,5 @@
+# gmusicapi-13.0.0
+PKG_URL="https://github.com/simon-weber/gmusicapi/archive/13.0.0.tar.gz"
+BUILD_PROCESS=pythonbuild
+# CONF_FLAGS=""
+PKG_DEPS="python/lxml_4.5.2 moode/recoll_1.27.3 python/mutagen-1.45.0"
