@@ -126,14 +126,14 @@ sed -i 's|/usr/local/lib/python${PYTHONBIN_VER}/dist-packages/|/usr/lib/python${
 cat >${BIN_PATH}/etc/dbus-1/system.d/bluealsa.conf <<-EOF
 	<!-- initial version, based on /etc/dbus-1/system.d/avahi-dbus.conf, with thanks -->
 	<!DOCTYPE busconfig PUBLIC
-	   "-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN"
-	   "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+		\"-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN\"
+		\"http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd\">
 	<busconfig>
 
 	<!-- Only user root can own the BlueAlsa service -->
-	<policy user="root">
-	   <allow own="org.bluealsa"/>
-	   <allow send_destination="org.bluealsa"/>
+	<policy user=\"root\">
+		<allow own=\"org.bluealsa\"/>
+		<allow send_destination=\"org.bluealsa\"/>
 	</policy>
 
 	</busconfig>

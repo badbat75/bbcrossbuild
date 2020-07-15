@@ -19,9 +19,9 @@ then
 fi
 
 BINUTILS_VER=${BINUTILS_VER:-2.34}
-GCC_VER=${GCC_VER:-9}
+GCC_VER=${GCC_VER:-10}
 GMP_VER=${GMP_VER:-6.1.2}
-MPFR_VER=${MPFR_VER:-4.0.2}
+MPFR_VER=${MPFR_VER:-4.1.0}
 MPC_VER=${MPC_VER:-1.1.0}
 ISL_VER=${ISL_VER:-0.22}
 
@@ -238,7 +238,7 @@ function setup_gcc () {
 
 		set -x
 		local GMPURL=https://gmplib.org/download/gmp/gmp-${GMP_VER}.tar.xz
-		local MPFRURL=https://www.mpfr.org/mpfr-current/mpfr-${MPFR_VER}.tar.xz
+		local MPFRURL=https://www.mpfr.org/mpfr-${MPFR_VER}/mpfr-${MPFR_VER}.tar.xz
 		local MPCURL=https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VER}.tar.gz
 		local ISLURL=http://isl.gforge.inria.fr/isl-${ISL_VER}.tar.xz
 		local BINUTILSURL=https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz
