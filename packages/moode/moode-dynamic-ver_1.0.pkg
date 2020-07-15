@@ -7,10 +7,10 @@ else
 fi
 if [ -z "${MPDVER}" ]
 then
-	MPDVER=0.21.24
+	MPDVER=0.21.25
 fi
 PKG_SRCDIR=moode_${MOODEREL}
-BUILD_PROCESS=downloadonly	
+BUILD_PROCESS=downloadonly
 PKG_DEPS="python/RPi.GPIO_0.7.0 python/python-musicpd_0.4.4 moode/mpd_${MPDVER} raspbian/zip_3.0-8"
 PKG_PREBUILD="install -D boot/config.txt.default ${BIN_PATH}/boot/config.txt
 install -d ${BIN_PATH}/etc/sudoers.d
