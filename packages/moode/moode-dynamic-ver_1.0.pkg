@@ -45,7 +45,7 @@ install -D other/sdcard/Stereo\ Test/* ${BIN_PATH}/mnt/SDCARD/
 install -D network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
 #install -D network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
 install -D network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
-sqlite ${BIN_PATH}/var/local/www/db/moode-sqlite3.db < var/local/www/db/moode-sqlite3.db.sql
+sqlite3 ${BIN_PATH}/var/local/www/db/moode-sqlite3.db < var/local/www/db/moode-sqlite3.db.sql
 #install -D var/local/www/db/moode-sqlite3.db.default ${BIN_PATH}/var/local/www/db/moode-sqlite3.db
 # Moode sources and configs
 install -D mpd/RADIO/* ${BIN_PATH}/var/lib/mpd/music/RADIO
