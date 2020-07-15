@@ -26,6 +26,9 @@ PKI_KEY_NAME=badbat75
 PKI_SUBJECT="/C=IT/ST=Bologna/L=Bologna/O=BadBat75 LTD/CN=badbat75/emailAddress=emiliano.desimoni@outlook.com"
 ######
 
+### Specify boot C compiler (default: gcc)
+# TOOLCHAIN_CC="cc"
+
 ### Enable and set if you are using a gcc wrapper like ccache or distcc
 # CCWRAPPER="ccache"
 ### Set make verbosity (0 disabled, 1 enabled)
