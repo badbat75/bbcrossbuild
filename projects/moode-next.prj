@@ -1,6 +1,6 @@
 # Build recipe for moode mediacenter
 
-MOODEREL=r660
+MOODEREL=r670
 #MOODEDEVCOMMIT=fd26dca2d01b9d03ba628d1ccd3d703f4805d7bd
 RASPBIAN_IMAGE=2020-05-27-raspios-buster-lite-armhf
 RASPBIAN_URL=http://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2020-05-28/
@@ -131,8 +131,8 @@ run_on_root_dir temp root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
 	bs2b-ladspa libbs2b0 libasound2-plugin-equal \
 	\
 	telnet sysstat squashfs-tools shellinabox \
-	samba smbclient ntfs-3g exfat-fuse xfsprogs inotify-tools ffmpeg \
-	avahi-utils winbind libnss-winbind djmount haveged \
+	samba smbclient ntfs-3g exfat-fuse inotify-tools ffmpeg \
+	avahi-utils winbind libnss-winbind djmount haveged xfsprogs triggerhappy zip id3v2\
 	udisks2 libatasmart4 libdbus-glib-1-2 libgudev-1.0-0 libsgutils2-2 libdevmapper-event1.02.1 \
 	\
 	libyajl2 libshout3 libfaad2 libmad0 libavahi-client3 libcurl3-gnutls \
@@ -187,6 +187,7 @@ run_on_root_dir temp root "dphys-swapfile uninstall"
 run_on_root_dir temp root "systemctl disable dphys-swapfile"
 run_on_root_dir temp root "[ -d /var/www/html ] && rm -r /var/www/html || true"
 run_on_root_dir temp root "rm /etc/update-motd.d/10-uname || true"
+run_on_root_dir temp root "sudo rm /etc/motd || true"
 #run_on_root_dir temp root "rm /var/lib/dhcpcd5/*"
 # Start-up services
 #run_on_root_dir temp root "systemctl daemon-reload"
