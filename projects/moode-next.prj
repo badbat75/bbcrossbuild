@@ -52,7 +52,7 @@ build moode/moode-dynamic-ver_1.0
 
 # STEP 1 - Modify Raspbian Lite and create a new, base image
 build raspbian/iw_5.4-1
-build moode/wireless-regdb_651e39de
+build moode/wireless-regdb_2020-04-29
 build raspbian/wpa_supplicant_2.9.0-13
 build raspbian/hostapd_2.9.0-13
 
@@ -94,7 +94,7 @@ build moode/mpdas_0.4.5+c81c480
 build moode/shairport-sync_3.3.7rc1
 
 # COMPONENT 4B - Librespot
-build moode/librespot_0.1.1
+build moode/librespot_0.1.2
 
 # COMPONENT 5 - Squeezelite
 build moode/squeezelite_master+59fea82
