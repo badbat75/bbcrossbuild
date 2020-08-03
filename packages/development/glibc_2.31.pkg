@@ -9,6 +9,7 @@ CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}\${BUILD_INCLUDEDIR} --d
 	--enable-stack-protector=strong --enable-obsolete-rpc --enable-obsolete-nsl --enable-pt_chown \
 	libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes"
 #--with-headers=${BIN_PATH}${BUILD_INCLUDEDIR} 
+PKG_CFLAGS="-Wno-stringop-overflow"
 INST_CMD="${OVERRIDE_INST_CMD:-install}"
 #PATCHDEB=""
 #PKG_DEPS=

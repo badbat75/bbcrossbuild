@@ -302,15 +302,19 @@ function setup_gcc () {
 
 		set -x
 		local BUILD_ARCH=${1:-${HARCH}}
+		if [ ${MAKEVERBOSE:-0} -eq 0 ]
+		then
+			local SILENTCONFIG="--enable-silent-rules"
+		fi
 		case ${GCC_STAGE} in
 			stage1 | stage2 )
 				local GCC_LANGUAGES=c
-				local GCC_COMMON_CONFIG="--enable-languages=${GCC_LANGUAGES} --disable-shared --enable-linker-build-id --disable-nls --enable-gnu-unique-object --disable-plugin --enable-checking=release --disable-libmudflap --disable-libgomp --disable-libssp --disable-lto --disable-threads --enable-multiarch \
+				local GCC_COMMON_CONFIG="${SILENTCONFIG} --enable-languages=${GCC_LANGUAGES} --disable-shared --enable-linker-build-id --disable-nls --enable-gnu-unique-object --disable-plugin --enable-checking=release --disable-libmudflap --disable-libgomp --disable-libssp --disable-lto --disable-threads --enable-multiarch \
 					--disable-option-checking --disable-libitm --disable-libmpx --without-headers --without-ppl"
 			;;
 			* )
 				local GCC_LANGUAGES=${GCC_LANGUAGES:-c,c++,lto}
-				local GCC_COMMON_CONFIG="--enable-languages=${GCC_LANGUAGES} --enable-shared --enable-linker-build-id --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --enable-checking=release --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-threads=posix --enable-initfini-array --enable-gnu-indirect-function --enable-multiarch \
+				local GCC_COMMON_CONFIG="${SILENTCONFIG} --enable-languages=${GCC_LANGUAGES} --enable-shared --enable-linker-build-id --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --enable-checking=release --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-threads=posix --enable-initfini-array --enable-gnu-indirect-function --enable-multiarch \
 					--with-default-libstdcxx-abi=new \
 					--disable-option-checking --disable-libitm --disable-libmpx"
 					#--with-system-zlib
