@@ -253,13 +253,13 @@ function setup_gcc () {
 		download_uncompress ${ISLURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/isl
 		cd ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
 		find ../binutils-${BINUTILS_VER} -maxdepth 1 -type d -exec ln -fs {} . \;
-		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -lt 10 && test_version ${BINUTILS_VER} -ge 2.33
+		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 9 && test_version ${BINUTILS_VER} -ge 2.33
 		then
 			echo "GCC version older than 10 and BINUTILS 2.33 or earlier..."
 			cp -f ../binutils-${BINUTILS_VER}/configure.ac .
 			cp -f ../binutils-${BINUTILS_VER}/Makefile.* .
 		fi
-		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -lt 10 && test_version ${BINUTILS_VER} -ge 2.34
+		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 9 && test_version ${BINUTILS_VER} -ge 2.34
 		then
 			echo "GCC version older than 10 and BINUTILS 2.34 or earlier..."
 			ln -fs ../binutils-${BINUTILS_VER}/config/debuginfod.m4 config/debuginfod.m4
@@ -267,9 +267,6 @@ function setup_gcc () {
 		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 10 && test_version ${BINUTILS_VER} -ge 2.35
 		then
 			echo "GCC version older than or equal to 10 and BINUTILS 2.35 or earlier..."
-			cp -f ../binutils-${BINUTILS_VER}/configure.ac .
-			cp -f ../binutils-${BINUTILS_VER}/Makefile.* .
-			ln -fs ../binutils-${BINUTILS_VER}/config/debuginfod.m4 config/debuginfod.m4
 			rm -rf libiberty
 			ln -fs ../binutils-${BINUTILS_VER}/libiberty .
 		fi
