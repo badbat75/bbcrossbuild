@@ -71,8 +71,7 @@ function build () (
 		trap 'STATUS=${?}; \
 			set +x; \
 			trap - ERR SIGINT; \
-			return ${STATUS};' ERR
-	
+			return ${STATUS};' ERR	
 		trap 'set +x; \
 			trap - ERR SIGINT; \
 			[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH} || true;
@@ -95,6 +94,7 @@ function build () (
 				then
 					git -C ${PKG_SRCPATH} checkout ${GIT_COMMIT}
 				fi
+				git -C ${PKG_SRCPATH} submodule update --init --recursive
 			fi
 		fi
 		set +x
@@ -370,6 +370,7 @@ function build () (
 				done
 				echo
 			}
+			set +x
 			OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 			if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 			then
@@ -421,23 +422,29 @@ function build () (
 				c_link_args = [${C_LINK_ARGS}]
 				cpp_link_args = [${CPP_LINK_ARGS}]
 			EOF
+			set -x
 		}
+
+		trap 'STATUS=${?}; \
+		set +x; \
+		trap - ERR; \
+		return ${STATUS};' ERR
+		set -x
+
 		mkdir -p ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
 		local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n '-v')"
 		createmesoncross
+		CMAKE=cmake \
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
-		meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release --strip -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS} &&
-		ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH} &&
+		meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release --strip -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS}
+		ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH}
 		DESTDIR=${BIN_PATH} ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH} install
-		local BUILD_STATUS=${?}
-		if [ ${BUILD_STATUS} -eq 0 ]
-		then
-			forge_la_libs ${PWD}
-		fi
+		forge_la_libs ${PWD}
 		cd ${BB_HOME}
-		return ${BUILD_STATUS}
+		set +x
+		trap - ERR
 	}
 
 	function cargobuild () {
