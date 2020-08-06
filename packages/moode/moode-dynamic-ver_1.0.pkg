@@ -1,0 +1,164 @@
+# moode-dynamic-ver_1.0
+if [ -z "${MOODEDEVCOMMIT}" ]
+then
+	PKG_URL="https://github.com/moode-player/moode/archive/${MOODEREL}prod.tar.gz"
+else
+	PKG_URL="https://github.com/moode-player/moode/archive/${MOODEDEVCOMMIT}.tar.gz"
+fi
+if [ -z "${MPDVER}" ]
+then
+	MPDVER=0.21.25
+fi
+PKG_SRCDIR=moode_${MOODEREL}
+BUILD_PROCESS=downloadonly
+PKG_DEPS="python/RPi.GPIO_0.7.0 python/python-musicpd_0.4.4 moode/mpd_${MPDVER} raspbian/zip_3.0-8"
+PKG_PREBUILD="install -D boot/config.txt.default ${BIN_PATH}/boot/config.txt
+install -d ${BIN_PATH}/etc/sudoers.d
+echo -e 'www-data\tALL=(ALL) NOPASSWD: ALL' >> ${BIN_PATH}/etc/sudoers.d/010_www-data
+# Dirs
+install -m 0755 -d ${BIN_PATH}/var/local/www
+install -m 0755 -d ${BIN_PATH}/var/local/www/commandw
+install -m 0755 -d ${BIN_PATH}/var/local/www/imagesw
+install -m 0755 -d ${BIN_PATH}/var/local/www/imagesw/toggle
+install -m 0755 -d ${BIN_PATH}/var/local/www/db
+install -m 0755 -d ${BIN_PATH}/var/local/php
+install -d ${BIN_PATH}/var/lib/mpd/music/RADIO
+install -m 0755 -d ${BIN_PATH}/var/log/mpd
+# Mount points
+install -d ${BIN_PATH}/mnt/NAS
+install -d ${BIN_PATH}/mnt/SDCARD
+install -d ${BIN_PATH}/mnt/UPNP
+# Symlinks
+ln -fs /mnt/NAS ${BIN_PATH}/var/lib/mpd/music/NAS
+ln -fs /mnt/SDCARD ${BIN_PATH}/var/lib/mpd/music/SDCARD
+[ ! -e ${BIN_PATH}/var/lib/mpd/music/USB ] && ln -fs /media ${BIN_PATH}/var/lib/mpd/music/USB
+# Logs
+install -D -m 0644 /dev/null ${BIN_PATH}/var/log/mpd/log
+install -D -m 0666 /dev/null ${BIN_PATH}/var/log/moode.log
+install -D -m 0666 /dev/null ${BIN_PATH}/var/log/php_errors.log
+# Files
+install -D -m 0666 mpd/mpd.conf.default ${BIN_PATH}/etc/mpd.conf
+install -D mpd/sticker.sql ${BIN_PATH}/var/lib/mpd
+install -d ${BIN_PATH}/mnt/SDCARD
+install -D other/sdcard/Stereo\ Test/* ${BIN_PATH}/mnt/SDCARD/
+#install -D network/interfaces.default ${BIN_PATH}/etc/network/interfaces
+install -D network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
+#install -D network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
+install -D network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
+sqlite3 ${BIN_PATH}/var/local/www/db/moode-sqlite3.db < var/local/www/db/moode-sqlite3.db.sql
+#install -D var/local/www/db/moode-sqlite3.db.default ${BIN_PATH}/var/local/www/db/moode-sqlite3.db
+# Moode sources and configs
+install -D mpd/RADIO/* ${BIN_PATH}/var/lib/mpd/music/RADIO
+install -d ${BIN_PATH}/var/lib/mpd/music/RADIO
+install -d ${BIN_PATH}/var/lib/mpd/playlists/
+install -D mpd/playlists/* ${BIN_PATH}/var/lib/mpd/playlists/
+find etc -maxdepth 1 -type f -exec install -v -D -m 0644 {} ${BIN_PATH}/etc \;
+install -d ${BIN_PATH}/etc/alsa/conf.d
+install -D -m 0644 etc/alsa/conf.d/* ${BIN_PATH}/etc/alsa/conf.d/
+install -d ${BIN_PATH}/etc/avahi/services
+install -D -m 0644 etc/avahi/services/* ${BIN_PATH}/etc/avahi/services/
+install -d ${BIN_PATH}/etc/bluetooth
+install -D -m 0644 etc/bluetooth/* ${BIN_PATH}/etc/bluetooth/
+install -d ${BIN_PATH}/etc/dbus-1/system.d
+install -D -m 0644 etc/dbus-1/system.d/* ${BIN_PATH}/etc/dbus-1/system.d/
+install -d ${BIN_PATH}/etc/default
+install -D -m 0644 etc/default/* ${BIN_PATH}/etc/default/
+install -d ${BIN_PATH}/etc/init.d
+install -D -m 0755 etc/init.d/* ${BIN_PATH}/etc/init.d/
+install -d ${BIN_PATH}/etc/modprobe.d
+install -D -m 0644 etc/modprobe.d/* ${BIN_PATH}/etc/modprobe.d/
+install -d ${BIN_PATH}/etc/nginx
+install -D -m 0644 etc/nginx/* ${BIN_PATH}/etc/nginx/
+install -d ${BIN_PATH}/etc/pam.d
+install -D -m 0644 etc/pam.d/* ${BIN_PATH}/etc/pam.d/
+cp -r etc/php ${BIN_PATH}/etc/
+install -d ${BIN_PATH}/etc/samba
+install -D -m 0644 etc/samba/* ${BIN_PATH}/etc/samba/
+install -d ${BIN_PATH}/etc/systemd/system
+install -D -m 0644 etc/systemd/system/* ${BIN_PATH}/etc/systemd/system/
+install -d ${BIN_PATH}/etc/udev/rules.d
+install -D -m 0644 etc/udev/rules.d/* ${BIN_PATH}/etc/udev/rules.d/
+install -d ${BIN_PATH}/etc/update-motd.d
+install -D -m 0644 etc/update-motd.d/* ${BIN_PATH}/etc/update-motd.d/
+install -d ${BIN_PATH}/home/pi
+install -D -m 0755 home/*.sh ${BIN_PATH}/home/pi
+#install -D -m 0755 home/*.php ${BIN_PATH}/home/pi
+install -D -m 0644 home/dircolors ${BIN_PATH}/home/pi/.dircolors
+install -D -m 0644 home/xinitrc.default ${BIN_PATH}/home/pi/.xinitrc
+install -d ${BIN_PATH}/lib/systemd/system
+install -D -m 0644 lib/systemd/system/* ${BIN_PATH}/lib/systemd/system/
+install -d ${BIN_PATH}/usr/local/bin
+install -D -m 0755 usr/local/bin/* ${BIN_PATH}/usr/local/bin/
+#install -d ${BIN_PATH}/usr/local/etc
+install -D -m 0644 etc/shairport-sync.conf ${BIN_PATH}/etc/
+install -d ${BIN_PATH}/usr/lib/tmpfiles.d
+install -D -m 0644 usr/lib/tmpfiles.d/* ${BIN_PATH}/usr/lib/tmpfiles.d/
+install -d ${BIN_PATH}/usr/share
+cp -r usr/share/* ${BIN_PATH}/usr/share/
+install -d ${BIN_PATH}/var/local
+cp -r var/local/www ${BIN_PATH}/var/local/
+cp -r www ${BIN_PATH}/var/
+chmod 0755 ${BIN_PATH}/var/www/command/*
+# rc.local
+chmod 0755 ${BIN_PATH}/etc/rc.local
+# Bluetooth
+chmod 0666 ${BIN_PATH}/etc/bluealsaaplay.conf
+chmod 0755 ${BIN_PATH}/usr/local/bin/a2dp-autoconnect
+# Rotenc
+install -D -m 0755 other/rotenc/rotenc.py ${BIN_PATH}/usr/bin/rotenc
+ln -fs /usr/bin/rotenc ${BIN_PATH}/usr/local/bin/rotenc
+# Localui
+chmod -R 0755 ${BIN_PATH}/var/local/www
+chmod -R 0777 ${BIN_PATH}/var/local/www/db
+chmod -R ug-s ${BIN_PATH}/var/local/www
+#chmod 0777 ${BIN_PATH}/var/local/www/playhistory.log
+chmod 0777 ${BIN_PATH}/var/local/www/currentsong.txt
+install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache.json
+# Permissions
+chmod 0777 ${BIN_PATH}/var/lib/mpd/music/RADIO
+chmod -R 0777 ${BIN_PATH}/var/local/www/db
+# BB customizations
+echo -e '#!/bin/bash\necho udisks-glue no more supported' > ${BIN_PATH}/usr/bin/udisks-glue
+chmod +x ${BIN_PATH}/usr/bin/udisks-glue
+sed -i 's|^#!/usr/bin/python$|#!/usr/bin/python3|g' ${BIN_PATH}/var/www/command/bt-agent.py
+sed -i 's|local/lib/python2.7/dist|lib/python${PYTHONBIN_VER}/dist|g' ${BIN_PATH}/var/www/upp-config.php
+sed -i 's|/usr/local/lib/python${PYTHONBIN_VER}/dist-packages/|/usr/lib/python${PYTHONBIN_VER}/dist-packages/|g' ${BIN_PATH}/var/www/command/sysinfo.sh
+cat >${BIN_PATH}/etc/dbus-1/system.d/bluealsa.conf <<-EOF
+	<!-- initial version, based on /etc/dbus-1/system.d/avahi-dbus.conf, with thanks -->
+	<!DOCTYPE busconfig PUBLIC
+		\"-//freedesktop//DTD D-BUS Bus Configuration 1.0//EN\"
+		\"http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd\">
+	<busconfig>
+
+	<!-- Only user root can own the BlueAlsa service -->
+	<policy user=\"root\">
+		<allow own=\"org.bluealsa\"/>
+		<allow send_destination=\"org.bluealsa\"/>
+	</policy>
+
+	</busconfig>
+	EOF
+sed -i '/^ExecStart/ s/-p a2dp-sink$/-p a2dp-sink --ldac-abr/' ${BIN_PATH}/etc/systemd/system/bluealsa.service
+echo '### Only for bluez > 5.52'
+sed -i 's/ATTR{name}==\"\*:\*:\*:\*:\*:\*\"/ATTR{name}==\"*(AVRCP)\"/' ${BIN_PATH}/etc/udev/rules.d/10-a2dp-autoconnect.rules
+sed -i 's/^BTMAC=.*/BTMAC=00:00:00:00:00:00/' ${BIN_PATH}/usr/local/bin/a2dp-autoconnect
+echo '### Substitute default mpd binary ###'
+cp -f ${BIN_PATH}/usr/bin/mpd ${BIN_PATH}/var/www/inc/mpd-${MPDVER}
+echo '### Changes on core configuration files'
+sed -i 's/listen 80;/listen [::]:80 ipv6only=off;/' ${BIN_PATH}/etc/nginx/nginx.conf
+sqlite3 ${BIN_PATH}/var/local/www/db/moode-sqlite3.db \"
+	UPDATE cfg_hash SET value='\$(md5sum -z ${BIN_PATH}/etc/nginx/nginx.conf | awk '{print \$1}')' WHERE param='/etc/nginx/nginx.conf';
+	UPDATE cfg_hash SET value='\$(md5sum -z ${BIN_PATH}/etc/php/7.3/fpm/php.ini | awk '{print \$1}')' WHERE param='/etc/php/7.3/fpm/php.ini';
+	CREATE TRIGGER ro_columns BEFORE UPDATE OF param, value, [action] ON cfg_hash FOR EACH ROW BEGIN SELECT RAISE(ABORT, 'read only'); END;
+	\"
+# Patch for libupnpsamples-code
+#sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/upexplo.cpp
+#sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/typedservice.cpp
+#sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/dumpXML.cpp
+#sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/rdcvolume.cpp
+#sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/myrdcvolume.cpp
+#sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/typedservice.cpp
+#sed -i '/^#include \"log.h\"/ s|log.h|libupnpp/log.h|' other/libupnppsamples-code/upsend_src/workqueue.h
+#sed -i '/^#include \"config.h\"/ s|config.h|../src/localconfig.h|' other/libupnppsamples-code/upsend_src/wav.cpp
+#sed -i '/^#include \"config.h\"/ s|config.h|../src/localconfig.h|' other/libupnppsamples-code/upsend_src/streamer.cpp
+"

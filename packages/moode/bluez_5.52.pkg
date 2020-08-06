@@ -1,9 +1,0 @@
-# bluez_5.52
-PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-5.52.tar.xz"
-BUILD_PROCESS=configmake
-CONF_FLAGS="--enable-library --enable-deprecated"
-INST_CMD="libexecdir=\$(sbindir) install-strip"
-#PATCHDEB=""
-# Moode directory location search for bluetoothd and obexd
-PKG_POSTBUILD="ln -fs bluetooth/bluetoothd ${BIN_PATH}/usr/sbin/bluetoothd
-ln -fs bluetooth/obexd ${BIN_PATH}/usr/sbin/obexd"

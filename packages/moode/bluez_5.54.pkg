@@ -6,5 +6,7 @@ CONF_FLAGS="--enable-library --enable-deprecated"
 INST_CMD="libexecdir=\$(sbindir) install-strip"
 #PATCHDEB=""
 # Moode directory location search for bluetoothd and obexd
-PKG_POSTBUILD="ln -fs bluetooth/bluetoothd ${BIN_PATH}/usr/sbin/bluetoothd
+PKG_POSTBUILD="mkdir -p ${BIN_PATH}/bin
+mv ${BIN_PATH}/usr/bin/hciconfig ${BIN_PATH}/bin
+ln -fs bluetooth/bluetoothd ${BIN_PATH}/usr/sbin/bluetoothd
 ln -fs bluetooth/obexd ${BIN_PATH}/usr/sbin/obexd"

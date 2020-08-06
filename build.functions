@@ -32,9 +32,8 @@ function settoolflags () {
 	BUILD_LIBSHARED=${BUILD_LIBSHARED:-1}
 	BUILD_LIBSTATIC=${BUILD_LIBSTATIC:-1}
 
-	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}"
-	PLATFORM_KCFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}"
-	PLATFORM_RUSTFLAGS="${HMARCH_RUST:+-C target-feature=${HMARCH_RUST} }${HMCPU:+-C target-cpu=${HMCPU}}"
+	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
+		PLATFORM_RUSTFLAGS="${HMARCH_RUST:+-C target-feature=${HMARCH_RUST} }${HMCPU:+-C target-cpu=${HMCPU}}"
 	COMMON_CFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
 	COMMON_CXXFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
 	COMMON_CPPFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
@@ -72,8 +71,7 @@ function build () (
 		trap 'STATUS=${?}; \
 			set +x; \
 			trap - ERR SIGINT; \
-			return ${STATUS};' ERR
-	
+			return ${STATUS};' ERR	
 		trap 'set +x; \
 			trap - ERR SIGINT; \
 			[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH} || true;
@@ -96,6 +94,7 @@ function build () (
 				then
 					git -C ${PKG_SRCPATH} checkout ${GIT_COMMIT}
 				fi
+				git -C ${PKG_SRCPATH} submodule update --init --recursive
 			fi
 		fi
 		set +x
@@ -371,6 +370,7 @@ function build () (
 				done
 				echo
 			}
+			set +x
 			OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 			if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 			then
@@ -386,12 +386,12 @@ function build () (
 			fi
 			[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 			local CC="${HARCH}-gcc"
-			local CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}"
+			local CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}"
 			local CXX="${HARCH}-g++"
-			local CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}"
+			local CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}"
 			local CPP=${HARCH}-cpp
 			local CPPFLAGS="${COMMON_CPPFLAGS}"
-			local LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS}"
+			local LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}"
 			local AR=${HARCH}-gcc-ar
 			local NM=${HARCH}-gcc-nm
 			local RANLIB=${HARCH}-gcc-ranlib
@@ -422,23 +422,29 @@ function build () (
 				c_link_args = [${C_LINK_ARGS}]
 				cpp_link_args = [${CPP_LINK_ARGS}]
 			EOF
+			set -x
 		}
+
+		trap 'STATUS=${?}; \
+		set +x; \
+		trap - ERR; \
+		return ${STATUS};' ERR
+		set -x
+
 		mkdir -p ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
 		local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n '-v')"
 		createmesoncross
+		CMAKE=cmake \
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
-		meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release --strip -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS} &&
-		ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH} &&
+		meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release --strip -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS}
+		ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH}
 		DESTDIR=${BIN_PATH} ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH} install
-		local BUILD_STATUS=${?}
-		if [ ${BUILD_STATUS} -eq 0 ]
-		then
-			forge_la_libs ${PWD}
-		fi
+		forge_la_libs ${PWD}
 		cd ${BB_HOME}
-		return ${BUILD_STATUS}
+		set +x
+		trap - ERR
 	}
 
 	function cargobuild () {
@@ -493,14 +499,13 @@ function build () (
 		function make4kern () {
 			if [ ${KERN_LTOENABLE:-0} -eq 1 ] 
 			then
-				KERN_OPTCOMP_FLAGS+="${KERN_OPTLEVEL:+ -O${KERN_OPTLEVEL}}"
 				KERN_OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 				KBUILD_BUILD_TIMESTAMP='' make V=${MAKEVERBOSE:-0} \
 				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
 				LD="scripts/gcc-ld" \
 				AR="${HARCH}-gcc-ar" \
 				RANLIB="${HARCH}-gcc-ranlib" \
-				KCFLAGS="${KERN_OPTCOMP_FLAGS} ${PLATFORM_KCFLAGS} ${PKG_CFLAGS}" \
+				KCFLAGS="${PKG_CFLAGS}" \
 				KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 				LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 				ARCH=${KERN_ARCH} \
@@ -513,7 +518,7 @@ function build () (
 			else
 				KBUILD_BUILD_TIMESTAMP='' make V=${MAKEVERBOSE:-0} \
 				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
-				KCFLAGS="${KERN_OPTCOMP_FLAGS} ${PLATFORM_KCFLAGS} ${PKG_CFLAGS}" \
+				KCFLAGS="${PKG_CFLAGS}" \
 				KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 				LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 				ARCH=${KERN_ARCH} \
@@ -532,11 +537,25 @@ function build () (
 
 		# Config kernel build
 		make V=${MAKEVERBOSE:-0} ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} ${KERN_DEFCONFIG} .config
+
+		case ${KERN_OPTLEVEL:-null} in
+			s|S)	scripts/config -e CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3
+			;;
+			2)	scripts/config -d CC_OPTIMIZE_FOR_SIZE -e CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3
+			;;
+			3)	# Patch kernel to build with -O3 flag
+				sed -i '/depends on ARC$/d' init/Kconfig
+				scripts/config -d CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -e CC_OPTIMIZE_FOR_PERFORMANCE_O3
+			;;
+		esac
+
 		if [ "x${CONF_FLAGS}" != "x" ]
 		then
-			scripts/config ${CONF_FLAGS} &&
-			make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} ${KERN_DEFCONFIG} oldconfig
+			scripts/config ${CONF_FLAGS}
 		fi
+
+		make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} oldconfig
+	
 		if [ ! -d ${BIN_PATH}/boot ]
 		then
 			mkdir -p ${BIN_PATH}/boot

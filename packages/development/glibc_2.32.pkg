@@ -1,5 +1,5 @@
-# glibc_2.31
-PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-2.31.tar.xz"
+# glibc_2.32
+PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-2.32.tar.xz"
 BUILD_PROCESS=configmake
 AUTOCONF=0
 LTOENABLE=0

@@ -18,10 +18,10 @@ then
 	mkdir -p ${GLOBAL_TOOLCHAIN_PATH}
 fi
 
-BINUTILS_VER=${BINUTILS_VER:-2.34}
-GCC_VER=${GCC_VER:-9}
+BINUTILS_VER=${BINUTILS_VER:-2.35}
+GCC_VER=${GCC_VER:-10}
 GMP_VER=${GMP_VER:-6.1.2}
-MPFR_VER=${MPFR_VER:-4.0.2}
+MPFR_VER=${MPFR_VER:-4.1.0}
 MPC_VER=${MPC_VER:-1.1.0}
 ISL_VER=${ISL_VER:-0.22}
 
@@ -238,7 +238,7 @@ function setup_gcc () {
 
 		set -x
 		local GMPURL=https://gmplib.org/download/gmp/gmp-${GMP_VER}.tar.xz
-		local MPFRURL=https://www.mpfr.org/mpfr-current/mpfr-${MPFR_VER}.tar.xz
+		local MPFRURL=https://www.mpfr.org/mpfr-${MPFR_VER}/mpfr-${MPFR_VER}.tar.xz
 		local MPCURL=https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VER}.tar.gz
 		local ISLURL=http://isl.gforge.inria.fr/isl-${ISL_VER}.tar.xz
 		local BINUTILSURL=https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz
@@ -253,16 +253,22 @@ function setup_gcc () {
 		download_uncompress ${ISLURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/isl
 		cd ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
 		find ../binutils-${BINUTILS_VER} -maxdepth 1 -type d -exec ln -fs {} . \;
-		if $(test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -lt 10 && test_version ${BINUTILS_VER} -ge 2.33)
+		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 9 && test_version ${BINUTILS_VER} -ge 2.33
 		then
 			echo "GCC version older than 10 and BINUTILS 2.33 or earlier..."
 			cp -f ../binutils-${BINUTILS_VER}/configure.ac .
 			cp -f ../binutils-${BINUTILS_VER}/Makefile.* .
 		fi
-		if $(test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -lt 10 && test_version ${BINUTILS_VER} -ge 2.34)
+		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 9 && test_version ${BINUTILS_VER} -ge 2.34
 		then
 			echo "GCC version older than 10 and BINUTILS 2.34 or earlier..."
 			ln -fs ../binutils-${BINUTILS_VER}/config/debuginfod.m4 config/debuginfod.m4
+		fi
+		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 10 && test_version ${BINUTILS_VER} -ge 2.35
+		then
+			echo "GCC version older than or equal to 10 and BINUTILS 2.35 or earlier..."
+			rm -rf libiberty
+			ln -fs ../binutils-${BINUTILS_VER}/libiberty .
 		fi
 		autoreconf${AUTOCONF_VER} -fiv
 		set +x
@@ -302,21 +308,26 @@ function setup_gcc () {
 
 		set -x
 		local BUILD_ARCH=${1:-${HARCH}}
+		if [ ${MAKEVERBOSE:-0} -eq 0 ]
+		then
+			local SILENTCONFIG="--enable-silent-rules"
+		fi
 		case ${GCC_STAGE} in
 			stage1 | stage2 )
 				local GCC_LANGUAGES=c
-				local GCC_COMMON_CONFIG="--enable-languages=${GCC_LANGUAGES} --disable-shared --enable-linker-build-id --disable-nls --enable-gnu-unique-object --disable-plugin --enable-checking=release --disable-libmudflap --disable-libgomp --disable-libssp --disable-lto --disable-threads --enable-multiarch \
+				local GCC_COMMON_CONFIG="${SILENTCONFIG} --enable-languages=${GCC_LANGUAGES} --disable-shared --enable-linker-build-id --disable-nls --enable-gnu-unique-object --disable-plugin --enable-checking=release --disable-libmudflap --disable-libgomp --disable-libssp --disable-lto --disable-threads --enable-multiarch \
 					--disable-option-checking --disable-libitm --disable-libmpx --without-headers --without-ppl"
 			;;
 			* )
 				local GCC_LANGUAGES=${GCC_LANGUAGES:-c,c++,lto}
-				local GCC_COMMON_CONFIG="--enable-languages=${GCC_LANGUAGES} --enable-shared --enable-linker-build-id --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --enable-checking=release --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-threads=posix --enable-initfini-array --enable-gnu-indirect-function --enable-multiarch \
-					--with-default-libstdcxx-abi=new --with-system-zlib \
+				local GCC_COMMON_CONFIG="${SILENTCONFIG} --enable-languages=${GCC_LANGUAGES} --enable-shared --enable-linker-build-id --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --enable-checking=release --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-threads=posix --enable-initfini-array --enable-gnu-indirect-function --enable-multiarch \
+					--with-default-libstdcxx-abi=new \
 					--disable-option-checking --disable-libitm --disable-libmpx"
+					#--with-system-zlib
 			;;
 		esac
 		local GCC_BUILD_CONFIG="--disable-multilib --disable-bootstrap"
-		local GCC_HOST_CONFIG="--with-arch-directory=${HM}${HMARCH:+ --with-arch=${HMARCH}}${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
+		local GCC_HOST_CONFIG="--with-multilib=default --with-arch-directory=${HM}${HMARCH:+ --with-arch=${HMARCH}}${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
 		local BINUTILS_COMMON_CONFIG="--enable-gold --enable-libctf"
 		local BINUTILS_BUILD_CONFIG=""
 		local BINUTILS_HOST_CONFIG=""
@@ -341,7 +352,7 @@ function setup_gcc () {
 		else
 			local HOST_RANLIB="gcc-ranlib"
 		fi
-		local HOST_CFLAGS="${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS} -march=native -Wno-pedantic"
+		local HOST_CFLAGS="${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS} -fPIC -march=native -Wno-pedantic"
 		local HOST_CXXFLAGS="${HOST_CFLAGS}"
 		local HOST_LDFLAGS="${COMMON_LDFLAGS} ${GCC_OPTLINK_FLAGS} -lgcc_s"
 		if [ "${BUILD_ARCH}" == "${BARCH}" ]
@@ -368,7 +379,7 @@ function setup_gcc () {
 				local GCC_SYSROOT_PATH=${BIN_PATH}
 			fi
 			local CONFIG_ARCH_PARAMS="--build=${BARCH} --host=${BARCH} --target=${HARCH} --with-sysroot=${GCC_SYSROOT_PATH}"
-			local TARGET_CFLAGS="${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS}${HMARCH:+ -march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}"
+			local TARGET_CFLAGS="${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS}${HMARCH:+ -march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
 			local TARGET_CXXFLAGS="${TARGET_CFLAGS}"
 			local TARGET_LDFLAGS="${COMMON_LDFLAGS} ${GCC_OPTLINK_FLAGS}"
 		fi
@@ -518,6 +529,10 @@ function install_gcclibs () {
 	echo "GCCCXXLIB: ${GCCCXXLIB}" >> ${LOG_PATH}/gcclibs.log
 	echo "GCCCXXLIBNAME: ${GCCCXXLIBNAME}" >> ${LOG_PATH}/gcclibs.log
 	echo "BASEGCCCXXLIBNAME: ${BASEGCCCXXLIBNAME}" >> ${LOG_PATH}/gcclibs.log
+	if [ ! -d ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} ]
+	then
+		mkdir -p ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
+	fi
 	cp -v ${GCCCXXLIB} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} >> ${LOG_PATH}/gcclibs.log 2>&1 &&
 	ln -fs ${GCCCXXLIBNAME} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/${BASEGCCCXXLIBNAME} >> ${LOG_PATH}/gcclibs.log 2>&1
 	local BUILD_STATUS=${?}

@@ -1,8 +1,0 @@
-# wireless-regdb_651e39de
-PKG_URL="https://git.kernel.org/pub/scm/linux/kernel/git/sforshee/wireless-regdb.git/snapshot/wireless-regdb-651e39dee8605995b736b6056c6f7dc5c5a9c948.tar.gz"
-BUILD_PROCESS=simplemake
-PKG_TWOSTEPSBUILD=0
-INST_CMD=install
-#PKG_DEPS=
-#PKG_PREBUILD=""
-PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} CRDA_PATH=/lib/crda FIRMWARE_PATH=/lib/firmware MANDIR=\${BUILD_PREFIX}/share/man"

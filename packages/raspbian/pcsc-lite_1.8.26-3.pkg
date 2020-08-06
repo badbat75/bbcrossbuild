@@ -1,6 +1,0 @@
-# pcsc-lite_1.8.26-3
-PKG_URL="http://archive.raspbian.org/raspbian/pool/main/p/pcsc-lite/pcsc-lite_1.8.26.orig.tar.bz2"
-BUILD_PROCESS=configmake
-CONF_FLAGS="--disable-usb --with-systemdsystemunitdir=/lib/systemd/system --enable-usbdropdir=\${BUILD_LIBDIR}/pcsc/drivers"
-INST_CMD=install-strip
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/p/pcsc-lite/pcsc-lite_1.8.26-3.debian.tar.xz"

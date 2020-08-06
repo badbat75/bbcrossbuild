@@ -179,7 +179,7 @@ then
 else
 	echo "Platform file ${PLATFORM} does not exists!!! Proceeding as no platform specified."
 	PLATFORM=native
-	HARCH=$(${TOOLCHAIN_CC} -dumpmachine)
+	HARCH=$(${TOOLCHAIN_CC:-gcc} -dumpmachine)
 	HMARCH=native
 fi
 
