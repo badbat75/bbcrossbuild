@@ -1,11 +1,11 @@
 # zstd_1.4.5+dfsg-4+rpi1
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libz/libzstd/libzstd_1.4.5%2Bdfsg.orig.tar.xz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libz/libzstd/libzstd_1.4.5%2Bdfsg-4%2Brpi1.debian.tar.xz"
-PKG_CFLAGS=""
-PKG_LDFLAGS=
+#PKG_CFLAGS=
+#PKG_LDFLAGS=
 BUILD_PROCESS=simplemake
 INST_CMD=install
-PKG_DEPS=""
-PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX}"
+#PKG_DEPS=
+PKG_MAKEVARS="PREFIX=${BUILD_PREFIX} LIBDIR=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
 
 # Note: Build-Depends: d-shlibs, debhelper-compat (= 13), help2man, liblz4-dev, liblzma-dev, zlib1g-dev
