@@ -317,13 +317,14 @@ function setup_gcc () {
 				local GCC_LANGUAGES=c
 				local GCC_COMMON_CONFIG="${SILENTCONFIG} --enable-languages=${GCC_LANGUAGES} --disable-shared --enable-linker-build-id --disable-nls --enable-gnu-unique-object --disable-plugin --enable-checking=release --disable-libmudflap --disable-libgomp --disable-libssp --disable-lto --disable-threads --enable-multiarch \
 					--disable-option-checking --disable-libitm --disable-libmpx --without-headers --without-ppl"
-			;;
+				local GCC_COMMON_CONFIG+=" --with-system-zlib"
+	;;
 			* )
 				local GCC_LANGUAGES=${GCC_LANGUAGES:-c,c++,lto}
 				local GCC_COMMON_CONFIG="${SILENTCONFIG} --enable-languages=${GCC_LANGUAGES} --enable-shared --enable-linker-build-id --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --enable-checking=release --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-threads=posix --enable-initfini-array --enable-gnu-indirect-function --enable-multiarch \
 					--with-default-libstdcxx-abi=new \
 					--disable-option-checking --disable-libitm --disable-libmpx"
-					#--with-system-zlib
+				local GCC_COMMON_CONFIG+=" --with-system-zlib"
 			;;
 		esac
 		local GCC_BUILD_CONFIG="--disable-multilib --disable-bootstrap"
@@ -352,9 +353,15 @@ function setup_gcc () {
 		else
 			local HOST_RANLIB="gcc-ranlib"
 		fi
-		local HOST_CFLAGS="${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS} -fPIC -march=native -Wno-pedantic"
+		local HOST_CFLAGS="${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS} -Wno-pedantic"
+		local HOST_CFLAGS+=" -march=native"
 		local HOST_CXXFLAGS="${HOST_CFLAGS}"
-		local HOST_LDFLAGS="${COMMON_LDFLAGS} ${GCC_OPTLINK_FLAGS} -lgcc_s"
+		local HOST_LDFLAGS="${COMMON_LDFLAGS} ${GCC_OPTLINK_FLAGS}"
+		### Compile workarounds
+		### if no system-zlib specified:
+		#local HOST_CFLAGS+=" -fPIC"
+		#local HOST_LDFLAGS+=" -lgcc_s"
+		###
 		if [ "${BUILD_ARCH}" == "${BARCH}" ]
 		then
 			# If BUILD_ARCH then install in GLOBAL_TOOLCHAIN_PATH
@@ -368,7 +375,7 @@ function setup_gcc () {
 			local TARGET_LDFLAGS="${HOST_LDFLAGS}"
 		else
 			# if TARGET_ARCH then install in TOOLCHAIN_PATH
-			local GCC_BUILD_PATH=${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
+			local GCC_BUILD_PATsH=${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 			local GCC_INSTALL_PATH=${TOOLCHAIN_PATH}
 			local GCC_CONFIG="${GCC_HOST_CONFIG}"
 			local BINUTILS_CONFIG="${BINUTILS_HOST_CONFIG}"
@@ -386,12 +393,23 @@ function setup_gcc () {
 		local BINUTILS_LTO_WRAPPERS_PATH=${GCC_BUILD_PATH}/gcc-${GCC_VER}/binutils_lto_wrappers
 		if [ ${GCC_LTOENABLE} -eq 1 ]
 		then
-			local GCC_OPTCOMP_FLAGS="${GCC_OPTCOMP_FLAGS} ${COMMON_LTOFLAGS}"
-			local TARGET_AR="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-ar-new"
-			local TARGET_NM="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-nm-new"
-			local TARGET_RANLIB="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-ranlib-new"
-			local TARGET_CONFIG_ARGS="AR_FOR_TARGET='${TARGET_AR}' NM_FOR_TARGET='${TARGET_NM}' RANLIB_FOR_TARGET='${TARGET_RANLIB}'"
+			local HOST_CFLAGS+=" ${COMMON_LTOFLAGS}"
+			local HOST_CXXFLAGS+=" ${COMMON_LTOFLAGS}"
+			#local TARGET_AR="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-ar-new"
+			#local TARGET_NM="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-nm-new"
+			#local TARGET_RANLIB="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-ranlib-new"
+			#local TARGET_CONFIG_ARGS="AR_FOR_TARGET='${TARGET_AR}' NM_FOR_TARGET='${TARGET_NM}' RANLIB_FOR_TARGET='${TARGET_RANLIB}'"
 		fi
+		#if [ ${LTOENABLE} -eq 1 ]
+		#then
+		#	gcc_binutils_build_patch ${BARCH}
+		#	local TARGET_CFLAGS+=" ${COMMON_LTOFLAGS}"
+		#	local TARGET_CXXFLAGS+=" ${COMMON_LTOFLAGS}"
+		#	local TARGET_AR="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-ar-new"
+		#	local TARGET_NM="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-nm-new"
+		#	local TARGET_RANLIB="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-ranlib-new"
+		#	local TARGET_CONFIG_ARGS="AR_FOR_TARGET='${TARGET_AR}' NM_FOR_TARGET='${TARGET_NM}' RANLIB_FOR_TARGET='${TARGET_RANLIB}'"
+		#fi
 		local BUILD_ENV_SHELL="CC_FOR_BUILD='${HOST_CC}' CXX_FOR_BUILD='${HOST_CXX}' AR_FOR_BUILD='${HOST_AR}' NM_FOR_BUILD='${HOST_NM}' RANLIB_FOR_BUILD='${HOST_RANLIB}' \
 			CFLAGS_FOR_BUILD='${HOST_CFLAGS}' CXXFLAGS_FOR_BUILD='${HOST_CXXFLAGS}' LDFLAGS_FOR_BUILD='${HOST_LDFLAGS}' \
 			CC='${HOST_CC}' CXX='${HOST_CXX}' AR='${HOST_AR}' NM='${HOST_NM}' RANLIB='${HOST_RANLIB}' \
@@ -424,8 +442,7 @@ function setup_gcc () {
 			* )
 				(eval "trap 'exit ${?}' ERR; ${BUILD_ENV_SHELL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure -v \
 					--prefix=${GCC_INSTALL_PATH} --mandir=${GCC_INSTALL_PATH}/share/man --infodir=${GCC_INSTALL_PATH}/share/info \
-					${CONFIG_ARCH_PARAMS} ${BINUTILS_COMMON_CONFIG} ${BINUTILS_CONFIG} ${GCC_COMMON_CONFIG} ${GCC_CONFIG} ${TARGET_CONFIG_ARGS}")
-				gcc_binutils_build_patch ${BARCH}
+					${CONFIG_ARCH_PARAMS} ${BINUTILS_COMMON_CONFIG} ${BINUTILS_CONFIG} ${GCC_COMMON_CONFIG} ${GCC_CONFIG} ${TARGET_CONFIG_ARGS}")				
 				make STAGE_CC_WRAPPER="${CCWRAPPER}" V=${MAKEVERBOSE:-0}
 				make V=${MAKEVERBOSE:-0} install-strip
 			;;

@@ -1,5 +1,5 @@
 # libupnppsamples_master+2a6e7a
-GIT_URL="http://@opensourceprojects.eu/git/p/libupnppsamples/code"
+GIT_URL="http://opensourceprojects.eu/git/p/libupnppsamples/code"
 GIT_BRANCH=2a6e7a
 BUILD_PROCESS=configmake
 # CONF_FLAGS=""

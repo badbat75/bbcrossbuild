@@ -30,7 +30,7 @@ PKI_SUBJECT="/C=IT/ST=Bologna/L=Bologna/O=BadBat75 LTD/CN=badbat75/emailAddress=
 # TOOLCHAIN_CC="cc"
 
 ### Enable and set if you are using a gcc wrapper like ccache or distcc
-# CCWRAPPER="ccache"
+CCWRAPPER="ccache"
 ### Set make verbosity (0 disabled, 1 enabled)
 MAKEVERBOSE=0
 
@@ -53,7 +53,8 @@ OPTCOMP_FLAGS="-pipe"
 ### Optional rustc compiler flags
 OPTCOMP_RUSTFLAGS="-C codegen-units=1"
 ### Optional gcc-ld linker flags
-OPTLINK_FLAGS="-fuse-ld=gold -Wl,-z,relro"
+OPTLINK_FLAGS="-fuse-ld=gold"
+OPTLINK_FLAGS+=" -Wl,-z,relro -Wl,-z,now"
 ### Enable LTO building for the applications (can be set up in the project definition)
 # LTOENABLE=1
 ######
@@ -71,7 +72,7 @@ KERN_OPTLINK_FLAGS=
 
 ###### Versions for GCC and its dependencies
 #GCC_VER=10
-#BINUTILS_VER=2.34
+#BINUTILS_VER=2.35
 #GMP_VER=6.1.2
 #MPFR_VER=4.0.2
 #MPC_VER=1.1.0
@@ -81,7 +82,7 @@ GCC_OPTLEVEL=3
 ### Optional gcc compiler flags
 GCC_OPTCOMP_FLAGS=
 ### Optional ld linker flags
-GCC_OPTLINK_FLAGS="-Wl,-z,relro"
+GCC_OPTLINK_FLAGS="-Wl,-z,relro -Wl,-z,now"
 ### Enable LTO building for GCC and its libraries (can be set up in the project definition)
 # GCC_LTOENABLE=1
 ######
