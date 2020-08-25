@@ -318,7 +318,7 @@ function setup_gcc () {
 				local GCC_COMMON_CONFIG="${SILENTCONFIG} --enable-languages=${GCC_LANGUAGES} --disable-shared --enable-linker-build-id --disable-nls --enable-gnu-unique-object --disable-plugin --enable-checking=release --disable-libmudflap --disable-libgomp --disable-libssp --disable-lto --disable-threads --enable-multiarch \
 					--disable-option-checking --disable-libitm --disable-libmpx --without-headers --without-ppl"
 				local GCC_COMMON_CONFIG+=" --with-system-zlib"
-	;;
+			;;
 			* )
 				local GCC_LANGUAGES=${GCC_LANGUAGES:-c,c++,lto}
 				local GCC_COMMON_CONFIG="${SILENTCONFIG} --enable-languages=${GCC_LANGUAGES} --enable-shared --enable-linker-build-id --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --enable-checking=release --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-threads=posix --enable-initfini-array --enable-gnu-indirect-function --enable-multiarch \
@@ -375,7 +375,7 @@ function setup_gcc () {
 			local TARGET_LDFLAGS="${HOST_LDFLAGS}"
 		else
 			# if TARGET_ARCH then install in TOOLCHAIN_PATH
-			local GCC_BUILD_PATsH=${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
+			local GCC_BUILD_PATH=${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 			local GCC_INSTALL_PATH=${TOOLCHAIN_PATH}
 			local GCC_CONFIG="${GCC_HOST_CONFIG}"
 			local BINUTILS_CONFIG="${BINUTILS_HOST_CONFIG}"
@@ -416,6 +416,7 @@ function setup_gcc () {
 			CFLAGS='${HOST_CFLAGS}' CXXFLAGS='${HOST_CXXFLAGS}' LDFLAGS='${HOST_LDFLAGS}' \
 			CFLAGS_FOR_TARGET='${TARGET_CFLAGS}' CXXFLAGS_FOR_TARGET='${TARGET_CXXFLAGS}' LDFLAGS_FOR_TARGET='${TARGET_LDFLAGS}'"
 
+		echo "GCC_BUILD_PATH: ${GCC_BUILD_PATH}"
 		### Build GCC
 		if [ -d ${GCC_BUILD_PATH} ] && [[ ! "${GCC_STAGE}" =~ ^stage[24] ]]
 		then
