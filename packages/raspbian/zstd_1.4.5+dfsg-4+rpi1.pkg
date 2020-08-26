@@ -5,7 +5,7 @@ PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libz/libzstd/libzstd_1.
 #PKG_LDFLAGS=
 BUILD_PROCESS=simplemake
 INST_CMD=install
-#PKG_DEPS=
+PKG_DEPS="raspbian/lz4_1.9.2-2"
 PKG_MAKEVARS="PREFIX=${BUILD_PREFIX} LIBDIR=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
 
 # Note: Build-Depends: d-shlibs, debhelper-compat (= 13), help2man, liblz4-dev, liblzma-dev, zlib1g-dev
