@@ -1,5 +1,5 @@
-# squeezelite_master+59fea82
-PKG_URL="https://github.com/ralph-irving/squeezelite/archive/59fea822893f94f54c141d0b07019ec45e7fa095.tar.gz"
+# squeezelite_master+b8c8138
+PKG_URL="https://github.com/ralph-irving/squeezelite/archive/b8c8138b5d78e71d9c743999eccbe2b487390068.tar.gz"
 BUILD_PROCESS=simplemake
 INST_CMD=all
 #PKG_DEPS="raspbian/opusfile_0.9+20170913-1"

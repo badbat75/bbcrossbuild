@@ -1,4 +1,4 @@
-# moode-dynamic-ver_1.0
+# moode-dynamic-ver_1.1
 if [ -z "${MOODEDEVCOMMIT}" ]
 then
 	PKG_URL="https://github.com/moode-player/moode/archive/${MOODEREL}prod.tar.gz"
@@ -151,6 +151,10 @@ sqlite3 ${BIN_PATH}/var/local/www/db/moode-sqlite3.db \"
 	UPDATE cfg_hash SET value='\$(md5sum -z ${BIN_PATH}/etc/php/7.3/fpm/php.ini | awk '{print \$1}')' WHERE param='/etc/php/7.3/fpm/php.ini';
 	CREATE TRIGGER ro_columns BEFORE UPDATE OF param, value, [action] ON cfg_hash FOR EACH ROW BEGIN SELECT RAISE(ABORT, 'read only'); END;
 	\"
+if test_version ${MOODEREL} -gt 6.7.1
+then
+	cp other/mpd/_patches/*.patch ${PATCH_PATH}
+fi
 # Patch for libupnpsamples-code
 #sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/upexplo.cpp
 #sed -i '/^#include <string>/i #include <unistd.h>' other/libupnppsamples-code/src/typedservice.cpp
