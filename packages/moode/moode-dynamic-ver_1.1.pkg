@@ -151,10 +151,13 @@ sqlite3 ${BIN_PATH}/var/local/www/db/moode-sqlite3.db \"
 	UPDATE cfg_hash SET value='\$(md5sum -z ${BIN_PATH}/etc/php/7.3/fpm/php.ini | awk '{print \$1}')' WHERE param='/etc/php/7.3/fpm/php.ini';
 	CREATE TRIGGER ro_columns BEFORE UPDATE OF param, value, [action] ON cfg_hash FOR EACH ROW BEGIN SELECT RAISE(ABORT, 'read only'); END;
 	\"
-cat > ${BIN_PATH}/var/local/www/mpd_versions.conf <<-EOF
-	# This config contains the selectable MPD versions for moOde
-	${MPDVER};${MPDVER} (Default)
-	EOF
+if test_version ${MOODEREL} -ge 6.7.0
+then
+	cat > ${BIN_PATH}/var/local/www/mpd_versions.conf <<-EOF
+		# This config contains the selectable MPD versions for moOde
+		${MPDVER};${MPDVER} (Default)
+		EOF
+fi
 if test_version ${MOODEREL} -ge 7.0.0
 then
 	cp other/mpd/_patches/*.patch ${PATCH_PATH}
