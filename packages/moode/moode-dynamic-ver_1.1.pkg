@@ -10,6 +10,7 @@ then
 	MPDVER=0.21.25
 fi
 PKG_SRCDIR=moode_${MOODEREL}
+echo -n ${PKG_SRCDIR}${MOODEDEVCOMMIT:++${MOODEDEVCOMMIT}}
 BUILD_PROCESS=downloadonly
 PKG_DEPS="python/RPi.GPIO_0.7.0 python/python-musicpd_0.4.4 moode/mpd_${MPDVER} raspbian/zip_3.0-8"
 PKG_PREBUILD="install -D boot/config.txt.default ${BIN_PATH}/boot/config.txt
@@ -45,8 +46,16 @@ install -D other/sdcard/Stereo\ Test/* ${BIN_PATH}/mnt/SDCARD/
 install -D network/wpa_supplicant.conf.default ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant.conf
 #install -D network/dhcpcd.conf.default ${BIN_PATH}/etc/dhcpcd.conf
 install -D network/hostapd.conf.default ${BIN_PATH}/etc/hostapd/hostapd.conf
-sqlite3 ${BIN_PATH}/var/local/www/db/moode-sqlite3.db < var/local/www/db/moode-sqlite3.db.sql
-#install -D var/local/www/db/moode-sqlite3.db.default ${BIN_PATH}/var/local/www/db/moode-sqlite3.db
+if test_version ${MOODEREL} -ge r670
+then
+	if [ -f ${BIN_PATH}/var/local/www/db/moode-sqlite3.db ]
+	then
+		rm -f ${BIN_PATH}/var/local/www/db/moode-sqlite3.db
+	fi
+	sqlite3 ${BIN_PATH}/var/local/www/db/moode-sqlite3.db < var/local/www/db/moode-sqlite3.db.sql
+else
+	install -D var/local/www/db/moode-sqlite3.db.default ${BIN_PATH}/var/local/www/db/moode-sqlite3.db
+fi
 # Moode sources and configs
 install -D mpd/RADIO/* ${BIN_PATH}/var/lib/mpd/music/RADIO
 install -d ${BIN_PATH}/var/lib/mpd/music/RADIO
@@ -96,6 +105,10 @@ install -D -m 0644 usr/lib/tmpfiles.d/* ${BIN_PATH}/usr/lib/tmpfiles.d/
 install -d ${BIN_PATH}/usr/share
 cp -r usr/share/* ${BIN_PATH}/usr/share/
 install -d ${BIN_PATH}/var/local
+if test_version ${MOODEREL} -ge r650
+then
+	rm -f var/local/www/mpd_versions/mpd-*
+fi
 cp -r var/local/www ${BIN_PATH}/var/local/
 cp -r www ${BIN_PATH}/var/
 chmod 0755 ${BIN_PATH}/var/www/command/*
@@ -151,14 +164,14 @@ sqlite3 ${BIN_PATH}/var/local/www/db/moode-sqlite3.db \"
 	UPDATE cfg_hash SET value='\$(md5sum -z ${BIN_PATH}/etc/php/7.3/fpm/php.ini | awk '{print \$1}')' WHERE param='/etc/php/7.3/fpm/php.ini';
 	CREATE TRIGGER ro_columns BEFORE UPDATE OF param, value, [action] ON cfg_hash FOR EACH ROW BEGIN SELECT RAISE(ABORT, 'read only'); END;
 	\"
-if test_version ${MOODEREL} -ge 6.7.0
+if test_version ${MOODEREL} -ge r670
 then
 	cat > ${BIN_PATH}/var/local/www/mpd_versions.conf <<-EOF
 		# This config contains the selectable MPD versions for moOde
 		${MPDVER};${MPDVER} (Default)
 		EOF
 fi
-if test_version ${MOODEREL} -ge 7.0.0
+if test_version ${MOODEREL} -ge r700
 then
 	cp other/mpd/_patches/*.patch ${PATCH_PATH}
 fi
