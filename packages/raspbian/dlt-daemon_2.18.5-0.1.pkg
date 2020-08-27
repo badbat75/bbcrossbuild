@@ -12,9 +12,5 @@ PKG_CFLAGS="-Wno-stringop-overflow -Wno-stringop-truncation -Wno-unused-variable
 #PKG_LDFLAGS="-lssl -lcrypto -lpthread -luv -lev -lz -lsystemd"
 INST_CMD=install/strip
 
-### GCC 10 Workaround ####
-test_version ${GCC_VER} -ge 10 && PKG_CFLAGS+=" -fcommon" || true
-##########################
-
 # Note:
 # Dependencies: cmake, doxygen, python, libwebsocket, dlt-daemon
