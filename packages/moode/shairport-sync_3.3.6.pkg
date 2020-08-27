@@ -1,7 +1,7 @@
 # shairport-sync_3.3.6
 PKG_URL="https://github.com/mikebrady/shairport-sync/archive/3.3.6.tar.gz"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--with-dummy --with-stdout --with-pipe	--with-ssl=openssl --with-soxr --with-metadata \
+CONF_FLAGS="--with-dummy --with-stdout --with-pipe --with-soxr --with-metadata \
 		--with-avahi --with-alsa --with-convolution --with-piddir=/run/shairport-sync --without-configfiles \
 		--with-apple-alac --without-libdaemon --with-mqtt-client --with-systemd --with-dbus-interface"
 INST_CMD=install-strip
@@ -13,6 +13,17 @@ PKG_POSTBUILD="install -d ${BIN_PATH}/usr/local/bin &&
 install -d ${BIN_PATH}/usr/local/etc &&
 ln -fs /usr/bin/shairport-sync ${BIN_PATH}/usr/local/bin/shairport-sync &&
 ln -fs /etc/shairport-sync.conf ${BIN_PATH}/usr/local/etc/shairport-sync.conf"
+
+case x${SSL_LIBRARIES} in
+	xmbedtls) ### Build with MBEDTLS
+		CONF_FLAGS+=" --with-ssl=mbedtls"
+		PKG_DEPS+=" raspbian/mbedtls_2.16.5-1"
+		PKG_LDFLAGS="-lssl -lcrypto"
+	;;
+	*) ### Build with OpenSSL
+		CONF_FLAGS+=" --with-ssl=openssl"
+	;;
+esac
 
 # Dependencies:
 # libasound2-dev libpopt-dev libconfig-dev avahi-daemon libavahi-client-dev libssl-dev libsoxr-dev
