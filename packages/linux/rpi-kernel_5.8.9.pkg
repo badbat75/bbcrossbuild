@@ -1,5 +1,5 @@
-# rpi-kernel_5.9.0-rc4
-PKG_URL="https://github.com/raspberrypi/linux/archive/e92a24c342b0a37d99a4e1b17d3cfd5e64f002e2.tar.gz"
+# rpi-kernel_5.8.9
+PKG_URL="https://github.com/raspberrypi/linux/archive/8cefadb9b258ee2920e012eaa0065f5834d0c57f.tar.gz"
 BUILD_PROCESS=kernelbuild
 INST_CMD="INSTALL_MOD_STRIP=1"
 # Enable preemptive/realtime kernel
