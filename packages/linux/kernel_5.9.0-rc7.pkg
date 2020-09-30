@@ -1,0 +1,4 @@
+# rpi-kernel_5.9.0-rc7
+PKG_URL="https://git.kernel.org/torvalds/t/linux-5.9-rc7.tar.gz"
+BUILD_PROCESS=kernelbuild
+INST_CMD="INSTALL_MOD_STRIP=1"
