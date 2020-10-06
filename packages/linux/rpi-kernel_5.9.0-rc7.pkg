@@ -1,6 +1,10 @@
 # rpi-kernel_5.9.0-rc7
-PKG_URL="https://github.com/raspberrypi/linux/archive/7351d35b57259b6ed970a89b14e078d1bcd52895.tar.gz"
+PKG_URL="https://github.com/raspberrypi/linux/archive/59b9a92aed382ef4890f73a41d0d87dba6ebd1bc.tar.gz"
 BUILD_PROCESS=kernelbuild
 INST_CMD="INSTALL_MOD_STRIP=1"
-# Enable preemptive/realtime kernel
-#CONF_FLAGS="-d CONFIG_PREEMPT_NONE -d CONFIG_PREEMPT_VOLUNTARY -e CONFIG_PREEMPT"
+case x${WITH_RT} in
+	yes|1)
+        # Enable preemptive/realtime kernel
+        CONF_FLAGS="-d CONFIG_PREEMPT_NONE -d CONFIG_PREEMPT_VOLUNTARY -e CONFIG_PREEMPT"
+	;;
+esac
