@@ -15,8 +15,8 @@ ln -fs /usr/bin/shairport-sync ${BIN_PATH}/usr/local/bin/shairport-sync &&
 ln -fs /etc/shairport-sync.conf ${BIN_PATH}/usr/local/etc/shairport-sync.conf"
 
 case x${WITH_ALAC_LIBRARIES} in
-	yes|1)
-		CONF_FLAGS+" --with-apple-alac"
+	xyes|x1)
+		CONF_FLAGS+=" --with-apple-alac"
 		PKG_DEPS+=" moode/alac_0.0.7+5d6d836"
 	;;
 esac

@@ -1,5 +1,5 @@
-# recoll_1.27.3
-PKG_URL="https://www.lesbonscomptes.com/recoll/recoll-1.27.3.tar.gz"
+# recoll_1.27.9
+PKG_URL="https://www.lesbonscomptes.com/recoll/recoll-1.27.9.tar.gz"
 AUTOCONF=0
 PATCHES="recoll-python-bbxb.patch"
 BUILD_PROCESS=configmake

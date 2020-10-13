@@ -1,5 +1,5 @@
-# rpi-kernel_5.9.0-rc7
-PKG_URL="https://github.com/raspberrypi/linux/archive/59b9a92aed382ef4890f73a41d0d87dba6ebd1bc.tar.gz"
+# rpi-kernel_5.9.0
+PKG_URL="https://github.com/raspberrypi/linux/archive/c97b595676965b2f9c4d2bfb5156e7210f1a657d.tar.gz"
 BUILD_PROCESS=kernelbuild
 INST_CMD="INSTALL_MOD_STRIP=1"
 case x${WITH_RT} in

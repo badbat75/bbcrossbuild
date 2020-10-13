@@ -1,0 +1,4 @@
+# mutagen-1.45.1
+PKG_URL="https://github.com/quodlibet/mutagen/archive/release-1.45.1.tar.gz"
+BUILD_PROCESS=pythonbuild
+# CONF_FLAGS=""

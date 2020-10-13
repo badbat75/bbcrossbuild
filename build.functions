@@ -885,7 +885,10 @@ function build () (
 		mkdir -p ${STATUS_PATH}
 	fi
 	#rm -rf ${PKG_SRCPATH} &&
-	rm -rf ${PKG_BLDPATH}
+	if [ ${KEEP_BUILDDIR:-0} -eq 0 ]
+	then
+		rm -rf ${PKG_BLDPATH}
+	fi
 	if [ ${PKG_SAVE_STATUS:-1} -eq 1 ]
 	then
 		md5sum ${PKG_PATH}/${1}.pkg > ${STATUS_PATH}/${PKG_NAME}
