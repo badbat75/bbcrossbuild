@@ -1,4 +1,4 @@
-# moode-dynamic-ver_1.1
+# moode-dynamic-ver_1.2
 if [ -z "${MOODEDEVCOMMIT}" ]
 then
 	PKG_URL="https://github.com/moode-player/moode/archive/${MOODEREL}prod.tar.gz"
