@@ -58,6 +58,7 @@ install -d ${BIN_PATH}/var/lib/mpd/music/RADIO
 install -d ${BIN_PATH}/var/lib/mpd/playlists/
 install -D mpd/playlists/* ${BIN_PATH}/var/lib/mpd/playlists/
 find etc -maxdepth 1 -type f -exec install -v -D -m 0644 {} ${BIN_PATH}/etc \;
+[ -f ${BIN_PATH}/etc/sudoers.d/010_moode ] && chmod 0440 ${BIN_PATH}/etc/sudoers.d/010_moode || true
 install -d ${BIN_PATH}/etc/alsa/conf.d
 install -D -m 0644 etc/alsa/conf.d/* ${BIN_PATH}/etc/alsa/conf.d/
 install -d ${BIN_PATH}/etc/avahi/services
@@ -125,7 +126,16 @@ chmod -R 0777 ${BIN_PATH}/var/local/www/db
 chmod -R ug-s ${BIN_PATH}/var/local/www
 #chmod 0777 ${BIN_PATH}/var/local/www/playhistory.log
 chmod 0777 ${BIN_PATH}/var/local/www/currentsong.txt
-install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache.json
+if test_version ${MOODEREL} -ge r700
+then
+	install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache_all.json"
+	install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache_folder.json"
+	install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache_format.json"
+	install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache_lossless.json"
+	install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache_lossy.json"
+else
+	install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache.json
+fi
 # Permissions
 chmod 0777 ${BIN_PATH}/var/lib/mpd/music/RADIO
 chmod -R 0777 ${BIN_PATH}/var/local/www/db
