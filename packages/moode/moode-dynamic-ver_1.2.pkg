@@ -128,11 +128,11 @@ chmod -R ug-s ${BIN_PATH}/var/local/www
 chmod 0777 ${BIN_PATH}/var/local/www/currentsong.txt
 if test_version ${MOODEREL} -ge r700
 then
-	install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache_all.json"
-	install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache_folder.json"
-	install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache_format.json"
-	install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache_lossless.json"
-	install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache_lossy.json"
+	install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache_all.json
+	install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache_folder.json
+	install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache_format.json
+	install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache_lossless.json
+	install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache_lossy.json
 else
 	install -D -m 0777 /dev/null ${BIN_PATH}/var/local/www/libcache.json
 fi
