@@ -1,7 +1,7 @@
 # pi-bluetooth_0.1.15
 PKG_URL="https://github.com/RPi-Distro/pi-bluetooth/archive/34fb0155936d2797e086141d7d4a12fdd7738e71.tar.gz"
 BUILD_PROCESS=downloadonly
-PKG_DEPS="moode/bluez_5.54"
+PKG_DEPS="moode/bluez_5.55"
 PKG_PREBUILD="install -d -m0755 ${BIN_PATH}\${BUILD_PREFIX}/bin
 install -d -m0755 ${BIN_PATH}\${BUILD_SYSCONFDIR}/systemd/system
 install -d -m0755 ${BIN_PATH}/lib/udev/rules.d
