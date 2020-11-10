@@ -671,6 +671,7 @@ function setup_python () {
 	function build_python_crossenv () {
 		trap 'STATUS=${?}; \
 			set +x; \
+			[ -d ${TOOLCHAIN_PATH}/venv-${HARCH} ] && rm -rf || true; \
 			trap ERR; \
 			return ${STATUS}' ERR
 

@@ -1,4 +1,4 @@
-MPDVER=0.22.2
+MPDVER=0.22.3
 PKG_URL="http://www.musicpd.org/download/mpd/0.22/mpd-${MPDVER}.tar.xz"
 BUILD_PROCESS=mesonninja
 export BOOST_ROOT=${BIN_PATH}
@@ -23,9 +23,8 @@ then
 	local PATCH_ID=_p0x$(($SELECTIVE_RESAMPLING + $SOX_CUSTOM_RECIPE))
 	# Patch source archive
 	PKG_DEPS+=" moode/moode-dynamic-ver_1.2"
-#	PATCHES="mpd-0.22.x_soxr_customrecipe.patch mpd_0.22.xx_selective_resample_mode.patch"
-	PATCHES="mpd_0.22.xx_selective_resample_mode.patch"
-	PKG_PREBUILD="sed -i \"/version: '0/s/',/$PATCH_ID',/\" meson.build"
+	PKG_PREBUILD="patch -p1 < ${SRC_PATH}/moode_${MOODEREL}/other/mpd/_patches/mpd_0.22.xx_selective_resample_mode.patch
+		sed -i \"/version: '0/s/',/$PATCH_ID',/\" meson.build"
 fi
 
 PKG_CXXFLAGS="-Wno-shadow"
