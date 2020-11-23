@@ -13,6 +13,10 @@ if [ ${MOODEINSTALL:-1} -eq 1 ]
 then
 	PKG_PREBUILD="
 		install -D boot/config.txt.default ${BIN_PATH}/boot/config.txt
+		if test_version ${MOODEREL} -ge r700
+		then
+			install -D boot/moodecfg.ini.default ${BIN_PATH}/boot/moodecfg.ini.default
+		fi
 		install -d ${BIN_PATH}/etc/sudoers.d
 		echo -e 'www-data\tALL=(ALL) NOPASSWD: ALL' >> ${BIN_PATH}/etc/sudoers.d/010_www-data
 		# Dirs
