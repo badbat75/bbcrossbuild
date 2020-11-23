@@ -1,0 +1,13 @@
+# libupnpp_0.20.0
+PKG_URL="https://www.lesbonscomptes.com/upmpdcli/downloads/libupnpp-0.20.0.tar.gz"
+PATCHES=
+BUILD_PROCESS=configmake
+# CONF_FLAGS=""
+PKG_CXXFLAGS="-D_FILE_OFFSET_BITS=64 -I${BIN_PATH}${BUILD_INCLUDEDIR}/npupnp"
+INST_CMD=install-strip
+PKG_DEPS="moode/libnpupnp_4.0.12 moode/libmpdclient-2.19"
+
+if [ "$(echo ${PLATFORM_CFLAGS} | grep -o "\-mtls-dialect=gnu2")" == "-mtls-dialect=gnu2" ]
+then
+    PLATFORM_CFLAGS="$(echo ${PLATFORM_CFLAGS} | sed -E 's/-mtls-dialect=gnu2\s?//')"
+fi
