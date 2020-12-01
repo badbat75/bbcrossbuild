@@ -1,4 +1,4 @@
 # rpi-kernel_5.10
-PKG_URL="https://git.kernel.org/torvalds/t/linux-5.10-rc5.tar.gz"
+PKG_URL="https://git.kernel.org/torvalds/t/linux-5.10-rc6.tar.gz"
 BUILD_PROCESS=kernelbuild
 INST_CMD="INSTALL_MOD_STRIP=1"
