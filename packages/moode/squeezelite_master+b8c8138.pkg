@@ -1,9 +1,9 @@
-# squeezelite_master+b8c8138
-PKG_URL="https://github.com/ralph-irving/squeezelite/archive/b8c8138b5d78e71d9c743999eccbe2b487390068.tar.gz"
+# squeezelite_master+cfab656
+PKG_URL="https://github.com/ralph-irving/squeezelite/archive/cfab656ad404305ae4ee36a724fb08fa756eddc0.tar.gz"
 BUILD_PROCESS=simplemake
 INST_CMD=all
-#PKG_DEPS="raspbian/opusfile_0.9+20170913-1"
-PKG_DEPS="moode/wiringpi_2.50+5c6bab7 raspbian/libsoxr_0.1.3-1"
+PKG_DEPS="moode/wiringpi_2.50+e9821ab raspbian/libsoxr_0.1.3-1"
+#PKG_DEPS+="raspbian/opusfile_0.9+20170913-1"
 PKG_CFLAGS="-fPIC -I${DISTOS_PATH}/\${BUILD_INCLUDEDIR}/opus -I${BIN_PATH}/\${BUILD_INCLUDEDIR}/alac"
 PKG_LDFLAGS="-lgomp -lasound"
 PKG_MAKEVARS='OPTS="-DOPUS -DALAC -DRESAMPLE -DFFMPEG -DVISEXPORT -DDSD -DGPIO -DRPI -DUSE_SSL -DLINKALL" PREFIX=${BUILD_PREFIX} EXECUTABLE=squeezelite'
