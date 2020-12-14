@@ -1,45 +1,30 @@
-diff -Naur wiringPi-8d188fa.orig/Makefile wiringPi-8d188fa/Makefile
---- wiringPi-8d188fa.orig/Makefile	1970-01-01 01:00:00.000000000 +0100
-+++ wiringPi-8d188fa/Makefile	2019-04-30 15:08:08.285074700 +0200
-@@ -0,0 +1,15 @@
-+all:
-+		cd wiringPi && $(MAKE)
-+		cd devLib && $(MAKE)
-+		cd gpio && $(MAKE)
-+
-+install:
-+		cd wiringPi && $(MAKE) install
-+		cd devLib && $(MAKE) install
-+		cd gpio && $(MAKE) install
-+
-+clean:
-+		cd wiringPi && $(MAKE) clean
-+		cd devLib && $(MAKE) clean
-+		cd gpio && $(MAKE) clean
-+
-diff -Naur wiringPi-8d188fa.orig/devLib/Makefile wiringPi-8d188fa/devLib/Makefile
---- wiringPi-8d188fa.orig/devLib/Makefile	2018-03-14 08:17:04.000000000 +0100
-+++ wiringPi-8d188fa/devLib/Makefile	2019-04-30 15:26:47.558271300 +0200
-@@ -36,8 +36,8 @@
- 
+diff -Naur ../wiringpi_2.50+e9821ab.orig/devLib/Makefile ./devLib/Makefile
+--- ../wiringpi_2.50+e9821ab.orig/devLib/Makefile	2020-12-14 16:56:43.067905405 +0100
++++ ./devLib/Makefile	2020-12-14 18:34:22.104326602 +0100
+@@ -37,9 +37,10 @@
  #DEBUG	= -g -O0
  DEBUG	= -O2
--CC	= gcc
+ CC	?= gcc
 -INCLUDE	= -I.
-+CC	?= gcc
 +INCLUDE	= -I. -I../wiringPi
  DEFS	= -D_GNU_SOURCE
- CFLAGS	= $(DEBUG) $(DEFS) -Wformat=2 -Wall -Winline $(INCLUDE) -pipe -fPIC
+ CFLAGS	= $(DEBUG) $(DEFS) -Wformat=2 -Wall -Winline $(INCLUDE) -pipe -fPIC $(EXTRA_CFLAGS)
++LDFLAGS = -L../wiringPi $(EXTRA_LDFLAGS)
  
-@@ -69,6 +69,7 @@
+ LIBS    =
+ 
+@@ -68,7 +69,9 @@
+ 
  $(DYNAMIC):	$(OBJ)
  	$Q echo "[Link (Dynamic)]"
- 	$Q $(CC) -shared -Wl,-soname,libwiringPiDev.so$(WIRINGPI_SONAME_SUFFIX) -o libwiringPiDev.so.$(VERSION) -lpthread $(OBJ)
+-	$Q $(CC) -shared -Wl,-soname,libwiringPiDev.so$(WIRINGPI_SONAME_SUFFIX) -o libwiringPiDev.so.$(VERSION) -lpthread $(OBJ)
++	$Q $(CC) -shared -Wl,-soname,libwiringPiDev.so$(WIRINGPI_SONAME_SUFFIX) -o libwiringPiDev.so.$(VERSION) -lpthread $(OBJ) $(LDFLAGS)
++	$Q echo "[File symlink]"
 +	$Q ln -s libwiringPiDev.so.$(VERSION) libwiringPiDev.so
  
  .c.o:
  	$Q echo [Compile] $<
-@@ -92,9 +93,8 @@
+@@ -92,9 +95,8 @@
  	$Q install -m 0644 $(HEADERS)					$(DESTDIR)$(PREFIX)/include
  	$Q echo "[Install Dynamic Lib]"
  	$Q install -m 0755 -d						$(DESTDIR)$(PREFIX)/lib
@@ -47,64 +32,61 @@ diff -Naur wiringPi-8d188fa.orig/devLib/Makefile wiringPi-8d188fa/devLib/Makefil
 -	$Q ln -sf $(DESTDIR)$(PREFIX)/lib/libwiringPiDev.so.$(VERSION)	$(DESTDIR)/lib/libwiringPiDev.so
 -	$Q $(LDCONFIG)
 +	$Q install -m 0755 libwiringPiDev.so.$(VERSION)			$(DESTDIR)$(PREFIX)/lib/$(HARCH)/libwiringPiDev.so.$(VERSION)
-+	$Q ln -sf libwiringPiDev.so.$(VERSION)	$(DESTDIR)$(PREFIX)/lib/$(HARCH)/libwiringPiDev.so
++	$Q ln -sf libwiringPiDev.so.$(VERSION)	$(DESTDIR)$(PREFIX)/lib/$(HARCH)/libwiringPiDev.so 
  
  .PHONY:	install-static
  install-static:	$(STATIC)
-diff -Naur wiringPi-8d188fa.orig/gpio/Makefile wiringPi-8d188fa/gpio/Makefile
---- wiringPi-8d188fa.orig/gpio/Makefile	2018-03-14 08:17:04.000000000 +0100
-+++ wiringPi-8d188fa/gpio/Makefile	2019-04-30 15:09:28.972001900 +0200
-@@ -32,11 +32,11 @@
+@@ -118,8 +120,8 @@
+ 	$Q install -m 0644 $(HEADERS)						$(DEB_DESTDIR)/usr/include
+ 	$Q echo "[Install Dynamic Lib: deb]"
+ 	install -m 0755 -d							$(DEB_DESTDIR)/usr/lib
+-	install -m 0755 libwiringPiDev.so.$(VERSION)				$(DEB_DESTDIR)/usr/lib/libwiringPiDev.so.$(VERSION)
+-	ln -sf $(DEB_DESTDIR)/usr/lib/libwiringPiDev.so.$(VERSION)		$(DEB_DESTDIR)/usr/lib/libwiringPiDev.so
++	install -m 0755 libwiringPiDev.so.$(VERSION)				$(DEB_DESTDIR)/usr/lib/$(HARCH)/libwiringPiDev.so.$(VERSION)
++	ln -sf libwiringPiDev.so.$(VERSION)		$(DEB_DESTDIR)/usr/lib/$(HARCH)/libwiringPiDev.so
  
+ .PHONY:	uninstall
+ uninstall:
+diff -Naur ../wiringpi_2.50+e9821ab.orig/gpio/Makefile ./gpio/Makefile
+--- ../wiringpi_2.50+e9821ab.orig/gpio/Makefile	2020-12-14 16:56:43.069905422 +0100
++++ ./gpio/Makefile	2020-12-14 18:23:30.965039267 +0100
+@@ -33,10 +33,10 @@
  #DEBUG	= -g -O0
  DEBUG	= -O2
--CC	= gcc
+ CC	?= gcc
 -INCLUDE	= -I$(DESTDIR)$(PREFIX)/include
--CFLAGS	= $(DEBUG) -Wall -Wextra $(INCLUDE) -Winline -pipe
-+CC	?= gcc
-+INCLUDE	= -I$(DESTDIR)$(PREFIX)/include -I../wiringPi -I../devLib
-+CFLAGS	+= $(DEBUG) -Wall -Wextra $(INCLUDE) -Winline -pipe
++INCLUDE	= -I../wiringPi -I../devLib
+ CFLAGS	= $(DEBUG) -Wall -Wextra $(INCLUDE) -Winline -pipe $(EXTRA_CFLAGS)
  
 -LDFLAGS	= -L$(DESTDIR)$(PREFIX)/lib
-+LDFLAGS	= -L$(DESTDIR)$(PREFIX)/lib -L../wiringPi -L../devLib
++LDFLAGS	= -L../devLib -L../wiringPi $(EXTRA_LDFLAGS)
  LIBS    = -lwiringPi -lwiringPiDev -lpthread -lrt -lm -lcrypt
  
  # May not need to  alter anything below this line
-@@ -74,7 +74,6 @@
- 	$Q echo "[Install]"
- 	$Q cp gpio		$(DESTDIR)$(PREFIX)/bin
- ifneq ($(WIRINGPI_SUID),0)
--	$Q chown root.root	$(DESTDIR)$(PREFIX)/bin/gpio
- 	$Q chmod 4755		$(DESTDIR)$(PREFIX)/bin/gpio
- endif
- 	$Q mkdir -p		$(DESTDIR)$(PREFIX)/share/man/man1
-diff -Naur wiringPi-8d188fa.orig/wiringPi/Makefile wiringPi-8d188fa/wiringPi/Makefile
---- wiringPi-8d188fa.orig/wiringPi/Makefile	2018-03-14 08:17:04.000000000 +0100
-+++ wiringPi-8d188fa/wiringPi/Makefile	2019-04-30 15:02:52.508183500 +0200
-@@ -36,10 +36,10 @@
- 
- #DEBUG	= -g -O0
- DEBUG	= -O2
--CC	= gcc
-+CC	?= gcc
- INCLUDE	= -I.
+diff -Naur ../wiringpi_2.50+e9821ab.orig/wiringPi/Makefile ./wiringPi/Makefile
+--- ../wiringpi_2.50+e9821ab.orig/wiringPi/Makefile	2020-12-14 16:56:43.070905431 +0100
++++ ./wiringPi/Makefile	2020-12-14 18:35:59.405117354 +0100
+@@ -41,7 +41,7 @@
  DEFS	= -D_GNU_SOURCE
--CFLAGS	= $(DEBUG) $(DEFS) -Wformat=2 -Wall -Wextra -Winline $(INCLUDE) -pipe -fPIC
-+CFLAGS	+= $(DEBUG) $(DEFS) -Wformat=2 -Wall -Wextra -Winline $(INCLUDE) -pipe -fPIC
+ CFLAGS	= $(DEBUG) $(DEFS) -Wformat=2 -Wall -Wextra -Winline $(INCLUDE) -pipe -fPIC $(EXTRA_CFLAGS)
  #CFLAGS	= $(DEBUG) $(DEFS) -Wformat=2 -Wall -Wextra -Wconversion -Winline $(INCLUDE) -pipe -fPIC
- 
+-
++LDFLAGS = $(EXTRA_LDFLAGS)
  LIBS    = -lm -lpthread -lrt -lcrypt
-@@ -75,7 +75,8 @@
+ 
+ ###############################################################################
+@@ -75,7 +75,9 @@
  
  $(DYNAMIC):	$(OBJ)
  	$Q echo "[Link (Dynamic)]"
 -	$Q $(CC) -shared -Wl,-soname,libwiringPi.so$(WIRINGPI_SONAME_SUFFIX) -o libwiringPi.so.$(VERSION) $(LIBS) $(OBJ)
 +	$Q $(CC) -shared -Wl,-soname,libwiringPi.so$(WIRINGPI_SONAME_SUFFIX) -o libwiringPi.so.$(VERSION) $(LIBS) $(OBJ) $(LDFLAGS)
++	$Q echo "[File symlink]"
 +	$Q ln -s libwiringPi.so.$(VERSION) libwiringPi.so
  
  .c.o:
  	$Q echo [Compile] $<
-@@ -100,9 +101,9 @@
+@@ -100,9 +102,8 @@
  	$Q install -m 0644 $(HEADERS)					$(DESTDIR)$(PREFIX)/include
  	$Q echo "[Install Dynamic Lib]"
  	$Q install -m 0755 -d						$(DESTDIR)$(PREFIX)/lib
@@ -112,8 +94,18 @@ diff -Naur wiringPi-8d188fa.orig/wiringPi/Makefile wiringPi-8d188fa/wiringPi/Mak
 -	$Q ln -sf $(DESTDIR)$(PREFIX)/lib/libwiringPi.so.$(VERSION)	$(DESTDIR)/lib/libwiringPi.so
 -	$Q $(LDCONFIG)
 +	$Q install -m 0755 libwiringPi.so.$(VERSION)			$(DESTDIR)$(PREFIX)/lib/$(HARCH)/libwiringPi.so.$(VERSION)
-+	$Q ln -sf libwiringPi.so.$(VERSION)	$(DESTDIR)$(PREFIX)/lib/$(HARCH)/libwiringPi.so
-+#	$Q $(LDCONFIG)
++	$Q ln -sf libwiringPi.so.$(VERSION)	$(DESTDIR)/usr/lib/$(HARCH)/libwiringPi.so
  
- .PHONY:	install-deb
- install-deb:	$(DYNAMIC)
+ .PHONY: check-deb-destdir
+ check-deb-destdir:
+@@ -117,8 +118,8 @@
+ 	$Q install -m 0644 $(HEADERS)						$(DEB_DESTDIR)/usr/include
+ 	$Q echo "[Install Dynamic Lib: deb]"
+ 	install -m 0755 -d							$(DEB_DESTDIR)/usr/lib
+-	install -m 0755 libwiringPi.so.$(VERSION)				$(DEB_DESTDIR)/usr/lib/libwiringPi.so.$(VERSION)
+-	ln -sf $(DEB_DESTDIR)/usr/lib/libwiringPi.so.$(VERSION)	$(DEB_DESTDIR)/usr/lib/libwiringPi.so
++	install -m 0755 libwiringPi.so.$(VERSION)				$(DEB_DESTDIR)/usr/lib/$(HARCH)libwiringPi.so.$(VERSION)
++	ln -sf libwiringPi.so.$(VERSION)	$(DEB_DESTDIR)/usr/lib/$(HARCH)/libwiringPi.so
+ 
+ .PHONY:	uninstall
+ uninstall:
