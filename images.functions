@@ -380,7 +380,10 @@ function inject_into_root_dir () {
 		echo -n "setting ownership of ${TARGET_OWNER} on ${TARGET_DIR}..."
 		sudo chown -h ${TARGET_OWNER} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	fi
-	sudo cp -fr --preserve=mode,timestamps ${SOURCE_PATH}/${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+	#sudo cp -fr --preserve=mode,timestamps ${SOURCE_PATH}/${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+	cd ${SOURCE_PATH}
+	sudo rsync -K -a --no-owner --no-group ${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+	cd -
 	echo -n "setting ownership of ${TARGET_OWNER} on ${TARGET_FILE}..."
 	case ${OBJECT} in
 		binaries)
