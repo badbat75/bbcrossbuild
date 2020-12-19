@@ -13,3 +13,5 @@ PKG_LDFLAGS="-lz"
 #PKG_DEPS=""
 #PKG_PREBUILD=""
 #PKG_POSTBUILD=""
+
+OPTCOMP_FLAGS=$(echo ${OPTCOMP_FLAGS} | sed 's/-Wl,-z,relro//g;s/-Wl,-z,now//g')

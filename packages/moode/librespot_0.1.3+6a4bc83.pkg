@@ -1,0 +1,11 @@
+# librespot_0.1.3+6a4bc83
+PKG_URL="https://github.com/librespot-org/librespot/archive/6a4bc83259dd723dfecce073c363be84f31565d9.tar.gz"
+BUILD_PROCESS=cargobuild
+CONF_FLAGS="--features alsa-backend"
+#PKG_RUSTFLAGS=
+PKG_DEPS="raspbian/portaudio19_19.6.0-1"
+#CARGO_BIN=/usr/bin
+#CARGO_LIB=/usr/lib/${HARCH}
+CARGO_BINLIST="librespot"
+LTOENABLE=0
+CARGO_STRIP=1

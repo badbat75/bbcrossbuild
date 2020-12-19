@@ -1,0 +1,4 @@
+# bottle_0.12.19
+PKG_URL="https://files.pythonhosted.org/packages/ea/80/3d2dca1562ffa1929017c74635b4cb3645a352588de89e90d0bb53af3317/bottle-0.12.19.tar.gz"
+BUILD_PROCESS=pythonbuild
+# CONF_FLAGS=""

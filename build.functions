@@ -725,6 +725,8 @@ function build () (
 			macosx|ios) local HMBINFMT=mach-o;;
 		esac
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+
+		local PLATFORM_CFLAGS=$(echo ${PLATFORM_CFLAGS} | sed 's/-mtls-dialect=gnu2//g')
 		local CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS} ${PKG_CXXFLAGS}"
 		local CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}"
 		local LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}"
@@ -883,7 +885,10 @@ function build () (
 		mkdir -p ${STATUS_PATH}
 	fi
 	#rm -rf ${PKG_SRCPATH} &&
-	rm -rf ${PKG_BLDPATH}
+	if [ ${KEEP_BUILDDIR:-0} -eq 0 ]
+	then
+		rm -rf ${PKG_BLDPATH}
+	fi
 	if [ ${PKG_SAVE_STATUS:-1} -eq 1 ]
 	then
 		md5sum ${PKG_PATH}/${1}.pkg > ${STATUS_PATH}/${PKG_NAME}

@@ -1,10 +1,10 @@
 # libupnppsamples_master+2a6e7a
-GIT_URL="http://@opensourceprojects.eu/git/p/libupnppsamples/code"
+GIT_URL="http://opensourceprojects.eu/git/p/libupnppsamples/code"
 GIT_BRANCH=2a6e7a
 BUILD_PROCESS=configmake
 # CONF_FLAGS=""
 INST_CMD=install-strip
 PKG_CXXFLAGS="-D_FILE_OFFSET_BITS=64"
-PKG_DEPS="moode/libupnpp_0.19.3"
+PKG_DEPS="moode/libupnpp_0.20.1"
 INST_CMD="upexplorer"
 PKG_POSTBUILD="install -s --strip-program=${HARCH}-strip upexplorer ${BIN_PATH}${BUILD_PREFIX}/bin"

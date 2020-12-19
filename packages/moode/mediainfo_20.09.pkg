@@ -1,0 +1,10 @@
+# mediainfo_20.09
+PKG_URL="https://mediaarea.net/download/source/mediainfo/20.09/mediainfo_20.09.tar.xz"
+PKG_PREBUILD="sed -i 's/ -O2//g' Project/GNU/CLI/configure.ac"
+BUILD_PROCESS=configmake
+AUTOCONF_PATH=Project/GNU/CLI
+CONF_COPYSRC=1
+CONF_PATH=Project/GNU/CLI
+# CONF_FLAGS=""
+INST_CMD=install-strip
+PKG_DEPS="moode/libmediainfo_20.09"
