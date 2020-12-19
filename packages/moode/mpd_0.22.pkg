@@ -23,8 +23,14 @@ then
 	local PATCH_ID=_p0x$(($SELECTIVE_RESAMPLING + $SOX_CUSTOM_RECIPE))
 	# Patch source archive
 	PKG_DEPS+=" moode/moode-dynamic-ver_1.2"
-	PKG_PREBUILD="patch -p1 < ${SRC_PATH}/moode_${MOODEREL}/other/mpd/_patches/mpd_0.22.xx_selective_resample_mode.patch
-		sed -i \"/version: '0/s/',/$PATCH_ID',/\" meson.build"
+	PKG_PREBUILD="
+		if [ ! -f mpd.patched ]
+		then
+			patch -p1 < ${SRC_PATH}/moode_${MOODEREL}/other/mpd/_patches/mpd_0.22.xx_selective_resample_mode.patch
+			sed -i \"/version: '0/s/',/$PATCH_ID',/\" meson.build
+			touch mpd.patched
+		fi
+		"
 fi
 
 PKG_CXXFLAGS="-Wno-shadow"
