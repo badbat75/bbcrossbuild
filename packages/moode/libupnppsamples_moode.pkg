@@ -4,7 +4,7 @@ BUILD_PROCESS=configmake
 # CONF_FLAGS=""
 AUTOCONF_PATH=other/libupnpp-samples-master
 PKG_CXXFLAGS="-D_FILE_OFFSET_BITS=64"
-PKG_DEPS="moode/moode-dynamic-ver_1.2 moode/libupnpp_0.20.1"
+PKG_DEPS="moode/moode-dynamic-ver_1.2 moode/libupnpp_0.20"
 CONF_PATH=other/libupnpp-samples-master
 INST_CMD="upexplorer"
 PKG_PREBUILD="unzip -o other/upmpdcli/libupnpp-samples-master.zip -d other"

@@ -1,5 +1,5 @@
-# libupnpp_0.20.1
-PKG_URL="https://www.lesbonscomptes.com/upmpdcli/downloads/libupnpp-0.20.1.tar.gz"
+# libupnpp_0.20
+PKG_URL="https://www.lesbonscomptes.com/upmpdcli/downloads/libupnpp-0.20.2.tar.gz"
 PATCHES=
 BUILD_PROCESS=configmake
 # CONF_FLAGS=""
