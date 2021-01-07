@@ -9,3 +9,4 @@ CONF_FLAGS="--no-default-features --features alsa-backend --features websocket"
 CARGO_BINLIST="camilladsp"
 CARGO_STRIP=1
 LTOENABLE=0
+PKG_POSTBUILD="ln -fs /usr/bin/camilladsp ${BIN_PATH}/usr/local/bin/camilladsp"
