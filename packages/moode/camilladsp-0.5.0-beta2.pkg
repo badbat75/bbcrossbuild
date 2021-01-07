@@ -1,0 +1,11 @@
+# camilladsp-0.5.0-beta2
+PKG_URL="https://github.com/HEnquist/camilladsp/archive/v0.5.0-beta2.tar.gz"
+BUILD_PROCESS=cargobuild
+CONF_FLAGS="--no-default-features --features alsa-backend --features websocket"
+#PKG_RUSTFLAGS=
+#PKG_DEPS=
+#CARGO_BIN=/usr/bin
+#CARGO_LIB=/usr/lib/${HARCH}
+CARGO_BINLIST="camilladsp"
+CARGO_STRIP=1
+LTOENABLE=0

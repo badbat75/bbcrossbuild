@@ -1,4 +1,4 @@
-# upexplorer-moode
+# libupnppsamples_moode
 PKG_SRCDIR=moode_${MOODEREL}
 BUILD_PROCESS=configmake
 # CONF_FLAGS=""
