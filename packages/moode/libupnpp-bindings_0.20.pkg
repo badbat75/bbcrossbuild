@@ -1,0 +1,8 @@
+# libupnpp-bindings_0.20
+PKG_URL="https://www.lesbonscomptes.com/upmpdcli/downloads/libupnpp-bindings-0.20.1.tar.gz"
+PATCHES=
+BUILD_PROCESS=configmake
+PYTHONBIN_VER="$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)"
+CONF_FLAGS="PYTHON_VERSION=3 PYTHON_SITE_PKG=${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
+INST_CMD=install-strip
+PKG_DEPS="moode/libupnpp_0.20"
