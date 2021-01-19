@@ -1,7 +1,8 @@
 # openaptx_1.3.0
 PKG_URL="https://github.com/Arkq/openaptx/archive/v1.3.0.tar.gz"
 BUILD_PROCESS=cmakemake
-CONF_FLAGS="-DENABLE_DOC=ON -DENABLE_APTX422=ON -DENABLE_APTXHD100=ON -DWITH_FFMPEG=OFF -DWITH_SNDFILE=ON"
+CONF_FLAGS="-DENABLE_DOC=ON -DENABLE_APTX422=ON -DENABLE_APTXHD100=ON -DWITH_FFMPEG=ON -DWITH_SNDFILE=ON"
 INST_CMD=install/strip
 #PKG_MAKEVARS=-j1
-PKG_PREBUILD="sed -i '/COMMAND bin2array/ s|bin2array|LD_LIBRARY_PATH=${DISTOS_PATH}/lib${BUILD_LIBSUFFIX} ${DISTOS_PATH}/lib${BUILD_LIBSUFFIX}/ld-linux.so.3 ./bin2array|' src/CMakeLists.txt"
+PKG_PREBUILD="sed -i '/pkg_check_modules(FFLibAVCodec/ s/libavcodec>=58.18.100)$/libavcodec>=58.18.100 libavutil>=56.22.100)/' CMakeLists.txt
+    sed -i '/COMMAND bin2array/ s|bin2array|LD_LIBRARY_PATH=${DISTOS_PATH}/lib${BUILD_LIBSUFFIX} ${DISTOS_PATH}/lib${BUILD_LIBSUFFIX}/ld-linux.so.3 ./bin2array|' src/CMakeLists.txt"
