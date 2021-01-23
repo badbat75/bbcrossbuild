@@ -2,7 +2,7 @@
 sudo dnf install -y gcc g++ binutils ccache libzstd libzstd-devel\
     curl gawk bison flex cmake ninja-build \
 	autoconf autoconf-archive automake gettext-devel libtool \
-    git xmltoman docbook-utils swig doxygen texinfo
+    git xmltoman docbook-utils swig doxygen texinfo docutils
 
 #autoconf2.64
 

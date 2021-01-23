@@ -2,7 +2,7 @@
 sudo apt-get install -y curl ccache build-essential libzstd1 libzstd-dev \
     gawk bison flex cmake ninja-build \
     autoconf autoconf2.64 autoconf-archive automake autopoint libtool \
-    git xmltoman docbook-utils swig doxygen texinfo
+    git xmltoman docbook-utils swig doxygen texinfo docutils
 
 # For Image emulation
 sudo apt-get install -y qemu-user-static
