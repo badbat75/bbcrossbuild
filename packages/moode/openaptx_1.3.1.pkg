@@ -1,5 +1,5 @@
-# openaptx_1.3.0
-PKG_URL="https://github.com/Arkq/openaptx/archive/v1.3.0.tar.gz"
+# openaptx_1.3.1
+PKG_URL="https://github.com/Arkq/openaptx/archive/v1.3.1.tar.gz"
 BUILD_PROCESS=cmakemake
 CONF_FLAGS="-DENABLE_DOC=ON -DENABLE_APTX422=ON -DENABLE_APTXHD100=ON -DWITH_FFMPEG=ON -DWITH_SNDFILE=ON"
 INST_CMD=install/strip

@@ -10,6 +10,6 @@ PATCHES=
 PKG_POSTBUILD="install -d ${BIN_PATH}/run/bluealsa"
 if [ "${WITH_OPENAPTX}" == "1" ]
 then
-    PKG_DEPS+=" moode/openaptx_1.3.0"
+    PKG_DEPS+=" moode/openaptx_1.3.1"
     CONF_FLAGS+=" --enable-aptx --enable-aptx-hd"
 fi
