@@ -150,7 +150,7 @@ function create_sfx_archive () {
 	fi
 	cat >>${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx <<-EOF
 
-		tail -n+\$ARCHIVE \$0 | tar xJf - -C /
+		tail -n+\$ARCHIVE \$0 | tar xJf - -C / --keep-directory-symlink
 
 	EOF
 	if [ -f ${USERDATA_PATH}/post.sfx ]
