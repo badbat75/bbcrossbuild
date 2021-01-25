@@ -322,6 +322,7 @@ function setup_gcc () {
 			* )
 				local GCC_LANGUAGES=${GCC_LANGUAGES:-c,c++,lto}
 				local GCC_COMMON_CONFIG="${SILENTCONFIG} --enable-languages=${GCC_LANGUAGES} --enable-shared --enable-linker-build-id --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --enable-checking=release --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-threads=posix --enable-initfini-array --enable-gnu-indirect-function --enable-multiarch \
+					--enable-install-libiberty \
 					--with-default-libstdcxx-abi=new \
 					--disable-option-checking --disable-libitm --disable-libmpx"
 				local GCC_COMMON_CONFIG+=" --with-system-zlib"
@@ -329,7 +330,8 @@ function setup_gcc () {
 		esac
 		local GCC_BUILD_CONFIG="--disable-multilib --disable-bootstrap"
 		local GCC_HOST_CONFIG="--with-multilib=default --with-arch-directory=${HM}${HMARCH:+ --with-arch=${HMARCH}}${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
-		local BINUTILS_COMMON_CONFIG="--enable-gold --enable-libctf"
+		# from binutils 2.34 enable-instal-libbfd
+		local BINUTILS_COMMON_CONFIG="--enable-gold --enable-install-libbfd"
 		local BINUTILS_BUILD_CONFIG=""
 		local BINUTILS_HOST_CONFIG=""
 		local GCC_OPTCOMP_FLAGS="${GCC_OPTCOMP_FLAGS}${GCC_OPTLEVEL:+ -O${GCC_OPTLEVEL}}"
@@ -446,6 +448,11 @@ function setup_gcc () {
 					${CONFIG_ARCH_PARAMS} ${BINUTILS_COMMON_CONFIG} ${BINUTILS_CONFIG} ${GCC_COMMON_CONFIG} ${GCC_CONFIG} ${TARGET_CONFIG_ARGS}")				
 				make STAGE_CC_WRAPPER="${CCWRAPPER}" V=${MAKEVERBOSE:-0}
 				make V=${MAKEVERBOSE:-0} install-strip
+				if [ -d libctf ]
+				then
+					make V=${MAKEVERBOSE:-0} -C libctf install-strip
+				fi
+				#read -p "Press enter to continue"
 			;;
 		esac
 		cd ${START_PWD}
@@ -530,7 +537,15 @@ function setup_gcc () {
 			rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
 		fi
 	else
-		echo "already there."
+	echo "already there."
+	fi
+	if [ -d ${GLOBAL_TOOLCHAIN_PATH}/lib ]
+	then
+		export LD_LIBRARY_PATH=${GLOBAL_TOOLCHAIN_PATH}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+	fi
+	if [ -d ${TOOLCHAIN_PATH}/lib ]
+	then
+		export LD_LIBRARY_PATH=${TOOLCHAIN_PATH}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 	fi
 	#set +x
 	trap ERR
