@@ -1,5 +1,5 @@
-# bluez-alsa_3.0.0+d075cee
-PKG_URL="https://github.com/Arkq/bluez-alsa/archive/d075cee8706ae5f1660db588229466d61ce1c36d.tar.gz"
+# bluez-alsa_3.0.0+c2bcc93
+PKG_URL="https://github.com/Arkq/bluez-alsa/archive/c2bcc9331af965809578f30383c3ac815a9556fe.tar.gz"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--with-alsaplugindir=\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX}/alsa-lib --enable-hcitop --enable-aac --enable-ldac --enable-mpg123 --enable-manpages"
 CONF_FLAGS+=" --disable-payloadcheck"
