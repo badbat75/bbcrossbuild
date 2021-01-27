@@ -173,7 +173,7 @@ then
 		sed -i 's/^BTMAC=.*/BTMAC=00:00:00:00:00:00/' ${BIN_PATH}/usr/local/bin/a2dp-autoconnect
 		echo '### Changes on core configuration files'
 		sed -i 's/listen 80;/listen [::]:80 ipv6only=off;/' ${BIN_PATH}/etc/nginx/nginx.conf
-		sed -i '/^\/\/\tpipe_name/ s|//||' ${BIN_PATH}/etc/shairport-sync.conf
+		#sed -i '/^\/\/\tpipe_name/ s|//||' ${BIN_PATH}/etc/shairport-sync.conf
 
 		sqlite3 ${BIN_PATH}/var/local/www/db/moode-sqlite3.db \"
 			UPDATE cfg_hash SET value='\$(md5sum -z ${BIN_PATH}/etc/nginx/nginx.conf | awk '{print \$1}')' WHERE param='/etc/nginx/nginx.conf';

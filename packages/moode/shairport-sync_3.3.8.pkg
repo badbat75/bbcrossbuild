@@ -1,5 +1,5 @@
-# shairport-sync_3.3.7
-PKG_URL="https://github.com/mikebrady/shairport-sync/archive/3.3.7.tar.gz"
+# shairport-sync_3.3.8
+PKG_URL="https://github.com/mikebrady/shairport-sync/archive/cfc6612e7536f438482c7b7723289452ac82ee5d.tar.gz"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--with-dummy --with-stdout --with-pipe --with-soxr --with-metadata \
 		--with-avahi --with-alsa --with-convolution --with-piddir=/run/shairport-sync --without-configfiles \
@@ -14,14 +14,14 @@ install -d ${BIN_PATH}/usr/local/etc &&
 ln -fs /usr/bin/shairport-sync ${BIN_PATH}/usr/local/bin/shairport-sync &&
 ln -fs /etc/shairport-sync.conf ${BIN_PATH}/usr/local/etc/shairport-sync.conf"
 
-case x${WITH_ALAC_LIBRARIES} in
+case x${WITH_ALAC} in
 	xyes|x1)
 		CONF_FLAGS+=" --with-apple-alac"
 		PKG_DEPS+=" moode/alac_0.0.7+5d6d836"
 	;;
 esac
 
-case x${SSL_LIBRARIES} in
+case x${WITH_SSL} in
 	xmbedtls) ### Build with MBEDTLS
 		CONF_FLAGS+=" --with-ssl=mbedtls"
 		PKG_DEPS+=" raspbian/mbedtls_2.16.5-1"
