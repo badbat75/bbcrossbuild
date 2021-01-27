@@ -10,7 +10,7 @@ PATCHES=
 PKG_POSTBUILD="install -d ${BIN_PATH}/run/bluealsa"
 case ${WITH_APTX} in
 	openaptx)
-		PKG_DEPS+=" moode/openaptx_1.3.1"
+		PKG_DEPS+=" moode/openaptx_1.3.1+4f5b8fd"
 		CONF_FLAGS+=" --enable-aptx --enable-aptx-hd"
 		;;
 	libopenaptx)
