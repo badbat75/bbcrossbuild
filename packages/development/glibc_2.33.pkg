@@ -7,7 +7,7 @@ CONF_FLAGS="--target=${HARCH} --cpu=${HMCPU} --with-headers=${BIN_PATH}\${BUILD_
 	--disable-werror --disable-sanity-checks --disable-crypt --disable-profile \
 	--enable-stackguard-randomization --enable-stack-protector=strong \
 	--enable-pt_chown --enable-tunables --enable-bind-now"
-#CONF_FLAGS+=" --without-selinux"
+CONF_FLAGS+=" --without-selinux"
 CONF_FLAGS+=" libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes"
 #PKG_CFLAGS="-Wno-stringop-overflow"
 INST_CMD="${OVERRIDE_INST_CMD:-install}"
