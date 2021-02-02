@@ -6,9 +6,16 @@ LTOENABLE=0
 #CONF_COPYSRC=1
 CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}\${BUILD_INCLUDEDIR} --disable-werror \
 	--disable-sanity-checks --enable-hacker-mode --without-selinux --enable-stackguard-randomization \
-	--enable-stack-protector=strong --enable-obsolete-rpc --enable-obsolete-nsl --enable-pt_chown \
-	libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes"
-#--with-headers=${BIN_PATH}${BUILD_INCLUDEDIR} 
+	--enable-stack-protector=strong --enable-obsolete-rpc --enable-obsolete-nsl --enable-pt_chown"
+if [ ${BOOTSTRAP:-0} -eq 1 ]
+then
+	CONF_FLAGS+=" --without-selinux"
+fi
+if [ ${WITH_LIBXCRYPT:-0} -eq 1 ]
+then
+	CONF_FLAGS+=" --disable-crypt"
+fi
+CONF_FLAGS+=" libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes"
 INST_CMD="${OVERRIDE_INST_CMD:-install}"
 #PATCHDEB=""
 #PKG_DEPS=

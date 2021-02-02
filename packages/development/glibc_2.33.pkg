@@ -3,11 +3,18 @@ PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-2.33.tar.xz"
 BUILD_PROCESS=configmake
 AUTOCONF=0
 LTOENABLE=0
-CONF_FLAGS="--target=${HARCH} --cpu=${HMCPU} --with-headers=${BIN_PATH}\${BUILD_INCLUDEDIR} \
-	--disable-werror --disable-sanity-checks --disable-crypt --disable-profile \
+CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}\${BUILD_INCLUDEDIR} \
+	--disable-werror --disable-sanity-checks --disable-profile \
 	--enable-stackguard-randomization --enable-stack-protector=strong \
 	--enable-pt_chown --enable-tunables --enable-bind-now"
-CONF_FLAGS+=" --without-selinux"
+if [ ${BOOTSTRAP:-0} -eq 1 ]
+then
+	CONF_FLAGS+=" --without-selinux"
+fi
+if [ ${WITH_LIBXCRYPT:-0} -eq 1 ]
+then
+	CONF_FLAGS+=" --disable-crypt"
+fi
 CONF_FLAGS+=" libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes"
 #PKG_CFLAGS="-Wno-stringop-overflow"
 INST_CMD="${OVERRIDE_INST_CMD:-install}"

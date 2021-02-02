@@ -132,6 +132,7 @@ function bootstrap_sysroot () {
 
 	local KERN_PACKAGE=${1}
 	local GLIBC_PACKAGE=${2}
+	local LIBXCRYPT_PACKAGE=${3:-none}
 
 	#settoolflags
 	local MULTI_ARCH=${MULTIARCH:-1}
@@ -161,7 +162,7 @@ function bootstrap_sysroot () {
 	echo -n "${SPACES}"
 	if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1
 	then
-		setup_gcc stage1
+		GCC_LTOENABLE=0 setup_gcc stage1
 	else
 		echo "GCC stage1 (gcc) already installed."
 	fi
@@ -177,17 +178,34 @@ function bootstrap_sysroot () {
 	echo -n "${SPACES}"
 	if [ ! -f ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_VER}/libgcc.a ]
 	then
-		setup_gcc stage2
+		GCC_LTOENABLE=0 setup_gcc stage2
 	else
 		echo "GCC stage2 (libgcc) already installed."
 	fi
 	# Build glibc (requisite for GCC final)
 	echo -n "${SPACES}"
+	if [ "${LIBXCRYPT_PACKAGE}" != "none" ]
+	then
+		local WITH_LIBXCRYPT=1
+	else
+		local WITH_LIBXCRYPT=0
+	fi
 	if [ ! -f ${BIN_PATH}/lib/libc.so.6 ] && [ ! -f ${BIN_PATH}/lib64/libc.so.6 ]
 	then
-		NUMSPACES=1 OVERRIDE_TARGET_GCC_CHECK=1 build ${GLIBC_PACKAGE}
+		NUMSPACES=1 OVERRIDE_TARGET_GCC_CHECK=1 BOOTSTRAP=1 WITH_LIBXCRYPT=${WITH_LIBXCRYPT} build ${GLIBC_PACKAGE}
 	else
 		echo "${GLIBC_PACKAGE} libraries already installed."
+	fi
+	# Build libxcrypt
+	if [ ${WITH_LIBXCRYPT} -eq 1 ]
+	then
+		if [ ! -f ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libcrypt.so ]
+		then
+			echo -n "${SPACES}"
+			NUMSPACES=1 OVERRIDE_TARGET_GCC_CHECK=1 INSTALL_ONLYHEADERS=1 build ${LIBXCRYPT_PACKAGE}
+		else
+			echo "${LIBXCRYPT_PACKAGE} libraries already installed."
+		fi
 	fi
 	# Build gcc final
 	echo -n "${SPACES}"
@@ -314,8 +332,8 @@ function setup_gcc () {
 		fi
 		case ${GCC_STAGE} in
 			stage1 | stage2 )
-				local GCC_LANGUAGES=c
-				local GCC_COMMON_CONFIG="${SILENTCONFIG} --enable-languages=${GCC_LANGUAGES} --disable-shared --enable-linker-build-id --disable-nls --enable-gnu-unique-object --disable-plugin --enable-checking=release --disable-libmudflap --disable-libgomp --disable-libssp --disable-lto --disable-threads --enable-multiarch \
+				local GCC_LANGUAGES=c,lto
+				local GCC_COMMON_CONFIG="${SILENTCONFIG} --enable-languages=${GCC_LANGUAGES} --disable-shared --enable-linker-build-id --disable-nls --enable-gnu-unique-object --disable-plugin --enable-checking=release --disable-libmudflap --disable-libgomp --disable-libssp --enable-lto --disable-threads --enable-multiarch \
 					--disable-option-checking --disable-libitm --disable-libmpx --without-headers --without-ppl"
 				local GCC_COMMON_CONFIG+=" --with-system-zlib"
 			;;
