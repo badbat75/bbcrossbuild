@@ -294,31 +294,6 @@ function setup_gcc () {
 	}
 
 	function build_gcc () {
-
-		function gcc_binutils_build_patch () {
-			trap 'STATUS=${?}; \
-				set +x; \
-				trap ERR; \
-				return ${STATUS}' ERR
-	
-			set -x
-			local GCC_REALVER=$(cat ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/gcc/BASE-VER)
-			mkdir -p gcc/../lib/gcc/${BUILD_ARCH}/${GCC_REALVER}/../../../../${BUILD_ARCH}/bin
-			ln -fs ../../gcc/liblto_plugin.so ${BUILD_ARCH}/bin/				
-			ln -fs ../../binutils/nm-new ${BUILD_ARCH}/bin/${BUILD_ARCH}-nm
-			ln -fs ../../binutils/nm-new ${BUILD_ARCH}/bin/nm
-			ln -fs ../../binutils/ar ${BUILD_ARCH}/bin/${BUILD_ARCH}-ar
-			ln -fs ../../binutils/ar ${BUILD_ARCH}/bin/ar
-			ln -fs ../../binutils/ranlib ${BUILD_ARCH}/bin/${BUILD_ARCH}-ranlib
-			ln -fs ../../binutils/ranlib ${BUILD_ARCH}/bin/ranlib
-			sed -i 's|^AR_FOR_TARGET=.*|AR_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-ar|' Makefile
-			sed -i 's|^NM_FOR_TARGET=.*|NM_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-nm|' Makefile
-			sed -i 's|^RANLIB_FOR_TARGET=.*|RANLIB_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-ranlib|' Makefile
-			sed -i 's|^COMPILER_NM_FOR_TARGET=.*|COMPILER_NM_FOR_TARGET=$$r/$(HOST_SUBDIR)/gcc/gcc-nm|' Makefile
-			set +x
-			trap ERR
-		}
-
 		trap 'STATUS=${?}; \
 			set +x; \
 			trap ERR; \
@@ -333,7 +308,7 @@ function setup_gcc () {
 		case ${GCC_STAGE} in
 			stage1 | stage2 )
 				local GCC_LANGUAGES=c,lto
-				local GCC_COMMON_CONFIG="${SILENTCONFIG} --enable-languages=${GCC_LANGUAGES} --disable-shared --enable-linker-build-id --disable-nls --enable-gnu-unique-object --disable-plugin --enable-checking=release --disable-libmudflap --disable-libgomp --disable-libssp --enable-lto --disable-threads --enable-multiarch \
+				local GCC_COMMON_CONFIG="${SILENTCONFIG} --enable-languages=${GCC_LANGUAGES} --disable-shared --enable-linker-build-id --disable-nls --enable-gnu-unique-object --disable-plugin --enable-checking=release --disable-libmudflap --disable-libgomp --disable-libssp --enable-lto --disable-threads --enable-initfini-array --enable-multiarch \
 					--disable-option-checking --disable-libitm --disable-libmpx --without-headers --without-ppl"
 				local GCC_COMMON_CONFIG+=" --with-system-zlib"
 			;;
@@ -349,7 +324,7 @@ function setup_gcc () {
 		local GCC_BUILD_CONFIG="--disable-multilib --disable-bootstrap"
 		local GCC_HOST_CONFIG="--with-multilib=default --with-arch-directory=${HM}${HMARCH:+ --with-arch=${HMARCH}}${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
 		# from binutils 2.34 enable-instal-libbfd
-		local BINUTILS_COMMON_CONFIG="--enable-gold --enable-install-libbfd"
+		local BINUTILS_COMMON_CONFIG="--enable-gold --enable-install-libbfd --enable-64-bit-bfd"
 		local BINUTILS_BUILD_CONFIG=""
 		local BINUTILS_HOST_CONFIG=""
 		local GCC_OPTCOMP_FLAGS="${GCC_OPTCOMP_FLAGS}${GCC_OPTLEVEL:+ -O${GCC_OPTLEVEL}}"
@@ -415,21 +390,7 @@ function setup_gcc () {
 		then
 			local HOST_CFLAGS+=" ${COMMON_LTOFLAGS}"
 			local HOST_CXXFLAGS+=" ${COMMON_LTOFLAGS}"
-			#local TARGET_AR="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-ar-new"
-			#local TARGET_NM="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-nm-new"
-			#local TARGET_RANLIB="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-ranlib-new"
-			#local TARGET_CONFIG_ARGS="AR_FOR_TARGET='${TARGET_AR}' NM_FOR_TARGET='${TARGET_NM}' RANLIB_FOR_TARGET='${TARGET_RANLIB}'"
 		fi
-		#if [ ${LTOENABLE} -eq 1 ]
-		#then
-		#	gcc_binutils_build_patch ${BARCH}
-		#	local TARGET_CFLAGS+=" ${COMMON_LTOFLAGS}"
-		#	local TARGET_CXXFLAGS+=" ${COMMON_LTOFLAGS}"
-		#	local TARGET_AR="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-ar-new"
-		#	local TARGET_NM="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-nm-new"
-		#	local TARGET_RANLIB="${BINUTILS_LTO_WRAPPERS_PATH}/gcc-ranlib-new"
-		#	local TARGET_CONFIG_ARGS="AR_FOR_TARGET='${TARGET_AR}' NM_FOR_TARGET='${TARGET_NM}' RANLIB_FOR_TARGET='${TARGET_RANLIB}'"
-		#fi
 		local BUILD_ENV_SHELL="CC_FOR_BUILD='${HOST_CC}' CXX_FOR_BUILD='${HOST_CXX}' AR_FOR_BUILD='${HOST_AR}' NM_FOR_BUILD='${HOST_NM}' RANLIB_FOR_BUILD='${HOST_RANLIB}' \
 			CFLAGS_FOR_BUILD='${HOST_CFLAGS}' CXXFLAGS_FOR_BUILD='${HOST_CXXFLAGS}' LDFLAGS_FOR_BUILD='${HOST_LDFLAGS}' \
 			CC='${HOST_CC}' CXX='${HOST_CXX}' AR='${HOST_AR}' NM='${HOST_NM}' RANLIB='${HOST_RANLIB}' \
@@ -572,11 +533,15 @@ function setup_gcc () {
 function install_gcclibs () {
 	settoolflags
 	local GCCSEARCHLIBS="$(${HARCH:+${HARCH}-}gcc -print-search-dirs | grep 'libraries:' | sed 's/^libraries: =//;s/\:/ /g')"
+	local GCCLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 -type f -name 'libgcc_s.so.*' -exec realpath {} \; 2>/dev/null | sort | tail -n1)
+	local GCCLIBNAME=$(basename ${GCCLIB})
 	local GCCCXXLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 -type f \( -name 'libstdc++.so.*' ! -name 'libstdc++.so.*-*.py' \)  -exec realpath {} \; 2>/dev/null | sort | tail -n1)
 	local GCCCXXLIBNAME=$(basename ${GCCCXXLIB})
 	local BASEGCCCXXLIBNAME=$(echo ${GCCCXXLIBNAME} | cut -d'.' -f1,2,3)
-	echo -n "Installing ${BASEGCCCXXLIBNAME} library..."
+	echo -n "Installing ${GCCLIBNAME}, ${BASEGCCCXXLIBNAME} library..."
 	echo "GCCSEARCHLIBS: ${GCCSEARCHLIBS}" > ${LOG_PATH}/gcclibs.log
+	echo "GCCLIB: ${GCCLIB}" >> ${LOG_PATH}/gcclibs.log
+	echo "GCCLIBNAME: ${GCCLIBNAME}" >> ${LOG_PATH}/gcclibs.log
 	echo "GCCCXXLIB: ${GCCCXXLIB}" >> ${LOG_PATH}/gcclibs.log
 	echo "GCCCXXLIBNAME: ${GCCCXXLIBNAME}" >> ${LOG_PATH}/gcclibs.log
 	echo "BASEGCCCXXLIBNAME: ${BASEGCCCXXLIBNAME}" >> ${LOG_PATH}/gcclibs.log
@@ -584,8 +549,8 @@ function install_gcclibs () {
 	then
 		mkdir -p ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 	fi
-	cp -v ${GCCCXXLIB} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} >> ${LOG_PATH}/gcclibs.log 2>&1 &&
-	ln -fs ${GCCCXXLIBNAME} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/${BASEGCCCXXLIBNAME} >> ${LOG_PATH}/gcclibs.log 2>&1
+	cp -v ${GCCLIB} ${GCCCXXLIB} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} >> ${LOG_PATH}/gcclibs.log 2>&1 &&
+	ln -vfs ${GCCCXXLIBNAME} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/${BASEGCCCXXLIBNAME} >> ${LOG_PATH}/gcclibs.log 2>&1
 	local BUILD_STATUS=${?}
 	if [ ${BUILD_STATUS} -eq 0 ]
 	then

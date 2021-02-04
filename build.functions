@@ -291,7 +291,7 @@ function build () (
 		OBJDUMP=${HARCH}-objdump \
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
-			eval "make ${PKG_MAKEVARS} DESTDIR=${BIN_PATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}"
+			eval "make ${PKG_MAKEVARS} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${BIN_PATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}"
 		forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
@@ -856,14 +856,13 @@ function build () (
 		mkdir -p ${BIN_PATH}
 	fi
 	> ${LOG_PATH}/${PKG_NAME}.log
-	if [ ! -d ${PKG_SRCPATH} ]
+	if [ ! -d ${PKG_SRCPATH} ] && [ ! -z ${PKG_URL} ]
 	then
 		echo -n "Downloading ${PKG_NAME}..."
 		downloadsources >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 		echo "Done."
 		preparesources
 	fi
-	echo -n "Building ${PKG_NAME}..."
 	if [ -d ${PKG_BLDPATH} ]
 	then
 		rm -rf ${PKG_BLDPATH}
@@ -873,10 +872,17 @@ function build () (
 		cd ${PKG_SRCPATH}
 		(eval "trap 'exit 1' ERR; set -x && ${PKG_PREBUILD} 2>&1 && set +x") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 	fi
-	${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-
+	if [ ! ${BUILD_PROCESS:-none} == none ]
+	then
+		echo -n "Building ${PKG_NAME}..."
+		${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+	fi
 	if [ ! -z "${PKG_POSTBUILD}" ]
 	then
+		if [ ! -d ${PKG_BLDPATH} ]
+		then
+			mkdir -p ${PKG_BLDPATH}
+		fi
 		cd ${PKG_BLDPATH}
 		(eval "trap 'exit 1' ERR; set -x && ${PKG_POSTBUILD} 2>&1 && set +x") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 	fi

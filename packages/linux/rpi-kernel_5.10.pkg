@@ -1,6 +1,6 @@
 # rpi-kernel_5.10
 KERN_VER=5.10.11
-PKG_URL="https://github.com/raspberrypi/linux/archive/c9226080e513181ffb3909a905e9c23b8a6e8f62.tar.gz"
+PKG_URL="https://github.com/raspberrypi/linux/archive/f943c26bb838ef807216e1f3b41732c5195a7de7.tar.gz"
 BUILD_PROCESS=kernelbuild
 INST_CMD="INSTALL_MOD_STRIP=1"
 case x${WITH_RT} in
