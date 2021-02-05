@@ -37,3 +37,6 @@ sudo apt-get install -y pandoc
 
 # for lxml
 sudo apt-get install -y libxslt1-dev
+
+# for systemd
+sudo apt-get install -y xsltproc docbook-xsl
