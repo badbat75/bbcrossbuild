@@ -441,7 +441,10 @@ function build () (
 		CMAKE=cmake \
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}} \
-		meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release --strip -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS}
+		meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release --strip -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} \
+			--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+			--includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} \
+			${CONF_FLAGS}
 		ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH}
 		DESTDIR=${BIN_PATH} ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH} install
 		forge_la_libs ${PWD}
