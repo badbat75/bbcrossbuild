@@ -532,25 +532,22 @@ function setup_gcc () {
 
 function install_gcclibs () {
 	settoolflags
-	local GCCSEARCHLIBS="$(${HARCH:+${HARCH}-}gcc -print-search-dirs | grep 'libraries:' | sed 's/^libraries: =//;s/\:/ /g')"
-	local GCCLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 -type f -name 'libgcc_s.so.*' -exec realpath {} \; 2>/dev/null | sort | tail -n1)
-	local GCCLIBNAME=$(basename ${GCCLIB})
-	local GCCCXXLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 -type f \( -name 'libstdc++.so.*' ! -name 'libstdc++.so.*-*.py' \)  -exec realpath {} \; 2>/dev/null | sort | tail -n1)
-	local GCCCXXLIBNAME=$(basename ${GCCCXXLIB})
-	local BASEGCCCXXLIBNAME=$(echo ${GCCCXXLIBNAME} | cut -d'.' -f1,2,3)
+	local GCCSEARCHLIBS="$( ( for lib in $(${HARCH:+${HARCH}-}gcc -print-search-dirs | grep 'libraries:' | sed 's/^libraries: =//;s/\:/ /g' ); do realpath "${lib}"; done ) | grep -v "${BIN_PATH}" | sort | uniq | xargs )"
+	local GCCLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 \( -name 'libgcc_s.so*' -o -name 'libssp.so*' \) 2>/dev/null | xargs )
+	local GCCLIBNAME="$( ( for name in ${GCCLIB}; do echo $(basename ${name}); done ) | sort | uniq | xargs )"
+	local GCCCXXLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 \( -name 'libstdc++.so.*' ! -name 'libstdc++.so.*-*.py' \) 2>/dev/null | xargs )
+	local GCCCXXLIBNAME="$( ( for name in ${GCCCXXLIB}; do echo $(basename ${name}); done ) | sort | uniq | xargs )"
 	echo -n "Installing ${GCCLIBNAME}, ${BASEGCCCXXLIBNAME} library..."
 	echo "GCCSEARCHLIBS: ${GCCSEARCHLIBS}" > ${LOG_PATH}/gcclibs.log
 	echo "GCCLIB: ${GCCLIB}" >> ${LOG_PATH}/gcclibs.log
 	echo "GCCLIBNAME: ${GCCLIBNAME}" >> ${LOG_PATH}/gcclibs.log
 	echo "GCCCXXLIB: ${GCCCXXLIB}" >> ${LOG_PATH}/gcclibs.log
 	echo "GCCCXXLIBNAME: ${GCCCXXLIBNAME}" >> ${LOG_PATH}/gcclibs.log
-	echo "BASEGCCCXXLIBNAME: ${BASEGCCCXXLIBNAME}" >> ${LOG_PATH}/gcclibs.log
 	if [ ! -d ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} ]
 	then
 		mkdir -p ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 	fi
-	cp -v ${GCCLIB} ${GCCCXXLIB} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} >> ${LOG_PATH}/gcclibs.log 2>&1 &&
-	ln -vfs ${GCCCXXLIBNAME} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/${BASEGCCCXXLIBNAME} >> ${LOG_PATH}/gcclibs.log 2>&1
+	cp -P -v ${GCCLIB} ${GCCCXXLIB} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} >> ${LOG_PATH}/gcclibs.log 2>&1 &&
 	local BUILD_STATUS=${?}
 	if [ ${BUILD_STATUS} -eq 0 ]
 	then

@@ -847,7 +847,7 @@ function build () (
 		fi
 	fi
 
-	if [ ${OVERRIDE_TARGET_GCC_CHECK:-0} -eq 0 ]
+	if [ ${OVERRIDE_TARGET_GCC_CHECK:-0} -eq 0 ] && [ "${BUILD_PROCESS}" != "none" ] && [ "${BUILD_PROCESS}" != "downloadonly" ]
 	then
 		check_target_gcc
 	fi
