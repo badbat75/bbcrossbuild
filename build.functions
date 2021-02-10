@@ -241,7 +241,7 @@ function build () (
 			eval "${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS}"
 		if [ ${PKG_TWOSTEPSBUILD:-0} -eq 1 ]
 		then
-			make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0}
+			eval "make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0}"
 		fi
 		make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD:-}
 		forge_la_libs ${PWD}
