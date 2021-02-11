@@ -652,11 +652,11 @@ function setup_python () {
 		NM="${HOST_NM}" \
 		RANLIB="${HOST_RANLIB}" \
 		LDFLAGS="${OPTLINK_FLAGS}" \
-		${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER} --enable-shared
+		${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER} --enable-shared ax_cv_c_float_words_bigendian=no
 		make
 		make install
 		${BUILD_PYTHON} ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py
-		${BUILD_PYTHONPIP} install crossenv
+		#${BUILD_PYTHONPIP} install crossenv
 		cd ${START_PWD}
 		rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
 		set +x
@@ -673,6 +673,7 @@ function setup_python () {
 		set -x
 		settoolflags
 		#local LTO_PLUGIN_PATH="$(${BARCH}-gcc --print-prog-name=liblto_plugin.so)"
+		${BUILD_PYTHONPIP} install crossenv
 		${BUILD_PYTHON} -m crossenv ${HOST_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH}
 		CC="${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc" \
 		CFLAGS="${OPTCOMP_FLAGS} ${COMMON_LTOFLAGS} -march=native" \
@@ -704,7 +705,13 @@ function setup_python () {
 	echo -n "Setting up Python"
 	if [ -z ${1} ]
 	then
-		local PYTHON_VER=$(find ${DISTOS_PATH}/usr/include -maxdepth 1 -name 'python*' -exec grep '#define PY_VERSION ' {}/patchlevel.h \; | awk '{print $3}' | sed 's/\"//g' | sort -u | tail -n1)
+		if [ -d ${DISTOS_PATH} ]
+		then
+			local PYTHON_SEARCHPATH=${DISTOS_PATH}
+		else
+			local PYTHON_SEARCHPATH=${BIN_PATH}
+		fi
+		local PYTHON_VER=$(find ${PYTHON_SEARCHPATH}/usr/include -maxdepth 1 -name 'python*' -exec grep '#define PY_VERSION ' {}/patchlevel.h \; | awk '{print $3}' | sed 's/\"//g' | sort -u | tail -n1)
 		if [ "x${PYTHON_VER}" == "x" ]
 		then
 			echo "...no way to guess its version and not specified. Exiting..."
@@ -720,16 +727,16 @@ function setup_python () {
 	PYTHONBIN_VER=$( echo ${PYTHON_VER} | cut -d'.' -f1,2)
 	BUILD_PYTHON=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/python${PYTHONBIN_VER}
 	BUILD_PYTHONPIP=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip${PYTHONBIN_VER}
-	HOST_PYTHON=${DISTOS_PATH}/usr/bin/python${PYTHONBIN_VER}
+	HOST_PYTHON=${PYTHON_SEARCHPATH}/usr/bin/python${PYTHONBIN_VER}
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	export PATH=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin:${PATH}
 	export LD_LIBRARY_PATH=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-	if [ ! -x ${HOST_PYTHON} ]
-	then
-		echo "no host python present (${HOST_PYTHON}). Exiting..."
-		echo
-		return 1
-	fi
+	#if [ ! -x ${HOST_PYTHON} ]
+	#then
+	#	echo "no host python present (${HOST_PYTHON}). Exiting..."
+	#	echo
+	#	return 1
+	#fi
 	if [ ! -x ${BUILD_PYTHON} ] || [ ! -x ${BUILD_PYTHONPIP} ]
 	then
 		echo -n "downloading..."
@@ -740,18 +747,21 @@ function setup_python () {
 		rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}
 	else
 		echo "already there."
-	fi	
-	if [ ! $(stat -c '%u' ${DISTOS_PATH}) -eq $(id -u) ]
-	then
-		local SUDO_CMD='sudo'
 	fi
-	if [ -f ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/plat-${HARCH}/_sysconfigdata_m.py ]
+	if [ -d ${DISTOS_PATH} ]
 	then
-		eval ${SUDO_CMD} mv ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/plat-${HARCH}/_sysconfigdata_m.py ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/_sysconfigdata.py
-	fi
-	if [ -d ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m-${HARCH} ] && [ ! -L ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m ]
-	then
-		eval ${SUDO_CMD} ln -s config-${PYTHONBIN_VER}m-${HARCH} ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m
+		if [ ! $(stat -c '%u' ${DISTOS_PATH}) -eq $(id -u) ]
+		then
+			local SUDO_CMD='sudo'
+		fi
+		if [ -f ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/plat-${HARCH}/_sysconfigdata_m.py ]
+		then
+			eval ${SUDO_CMD} mv ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/plat-${HARCH}/_sysconfigdata_m.py ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/_sysconfigdata.py
+		fi
+		if [ -d ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m-${HARCH} ] && [ ! -L ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m ]
+		then
+			eval ${SUDO_CMD} ln -s config-${PYTHONBIN_VER}m-${HARCH} ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m
+		fi
 	fi
 	trap ERR
 	trap 'STATUS=${?}; \
@@ -766,16 +776,19 @@ function setup_python () {
 		trap ERR; \
 		return ${STATUS}' ERR
 
-	echo -n "Creating virtual cross environment..."
-	if [ ! -d ${TOOLCHAIN_PATH}/venv-${HARCH} ]
+	if [ ${SKIP_PYTHONVENV:-0} -eq 0 ]
 	then
-		build_python_crossenv >> ${LOG_PATH}/toolchain_python-crossenv.log 2>&1
-		echo "done."
-		echo
-	else
-		echo "already there."
-		echo
-		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate >> ${LOG_PATH}/toolchain_python-crossenv.log 2>&1
+		echo -n "Creating virtual cross environment..."
+		if [ ! -d ${TOOLCHAIN_PATH}/venv-${HARCH} ]
+		then
+			build_python_crossenv >> ${LOG_PATH}/toolchain_python-crossenv.log 2>&1
+			echo "done."
+			echo
+		else
+			echo "already there."
+			echo
+			source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate >> ${LOG_PATH}/toolchain_python-crossenv.log 2>&1
+		fi
 	fi
 	trap ERR
 }

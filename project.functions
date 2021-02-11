@@ -37,7 +37,7 @@ function remove_devfiles () {
 	chmod 755 ${TMP_PATH}
 	cd ${BIN_PATH}
 	#mkdir -p ${TMP_PATH}/${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
-	TMP_PATH=${TMP_PATH} find . -type f -name '*.la' -exec sh -c \
+	TMP_PATH=${TMP_PATH} find . -type f \( -name '*.la' -o -name '*.a' \) -exec sh -c \
 		'mkdir -p ${TMP_PATH}/$(dirname ${1}) && mv ${1} ${TMP_PATH}/${1}' \
 		sh {} \;
 	if [ -d .${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig ]
