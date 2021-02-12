@@ -1,0 +1,9 @@
+#!/bin/bash
+PROJECT=${1}
+LIBRARY=${2}
+if [ -d "${HOME}/.bbxb/${1}" ]
+then
+	pushd ${HOME}/.bbxb/${1}/*/logs
+	grep "\-l${LIBRARY}" * | sed s/.log:.*$// | uniq
+	popd
+fi
