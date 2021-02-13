@@ -9,6 +9,55 @@ check_core_functions () {
 	fi
 }
 
+param2value () {
+	
+	# Requires at least one OPTS or OPTS_WITH_VALUE to run
+	# OPTS="-a -b -c" OPTS_WITH_VALUE="-d" . ./param2value
+
+	local OPTS+=" -h --help"
+
+	for p in $(( set -o posix ; set ) | grep ^_PARAM_)
+	do
+		unset $(echo $p | awk 'BEGIN {FS="="} ; {print $1}')
+	done
+	set +x
+
+	for option in ${@}
+	do
+		if [[ ${option} == -* ]]
+		then
+			if [ "${option}" == "$(echo ${OPTS} ${OPTS_WITH_VALUE} | grep -o -- "${option}\b")" ]
+			then
+				PARAMETER=$(echo ${option} | sed -e 's/^--\?//' | awk '{print toupper($0)}')
+				if [ "${option}" == "$(echo ${OPTS_WITH_VALUE} | grep -o -- "${option}\b")" ]
+				then
+					VALUE=$(echo ${@} | grep -o -- "${option}\b \w*" | awk '{print $2}')
+					eval "local _PARAM_${PARAMETER}=${VALUE}"
+				else
+					eval "local _PARAM_${PARAMETER}=1"
+				fi
+				[ ${DEBUG:-0} -eq 1 ] && eval echo "${PARAMETER}=\$_PARAM_${PARAMETER}" || true
+			else
+				echo "Unrecognized option: ${option}"
+				return 1
+			fi
+		fi
+	done
+
+	if [ ${_PARAM_HELP:-0} -eq 1 ] || [ ${_PARAM_H:-0} -eq 1 ]
+	then
+		echo "Valid options:"
+		for v in ${OPTS}
+		do
+			echo ${v}
+		done
+		for v in ${OPTS_WITH_VALUE}
+		do 
+			echo "${v} <value>"
+		done
+	fi
+}
+
 download_uncompress () {
 	## download_uncompress <URLs> <destination> [files_to_extract]
 	## STRIPCOMPONENTS=<num>: Add strip --strip-components=<n> to tar command

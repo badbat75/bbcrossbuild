@@ -83,6 +83,8 @@ GCC_OPTLEVEL=3
 GCC_OPTCOMP_FLAGS=
 ### Optional ld linker flags
 GCC_OPTLINK_FLAGS="-Wl,-z,relro -Wl,-z,now"
+### Those could break symbol dependencies. Tested on gawk versus ncurses
+#OPTLINK_FLAGS+=" -Wl,--as-needed"
 ### Enable LTO building for GCC and its libraries (can be set up in the project definition)
 # GCC_LTOENABLE=1
 ######
