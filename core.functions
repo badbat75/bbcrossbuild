@@ -14,48 +14,32 @@ param2value () {
 	# Requires at least one OPTS or OPTS_WITH_VALUE to run
 	# OPTS="-a -b -c" OPTS_WITH_VALUE="-d" . ./param2value
 
-	local OPTS+=" -h --help"
+	local OPTS+=" -v"
 
-	for p in $(( set -o posix ; set ) | grep ^_PARAM_)
+	for p in $(( set -o posix ; set ) | grep ^_param_)
 	do
 		unset $(echo $p | awk 'BEGIN {FS="="} ; {print $1}')
 	done
-	set +x
 
-	for option in ${@}
-	do
-		if [[ ${option} == -* ]]
-		then
-			if [ "${option}" == "$(echo ${OPTS} ${OPTS_WITH_VALUE} | grep -o -- "${option}\b")" ]
+	while(($#)) ; do
+		if [ "${1}" == "$(echo ${OPTS} ${OPTS_WITH_VALUE} | grep -o -- "${1}\b")" ]
 			then
-				PARAMETER=$(echo ${option} | sed -e 's/^--\?//' | awk '{print toupper($0)}')
-				if [ "${option}" == "$(echo ${OPTS_WITH_VALUE} | grep -o -- "${option}\b")" ]
+				PARAMETER=$(echo ${1} | sed -e 's/^--\?//')
+				if [ "${1}" == "$(echo ${OPTS_WITH_VALUE} | grep -o -- "${1}\b")" ]
 				then
-					VALUE=$(echo ${@} | grep -o -- "${option}\b \w*" | awk '{print $2}')
-					eval "local _PARAM_${PARAMETER}=${VALUE}"
+					shift
+					VALUE=${1}
+					eval "_param_${PARAMETER}='${VALUE}'"
 				else
-					eval "local _PARAM_${PARAMETER}=1"
+					eval "_param_${PARAMETER}=1"
 				fi
-				[ ${DEBUG:-0} -eq 1 ] && eval echo "${PARAMETER}=\$_PARAM_${PARAMETER}" || true
-			else
-				echo "Unrecognized option: ${option}"
-				return 1
-			fi
+				[ ${_param_v:-0} -eq 1 ] && eval echo "_param_${PARAMETER}=\$_param_${PARAMETER}" || true
+		else
+			echo "Unrecognized option: ${1}"
+			return 1
 		fi
+		shift
 	done
-
-	if [ ${_PARAM_HELP:-0} -eq 1 ] || [ ${_PARAM_H:-0} -eq 1 ]
-	then
-		echo "Valid options:"
-		for v in ${OPTS}
-		do
-			echo ${v}
-		done
-		for v in ${OPTS_WITH_VALUE}
-		do 
-			echo "${v} <value>"
-		done
-	fi
 }
 
 download_uncompress () {
