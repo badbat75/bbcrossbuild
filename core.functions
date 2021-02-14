@@ -12,7 +12,7 @@ check_core_functions () {
 param2value () {
 	
 	# Requires at least one OPTS or OPTS_WITH_VALUE to run
-	# OPTS="-a -b -c" OPTS_WITH_VALUE="-d" . ./param2value
+	# OPTS="-a -b -c" OPTS_WITH_VALUE="-d" param2value "${@}"
 
 	local OPTS+=" -v"
 	local NUM=0
@@ -25,22 +25,29 @@ param2value () {
 	while(($#)) ; do
 		if [ "${1}" == "$(echo ${OPTS} ${OPTS_WITH_VALUE} | grep -o -- "${1}\b")" ]
 			then
+				local OPTION=${1}
 				local PARAMETER=$(echo ${1} | sed -e 's/^--\?//')
 				if [ "${1}" == "$(echo ${OPTS_WITH_VALUE} | grep -o -- "${1}\b")" ]
 				then
 					shift
-					eval "local _param_${PARAMETER}='${1}'"
+					if [ ! "x${1}" == "x" ]
+					then 
+						eval "_param_${PARAMETER}='${1}'"
+					else
+						echo "${OPTION} unset, no assigned value."
+						return 1
+					fi
 				else
-					eval "local _param_${PARAMETER}=1"
+					eval "_param_${PARAMETER}=1"
 				fi
 		else
 			if [[ ${1} == -* ]]
 			then
 				echo "Unrecognized option: ${1}"
-				exit 1
+				return 1
 			else
 				local NUM=$((NUM+1))
-				eval "local _param_${NUM}=${1}"
+				eval "_param_${NUM}=${1}"
 				local PARAMETER=${NUM}
 			fi
 		fi
