@@ -1,0 +1,191 @@
+#!/bin/bash
+set -e
+MYPATH=$(dirname $(realpath ${0}))
+
+source ${MYPATH}/lfs.conf
+OPTS="-c -h -m -r -s -u" OPTS_WITH_VALUE="-i --layout --rootfs" . ${MYPATH}/selector ${@}
+
+echo
+
+if [ ${_param_h:-0} -eq 1 ]
+then
+	echo "$(basename ${0}) [options] <image_path>"
+	echo
+	echo "Options:"
+	echo " -h : Print this help"
+	echo " -c : Create new image"
+	echo " -m : Mount the image"
+	echo " -r : Restore from a saved image"
+	echo " -s : Image size in KiB (default: ${SIZEINMEGS})"
+	echo " -u : Unmount the image"
+	echo " -v : Verbose output"
+	echo " -i <archive_path>      : Inject specified archive in to the image (implies -m)"
+	echo " --layout <layout_file> : Refer to specified layout_file to create paritions (default: ${PARTLAYOUT})"
+	echo " --rootfs <filesystem>  : specify the root filesystem (default: ${ROOTFS})"
+	echo
+	exit 0
+fi
+
+if [ ${_param_v:-0} -eq 1 ]
+then
+	set -x
+	output="&1"
+else
+	output=/dev/null
+fi
+
+##### Options check #####
+if [ -z "${_param_1}" ]
+then
+	echo "Filename not specified."
+	exit 1
+fi
+
+DISKIMAGE=$(realpath ${_param_1:-${DISKIMAGE}})
+PARTLAYOUT=$(realpath ${_param__layout:-${PARTLAYOUT}})
+SIZEINMEGS=${_param_s:-${SIZEINMEGS}}
+ROOTFS=${_param_rootfs:-${ROOTFS}}
+
+ROOTDIR=$(realpath $(basename ${DISKIMAGE}_rootfs))
+
+if [ ${_param_c:-0} -eq 0 ] && [ ${_param_m:-0} -eq 0 ] && [ ${_param_c:-0} -eq 0 ]
+then
+	echo -n "Oh my God, what I have to do now? "
+	if [ -f ${DISKIMAGE} ]
+	then
+		if mountpoint -q ${ROOTDIR}
+		then
+			echo "Guessing unmount..."
+			_param_u=1
+		else
+			echo "Guessing mount..."
+			_param_m=1
+		fi
+	else
+		echo "Guessing create..."
+		_param_c=1
+	fi
+	echo
+fi
+
+if [ ! -f ${DISKIMAGE} ] && [ ${_param_c:-0} -eq 0 ]
+then
+	echo "${DISKIMAGE} not found"
+	echo
+	exit 1
+fi
+
+if [ ! "x${_param_i}" == "x" ]
+then
+	if [ ! -f "${_param_i}" ]
+	then
+		TARFILE="$(realpath ${_param_i})"
+	else
+		echo "${_param_i} not found"
+		exit 1
+	fi
+fi
+#########################
+
+echo "Working on $(basename ${DISKIMAGE})..."
+echo
+
+[ ${_param_r:-0} -eq 1 ] && cp -f ${DISKIMAGE}.save ${DISKIMAGE} || true
+if [ ${_param_c:-0} -eq 1 ]
+then
+	if ! mountpoint -q ${ROOTDIR}
+	then
+		echo -n "Creating image... "
+		eval "dd if=/dev/zero of=${DISKIMAGE} bs=1KiB count=${SIZEINMEGS} status=progress  >${output} 2>&1"
+		echo "ok."
+		echo -n "Partitioning using $(basename ${PARTLAYOUT}) file..."
+		eval "sfdisk ${DISKIMAGE} < ${PARTLAYOUT} >${output}"
+		echo "ok."
+		echo -n "Creating loopback devices..."
+		eval "sudo losetup -f -P ${DISKIMAGE} >${output}"
+		LODEVICE=$(sudo losetup -l --raw | grep ${DISKIMAGE} | tail -n1 | awk '{print $1}')
+		echo "ok."
+		#echo -n "Scanning for partitions."
+		#eval "sudo kpartx ${LODEVICE} >${output}"
+		echo -n "Creating filesystems..."
+		eval "sudo mkfs.vfat ${LODEVICE}p1 >${output} 2>&1"
+		eval "sudo mkfs.${ROOTFS} ${LODEVICE}p2 >${output} 2>&1"
+		echo "ok."
+		echo -n "Mounting image..."
+		eval "mkdir -p ${ROOTDIR} >${output}"
+		eval "sudo mount ${LODEVICE}p2 ${ROOTDIR} >${output}"
+		eval "sudo mkdir ${ROOTDIR}/boot >${output}"
+		eval "sudo mount ${LODEVICE}p1 ${ROOTDIR}/boot >${output}"
+		eval "sudo mkdir -p ${ROOTDIR}/etc >${output}"
+		echo "ok."
+		echo -n "Creating /etc/fstab..."
+		eval "cat > /tmp/fstab.temp <<-EOF >${output}
+			proc                 /proc proc defaults 0 0
+			PARTUUID=$(sudo blkid ${LODEVICE}p1 -o value -s PARTUUID) /boot $(sudo blkid ${LODEVICE}p1 -o value -s TYPE) defaults 0 2
+			PARTUUID=$(sudo blkid ${LODEVICE}p2 -o value -s PARTUUID) /     $(sudo blkid ${LODEVICE}p2 -o value -s TYPE) defaults 0 1
+		EOF
+		"
+		eval "sudo cp /tmp/fstab.temp ${ROOTDIR}/etc/fstab >${output}"
+		eval "rm /tmp/fstab.temp >${output}"
+		echo "ok."
+		echo -n "Unmounting image..."
+		eval "sudo umount ${ROOTDIR}/boot ${ROOTDIR} >${output}"
+		eval "rmdir ${ROOTDIR} >${output}"
+		echo "ok."
+		echo -n "Flushing loop devices..."
+		eval "sudo losetup -D >${output}"
+		echo "ok."
+	else
+		echo "$(basename ${DISKIMAGE}) still mounted, unmount it first."
+		exit 1
+	fi
+fi
+
+if [ ${_param_m:-0} -eq 1 ] || [ ! "x${_param_i}" == "x" ]
+then
+	if ! mountpoint -q ${ROOTDIR}
+	then
+		echo -n "Creating loopback devices..."
+		eval "sudo losetup -f -P ${DISKIMAGE} >${output}"
+		LODEVICE=$(sudo losetup -l --raw | grep ${DISKIMAGE} | tail -n1 |awk '{print $1}')
+		#echo -n "Scanning for partitions..."
+		#sudo kpartx ${LODEVICE} >${output}"
+		echo "ok."
+		echo -n "Mounting image on ${ROOTDIR}..."
+		eval "mkdir -p ${ROOTDIR}	>${output}"
+		eval "sudo mount ${LODEVICE}p2 ${ROOTDIR} >${output}"
+		eval "sudo mount ${LODEVICE}p1 ${ROOTDIR}/boot >${output}"
+		echo "ok."
+		if [ ! "x${_param_i}" == "x" ]
+		then
+			echo -n "Injecting archive ${TARFILE}..."
+			eval "sudo tar xf ${TARFILE} -C ${ROOTDIR} >${output}"
+			echo "ok."
+		fi
+	else
+		echo "$(basename ${DISKIMAGE}) still mounted, unmount it first."
+		exit 1
+	fi
+fi
+if [ ${_param_u:-0} -eq 1 ]
+then
+	if mountpoint -q ${ROOTDIR}
+	then
+		echo -n "Unmounting image..."
+		eval "sudo umount ${ROOTDIR}/boot ${ROOTDIR} >${output}"
+		eval "rmdir ${ROOTDIR} >${output}"
+		echo "ok."
+		echo -n "Flushing loop devices..."
+		eval "sudo losetup -D >${output}"
+		echo "ok."
+	else
+		echo "$(basename ${DISKIMAGE}) not mounted yet"
+		exit 1
+	fi
+fi
+
+echo
+echo "Operation completed."
+echo
+
+set +e +x
