@@ -17,10 +17,7 @@ param2value () {
 	local OPTS+=" -v"
 	local NUM=0
 
-	for p in $(( set -o posix ; set ) | grep ^_param_)
-	do
-		unset $(echo $p | awk 'BEGIN {FS="="} ; {print $1}')
-	done
+	unset $( ( set -o posix ; set ) | grep ^_param_ | sed 's/=.*$//g' | xargs )
 
 	while(($#)) ; do
 		if [ "${1}" == "$(echo ${OPTS} ${OPTS_WITH_VALUE} | grep -o -- "${1}\b")" ]
@@ -47,7 +44,7 @@ param2value () {
 				return 1
 			else
 				local NUM=$((NUM+1))
-				eval "_param_${NUM}=${1}"
+				eval "_param_${NUM}='${1}'"
 				local PARAMETER=${NUM}
 			fi
 		fi
