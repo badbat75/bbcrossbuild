@@ -20,33 +20,33 @@ param2value () {
 	unset $( ( set -o posix ; set ) | grep ^_param_ | sed 's/=.*$//g' | xargs )
 
 	while(($#)) ; do
-		if [ "${1}" == "$(echo ${OPTS} ${OPTS_WITH_VALUE} | grep -o -- "${1}\b")" ]
-			then
-				local OPTION=${1}
-				local PARAMETER=$(echo ${1} | sed -e 's/^--\?//')
-				if [ "${1}" == "$(echo ${OPTS_WITH_VALUE} | grep -o -- "${1}\b")" ]
+		if [[ ${1} == -* ]]
+		then
+			if [ "${1}" == "$(echo ${OPTS} ${OPTS_WITH_VALUE} | grep -o -- "${1}\b")" ]
 				then
-					shift
-					if [ ! "x${1}" == "x" ]
-					then 
-						eval "_param_${PARAMETER}='${1}'"
+					local OPTION=${1}
+					local PARAMETER=$(echo ${1} | sed -e 's/^--\?//')
+					if [ "${1}" == "$(echo ${OPTS_WITH_VALUE} | grep -o -- "${1}\b")" ]
+					then
+						shift
+						if [ ! "x${1}" == "x" ]
+						then 
+							eval "_param_${PARAMETER}='${1}'"
+						else
+							echo "${OPTION} unset, no assigned value."
+							return 1
+						fi
 					else
-						echo "${OPTION} unset, no assigned value."
-						return 1
+						eval "_param_${PARAMETER}=1"
 					fi
-				else
-					eval "_param_${PARAMETER}=1"
-				fi
-		else
-			if [[ ${1} == -* ]]
-			then
+			else
 				echo "Unrecognized option: ${1}"
 				return 1
-			else
+			fi
+		else
 				local NUM=$((NUM+1))
 				eval "_param_${NUM}='${1}'"
 				local PARAMETER=${NUM}
-			fi
 		fi
 		[ ${_param_v:-0} -eq 1 ] && eval echo "_param_${PARAMETER}=\$_param_${PARAMETER}" || true
 		shift
