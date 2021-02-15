@@ -46,7 +46,7 @@ function create_image() {
 	echo -n "Creating image... "
 	dd if=/dev/zero of=${IMAGE_PATH} bs=1KiB count=${SIZE} status=progress >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo "ok."
-	echo -n "Partitioning using $(basename ${_param_layout}) file..."
+	echo -n "Partitioning..."
 	echo "${LAYOUT}" | sfdisk ${IMAGE_PATH} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo "ok."
 	echo -n "Creating loopback devices..."
@@ -67,13 +67,12 @@ function create_image() {
 	sudo mount ${LODEVICE}p1 ${MOUNT_DIR}/boot >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo "ok."
 	echo -n "Creating /etc/fstab..."
-	cat > /tmp/fstab.temp <<-EOF >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+	sudo bash -c "cat > ${MOUNT_DIR}/etc/fstab <<-EOF
 		proc                 /proc proc defaults 0 0
 		PARTUUID=$(sudo blkid ${LODEVICE}p1 -o value -s PARTUUID) /boot $(sudo blkid ${LODEVICE}p1 -o value -s TYPE) defaults 0 2
 		PARTUUID=$(sudo blkid ${LODEVICE}p2 -o value -s PARTUUID) /     $(sudo blkid ${LODEVICE}p2 -o value -s TYPE) defaults 0 1
-	EOF
-	sudo cp /tmp/fstab.temp ${MOUNT_DIR}/etc/fstab >> ${LOG_PATH}/images_${_param_1}.log 2>&1
-	rm /tmp/fstab.temp >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+		EOF
+		" >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo "ok."
 	echo -n "Unmounting image..."
 	sudo umount ${MOUNT_DIR}/boot ${MOUNT_DIR} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
