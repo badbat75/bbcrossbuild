@@ -34,10 +34,10 @@ PKG_PREBUILD="command1; command2 && command3"
 
 ###### Build process ######
 
-### CONF_COPYSRC:
+### PKG_COPYSRC:
 # Copy sources in the build directory (often needed for buggy build processes). 
 # Not enabled by default on configmake (0), enabled on other build processes (1).
-CONF_COPYSRC=1
+PKG_COPYSRC=1
 
 ### BUILD_PROCESS: (*)
 # Define what build process to use

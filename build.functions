@@ -196,12 +196,7 @@ function build () (
 			fi
 			echo "Done." || echo "Fail."
 		fi
-		if [ ${CONF_COPYSRC:-0} -eq 1 ] 
-		then
-			cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
-		else
-			mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
-		fi
+		mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 		cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
@@ -758,7 +753,7 @@ function build () (
 		STD_CONF_FLAGS \
 		CONF_CMD \
 		CONF_FLAGS \
-		CONF_COPYSOURCE \
+		PKG_COPYSRC \
 		CONF_PATH \
 		INST_CMD \
 		MAKEDIR \
@@ -877,6 +872,10 @@ function build () (
 	then
 		cd ${PKG_SRCPATH}
 		(eval "trap 'exit 1' ERR; set -x && ${PKG_PREBUILD} 2>&1 && set +x") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+	fi
+	if [ ${PKG_COPYSRC:-0} -eq 1 ] 
+	then
+		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 	fi
 	if [ ! ${BUILD_PROCESS:-none} == none ]
 	then

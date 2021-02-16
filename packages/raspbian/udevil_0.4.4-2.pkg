@@ -1,7 +1,7 @@
 # udevil_0.4.4-2
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/u/udevil/udevil_0.4.4.orig.tar.xz"
 BUILD_PROCESS=configmake
-CONF_COPYSRC=1
+PKG_COPYSRC=1
 #CONF_FLAGS=""
 INST_CMD=install-strip
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/u/udevil/udevil_0.4.4-2.debian.tar.xz"

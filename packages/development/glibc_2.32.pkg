@@ -3,7 +3,7 @@ PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-2.32.tar.xz"
 BUILD_PROCESS=configmake
 AUTOCONF=0
 LTOENABLE=0
-#CONF_COPYSRC=1
+#PKG_COPYSRC=1
 CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}\${BUILD_INCLUDEDIR} --disable-werror \
 	--disable-sanity-checks --enable-hacker-mode --without-selinux --enable-stackguard-randomization \
 	--enable-stack-protector=strong --enable-obsolete-rpc --enable-obsolete-nsl --enable-pt_chown"
