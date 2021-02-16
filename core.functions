@@ -207,6 +207,12 @@ test_version () {
 	esac	
 }
 
+pause () {
+	echo
+	read -n 1 -s -r -p "Press any key to continue..."
+	echo
+}
+
 BB_HOME=$(dirname $(realpath ${0}))
 NPROCS=$(echo $(nproc)/2+1 | bc)
 
