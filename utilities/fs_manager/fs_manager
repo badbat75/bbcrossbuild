@@ -95,7 +95,7 @@ ROOTFS=${_param_rootfs:-${ROOTFS}}
 
 ROOTDIR=$(realpath $(basename ${DISKIMAGE}_rootfs))
 
-if [ ${_param_c:-0} -eq 0 ] && [ ${_param_m:-0} -eq 0 ] && [ ${_param_c:-0} -eq 0 ]
+if [ ${_param_c:-0} -eq 0 ] && [ ${_param_m:-0} -eq 0 ] && [ ${_param_u:-0} -eq 0 ] && [ ${_param_c:-0} -eq 0 ]
 then
 	echo -n "Oh my God, what I have to do now? "
 	if [ -f ${DISKIMAGE} ]
@@ -200,8 +200,11 @@ then
 		echo "ok."
 		echo -n "Mounting image on ${ROOTDIR}..."
 		eval "mkdir -p ${ROOTDIR}	>${output}"
-		eval "sudo mount ${LODEVICE}p2 ${ROOTDIR} >${output}"
+		eval "sudo mount -oacl ${LODEVICE}p2 ${ROOTDIR} >${output}"
 		eval "sudo mount ${LODEVICE}p1 ${ROOTDIR}/boot >${output}"
+		eval "sudo mount -t proc /proc ${ROOTDIR}/proc >${output}"
+		eval "sudo mount --rbind /dev ${ROOTDIR}/dev >${output}"
+		eval "sudo mount --rbind /dev/pts ${ROOTDIR}/dev/pts >${output}"
 		echo "ok."
 		if [ ! "x${_param_i}" == "x" ]
 		then
@@ -219,7 +222,7 @@ then
 	if mountpoint -q ${ROOTDIR}
 	then
 		echo -n "Unmounting image..."
-		eval "sudo umount ${ROOTDIR}/boot ${ROOTDIR} >${output}"
+		eval "sudo umount -f ${ROOTDIR}/dev/pts ${ROOTDIR}/dev ${ROOTDIR}/proc ${ROOTDIR}/boot ${ROOTDIR} >${output}"
 		eval "rmdir ${ROOTDIR} >${output}"
 		echo "ok."
 		echo -n "Flushing loop devices..."
