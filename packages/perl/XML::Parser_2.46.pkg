@@ -1,0 +1,61 @@
+# XML::Parser_2.46
+PKG_URL="https://cpan.metacpan.org/authors/id/T/TO/TODDR/XML-Parser-2.46.tar.gz"
+PKG_SRCDIR="perl/cpan/XML-Parser"
+BUILD_PROCESS=downloadonly
+PKG_PREBUILD="cat <<-EOF | patch -s -p1 || true
+--- XML-Parser/Makefile.PL	2019-09-24 07:20:53.000000000 +0200
++++ XML-Parser.patched/Makefile.PL	2021-02-17 15:23:04.852911700 +0100
+@@ -28,50 +28,8 @@
+ 
+ @ARGV = @replacement_args;
+ 
+-unless (
+-    check_lib(    # fill in what you prompted the user for here
+-        lib     => [qw(expat)],
+-        header  => ['expat.h'],
+-        incpath => \\\$expat_incpath,
+-        ( \\\$expat_libpath ? ( libpath => \\\$expat_libpath ) : () ),
+-    )
+-) {
+-    warn <<'Expat_Not_Installed;';
+-
+-Expat must be installed prior to building XML::Parser and I can't find
+-it in the standard library directories. Install 'expat-devel' (or
+-'libexpat1-dev') package with your OS package manager. See 'README'.
+-
+-Or you can download expat from:
+-
+-http://sourceforge.net/projects/expat/
+-
+-If expat is installed, but in a non-standard directory, then use the
+-following options to Makefile.PL:
+-
+-    EXPATLIBPATH=...  To set the directory in which to find libexpat
+-
+-    EXPATINCPATH=...  To set the directory in which to find expat.h
+-
+-For example:
+-
+-    perl Makefile.PL EXPATLIBPATH=/home/me/lib EXPATINCPATH=/home/me/include
+-
+-Note that if you build against a shareable library in a non-standard location
+-you may (on some platforms) also have to set your LD_LIBRARY_PATH environment
+-variable at run time for perl to find the library.
+-
+-Expat_Not_Installed;
+-
+-    # exiting before Makefile generation silences CPANTesters reports
+-    # when expat is not available.
+-    exit 0;
+-}
+-
+-if ( not \\\$expat_libpath and \\\$] >= 5.006001 and \\\$^O ne 'MSWin32' ) {
+-    require ExtUtils::Liblist;    # Buggy before this
+-    (\\\$expat_libpath) = ExtUtils::Liblist->ext('-lexpat');
+-}
++require ExtUtils::Liblist;    # Buggy before this
++(\\\$expat_libpath) = ExtUtils::Liblist->ext('-lexpat');
+ 
+ # Don't try to descend into Expat directory for testing
+EOF
+"
