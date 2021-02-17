@@ -204,7 +204,7 @@ then
 		eval "sudo mount ${LODEVICE}p1 ${ROOTDIR}/boot >${output}"
 		eval "sudo mount -t proc /proc ${ROOTDIR}/proc >${output}"
 		eval "sudo mount --rbind /dev ${ROOTDIR}/dev >${output}"
-		eval "sudo mount --rbind /dev/pts ${ROOTDIR}/dev/pts >${output}"
+		#eval "sudo mount --rbind /dev/pts ${ROOTDIR}/dev/pts >${output}"
 		echo "ok."
 		if [ ! "x${_param_i}" == "x" ]
 		then
@@ -222,7 +222,9 @@ then
 	if mountpoint -q ${ROOTDIR}
 	then
 		echo -n "Unmounting image..."
-		eval "sudo umount -f ${ROOTDIR}/dev/pts ${ROOTDIR}/dev ${ROOTDIR}/proc ${ROOTDIR}/boot ${ROOTDIR} >${output}"
+		eval "sudo umount -f ${ROOTDIR}/dev/pts ${ROOTDIR}/proc ${ROOTDIR}/boot"
+		sleep 3
+		eval "sudo umount -f ${ROOTDIR}/dev ${ROOTDIR} >${output}"
 		eval "rmdir ${ROOTDIR} >${output}"
 		echo "ok."
 		echo -n "Flushing loop devices..."
