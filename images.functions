@@ -180,7 +180,8 @@ function mount_tag () {
 	if [ "${ROOTREADY}" -eq 1 ]
 	then
 		#sudo mount -t tmpfs -o nosuid,nodev,mode=755 /run ${MOUNT_DIR}/run >> ${LOG_PATH}/images_${_param_1}.log 2>&1
-		sudo mount -t devpts /dev/pts ${MOUNT_DIR}/dev/pts >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+		sudo mount --rbind /dev ${MOUNT_DIR}/dev >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+		#sudo mount --rbind /dev/pts ${MOUNT_DIR}/dev/pts >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		sudo mount -t proc /proc ${MOUNT_DIR}/proc >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 
 		if [ ! -d ${MOUNT_DIR}/tmp/bbxb ]
@@ -189,7 +190,7 @@ function mount_tag () {
 		fi
 		sudo mount -o bind $(readlink -m ${MOUNT_DIR}/..) ${MOUNT_DIR}/tmp/bbxb
 		#MOUNTPOINTS[${MOUNT_DIR}]="${MOUNT_DIR}/proc ${MOUNT_DIR}/dev/pts ${MOUNT_DIR}/run ${MOUNT_DIR}/tmp/bbxb ${MOUNTPOINTS[${MOUNT_DIR}]}"
-		MOUNTPOINTS[${MOUNT_DIR}]="${MOUNT_DIR}/proc ${MOUNT_DIR}/dev/pts ${MOUNT_DIR}/tmp/bbxb ${MOUNTPOINTS[${MOUNT_DIR}]}"
+		MOUNTPOINTS[${MOUNT_DIR}]="${MOUNT_DIR}/proc ${MOUNT_DIR}/dev/pts ${MOUNT_DIR}/dev ${MOUNT_DIR}/tmp/bbxb ${MOUNTPOINTS[${MOUNT_DIR}]}"
 	fi
 	echo "Done."
 	MOUNTED_IMAGES="${MOUNTED_IMAGES} ${_param_1}"
@@ -341,7 +342,7 @@ function run_on_root_dir () {
 		fi; \
 		return ${STATUS};' ERR
 			
-	OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
+	OPTS="--allocate_pty" OPTS_WITH_VALUE="" param2value "${@}"
 	[ ${_param_v:-0} -eq 1 ] && set -x || true
 
 	local CHROOT_DIR=$(echo ${_param_1} | sed 's/^//g')
@@ -356,8 +357,8 @@ function run_on_root_dir () {
 		local CHROOT_PROMPT+='$ '
 	fi
 	echo "${CHROOT_PROMPT}${_param_3}" >> ${LOG_PATH}/images_${_param_1}.log 2>&1
-	sudo chroot ${PLATFORM_PATH}/${_param_1} su - --pty ${_param_2} -c \
-		"${_param_3}" >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+	sudo chroot ${PLATFORM_PATH}/${_param_1} su - $( [ ${_param_allocate_pty:-0} -eq 1 ] && echo "--pty" || true ) \
+		${_param_2} -c "${_param_3}" >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 
 	set +x
@@ -411,7 +412,7 @@ function inject_into_mount_tag () {
 	then
 		sudo mkdir -p ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 		echo -n "setting ownership of ${TARGET_OWNER} on ${TARGET_DIR}..."
-		sudo chown -h ${TARGET_OWNER} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+		sudo chown -h ${TARGET_OWNER} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}
 	fi
 	#sudo cp -fr --preserve=mode,timestamps ${SOURCE_PATH}/${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	cd ${SOURCE_PATH}
@@ -420,10 +421,22 @@ function inject_into_mount_tag () {
 	echo -n "setting ownership of ${TARGET_OWNER} on ${TARGET_FILE}..."
 	case ${OBJECT} in
 		binaries)
+			local SUIDFILES=$(find ${BIN_PATH} -perm /4000 -printf "${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}%P\n")
+			echo -e "Files with SUID:\n${SUIDFILES}" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 			find ${BIN_PATH} -printf "${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}%P\n" | xargs -d'\n' -n1 -P${NPROCS} sudo chown -h ${TARGET_OWNER}
+			for f in ${SUIDFILES}
+			do
+				sudo chmod -v u+s ${f} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+			done
 			;;
 		*)
-			sudo chown -hR ${TARGET_OWNER} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}/${TARGET_FILE} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+			local SUIDFILES=$(find ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}/${TARGET_FILE} -perm /4000)
+			echo -e "Files with SUID:\n${SUIDFILES}" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+			sudo chown -hRv ${TARGET_OWNER} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}/${TARGET_FILE} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+			for f in ${SUIDFILES}
+			do
+				sudo chmod -v u+s ${f} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+			done
 			;;
 	esac
 	[ ${_param_remove_devfiles:-0} -eq 1 ] && resume_devfiles no-exitstatus || true

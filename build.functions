@@ -234,11 +234,14 @@ function build () (
 			PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}} \
 			PATH=${PATH}:${BIN_PATH}${BUILD_EXECPREFIX}/bin${DISTOS_PATH:+:${DISTOS_PATH}/usr/bin} \
 			eval "${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS}"
-		if [ ${PKG_TWOSTEPSBUILD:-0} -eq 1 ]
+		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
 		then
-			eval "make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0}"
+			for target in ${PKG_MAKETARGETS:-all}
+			do
+				eval "make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}"
+			done
 		fi
-		make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD:-}
+		make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${INST_CMD:-}
 		forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
@@ -255,24 +258,28 @@ function build () (
 		cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ]
+		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
 		then
-			CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
-			CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
-			CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
-			CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-			CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
-			CPPFLAGS="${COMMON_CPPFLAGS}" \
-			LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-			AR=${HARCH}-gcc-ar \
-			AS=${HARCH}-as \
-			NM=${HARCH}-gcc-nm \
-			RANLIB=${HARCH}-gcc-ranlib \
-			STRIP=${HARCH}-strip \
-			OBJDUMP=${HARCH}-objdump \
-			PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-			PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
-				eval "make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0}"
+			for target in ${PKG_MAKETARGETS:-all}
+			do
+				echo "Making ${target}..."
+				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
+				CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
+				CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
+				CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
+				CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
+				CPPFLAGS="${COMMON_CPPFLAGS}" \
+				LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+				AR=${HARCH}-gcc-ar \
+				AS=${HARCH}-as \
+				NM=${HARCH}-gcc-nm \
+				RANLIB=${HARCH}-gcc-ranlib \
+				STRIP=${HARCH}-strip \
+				OBJDUMP=${HARCH}-objdump \
+				PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
+				PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
+					eval "make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}"
+			done
 		fi
 		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
 		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
@@ -289,7 +296,7 @@ function build () (
 		OBJDUMP=${HARCH}-objdump \
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
-			eval "make ${PKG_MAKEVARS} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${BIN_PATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}"
+			eval "make ${PKG_MAKEVARS} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}"
 		forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
@@ -346,7 +353,7 @@ function build () (
 			-D${VAR_INSTALL_CONFDIR:-"SYSCONF_INSTALL_DIR"}=${BUILD_SYSCONFDIR} \
 			${CONF_FLAGS}
 		make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0}
-		make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0} DESTDIR=${BIN_PATH} ${INST_CMD}
+		make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${INST_CMD}
 		forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
@@ -441,7 +448,7 @@ function build () (
 			--includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} \
 			${CONF_FLAGS}
 		ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH}
-		DESTDIR=${BIN_PATH} ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH} install
+		DESTDIR=${PKG_PKGPATH} ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH} install
 		forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
@@ -767,6 +774,7 @@ function build () (
 		PKG_CXXFLAGS \
 		PKG_LDFLAGS \
 		PKG_RUSTFLAGS \
+		PKG_MAKETARGETS \
 		PKG_MAKEVARS \
 		PKG_PREBUILD \
 		PKG_POSTBUILD \
@@ -794,6 +802,10 @@ function build () (
 	fi
 
 	settoolflags
+	
+	local PKG_NAME=$(basename ${1})
+	local PKG_PKGPATH=${PACKAGES_PATH}/${PKG_NAME}
+
 	source ${PKG_PATH}/${1}.pkg
 
 	trap 'local STATUS=${?}; \
@@ -808,7 +820,6 @@ function build () (
 		trap - ERR; \
 		return ${STATUS}' ERR
 
-	local PKG_NAME=$(basename ${1})
 	echo "Package ${PKG_NAME}"
 
 	for deps in ${PKG_DEPS}
@@ -868,6 +879,11 @@ function build () (
 	then
 		rm -rf ${PKG_BLDPATH}
 	fi
+	if [ -d ${PKG_PKGPATH} ]
+	then
+		rm -rf ${PKG_PKGPATH}
+	fi
+	mkdir -p ${PKG_PKGPATH}
 	if [ ! -z "${PKG_PREBUILD}" ]
 	then
 		cd ${PKG_SRCPATH}
@@ -900,6 +916,14 @@ function build () (
 	then
 		rm -rf ${PKG_BLDPATH}
 	fi
+	(
+		set -ex
+		tar cvjfp ${PACKAGES_PATH}/${PKG_NAME}.tar.xz --owner=0 --group=0 -C ${PKG_PKGPATH} .
+		tar xvjfp ${PACKAGES_PATH}/${PKG_NAME}.tar.xz -C ${BIN_PATH}
+		pause
+		rm -rf ${PKG_PKGPATH}
+		set +ex
+	) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 	if [ ${PKG_SAVE_STATUS:-1} -eq 1 ]
 	then
 		md5sum ${PKG_PATH}/${1}.pkg > ${STATUS_PATH}/${PKG_NAME}
