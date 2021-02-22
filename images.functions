@@ -44,6 +44,10 @@ function create_image() {
 		local LAYOUT="$(cat ${_param_layout})"
 	fi
 	echo -n "Creating image... "
+	if [ ! -d ${DISKIMAGES_PATH} ]
+	then
+		mkdir -pv ${DISKIMAGES_PATH} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+	fi
 	dd if=/dev/zero of=${IMAGE_PATH} bs=1KiB count=${SIZE} status=progress >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo "ok."
 	echo -n "Partitioning..."

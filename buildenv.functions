@@ -170,7 +170,11 @@ function bootstrap_sysroot () {
 	echo -n "${SPACES}"
 	if [ ! -f ${BIN_PATH}${BUILD_INCLUDEDIR}/gnu/libc-version.h ]
 	then
-		OVERRIDE_TARGET_GCC_CHECK=1 PKG_SAVE_STATUS=0 OVERRIDE_PKG_TWOSTEPSBUILD=0 OVERRIDE_INST_CMD="install-bootstrap-headers=yes install-headers" build ${GLIBC_PACKAGE}
+		OVERRIDE_TARGET_GCC_CHECK=1 BOOTSTRAP=1 PKG_SAVE_STATUS=0 OVERRIDE_PKG_TWOSTEPSBUILD=0 OVERRIDE_INST_CMD="install-bootstrap-headers=yes install-headers" build ${GLIBC_PACKAGE}
+		if [ ! -f ${BIN_PATH}${BUILD_INCLUDEDIR}/gnu/stubs.h ]
+		then
+			touch ${BIN_PATH}${BUILD_INCLUDEDIR}/gnu/stubs.h
+		fi
 	else
 		echo "${GLIBC_PACKAGE} headers already installed."
 	fi
@@ -190,9 +194,9 @@ function bootstrap_sysroot () {
 	else
 		local WITH_LIBXCRYPT=0
 	fi
-	if [ ! -f ${BIN_PATH}/lib/libc.so.6 ] && [ ! -f ${BIN_PATH}/lib64/libc.so.6 ]
+	if [ ! -f ${BIN_PATH}/lib${BUILD_LIBSUFFIX}/libc.so.6 ] && [ ! -f ${BIN_PATH}/lib64${BUILD_LIBSUFFIX}/libc.so.6 ]
 	then
-		NUMSPACES=1 OVERRIDE_TARGET_GCC_CHECK=1 BOOTSTRAP=1 WITH_LIBXCRYPT=${WITH_LIBXCRYPT} build ${GLIBC_PACKAGE}
+		NUMSPACES=1 OVERRIDE_TARGET_GCC_CHECK=1 WITH_LIBXCRYPT=${WITH_LIBXCRYPT} build ${GLIBC_PACKAGE}
 	else
 		echo "${GLIBC_PACKAGE} libraries already installed."
 	fi
