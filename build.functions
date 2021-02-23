@@ -883,7 +883,7 @@ function build () (
 	fi
 	if [ -d ${PKG_PKGPATH} ]
 	then
-		rm -rf ${PKG_PKGPATH}
+		sudo rm -rf ${PKG_PKGPATH}
 	fi
 	mkdir -p ${PKG_PKGPATH}
 	if [ ! -z "${PKG_PREBUILD}" ]
@@ -922,7 +922,7 @@ function build () (
 			tar cjfp ${PACKAGES_PATH}/${PKG_NAME}.tar.xz --owner=0 --group=0 -C ${PKG_PKGPATH} .
 		fi
 		rsync -aKv ${PKG_PKGPATH}/ ${BIN_PATH}
-		rm -rf ${PKG_PKGPATH}
+		sudo rm -rf ${PKG_PKGPATH}
 		set +ex
 	) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 	if [ ${KEEP_BUILDDIR:-0} -eq 0 ]
