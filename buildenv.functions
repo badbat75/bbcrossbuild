@@ -536,7 +536,7 @@ function setup_gcc () {
 
 function install_gcclibs () {
 	settoolflags
-	local GCCSEARCHLIBS="$( ( for lib in $(${HARCH:+${HARCH}-}gcc -print-search-dirs | grep 'libraries:' | sed 's/^libraries: =//;s/\:/ /g' ); do realpath "${lib}"; done ) | grep -v "${BIN_PATH}" | sort | uniq | xargs )"
+	local GCCSEARCHLIBS="$( ( for lib in $(${HARCH:+${HARCH}-}gcc -print-search-dirs | grep 'libraries:' | sed 's/^libraries: =//;s/\:/ /g' ); do realpath "${lib}" 2>/dev/null; done ) | grep -v "${BIN_PATH}" | sort | uniq | xargs )"
 	local GCCLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 \( -name 'libgcc_s.so*' -o -name 'libssp.so*' \) 2>/dev/null | xargs )
 	local GCCLIBNAME="$( ( for name in ${GCCLIB}; do echo $(basename ${name}); done ) | sort | uniq | xargs )"
 	local GCCCXXLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 \( -name 'libstdc++.so.*' ! -name 'libstdc++.so.*-*.py' \) 2>/dev/null | xargs )
