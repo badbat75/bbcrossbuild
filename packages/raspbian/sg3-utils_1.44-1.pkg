@@ -7,6 +7,6 @@ PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/s/sg3-utils/sg3-utils_1
 #PATCHES="""
 #PKG_CFLAGS=""
 #PKG_DEPS=""
-#PKG_POSTBUILD="install --mode=644 -D \${PKG_SRCPATH}/debian/  ${BIN_PATH}\${BUILD_SYSCONFDIR}/"
+#PKG_POSTBUILD="install --mode=644 -D \${PKG_SRCPATH}/debian/  ${PKG_PKGPATH}\${BUILD_SYSCONFDIR}/"
 
 # Note: Build-Depends: debhelper (>= 11), libudev-dev, pkg-config

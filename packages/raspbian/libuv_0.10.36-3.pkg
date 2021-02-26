@@ -4,12 +4,12 @@ PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libu/libuv/libuv_0.10.3
 BUILD_PROCESS=simplemake
 PKG_TWOSTEPSBUILD=0
 INST_CMD=all
-PKG_POSTBUILD="install -D -m 0755 libuv.so ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libuv.so.0.10
-	ln -fs libuv.so.0.10 ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libuv.so.0
-	ln -fs libuv.so.0.10 ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libuv.so
-	install -d -m 0755 ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig
-	install -D -m 0644 debian/libuv.pc ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig
-	sed -i 's|/@DEB_HOST_MULTIARCH@|${BUILD_LIBSUFFIX}|g;s|@DEB_VERSION_UPSTREAM@|0.10|g' ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig/libuv.pc
-	install -D -m 0644 include/uv.h ${BIN_PATH}${BUILD_INCLUDEDIR}
-	install -d ${BIN_PATH}${BUILD_INCLUDEDIR}/uv-private
-	install -D -m 0644 include/uv-private/* ${BIN_PATH}${BUILD_INCLUDEDIR}/uv-private"
+PKG_POSTBUILD="install -D -m 0755 libuv.so ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libuv.so.0.10
+	ln -fs libuv.so.0.10 ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libuv.so.0
+	ln -fs libuv.so.0.10 ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libuv.so
+	install -d -m 0755 ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig
+	install -D -m 0644 debian/libuv.pc ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig
+	sed -i 's|/@DEB_HOST_MULTIARCH@|${BUILD_LIBSUFFIX}|g;s|@DEB_VERSION_UPSTREAM@|0.10|g' ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig/libuv.pc
+	install -D -m 0644 include/uv.h ${PKG_PKGPATH}${BUILD_INCLUDEDIR}
+	install -d ${PKG_PKGPATH}${BUILD_INCLUDEDIR}/uv-private
+	install -D -m 0644 include/uv-private/* ${PKG_PKGPATH}${BUILD_INCLUDEDIR}/uv-private"

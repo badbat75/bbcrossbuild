@@ -1,50 +1,50 @@
 # wpa_supplicant_2.9.0
 PKG_SRCDIR=wpa_2.9.0
-PKG_CFLAGS="-MMD -Wno-stringop-overflow -fPIC -I${BIN_PATH}\${BUILD_INCLUDEDIR}/libnl3 -I${BIN_PATH}\${BUILD_INCLUDEDIR}/PCSC"
+PKG_CFLAGS="-MMD -Wno-stringop-overflow -fPIC -I${BIN_PATH}\${BUILD_INCLUDEDIR}/libnl3 -I${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/PCSC"
 PKG_LDFLAGS="-Wl,--as-needed -Wl,--build-id=none"
 BUILD_PROCESS=simplemake
 INST_CMD=all
 PKG_DEPS="raspbian/${PKG_SRCDIR} raspbian/libnl3_3.4.0-1 raspbian/pcsc-lite_1.9.0-1"
 PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} INCDIR=\${BUILD_INCLUDEDIR} BINDIR=/sbin -C wpa_supplicant"
 PKG_PREBUILD="cp -v --remove-destination debian/config/wpasupplicant/linux wpa_supplicant/.config"
-PKG_POSTBUILD="install -d ${BIN_PATH}/sbin
-install -d ${BIN_PATH}\${BUILD_PREFIX}/bin
-install -d ${BIN_PATH}\${BUILD_SYSCONFDIR}/wpa_supplicant
-install -d ${BIN_PATH}\${BUILD_PREFIX}/share/dbus-1/system-services
-install -d ${BIN_PATH}\${BUILD_PREFIX}/lib/pm-utils/sleep.d
-install -d ${BIN_PATH}/lib/systemd/system
-install -d ${BIN_PATH}\${BUILD_PREFIX}/lib/NetworkManager/conf.d
-install -d ${BIN_PATH}\${BUILD_SYSCONFDIR}/network/if-pre-up.d
-install -d ${BIN_PATH}\${BUILD_SYSCONFDIR}/network/if-up.d
-install -d ${BIN_PATH}\${BUILD_SYSCONFDIR}/network/if-down.d
-install -d ${BIN_PATH}\${BUILD_SYSCONFDIR}/network/if-post-down.d
-install -d ${BIN_PATH}\${BUILD_SYSCONFDIR}/ifplugd/action.d/action_wpa
-install -d ${BIN_PATH}\${BUILD_PREFIX}/share/man/man5
-install -d ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8
-install --mode=644 -D wpa_supplicant/dbus/dbus-wpa_supplicant.conf ${BIN_PATH}\${BUILD_SYSCONFDIR}/dbus-1/system.d/wpa_supplicant.conf
-install --mode=755 -D debian/ifupdown/wpa_action ${BIN_PATH}/sbin/
-install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D wpa_supplicant/wpa_cli ${BIN_PATH}/sbin/
-install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D wpa_supplicant/wpa_passphrase ${BIN_PATH}\${BUILD_PREFIX}/bin/
-install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D wpa_supplicant/wpa_supplicant ${BIN_PATH}/sbin/
-install --mode=644 -D debian/ifupdown/action_wpa.sh ${BIN_PATH}\${BUILD_SYSCONFDIR}/wpa_supplicant/
-install --mode=644 -D debian/ifupdown/functions.sh ${BIN_PATH}\${BUILD_SYSCONFDIR}/wpa_supplicant/
-install --mode=644 -D debian/ifupdown/wpasupplicant/ifupdown.sh ${BIN_PATH}\${BUILD_SYSCONFDIR}/wpa_supplicant/
-install --mode=644 -D wpa_supplicant/dbus/fi.*.service ${BIN_PATH}\${BUILD_PREFIX}/share/dbus-1/system-services/
-install --mode=644 -D wpa_supplicant/examples/60_wpa_supplicant ${BIN_PATH}\${BUILD_PREFIX}/lib/pm-utils/sleep.d/
-install --mode=644 -D wpa_supplicant/systemd/*.service ${BIN_PATH}/lib/systemd/system/
-install --mode=644 -D debian/NetworkManager/no-mac-addr-change.conf ${BIN_PATH}\${BUILD_PREFIX}/lib/NetworkManager/conf.d/
-ln -fs \${BUILD_SYSCONFDIR}/wpa_supplicant/ifupdown.sh ${BIN_PATH}\${BUILD_SYSCONFDIR}/network/if-pre-up.d/wpasupplicant
-ln -fs \${BUILD_SYSCONFDIR}/wpa_supplicant/ifupdown.sh ${BIN_PATH}\${BUILD_SYSCONFDIR}/network/if-up.d/wpasupplicant
-ln -fs \${BUILD_SYSCONFDIR}/wpa_supplicant/ifupdown.sh ${BIN_PATH}\${BUILD_SYSCONFDIR}/network/if-down.d/wpasupplicant
-ln -fs \${BUILD_SYSCONFDIR}/wpa_supplicant/ifupdown.sh ${BIN_PATH}\${BUILD_SYSCONFDIR}/network/if-post-down.d/wpasupplicant
-ln -fs \${BUILD_SYSCONFDIR}/wpa_supplicant/action_wpa.sh ${BIN_PATH}\${BUILD_SYSCONFDIR}/ifplugd/action.d/action_wpa
+PKG_POSTBUILD="install -d ${PKG_PKGPATH}/sbin
+install -d ${PKG_PKGPATH}\${BUILD_PREFIX}/bin
+install -d ${PKG_PKGPATH}\${BUILD_SYSCONFDIR}/wpa_supplicant
+install -d ${PKG_PKGPATH}\${BUILD_PREFIX}/share/dbus-1/system-services
+install -d ${PKG_PKGPATH}\${BUILD_PREFIX}/lib/pm-utils/sleep.d
+install -d ${PKG_PKGPATH}/lib/systemd/system
+install -d ${PKG_PKGPATH}\${BUILD_PREFIX}/lib/NetworkManager/conf.d
+install -d ${PKG_PKGPATH}\${BUILD_SYSCONFDIR}/network/if-pre-up.d
+install -d ${PKG_PKGPATH}\${BUILD_SYSCONFDIR}/network/if-up.d
+install -d ${PKG_PKGPATH}\${BUILD_SYSCONFDIR}/network/if-down.d
+install -d ${PKG_PKGPATH}\${BUILD_SYSCONFDIR}/network/if-post-down.d
+install -d ${PKG_PKGPATH}\${BUILD_SYSCONFDIR}/ifplugd/action.d/action_wpa
+install -d ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man5
+install -d ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man8
+install --mode=644 -D wpa_supplicant/dbus/dbus-wpa_supplicant.conf ${PKG_PKGPATH}\${BUILD_SYSCONFDIR}/dbus-1/system.d/wpa_supplicant.conf
+install --mode=755 -D debian/ifupdown/wpa_action ${PKG_PKGPATH}TH}/sbin/
+install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D wpa_supplicant/wpa_cli ${PKG_PKGPATH}/sbin/
+install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D wpa_supplicant/wpa_passphrase ${PKG_PKGPATH}\${BUILD_PREFIX}/bin/
+install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D wpa_supplicant/wpa_supplicant ${PKG_PKGPATH}/sbin/
+install --mode=644 -D debian/ifupdown/action_wpa.sh ${PKG_PKGPATH}\${BUILD_SYSCONFDIR}/wpa_supplicant/
+install --mode=644 -D debian/ifupdown/functions.sh ${PKG_PKGPATH}\${BUILD_SYSCONFDIR}/wpa_supplicant/
+install --mode=644 -D debian/ifupdown/wpasupplicant/ifupdown.sh ${PKG_PKGPATH}\${BUILD_SYSCONFDIR}/wpa_supplicant/
+install --mode=644 -D wpa_supplicant/dbus/fi.*.service ${PKG_PKGPATH}\${BUILD_PREFIX}/share/dbus-1/system-services/
+install --mode=644 -D wpa_supplicant/examples/60_wpa_supplicant ${PKG_PKGPATH}\${BUILD_PREFIX}/lib/pm-utils/sleep.d/
+install --mode=644 -D wpa_supplicant/systemd/*.service ${PKG_PKGPATH}/lib/systemd/system/
+install --mode=644 -D debian/NetworkManager/no-mac-addr-change.conf ${PKG_PKGPATH}\${BUILD_PREFIX}/lib/NetworkManager/conf.d/
+ln -fs \${BUILD_SYSCONFDIR}/wpa_supplicant/ifupdown.sh ${PKG_PKGPATH}\${BUILD_SYSCONFDIR}/network/if-pre-up.d/wpasupplicant
+ln -fs \${BUILD_SYSCONFDIR}/wpa_supplicant/ifupdown.sh ${PKG_PKGPATH}\${BUILD_SYSCONFDIR}/network/if-up.d/wpasupplicant
+ln -fs \${BUILD_SYSCONFDIR}/wpa_supplicant/ifupdown.sh ${PKG_PKGPATH}\${BUILD_SYSCONFDIR}/network/if-down.d/wpasupplicant
+ln -fs \${BUILD_SYSCONFDIR}/wpa_supplicant/ifupdown.sh ${PKG_PKGPATH}\${BUILD_SYSCONFDIR}/network/if-post-down.d/wpasupplicant
+ln -fs \${BUILD_SYSCONFDIR}/wpa_supplicant/action_wpa.sh ${PKG_PKGPATH}\${BUILD_SYSCONFDIR}/ifplugd/action.d/action_wpa
 make -C wpa_supplicant/doc/docbook
-cp debian/ifupdown/wpa_action.8 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8/ && gzip -f ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8/wpa_action.8
-cp wpa_supplicant/doc/docbook/wpa_background.8 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8/ && gzip -f ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8/wpa_background.8
-cp wpa_supplicant/doc/docbook/wpa_cli.8 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8/ && gzip -f ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8/wpa_cli.8
-cp wpa_supplicant/doc/docbook/wpa_passphrase.8 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8/ && gzip -f ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8/wpa_passphrase.8
-cp wpa_supplicant/doc/docbook/wpa_supplicant.8 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8/ && gzip -f ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8/wpa_supplicant.8
-cp wpa_supplicant/doc/docbook/wpa_supplicant.conf.5 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man5/ && gzip -f ${BIN_PATH}\${BUILD_PREFIX}/share/man/man5/wpa_supplicant.conf.5"
+cp debian/ifupdown/wpa_action.8 ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man8/ && gzip -f ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man8/wpa_action.8
+cp wpa_supplicant/doc/docbook/wpa_background.8 ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man8/ && gzip -f ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man8/wpa_background.8
+cp wpa_supplicant/doc/docbook/wpa_cli.8 ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man8/ && gzip -f ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man8/wpa_cli.8
+cp wpa_supplicant/doc/docbook/wpa_passphrase.8 ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man8/ && gzip -f ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man8/wpa_passphrase.8
+cp wpa_supplicant/doc/docbook/wpa_supplicant.8 ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man8/ && gzip -f ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man8/wpa_supplicant.8
+cp wpa_supplicant/doc/docbook/wpa_supplicant.conf.5 ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man5/ && gzip -f ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man5/wpa_supplicant.conf.5"
 
 # Bug in Fedora OpenJade
 if test_version $(cat /dev/null | openjade -vh 2>&1 | head -n 1 | awk '{print $4}' | sed 's|\"||g') -le 1.3.2

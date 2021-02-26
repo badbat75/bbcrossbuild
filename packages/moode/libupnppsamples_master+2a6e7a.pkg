@@ -7,4 +7,4 @@ INST_CMD=install-strip
 PKG_CXXFLAGS="-D_FILE_OFFSET_BITS=64"
 PKG_DEPS="moode/libupnpp_0.20"
 INST_CMD="upexplorer"
-PKG_POSTBUILD="install -s --strip-program=${HARCH}-strip upexplorer ${BIN_PATH}${BUILD_PREFIX}/bin"
+PKG_POSTBUILD="install -s --strip-program=${HARCH}-strip upexplorer ${PKG_PKGPATH}${BUILD_PREFIX}/bin"

@@ -2,6 +2,6 @@
 PKG_URL="https://mirrors.edge.kernel.org/pub/software/network/wireless-regdb/wireless-regdb-2020.11.20.tar.xz"
 BUILD_PROCESS=downloadonly
 PKG_PREBUILD="set -x
-    install -v -d -m755 ${BIN_PATH}/lib/firmware
-	install -v -m644 regulatory.db regulatory.db.p7s ${BIN_PATH}/lib/firmware
+    install -v -d -m755 ${PKG_PKGPATH}/lib/firmware
+	install -v -m644 regulatory.db regulatory.db.p7s ${PKG_PKGPATH}/lib/firmware
 	set +x"

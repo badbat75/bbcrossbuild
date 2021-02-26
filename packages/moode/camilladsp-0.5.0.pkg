@@ -1,5 +1,5 @@
-# camilladsp-0.5.0-beta2
-PKG_URL="https://github.com/HEnquist/camilladsp/archive/v0.5.0-beta2.tar.gz"
+# camilladsp-0.5.0
+PKG_URL="https://github.com/HEnquist/camilladsp/archive/v0.5.0-beta4.tar.gz"
 BUILD_PROCESS=cargobuild
 CONF_FLAGS="--no-default-features --features alsa-backend --features websocket"
 #PKG_RUSTFLAGS=
@@ -10,9 +10,9 @@ CARGO_BINLIST="camilladsp"
 CARGO_STRIP=1
 LTOENABLE=0
 PKG_POSTBUILD="
-	if [ ! -d ${BIN_PATH}/usr/local/bin ]
+	if [ ! -d ${PKG_PKGPATH}/usr/local/bin ]
 	then
-		mkdir -p ${BIN_PATH}/usr/local/bin
+		mkdir -p ${PKG_PKGPATH}/usr/local/bin
 	fi
-	ln -fs /usr/bin/camilladsp ${BIN_PATH}/usr/local/bin/camilladsp
+	ln -fs /usr/bin/camilladsp ${PKG_PKGPATH}/usr/local/bin/camilladsp
 	"

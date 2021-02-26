@@ -8,4 +8,4 @@ PKG_DEPS="moode/moode-dynamic-ver_1.2 moode/libupnpp_0.20"
 CONF_PATH=other/libupnpp-samples-master
 INST_CMD="upexplorer"
 PKG_PREBUILD="unzip -o other/upmpdcli/libupnpp-samples-master.zip -d other"
-PKG_POSTBUILD="install -s --strip-program=${HARCH}-strip other/libupnpp-samples-master/upexplorer ${BIN_PATH}${BUILD_PREFIX}/bin"
+PKG_POSTBUILD="install -s --strip-program=${HARCH}-strip other/libupnpp-samples-master/upexplorer ${PKG_PKGPATH}${BUILD_PREFIX}/bin"

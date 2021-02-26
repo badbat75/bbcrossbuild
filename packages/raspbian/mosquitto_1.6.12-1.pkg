@@ -12,15 +12,15 @@ CONF_FLAGS="-DWITH_BUNDLED_DEPS=yes -DWITH_ADNS=yes -DUSE_LIBWRAP=ON -DWITH_WEBS
 VAR_INSTALL_CONFDIR="CMAKE_INSTALL_SYSCONFDIR"
 VAR_INSTALL_LIBDIR="CMAKE_INSTALL_LIBDIR"
 PKG_LDFLAGS="-lssl -lcrypto -lpthread -luv -lev -lz -lsystemd"
-PKG_POSTBUILD="install -d ${BIN_PATH}/etc/mosquitto/conf.d/
-	install -m 644 \${PKG_SRCPATH}/debian/README-conf-d ${BIN_PATH}/etc/mosquitto/conf.d/README
-	install -d ${BIN_PATH}/etc/mosquitto/ca_certificates/
-	install -m 644 \${PKG_SRCPATH}/debian/README-ca_certificates ${BIN_PATH}/etc/mosquitto/ca_certificates/README
-	install -d ${BIN_PATH}/etc/mosquitto/certs/
-	install -m 644 \${PKG_SRCPATH}/debian/README-certs ${BIN_PATH}/etc/mosquitto/certs/README
-	install -m 644 \${PKG_SRCPATH}/debian/mosquitto.conf ${BIN_PATH}/etc/mosquitto/mosquitto.conf
-	install -d ${BIN_PATH}/lib/systemd/system/
-	install -m 644 \${PKG_SRCPATH}/service/systemd/mosquitto.service.notify ${BIN_PATH}/lib/systemd/system/mosquitto.service"
+PKG_POSTBUILD="install -d ${PKG_PKGPATH}/etc/mosquitto/conf.d/
+	install -m 644 \${PKG_SRCPATH}/debian/README-conf-d ${PKG_PKGPATH}/etc/mosquitto/conf.d/README
+	install -d ${PKG_PKGPATH}/etc/mosquitto/ca_certificates/
+	install -m 644 \${PKG_SRCPATH}/debian/README-ca_certificates ${PKG_PKGPATH}/etc/mosquitto/ca_certificates/README
+	install -d ${PKG_PKGPATH}/etc/mosquitto/certs/
+	install -m 644 \${PKG_SRCPATH}/debian/README-certs ${PKG_PKGPATH}/etc/mosquitto/certs/README
+	install -m 644 \${PKG_SRCPATH}/debian/mosquitto.conf ${PKG_PKGPATH}/etc/mosquitto/mosquitto.conf
+	install -d ${PKG_PKGPATH}/lib/systemd/system/
+	install -m 644 \${PKG_SRCPATH}/service/systemd/mosquitto.service.notify ${PKG_PKGPATH}/lib/systemd/system/mosquitto.service"
 INST_CMD=install/strip
 
 # Note:

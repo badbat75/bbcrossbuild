@@ -1,4 +1,4 @@
-MPDVER=0.22.4
+MPDVER=0.22.6
 PKG_URL="http://www.musicpd.org/download/mpd/0.22/mpd-${MPDVER}.tar.xz"
 BUILD_PROCESS=mesonninja
 export BOOST_ROOT=${BIN_PATH}
@@ -35,21 +35,21 @@ fi
 
 PKG_CXXFLAGS="-Wno-shadow"
 INST_CMD=install-strip
-PKG_POSTBUILD="install -d ${BIN_PATH}/var/lib/mpd
-install -d ${BIN_PATH}/var/lib/mpd/music
-install -d ${BIN_PATH}/var/lib/mpd/playlists
-install -D -m 0644 /dev/null ${BIN_PATH}/var/lib/mpd/state
-install -d ${BIN_PATH}/var/log/mpd
-install -D -m 0644 /dev/null ${BIN_PATH}/var/log/mpd/log
-install -d ${BIN_PATH}/run/mpd
-install -d ${BIN_PATH}/usr/local/bin
-ln -fs /usr/bin/mpd ${BIN_PATH}/usr/local/bin/mpd
-rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.service
-rm -f ${BIN_PATH}/usr/lib/systemd/system/mpd.socket
-rm -f ${BIN_PATH}/usr/lib/systemd/user/mpd.service
+PKG_POSTBUILD="install -d ${PKG_PKGPATH}/var/lib/mpd
+install -d ${PKG_PKGPATH}/var/lib/mpd/music
+install -d ${PKG_PKGPATH}/var/lib/mpd/playlists
+install -D -m 0644 /dev/null ${PKG_PKGPATH}/var/lib/mpd/state
+install -d ${PKG_PKGPATH}/var/log/mpd
+install -D -m 0644 /dev/null ${PKG_PKGPATH}/var/log/mpd/log
+install -d ${PKG_PKGPATH}/run/mpd
+install -d ${PKG_PKGPATH}/usr/local/bin
+ln -fs /usr/bin/mpd ${PKG_PKGPATH}/usr/local/bin/mpd
+rm -f ${PKG_PKGPATH}/usr/lib/systemd/system/mpd.service
+rm -f ${PKG_PKGPATH}/usr/lib/systemd/system/mpd.socket
+rm -f ${PKG_PKGPATH}/usr/lib/systemd/user/mpd.service
 if test_version ${MOODEREL} -ge r660
 then
-	install -D ${BIN_PATH}${BUILD_EXECPREFIX}/bin/mpd ${BIN_PATH}/var/local/www/mpd_versions/mpd-${MPDVER}
-	echo \"${MPDVER};${MPDVER} (Default)\" >> ${BIN_PATH}/var/local/www/mpd_versions.conf
+	install -D ${PKG_PKGPATH}${BUILD_EXECPREFIX}/bin/mpd ${PKG_PKGPATH}/var/local/www/mpd_versions/mpd-${MPDVER}
+	echo \"${MPDVER};${MPDVER} (Default)\" >> ${PKG_PKGPATH}/var/local/www/mpd_versions.conf
 fi
 "

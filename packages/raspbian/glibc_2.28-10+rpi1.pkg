@@ -12,8 +12,8 @@ CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}\${BUILD_INCLUDEDIR} --d
 INST_CMD="${OVERRIDE_INST_CMD:-install}"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/g/glibc/glibc_2.28-10%2Brpi1.debian.tar.xz"
 #PKG_DEPS=
-PKG_POSTBUILD="if [ ! -f ${BIN_PATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h ];
-	then touch ${BIN_PATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h; \
+PKG_POSTBUILD="if [ ! -f ${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h ];
+	then touch ${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h; \
 	fi" \
 PKG_TWOSTEPSBUILD=${OVERRIDE_PKG_TWOSTEPSBUILD:-1}
 PKG_MAKEVARS="ARCH=${KERN_ARCH} cross-compiling=yes"

@@ -1,7 +1,7 @@
 # allo-piano-firmware-master
 PKG_URL="https://github.com/allocom/piano-firmware/archive/master.tar.gz"
 BUILD_PROCESS=downloadonly
-PKG_PREBUILD="install -d -m0755 ${BIN_PATH}/lib/firmware/allo/piano/2.1 &&
-install -d -m0755 ${BIN_PATH}/lib/firmware/allo/piano/2.2 &&
-install -m 0644 -D lib/firmware/allo/piano/2.1/* ${BIN_PATH}/lib/firmware/allo/piano/2.1/ &&
-install -m 0644 -D lib/firmware/allo/piano/2.2/* ${BIN_PATH}/lib/firmware/allo/piano/2.2/"
+PKG_PREBUILD="install -d -m0755 ${PKG_PKGPATH}/lib/firmware/allo/piano/2.1 &&
+install -d -m0755 ${PKG_PKGPATH}/lib/firmware/allo/piano/2.2 &&
+install -m 0644 -D lib/firmware/allo/piano/2.1/* ${PKG_PKGPATH}/lib/firmware/allo/piano/2.1/ &&
+install -m 0644 -D lib/firmware/allo/piano/2.2/* ${PKG_PKGPATH}/lib/firmware/allo/piano/2.2/"
