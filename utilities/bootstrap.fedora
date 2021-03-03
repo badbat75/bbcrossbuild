@@ -36,3 +36,12 @@ sudo dnf install -y intltool
 
 # for dlc-daemon
 sudo dnf install -y pandoc
+
+# for systemd
+sudo dnf install -y libxslt docbook-xsl docbook2X
+
+# for man-db
+sudo dnf install -y groff
+
+# for btrfs-progs
+sudo dnf install -y xmlto asciidoc
