@@ -184,17 +184,17 @@ function mount_tag () {
 	if [ "${ROOTREADY}" -eq 1 ]
 	then
 		#sudo mount -t tmpfs -o nosuid,nodev,mode=755 /run ${MOUNT_DIR}/run >> ${LOG_PATH}/images_${_param_1}.log 2>&1
-		sudo mount --rbind /dev ${MOUNT_DIR}/dev >> ${LOG_PATH}/images_${_param_1}.log 2>&1
-		#sudo mount --rbind /dev/pts ${MOUNT_DIR}/dev/pts >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+		sudo mount --bind /dev ${MOUNT_DIR}/dev >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+		sudo mount --bind /dev/pts ${MOUNT_DIR}/dev/pts >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		sudo mount -t proc /proc ${MOUNT_DIR}/proc >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 
 		if [ ! -d ${MOUNT_DIR}/tmp/bbxb ]
 		then
 			mkdir -p ${MOUNT_DIR}/tmp/bbxb
 		fi
-		sudo mount -o bind $(readlink -m ${MOUNT_DIR}/..) ${MOUNT_DIR}/tmp/bbxb
+		#sudo mount -o bind $(readlink -m ${MOUNT_DIR}/..) ${MOUNT_DIR}/tmp/bbxb
 		#MOUNTPOINTS[${MOUNT_DIR}]="${MOUNT_DIR}/proc ${MOUNT_DIR}/dev/pts ${MOUNT_DIR}/run ${MOUNT_DIR}/tmp/bbxb ${MOUNTPOINTS[${MOUNT_DIR}]}"
-		MOUNTPOINTS[${MOUNT_DIR}]="${MOUNT_DIR}/proc ${MOUNT_DIR}/dev/pts ${MOUNT_DIR}/dev ${MOUNT_DIR}/tmp/bbxb ${MOUNTPOINTS[${MOUNT_DIR}]}"
+		MOUNTPOINTS[${MOUNT_DIR}]="${MOUNT_DIR}/proc ${MOUNT_DIR}/dev/pts ${MOUNT_DIR}/dev ${MOUNTPOINTS[${MOUNT_DIR}]}"
 	fi
 	echo "Done."
 	MOUNTED_IMAGES="${MOUNTED_IMAGES} ${_param_1}"

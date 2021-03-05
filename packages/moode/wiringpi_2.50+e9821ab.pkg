@@ -14,6 +14,8 @@ all:
 	cd gpio && \\\$(MAKE)
 
 install:
+	install -d \\\$(DESTDIR)\\\$(PREFIX)/lib/\\\$(HARCH)
+	install -d \\\$(DESTDIR)\\\$(PREFIX)/bin
 	cd wiringPi && \\\$(MAKE) install
 	cd devLib && \\\$(MAKE) install
 	cd gpio && \\\$(MAKE) install

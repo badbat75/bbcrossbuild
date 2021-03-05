@@ -243,7 +243,7 @@ function build () (
 			done
 		fi
 		make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${INST_CMD:-}
-		forge_la_libs ${PWD}
+		#forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -278,7 +278,7 @@ function build () (
 				STRIP=${HARCH}-strip \
 				OBJDUMP=${HARCH}-objdump \
 				PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-				PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
+				PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}} \
 					eval "make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}"
 			done
 		fi
@@ -298,7 +298,7 @@ function build () (
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
 			eval "make ${PKG_MAKEVARS} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}"
-		forge_la_libs ${PWD}
+		#forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -355,7 +355,7 @@ function build () (
 			${CONF_FLAGS}
 		make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0}
 		make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${INST_CMD}
-		forge_la_libs ${PWD}
+		#forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -450,7 +450,7 @@ function build () (
 			${CONF_FLAGS}
 		ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH}
 		DESTDIR=${PKG_PKGPATH} ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH} install
-		forge_la_libs ${PWD}
+		#forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -739,10 +739,10 @@ function build () (
 		local CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS} ${PKG_CXXFLAGS}"
 		local CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}"
 		local LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}"
-		./bootstrap.sh --prefix=${BIN_PATH}${BUILD_PREFIX} --exec-prefix=${BIN_PATH}${BUILD_EXECPREFIX} --libdir=${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BIN_PATH}${BUILD_INCLUDEDIR} --with-python-version=${PYTHONBIN_VER} &&
+		./bootstrap.sh --prefix=${PKG_PKGPATH}${BUILD_PREFIX} --exec-prefix=${PKG_PKGPATH}${BUILD_EXECPREFIX} --libdir=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${PKG_PKGPATH}${BUILD_INCLUDEDIR} --with-python-version=${PYTHONBIN_VER} &&
 		sed -i "s|using gcc ;|using gcc : : ${CXX} ;|" project-config.jam &&
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
+		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}} \
 		./b2 -j${NPROCS} -q ${B2_FLAGS} \
 			architecture=${HM} address-model=${HMADDRMOD} binary-format=${HMBINFMT} abi=${HMABI} target-os=${HOS} \
 			toolset=gcc threading=multi cxxflags="-fPIC ${CXXFLAGS}" linkflags="${LDFLAGS}" install
@@ -871,7 +871,7 @@ function build () (
 	fi
 	> ${LOG_PATH}/${PKG_NAME}.log
 #	if [ ! -d ${PKG_SRCPATH} ] && [ ! -z ${PKG_URL} ]
-	if [ ! -z ${PKG_URL} ]
+	if [ ! -z ${PKG_URL} ] || [ ! -z ${GIT_URL} ]
 	then
 		echo -n "Downloading ${PKG_NAME}..."
 		downloadsources >> ${LOG_PATH}/${PKG_NAME}.log 2>&1

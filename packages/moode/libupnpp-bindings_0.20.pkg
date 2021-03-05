@@ -6,3 +6,7 @@ PYTHONBIN_VER="$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)"
 CONF_FLAGS="PYTHON_VERSION=3 PYTHON_SITE_PKG=${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
 INST_CMD=install-strip
 PKG_DEPS="moode/libupnpp_0.20"
+PKG_PREBUILD="cd Project/GNU/CLI && ./autogen.sh
+    ln -fs ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libcurl.la ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/
+    ln -fs ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libcurl-gnutls.so ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/"
+PKG_POSTBUILD="rm -f ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/{libcurl.la,/libcurl-gnutls.so}"

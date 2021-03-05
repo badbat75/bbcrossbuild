@@ -2,9 +2,11 @@
 PKG_URL="https://mediaarea.net/download/source/libmediainfo/20.09/libmediainfo_20.09.tar.xz"
 PKG_PREBUILD="sed -i 's/ -O2//g' Project/GNU/Library/configure.ac"
 BUILD_PROCESS=configmake
-AUTOCONF_PATH=Project/GNU/Library
+AUTOCONF=0
+#AUTOCONF_PATH=Project/GNU/Library
 PKG_COPYSRC=1
 CONF_PATH=Project/GNU/Library
 CONF_FLAGS="--enable-visibility --with-libcurl --with-libmms --with-libtinyxml2 --without-libmd5"
 INST_CMD=install-strip
 PKG_DEPS="raspbian/libmms_0.6.4-3 raspbian/libzen_0.4.37-1 raspbian/tinyxml2_7.0.0+dfsg-1"
+PKG_PREBUILD="cd Project/GNU/Library && ./autogen.sh"

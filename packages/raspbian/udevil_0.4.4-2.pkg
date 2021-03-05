@@ -6,7 +6,9 @@ PKG_COPYSRC=1
 INST_CMD=install-strip
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/u/udevil/udevil_0.4.4-2.debian.tar.xz"
 PKG_DEPS=""
-PKG_PREBUILD="sed -i 's/-o root -g root //g' src/Makefile.am"
+AUTOCONF=0
+PKG_PREBUILD="sed -i 's/-o root -g root //g' src/Makefile.am
+    NOCONFIGURE=true ./autogen.sh"
 PKG_POSTBUILD="install -m 0755 -d \${PKG_PKGPATH}/media
     chmod 4755 \${PKG_PKGPATH}/usr/bin/udevil
     mkdir -p ${PKG_PKGPATH}/lib/systemd/system

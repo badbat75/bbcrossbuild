@@ -1,4 +1,4 @@
 # boost_1.75.0
 PKG_URL="https://dl.bintray.com/boostorg/release/1.75.0/source/boost_1_75_0.tar.gz"
-PKG_DEPS="raspbian/zstd_1.4.8+dfsg-1"
+PKG_DEPS="raspbian/zstd_1.4.8+dfsg-2"
 BUILD_PROCESS=boostbuild

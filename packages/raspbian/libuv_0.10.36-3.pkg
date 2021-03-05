@@ -10,6 +10,6 @@ PKG_POSTBUILD="install -D -m 0755 libuv.so ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_
 	install -d -m 0755 ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig
 	install -D -m 0644 debian/libuv.pc ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig
 	sed -i 's|/@DEB_HOST_MULTIARCH@|${BUILD_LIBSUFFIX}|g;s|@DEB_VERSION_UPSTREAM@|0.10|g' ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig/libuv.pc
-	install -D -m 0644 include/uv.h ${PKG_PKGPATH}${BUILD_INCLUDEDIR}
 	install -d ${PKG_PKGPATH}${BUILD_INCLUDEDIR}/uv-private
+	install -D -m 0644 include/uv.h ${PKG_PKGPATH}${BUILD_INCLUDEDIR}
 	install -D -m 0644 include/uv-private/* ${PKG_PKGPATH}${BUILD_INCLUDEDIR}/uv-private"
