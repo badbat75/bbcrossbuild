@@ -1,7 +1,0 @@
-# ladspa-sdk-1.13
-PKG_URL="http://archive.raspbian.org/raspbian/pool/main/l/ladspa-sdk/ladspa-sdk_1.13.orig.tar.gz"
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/l/ladspa-sdk/ladspa-sdk_1.13-3.debian.tar.xz"
-PATCHES="libladspa-makefile.patch"
-BUILD_PROCESS=simplemake
-AUTOCONF=0
-INST_CMD=install

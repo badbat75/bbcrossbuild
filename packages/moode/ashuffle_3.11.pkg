@@ -1,7 +1,6 @@
-# ashuffle_3.10
-#PKG_URL="https://github.com/joshkunz/ashuffle/archive/v3.10.1.tar.gz"
+# ashuffle_3.11
 GIT_URL=https://github.com/joshkunz/ashuffle
-GIT_COMMIT=v3.10.1
+GIT_COMMIT=v3.11.1
 #PATCHES=
 BUILD_PROCESS=mesonninja
 INST_CMD=install-strip

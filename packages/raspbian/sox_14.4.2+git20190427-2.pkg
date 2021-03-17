@@ -1,0 +1,10 @@
+# sox_14.4.2+git20190427-2
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/s/sox/sox_14.4.2%2Bgit20190427.orig.tar.bz2"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/s/sox/sox_14.4.2%2Bgit20190427-2.debian.tar.xz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--with-dyn-default --without-ffmpeg"
+INST_CMD=install-strip
+PKG_DEPS="raspbian/ladspa-sdk_1.15-2 raspbian/libid3tag_0.15.1b-14"
+
+# Note:
+# Install autopoint in build host

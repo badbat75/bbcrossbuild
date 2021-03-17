@@ -1,0 +1,19 @@
+# ladspa-sdk_1.15-2
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/l/ladspa-sdk/ladspa-sdk_1.15.orig.tar.gz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/l/ladspa-sdk/ladspa-sdk_1.15-2.debian.tar.xz"
+#PATCHES="libladspa-makefile.patch"
+BUILD_PROCESS=simplemake
+PKG_TWOSTEPSBUILD=1
+INST_CMD=install
+PKG_MAKEVARS="INSTALL_PLUGINS_DIR=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/ladspa/ \
+	INSTALL_INCLUDE_DIR=${PKG_PKGPATH}${BUILD_INCLUDEDIR} \
+	INSTALL_BINARY_DIR=${PKG_PKGPATH}${BUILD_EXECPREFIX}/bin"
+
+PKG_PREBUILD="cat <<EOF > Makefile
+all:
+	\\\$(MAKE) -C src targets
+
+install:
+	\\\$(MAKE) -C src install
+EOF
+"

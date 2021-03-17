@@ -111,7 +111,7 @@ function build () (
 			echo "Fail."; \
 			set +x; \
 			trap - ERR SIGINT; \
-			[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH} || true; \
+			#[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH} || true; \
 			return ${STATUS};' ERR
 
 		trap 'set +x; \
@@ -152,7 +152,7 @@ function build () (
 				download_uncompress ${scanpatch} ${PKG_SRCPATH}/bbxb_patches >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 			else
 				echo -n "${SPACES}Copying $scanpatch patch..."
-				cp ${PATCH_PATH}/$scanpatch ${PKG_SRCPATH}/bbxb_patches
+				cp -v ${PATCH_PATH}/$scanpatch ${PKG_SRCPATH}/bbxb_patches >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 			fi
 			for file in $(find ${PKG_SRCPATH}/bbxb_patches -type f)
 			do
