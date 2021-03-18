@@ -215,6 +215,15 @@ function bootstrap_sysroot () {
 	echo -n "${SPACES}"
 	setup_gcc stage3
 
+	if [ ! -f ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz ]
+	then
+		echo -n "   Removing .la libraries..."
+		local LA_LIBS="$(find ${TOOLCHAIN_PATH} -name "*.la" -printf "%P\n")"
+		tar cvjf ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz -C ${TOOLCHAIN_PATH} ${LA_LIBS}
+		(cd ${TOOLCHAIN_PATH}; rm -f ${LA_LIBS})
+		echo "Done."
+	fi
+
 	echo -n "   Copying libraries and headers..."
 	if [ ! -d ${TOOLCHAIN_PATH}/${HARCH}/include/c++ ]
 	then

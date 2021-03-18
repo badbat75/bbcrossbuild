@@ -93,12 +93,15 @@ function build () (
 		else
 			if [ ! -z ${GIT_URL} ]
 			then
-				git clone --single-branch ${GIT_URL} ${PKG_SRCPATH}
-				if  [ ! -z ${GIT_COMMIT} ]
+				if [ ! -d ${PKG_SRCPATH} ]
 				then
-					git -C ${PKG_SRCPATH} checkout ${GIT_COMMIT}
+					git clone --single-branch ${GIT_URL} ${PKG_SRCPATH}
+					if  [ ! -z ${GIT_COMMIT} ]
+					then
+						git -C ${PKG_SRCPATH} checkout ${GIT_COMMIT}
+					fi
+					git -C ${PKG_SRCPATH} submodule update --init --recursive
 				fi
-				git -C ${PKG_SRCPATH} submodule update --init --recursive
 			fi
 		fi
 		set +x

@@ -7,4 +7,4 @@ BUILD_PROCESS=configmake
 # CONF_FLAGS=""
 PKG_CXXFLAGS="-D_FILE_OFFSET_BITS=64"
 INST_CMD=install-strip
-PKG_DEPS="moode/libupnpp_0.20 raspbian/libmicrohttpd_0.9.71-1 raspbian/libjsoncpp_1.7.4-3 python/bottle_0.12.19"
+PKG_DEPS="moode/libupnpp_0.20 raspbian/libmicrohttpd_0.9.72-2 raspbian/libjsoncpp_1.7.4-3 python/bottle_0.12.19"

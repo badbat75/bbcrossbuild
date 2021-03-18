@@ -5,4 +5,4 @@ BUILD_PROCESS=configmake
 # CONF_FLAGS=""
 PKG_CXXFLAGS="-D_FILE_OFFSET_BITS=64"
 INST_CMD=install-strip
-PKG_DEPS="raspbian/libmicrohttpd_0.9.71-1"
+PKG_DEPS="raspbian/libmicrohttpd_0.9.72-2"
