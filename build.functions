@@ -37,6 +37,7 @@ function settoolflags () {
 	PLATFORM_RUSTFLAGS="${HMARCH_RUST:+-C target-feature=${HMARCH_RUST} }${HMCPU:+-C target-cpu=${HMCPU}}"
 	COMMON_CFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
 	COMMON_CXXFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
+	COMMON_FCFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
 	COMMON_CPPFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
 	COMMON_LDFLAGS="-Wl,-rpath-link,${BIN_PATH}/lib${BUILD_LIBSUFFIX} -L${BIN_PATH}/lib${BUILD_LIBSUFFIX}"
 	COMMON_LDFLAGS+=" -Wl,-rpath-link,${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -L${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
@@ -49,6 +50,7 @@ function settoolflags () {
 	then
 		COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include${BUILD_LIBSUFFIX}}"
 		COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CXXFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include${BUILD_LIBSUFFIX}}"
+		COMMON_FCFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CXXFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include${BUILD_LIBSUFFIX}}"
 		COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CPPFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include${BUILD_LIBSUFFIX}}"
 		COMMON_LDFLAGS+=" ${STD_LDFLAGS}"
 		COMMON_PKG_CONFIG_LIBDIR+=":${DISTOS_PATH}/usr/lib${BUILD_LIBSUFFIX}/pkgconfig:${DISTOS_PATH}/usr/share/pkgconfig"
@@ -271,6 +273,8 @@ function build () (
 				CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
 				CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
 				CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
+				FC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gfortran ${SYSROOT_CFLAGS}" \
+				FFLAGS="${COMMON_FFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FFLAGS}" \
 				CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
 				CPPFLAGS="${COMMON_CPPFLAGS}" \
 				LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
@@ -289,6 +293,8 @@ function build () (
 		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
 		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
 		CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
+		FC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gfortran ${SYSROOT_CFLAGS}" \
+		FFLAGS="${COMMON_FFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FFLAGS}" \
 		CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
 		CPPFLAGS="${COMMON_CPPFLAGS}" \
 		LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
@@ -397,7 +403,9 @@ function build () (
 			local CC="${HARCH}-gcc"
 			local CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}"
 			local CXX="${HARCH}-g++"
-			local CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}"
+			local CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
+			local FC=${HARCH}-gfortran
+			local FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FFLAGS}"
 			local CPP=${HARCH}-cpp
 			local CPPFLAGS="${COMMON_CPPFLAGS}"
 			local LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}"
@@ -407,12 +415,15 @@ function build () (
 			local STRIP=${HARCH}-strip
 			local C_ARGS=$(buildmesonargs "${CFLAGS}")
 			local CPP_ARGS=$(buildmesonargs "${CXXFLAGS}")
+			local FORTRAN_ARGS=$(buildmesonargs "${FFLAGS}")
 			local C_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
 			local CPP_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
+			local FORTRAN_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
 			cat > cross-${PLATFORM_NAME} <<-EOF
 				[binaries]
 				c = '${CC}'
 				cpp = '${CXX}'
+				fortran = '${FC}'
 				ar = '${AR}'
 				strip = '${STRIP}'
 				nm = '${NM}'
@@ -428,8 +439,10 @@ function build () (
 				[properties]
 				c_args = [${C_ARGS}]
 				cpp_args = [${CPP_ARGS}]
+				fortran_args= [${FORTRAN_ARGS}]
 				c_link_args = [${C_LINK_ARGS}]
 				cpp_link_args = [${CPP_LINK_ARGS}]
+				fortran_link_args = [${FORTRAN_LINK_ARGS}]
 			EOF
 			set -x
 		}
@@ -656,12 +669,12 @@ function build () (
 		fi
 		COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
-		if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
+		if [ ${STD_INSTALL_FLAGS:-1} -eq 1 ]
 		then
-			CONF_FLAGS+=" --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX}"
+			INSTALL_FLAGS+=" --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX}"
 			if [ -f ${DISTOS_PATH}/etc/debian_version ]
 			then
-				CONF_FLAGS+=" --install-lib=${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
+				INSTALL_FLAGS+=" --install-lib=${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
 			fi
 		fi
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
@@ -672,6 +685,10 @@ function build () (
 		CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
 		CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
 		CPPFLAGS="${COMMON_CPPFLAGS} ${PKG_CFLAGS}" \
+		FC=${HARCH}-gfortran \
+		FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
+		F90=${HARCH}-gfortran \
+		F90FLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
 		LD="${HARCH}-ld.gold ${PKG_LDFLAGS}" \
 		LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 		AR=${HARCH}-gcc-ar \
@@ -680,13 +697,61 @@ function build () (
 		RANLIB=${HARCH}-gcc-ranlib \
 		STRIP=${HARCH}-strip \
 		OBJDUMP=${HARCH}-objdump \
-		python setup.py build -j${NPROCS} &&
-		python setup.py install --root=${BIN_PATH} ${CONF_FLAGS}
+		eval "${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}"
+		eval "${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} ${INSTALL_FLAGS}"
 		local BUILD_STATUS=${?}
 		cd ${BB_HOME}
 		set +x
 		return ${BUILD_STATUS}
 	}
+
+	function pythonpip () {
+		set -x
+		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+		cd ${PKG_BLDPATH}
+		local PYTHONBIN_VER=$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)
+		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
+		then
+			COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
+			COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
+		fi
+		COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
+		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+		if [ ${STD_INSTALL_FLAGS:-1} -eq 1 ]
+		then
+			INSTALL_FLAGS+=" --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX}"
+			if [ -f ${DISTOS_PATH}/etc/debian_version ]
+			then
+				INSTALL_FLAGS+=" --install-lib=${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
+			fi
+		fi
+		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+		#local PYTHONPKG_DIR=
+		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
+		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
+		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
+		CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
+		CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
+		CPPFLAGS="${COMMON_CPPFLAGS} ${PKG_CFLAGS}" \
+		FC=${HARCH}-gfortran \
+		FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
+		F90=${HARCH}-gfortran \
+		F90FLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
+		LD="${HARCH}-ld.gold ${PKG_LDFLAGS}" \
+		LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+		AR=${HARCH}-gcc-ar \
+		AS=${HARCH}-as \
+		NM=${HARCH}-gcc-nm \
+		RANLIB=${HARCH}-gcc-ranlib \
+		STRIP=${HARCH}-strip \
+		OBJDUMP=${HARCH}-objdump \
+		eval "${PKG_BUILDVARS} cross-pip install --install-option=\"--target=${PKG_PKGPATH} ${INSTALL_FLAGS}\" ${PKG_PIPNAME}"
+		local BUILD_STATUS=${?}
+		cd ${BB_HOME}
+		set +x
+		return ${BUILD_STATUS}
+	}
+	
 
 	function boostbuild () {
 		set -x
@@ -776,6 +841,7 @@ function build () (
 		PKG_DEPS \
 		PKG_CFLAGS \
 		PKG_CXXFLAGS \
+		PKG_FCFLAGS \
 		PKG_LDFLAGS \
 		PKG_RUSTFLAGS \
 		PKG_MAKETARGETS \

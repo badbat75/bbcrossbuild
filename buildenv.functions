@@ -326,7 +326,7 @@ function setup_gcc () {
 				local GCC_COMMON_CONFIG+=" --with-system-zlib"
 			;;
 			* )
-				local GCC_LANGUAGES=${GCC_LANGUAGES:-c,c++,lto}
+				local GCC_LANGUAGES=${GCC_LANGUAGES:-c,c++,fortran,lto}
 				local GCC_COMMON_CONFIG="${SILENTCONFIG} --enable-languages=${GCC_LANGUAGES} --enable-shared --enable-linker-build-id --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --enable-checking=release --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-threads=posix --enable-initfini-array --enable-gnu-indirect-function --enable-multiarch \
 					--enable-install-libiberty \
 					--with-default-libstdcxx-abi=new \

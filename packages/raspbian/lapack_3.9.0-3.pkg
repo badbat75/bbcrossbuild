@@ -1,0 +1,75 @@
+# lapack_3.9.0-3
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/l/lapack/lapack_3.9.0.orig.tar.gz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/l/lapack/lapack_3.9.0-3.debian.tar.xz"
+PKG_FFLAGS=-frecursive
+#LTOENABLE=0
+PKG_MAKEVARS="PICOPTS=-fPIC"
+PKG_MAKETARGETS="blaslib cblaslib lapacklib tmglib lapackelib"
+#BUILD_PROCESS=mesonninja
+BUILD_PROCESS=simplemake
+#CONF_FLAGS=""
+#PKG_DEPS=""
+INST_CMD=lapackelib
+PKG_PREBUILD="cat >make.inc <<-EOF
+		FFLAGS_DRV = \\\$(FFLAGS)
+		FFLAGS_NOOPT = -O0 -frecursive
+		ARFLAGS = cr
+		TIMER = INT_ETIME
+		BLASLIB      = \\\$(TOPSRCDIR)/librefblas.a
+		CBLASLIB     = \\\$(TOPSRCDIR)/libcblas.a
+		LAPACKLIB    = \\\$(TOPSRCDIR)/liblapack.a
+		TMGLIB       = \\\$(TOPSRCDIR)/libtmglib.a
+		LAPACKELIB   = \\\$(TOPSRCDIR)/liblapacke.a
+	EOF
+	"
+PKG_POSTBUILD="
+		CC=\"${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}\"
+		FC=\"${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gfortran ${SYSROOT_CFLAGS}\"
+		AR=${HARCH}-gcc-ar
+		STRIP=${HARCH}-strip
+		LDFLAGS=\"${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS}\"
+		SO=3
+		SO_VERSION=3.9.0
+		mkdir -p pic32
+		for I in refblas cblas lapack tmglib lapacke; do cp lib\${I}.a pic32/lib\${I}_pic.a; done
+
+		# Build libblas.so.*
+		\${AR} d pic32/librefblas_pic.a xerbla.o # We want to use the xerbla.o from libcblas_pic.a
+		mkdir -p tmp
+		(cd tmp && \${AR} x ../pic32/librefblas_pic.a && \${AR} x ../pic32/libcblas_pic.a)
+		\${FC} -shared -Wl,-soname=libblas.so.\${SO} -o libblas.so.\${SO_VERSION} tmp/*.o \${LDFLAGS}
+		rm -rf tmp
+		ln -s libblas.so.\${SO_VERSION} libblas.so.\${SO}
+		ln -s libblas.so.\${SO_VERSION} libblas.so
+
+		# Build liblapack.so.*
+		mkdir -p tmp
+		(cd tmp && \${AR} x ../pic32/liblapack_pic.a)
+		\${FC} -shared -Wl,-soname=liblapack.so.\${SO} -o liblapack.so.\${SO_VERSION} tmp/*.o  -L. -lblas \${LDFLAGS}
+		rm -rf tmp
+		ln -s liblapack.so.\${SO_VERSION} liblapack.so.\${SO}
+		ln -s liblapack.so.\${SO_VERSION} liblapack.so
+
+		# Build libtmglib.so.*
+		mkdir -p tmp
+		(cd tmp && \${AR} x ../pic32/libtmglib_pic.a)
+		\${FC} -shared -Wl,-soname=libtmglib.so.\${SO} -o libtmglib.so.\${SO_VERSION} tmp/*.o  -L. -lblas -llapack \${LDFLAGS}
+		rm -rf tmp
+		ln -s libtmglib.so.\${SO_VERSION} libtmglib.so.\${SO}
+		ln -s libtmglib.so.\${SO_VERSION} libtmglib.so
+
+		# Build liblapacke.so.*
+		mkdir -p tmp
+		(cd tmp && \${AR} x ../pic32/liblapacke_pic.a)
+		\${CC} -shared -Wl,-soname=liblapacke.so.\${SO} -o liblapacke.so.\${SO_VERSION} tmp/*.o  -L. -lblas -llapack -ltmglib \${LDFLAGS}
+		rm -rf tmp
+		ln -s liblapacke.so.\${SO_VERSION} liblapacke.so.\${SO}
+		ln -s liblapacke.so.\${SO_VERSION} liblapacke.so
+
+		for I in libblas liblapacke liblapack libtmglib; do
+			install -D -s --strip-program=\${STRIP} -m755 \${I}.so.\${SO_VERSION} ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/\${I}.so.\${SO_VERSION}
+			ln -fsv \${I}.so.\${SO_VERSION} ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/\${I}.so.\${SO}
+			ln -fsv \${I}.so.\${SO_VERSION} ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/\${I}.so
+		done
+		pause
+	"
