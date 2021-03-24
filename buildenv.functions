@@ -681,15 +681,25 @@ function setup_python () {
 		#local LTO_PLUGIN_PATH="$(${BARCH}-gcc --print-prog-name=liblto_plugin.so)"
 		${BUILD_PYTHONPIP} install crossenv
 		${BUILD_PYTHON} -m crossenv ${HOST_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH}
-		CC="${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc" \
-		CFLAGS="${OPTCOMP_FLAGS} ${COMMON_LTOFLAGS} -march=native" \
-		AR="${BARCH}-gcc-ar" \
-		NM="${BARCH}-gcc-nm" \
-		RANLIB="${BARCH}-gcc-ranlib" \
-		LDFLAGS="${OPTLINK_FLAGS}" \
-		${BUILD_PYTHONPIP} install --upgrade -t ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/lib/python${PYTHONBIN_VER}/site-packages --no-binary :all: cython m2crypto future pycryptodome
-		#${BUILD_PYTHONPIP} install --upgrade -t ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/lib/python${PYTHONBIN_VER}/site-packages cython m2crypto future pycryptodome
 		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate
+		build-python -m pip install --upgrade pip cython setuptools wheel
+		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
+		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
+		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
+		CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
+		CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
+		CPPFLAGS="${COMMON_CPPFLAGS} ${PKG_CFLAGS}" \
+		FC=${HARCH}-gfortran \
+		FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
+		LD="${HARCH}-ld.gold ${PKG_LDFLAGS}" \
+		LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+		AR=${HARCH}-gcc-ar \
+		AS=${HARCH}-as \
+		NM=${HARCH}-gcc-nm \
+		RANLIB=${HARCH}-gcc-ranlib \
+		STRIP=${HARCH}-strip \
+		OBJDUMP=${HARCH}-objdump \
+			cross-pip -v install --upgrade pip cython setuptools wheel
 		set +x
 		trap ERR
 	}

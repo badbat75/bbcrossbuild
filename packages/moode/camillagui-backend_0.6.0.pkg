@@ -1,0 +1,14 @@
+# camillagui-backend_0.6.0
+PKG_URL="https://github.com/HEnquist/camillagui-backend/archive/refs/tags/v0.6.0.tar.gz"
+PKG_DEPS="python/pycamilladsp_0.5.0 python/pycamilladsp-plot_0.4.5 moode/moode-dynamic-ver_1.2 moode/camillagui_0.3.0"
+BUILD_PROCESS=downloadonly
+PKG_PREBUILD="
+    MOODE_CAMILLAGUI_PATH=${SRC_PATH}/moode_${MOODEREL}/other/camilladsp/gui
+    mkdir -p ${PKG_PKGPATH}/opt/camillagui
+    cp -frv * ${PKG_PKGPATH}/opt/camillagui
+    cp -frv \${MOODE_CAMILLAGUI_PATH}/css-variables.css ${PKG_PKGPATH}/opt/camillagui/build/css-variables.css
+    cp -frv \${MOODE_CAMILLAGUI_PATH}/camillagui.yml ${PKG_PKGPATH}/opt/camillagui/config
+    cp -frv \${MOODE_CAMILLAGUI_PATH}/gui-config.yml ${PKG_PKGPATH}/opt/camillagui/config
+    mkdir -p ${PKG_PKGPATH}/etc/systemd/system
+    cp -frv \${MOODE_CAMILLAGUI_PATH}/camillagui.service ${PKG_PKGPATH}/etc/systemd/system"
+# CONF_FLAGS=""

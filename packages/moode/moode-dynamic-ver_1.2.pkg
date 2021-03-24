@@ -8,7 +8,7 @@ fi
 PKG_SRCDIR=moode_${MOODEREL}
 echo -n ${PKG_SRCDIR}${MOODEDEVCOMMIT:++${MOODEDEVCOMMIT}}
 BUILD_PROCESS=downloadonly
-PKG_DEPS="python/RPi.GPIO_0.7.0 python/python-musicpd_0.4.4 raspbian/zip_3.0-8"
+PKG_DEPS="python/RPi.GPIO python/python-musicpd raspbian/zip_3.0-8"
 if [ ${MOODEINSTALL:-1} -eq 1 ]
 then
 	PKG_PREBUILD="

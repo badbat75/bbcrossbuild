@@ -1,0 +1,4 @@
+# pycamilladsp-plot_0.4.5
+PKG_URL="https://github.com/HEnquist/pycamilladsp-plot/archive/refs/tags/v0.4.5.tar.gz"
+BUILD_PROCESS=pythonbuild
+# CONF_FLAGS=""

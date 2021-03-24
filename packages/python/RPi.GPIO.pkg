@@ -1,0 +1,6 @@
+# RPi.GPIO
+BUILD_PROCESS=pythonpip
+
+### GCC 10 Workaround ####
+test_version ${GCC_VER} -ge 10 && PKG_CFLAGS+=" -fcommon" || true
+##########################

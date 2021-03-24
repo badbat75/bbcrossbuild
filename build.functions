@@ -505,7 +505,7 @@ function build () (
 			then
 				mkdir -p ${BIN_PATH}${CARGO_BIN}
 			fi
-			cp -p target/${CARGO_TARGET}/release/${file} ${BIN_PATH}${CARGO_BIN}/${file}
+			cp -p target/${CARGO_TARGET}/release/${file} ${PKG_PKGPATH}${CARGO_BIN}/${file}
 		done
 		for file in ${CARGO_LIBLIST}
 		do
@@ -513,7 +513,7 @@ function build () (
 			then
 				mkdir -p ${BIN_PATH}${CARGO_LIB}
 			fi
-			cp -p target/${CARGO_TARGET}/release/${file} ${BIN_PATH}${CARGO_LIB}/${file}
+			cp -p target/${CARGO_TARGET}/release/${file} ${PKG_PKGPATH}${CARGO_LIB}/${file}
 		done
 		cd ${BB_HOME}
 		set +x
@@ -662,6 +662,7 @@ function build () (
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
 		local PYTHONBIN_VER=$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)
+		local PYTHONBIN_MAJVER=$(echo ${PYTHONBIN_VER} | cut -d'.' -f1,1)
 		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
 		then
 			COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
@@ -669,16 +670,28 @@ function build () (
 		fi
 		COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
-		if [ ${STD_INSTALL_FLAGS:-1} -eq 1 ]
+		if [ ${MAKEVERBOSE:-0} -eq 1 ]
 		then
-			INSTALL_FLAGS+=" --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX}"
-			if [ -f ${DISTOS_PATH}/etc/debian_version ]
-			then
-				INSTALL_FLAGS+=" --install-lib=${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
-			fi
+			local VERBOSE="-v"
 		fi
+		if [ -f ${DISTOS_PATH}/etc/debian_version ]
+		then
+			local PYTHON_PKGDIR="dist-packages"
+		else
+			local PYTHON_PKGDIR="site-packages"
+		fi
+		local INSTALL_TARGET="--install-lib=${BUILD_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
+		PYTHONPATH=${BIN_PATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}
+		for pythonpkgdir in python${PYTHONBIN_MAJVER} python${PYTHONBIN_VER}
+		do
+			if [ -d ${DISTOS_PATH}${BUILD_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR} ]
+			then
+				PYTHONPATH+=:${DISTOS_PATH}${BUILD_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR}
+			fi
+			export PYTHONPATH
+		done
+		cross-python -m site
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-		#local PYTHONPKG_DIR=
 		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
 		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
 		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
@@ -697,8 +710,9 @@ function build () (
 		RANLIB=${HARCH}-gcc-ranlib \
 		STRIP=${HARCH}-strip \
 		OBJDUMP=${HARCH}-objdump \
-		eval "${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}"
-		eval "${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} ${INSTALL_FLAGS}"
+			eval '${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}'
+		eval '${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} \
+			${INSTALL_TARGET}'
 		local BUILD_STATUS=${?}
 		cd ${BB_HOME}
 		set +x
@@ -707,9 +721,8 @@ function build () (
 
 	function pythonpip () {
 		set -x
-		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
-		cd ${PKG_BLDPATH}
 		local PYTHONBIN_VER=$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)
+		local PYTHONBIN_MAJVER=$(echo ${PYTHONBIN_VER} | cut -d'.' -f1,1)
 		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
 		then
 			COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
@@ -717,16 +730,33 @@ function build () (
 		fi
 		COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
-		if [ ${STD_INSTALL_FLAGS:-1} -eq 1 ]
+		if [ ${MAKEVERBOSE:-0} -eq 1 ]
 		then
-			INSTALL_FLAGS+=" --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX}"
-			if [ -f ${DISTOS_PATH}/etc/debian_version ]
+			local VERBOSE="-v"
+		fi
+		if [ -f ${DISTOS_PATH}/etc/debian_version ]
+		then
+			local INSTALL_TARGET="-t ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
+			local PYTHON_PKGDIR="dist-packages"
+		else
+			local INSTALL_TARGET="--root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX}"
+			local PYTHON_PKGDIR="site-packages"
+		fi
+		PYTHONPATH=${BIN_PATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}
+		for pythonpkgdir in python${PYTHONBIN_MAJVER} python${PYTHONBIN_VER}
+		do
+			if [ -d ${DISTOS_PATH}${BUILD_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR} ]
 			then
-				INSTALL_FLAGS+=" --install-lib=${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
+				PYTHONPATH+=:${DISTOS_PATH}${BUILD_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR}
 			fi
+			export PYTHONPATH
+		done
+		cross-python -m site
+		if [ ${PKG_PYTHONBUILD:-1} -eq 1 ]
+		then
+			local PYTHONBUILD="--no-binary :all:"
 		fi
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-		#local PYTHONPKG_DIR=
 		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
 		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
 		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
@@ -745,9 +775,8 @@ function build () (
 		RANLIB=${HARCH}-gcc-ranlib \
 		STRIP=${HARCH}-strip \
 		OBJDUMP=${HARCH}-objdump \
-		eval "${PKG_BUILDVARS} cross-pip install --install-option=\"--target=${PKG_PKGPATH} ${INSTALL_FLAGS}\" ${PKG_PIPNAME}"
+			cross-python -m pip ${VERBOSE} install ${PYTHONBUILD} ${INSTALL_TARGET} ${PKG_NAME}
 		local BUILD_STATUS=${?}
-		cd ${BB_HOME}
 		set +x
 		return ${BUILD_STATUS}
 	}
@@ -939,66 +968,88 @@ function build () (
 		mkdir -p ${BIN_PATH}
 	fi
 	> ${LOG_PATH}/${PKG_NAME}.log
-#	if [ ! -d ${PKG_SRCPATH} ] && [ ! -z ${PKG_URL} ]
-	if [ ! -z ${PKG_URL} ] || [ ! -z ${GIT_URL} ]
-	then
-		echo -n "Downloading ${PKG_NAME}..."
-		downloadsources >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-		echo "Done."
-		preparesources
-	fi
-	if [ -d ${PKG_BLDPATH} ]
-	then
-		rm -rf ${PKG_BLDPATH}
-	fi
-	if [ -d ${PKG_PKGPATH} ]
-	then
-		sudo rm -rf ${PKG_PKGPATH}
-	fi
-	mkdir -p ${PKG_PKGPATH}
-	if [ ! -z "${PKG_PREBUILD}" ]
-	then
-		cd ${PKG_SRCPATH}
-		(eval "trap 'exit 1' ERR; set -x && ${PKG_PREBUILD} 2>&1 && set +x") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-	fi
-	if [ ${PKG_COPYSRC:-0} -eq 1 ] 
-	then
-		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
-	fi
-	if [ ! ${BUILD_PROCESS:-none} == none ]
-	then
-		echo -n "Building ${PKG_NAME}..."
-		${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-	fi
-	if [ ! -z "${PKG_POSTBUILD}" ]
-	then
-		if [ ! -d ${PKG_BLDPATH} ]
+	case x${BUILD_PROCESS} in
+	xpythonpip)
+		if [ ! -z "${PKG_PREBUILD}" ]
 		then
-			mkdir -p ${PKG_BLDPATH}
+			(eval "trap 'exit 1' ERR; set -x && ${PKG_PREBUILD} 2>&1 && set +x") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 		fi
-		cd ${PKG_BLDPATH}
-		(eval "trap 'exit 1' ERR; set -x && ${PKG_POSTBUILD} 2>&1 && set +x") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-	fi
+		if [ ! ${BUILD_PROCESS:-none} == none ]
+		then
+			echo -n "Building ${PKG_NAME}..."
+			${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		fi
+		if [ ! -z "${PKG_POSTBUILD}" ]
+		then
+			(eval "trap 'exit 1' ERR; set -x && ${PKG_POSTBUILD} 2>&1 && set +x") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		fi
+		;;
+	x*)
+		if [ ! -z ${PKG_URL} ] || [ ! -z ${GIT_URL} ]
+		then
+			echo -n "Downloading ${PKG_NAME}..."
+			downloadsources >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			echo "Done."
+			preparesources
+		fi
+		if [ -d ${PKG_BLDPATH} ]
+		then
+			rm -rf ${PKG_BLDPATH}
+		fi
+		if [ -d ${PKG_PKGPATH} ]
+		then
+			sudo rm -rf ${PKG_PKGPATH}
+		fi
+		mkdir -p ${PKG_PKGPATH}
+		if [ ! -z "${PKG_PREBUILD}" ]
+		then
+			cd ${PKG_SRCPATH}
+			(eval "trap 'exit 1' ERR; set -x && ${PKG_PREBUILD} 2>&1 && set +x") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		fi
+		if [ ${PKG_COPYSRC:-0} -eq 1 ] 
+		then
+			cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+		fi
+		if [ ! ${BUILD_PROCESS:-none} == none ]
+		then
+			echo -n "Building ${PKG_NAME}..."
+			${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		fi
+		if [ ! -z "${PKG_POSTBUILD}" ]
+		then
+			if [ ! -d ${PKG_BLDPATH} ]
+			then
+				mkdir -p ${PKG_BLDPATH}
+			fi
+			cd ${PKG_BLDPATH}
+			(eval "trap 'exit 1' ERR; set -x && ${PKG_POSTBUILD} 2>&1 && set +x") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		fi
+		;;
+	esac
 	if [ ! -d ${STATUS_PATH} ]
 	then
 		mkdir -p ${STATUS_PATH}
 	fi
 	#rm -rf ${PKG_SRCPATH} &&
-	(
-		set -ex
-		pwd
-		if [ ${PKG_SAVE_STATUS:-1} -eq 1 ]
-		then
-			tar cjfp ${PACKAGES_PATH}/${PKG_NAME}.tar.xz --owner=0 --group=0 -C ${PKG_PKGPATH} .
-		fi
-		rsync -aKv ${PKG_PKGPATH}/ ${BIN_PATH}
-		sudo rm -rf ${PKG_PKGPATH}
-		set +ex
-	) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-	if [ ${KEEP_BUILDDIR:-0} -eq 0 ]
-	then
-		rm -rf ${PKG_BLDPATH}
-	fi
+	case x${BUILD_PROCESS} in
+		*)
+			(
+				set -ex
+				pwd
+				if [ ${PKG_SAVE_STATUS:-1} -eq 1 ]
+				then
+					tar cjfp ${PACKAGES_PATH}/${PKG_NAME}.tar.xz --owner=0 --group=0 -C ${PKG_PKGPATH} .
+				fi
+				rsync -aKv ${PKG_PKGPATH}/ ${BIN_PATH}
+				sudo rm -rf ${PKG_PKGPATH}
+				set +ex
+			) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			if [ ${KEEP_BUILDDIR:-0} -eq 0 ]
+			then
+				rm -rf ${PKG_BLDPATH}
+			fi
+		;;
+	esac
 	if [ ${PKG_SAVE_STATUS:-1} -eq 1 ]
 	then
 		md5sum ${PKG_PATH}/${1}.pkg > ${STATUS_PATH}/${PKG_NAME}
