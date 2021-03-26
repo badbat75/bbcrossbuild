@@ -501,17 +501,17 @@ function build () (
 			cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}
 		for file in ${CARGO_BINLIST}
 		do
-			if [ ! -d ${BIN_PATH}${CARGO_BIN} ]
+			if [ ! -d ${PKG_PKGPATH}${CARGO_BIN} ]
 			then
-				mkdir -p ${BIN_PATH}${CARGO_BIN}
+				mkdir -p ${PKG_PKGPATH}${CARGO_BIN}
 			fi
 			cp -p target/${CARGO_TARGET}/release/${file} ${PKG_PKGPATH}${CARGO_BIN}/${file}
 		done
 		for file in ${CARGO_LIBLIST}
 		do
-			if [ ! -d ${BIN_PATH}${CARGO_LIB} ]
+			if [ ! -d ${PKG_PKGPATH}${CARGO_LIB} ]
 			then
-				mkdir -p ${BIN_PATH}${CARGO_LIB}
+				mkdir -p ${PKG_PKGPATH}${CARGO_LIB}
 			fi
 			cp -p target/${CARGO_TARGET}/release/${file} ${PKG_PKGPATH}${CARGO_LIB}/${file}
 		done

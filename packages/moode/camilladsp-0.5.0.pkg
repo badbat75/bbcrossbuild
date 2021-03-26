@@ -10,9 +10,6 @@ CARGO_BINLIST="camilladsp"
 CARGO_STRIP=1
 LTOENABLE=0
 PKG_POSTBUILD="
-	if [ ! -d ${PKG_PKGPATH}/usr/local/bin ]
-	then
-		mkdir -p ${PKG_PKGPATH}/usr/local/bin
-	fi
+	mkdir -p ${PKG_PKGPATH}/usr/local/bin
 	ln -fs /usr/bin/camilladsp ${PKG_PKGPATH}/usr/local/bin/camilladsp
 	"

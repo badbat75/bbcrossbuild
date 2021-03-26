@@ -10,7 +10,7 @@ sudo dnf install -y gcc g++ binutils ccache libzstd libzstd-devel\
 sudo dnf install -y qemu-user-static
 
 # for meson-ninja
-sudo dnf install python3-pip ninja-build meson
+sudo dnf install -y python3-pip meson ninja-build
 #sudo pip3 install meson ninja
 
 # for Python 3.7
@@ -45,3 +45,6 @@ sudo dnf install -y groff
 
 # for btrfs-progs
 sudo dnf install -y xmlto asciidoc
+
+# for camillagui
+sudo dnf install -y npm

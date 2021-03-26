@@ -215,15 +215,6 @@ function bootstrap_sysroot () {
 	echo -n "${SPACES}"
 	setup_gcc stage3
 
-	if [ ! -f ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz ]
-	then
-		echo -n "   Removing .la libraries..."
-		local LA_LIBS="$(find ${TOOLCHAIN_PATH} -name "*.la" -printf "%P\n")"
-		tar cvjf ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz -C ${TOOLCHAIN_PATH} ${LA_LIBS}
-		(cd ${TOOLCHAIN_PATH}; rm -f ${LA_LIBS})
-		echo "Done."
-	fi
-
 	echo -n "   Copying libraries and headers..."
 	if [ ! -d ${TOOLCHAIN_PATH}/${HARCH}/include/c++ ]
 	then
@@ -318,6 +309,14 @@ function setup_gcc () {
 		then
 			local SILENTCONFIG="--enable-silent-rules"
 		fi
+		if [ ${GCC_LTOENABLE} -eq 1 ]
+		then
+			local BOOTSTRAP_FLAGS="bootstrap-lto"
+		fi
+		if [ ${OPTLEVEL} -eq 3 ]
+		then
+			local BOOTSTRAP_FLAGS+=" bootstrap-O3"
+		fi
 		case ${GCC_STAGE} in
 			stage1 | stage2 )
 				local GCC_LANGUAGES=c,lto
@@ -327,7 +326,7 @@ function setup_gcc () {
 			;;
 			* )
 				local GCC_LANGUAGES=${GCC_LANGUAGES:-c,c++,fortran,lto}
-				local GCC_COMMON_CONFIG="${SILENTCONFIG} --enable-languages=${GCC_LANGUAGES} --enable-shared --enable-linker-build-id --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --enable-checking=release --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-threads=posix --enable-initfini-array --enable-gnu-indirect-function --enable-multiarch \
+				local GCC_COMMON_CONFIG="${SILENTCONFIG} --with-build-config=\"${BOOTSTRAP_FLAGS}\" --enable-languages=${GCC_LANGUAGES} --enable-shared --enable-linker-build-id --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --enable-checking=release --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-threads=posix --enable-initfini-array --enable-gnu-indirect-function --enable-multiarch \
 					--enable-install-libiberty \
 					--with-default-libstdcxx-abi=new \
 					--disable-option-checking --disable-libitm --disable-libmpx"
@@ -398,7 +397,6 @@ function setup_gcc () {
 			local TARGET_CXXFLAGS="${TARGET_CFLAGS}"
 			local TARGET_LDFLAGS="${COMMON_LDFLAGS} ${GCC_OPTLINK_FLAGS}"
 		fi
-		local BINUTILS_LTO_WRAPPERS_PATH=${GCC_BUILD_PATH}/gcc-${GCC_VER}/binutils_lto_wrappers
 		if [ ${GCC_LTOENABLE} -eq 1 ]
 		then
 			local HOST_CFLAGS+=" ${COMMON_LTOFLAGS}"
@@ -444,7 +442,6 @@ function setup_gcc () {
 				then
 					make V=${MAKEVERBOSE:-0} -C libctf install-strip
 				fi
-				#read -p "Press enter to continue"
 			;;
 		esac
 		cd ${START_PWD}
@@ -531,6 +528,16 @@ function setup_gcc () {
 	else
 	echo "already there."
 	fi
+
+	if [ ! -f ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz ]
+	then
+		echo -n "   Removing .la libraries..."
+		local LA_LIBS="$(find ${TOOLCHAIN_PATH} -name "*.la" -printf "%P\n")"
+		tar cvjf ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz -C ${TOOLCHAIN_PATH} ${LA_LIBS} >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+		(cd ${TOOLCHAIN_PATH}; rm -f ${LA_LIBS})
+		echo "Done."
+	fi
+
 	if [ -d ${GLOBAL_TOOLCHAIN_PATH}/lib ]
 	then
 		export LD_LIBRARY_PATH=${GLOBAL_TOOLCHAIN_PATH}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
@@ -652,17 +659,18 @@ function setup_python () {
 			local HOST_RANLIB="gcc-ranlib"
 		fi
 		CC="${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc" \
-		CFLAGS="${OPTCOMP_FLAGS} ${COMMON_LTOFLAGS} -march=native" \
+		CFLAGS="-march=native" \
 		AR="${HOST_AR}" \
 		NM="${HOST_NM}" \
 		RANLIB="${HOST_RANLIB}" \
 		LDFLAGS="${OPTLINK_FLAGS}" \
-		${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER} --enable-shared ax_cv_c_float_words_bigendian=no
+		${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER} --enable-shared --with-lto \
+			--with-system-ffi ax_cv_c_float_words_bigendian=no
+		#--with-address-sanitizer --with-undefined-behavior-sanitizer
 		make
 		make install
 		${BUILD_PYTHON} ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py
-		pip-${PYTHONBIN_VER} install meson ninja
-		#${BUILD_PYTHONPIP} install crossenv
+		pip${PYTHONBIN_VER} install meson ninja
 		cd ${START_PWD}
 		rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
 		set +x
@@ -719,14 +727,14 @@ function setup_python () {
 		return ${STATUS}' ERR
 
 	echo -n "Setting up Python"
+	if [ -d ${DISTOS_PATH} ]
+	then
+		local PYTHON_SEARCHPATH=${DISTOS_PATH}
+	else
+		local PYTHON_SEARCHPATH=${BIN_PATH}
+	fi
 	if [ -z ${1} ]
 	then
-		if [ -d ${DISTOS_PATH} ]
-		then
-			local PYTHON_SEARCHPATH=${DISTOS_PATH}
-		else
-			local PYTHON_SEARCHPATH=${BIN_PATH}
-		fi
 		local PYTHON_VER=$(find ${PYTHON_SEARCHPATH}/usr/include -maxdepth 1 -name 'python*' -exec grep '#define PY_VERSION ' {}/patchlevel.h \; | awk '{print $3}' | sed 's/\"//g' | sort -u | tail -n1)
 		if [ "x${PYTHON_VER}" == "x" ]
 		then
@@ -747,12 +755,6 @@ function setup_python () {
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	export PATH=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin:${PATH}
 	export LD_LIBRARY_PATH=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-	#if [ ! -x ${HOST_PYTHON} ]
-	#then
-	#	echo "no host python present (${HOST_PYTHON}). Exiting..."
-	#	echo
-	#	return 1
-	#fi
 	if [ ! -x ${BUILD_PYTHON} ] || [ ! -x ${BUILD_PYTHONPIP} ]
 	then
 		echo -n "downloading..."

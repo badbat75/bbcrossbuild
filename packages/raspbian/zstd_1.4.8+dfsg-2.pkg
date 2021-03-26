@@ -1,7 +1,7 @@
 # zstd_1.4.8+dfsg-2
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libz/libzstd/libzstd_1.4.8%2Bdfsg.orig.tar.xz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libz/libzstd/libzstd_1.4.8%2Bdfsg-2.debian.tar.xz"
-PKG_CFLAGS="-DZ_SOLO"
+#PKG_CFLAGS="-DZ_SOLO"
 #PKG_LDFLAGS=
 BUILD_PROCESS=simplemake
 INST_CMD="install"
