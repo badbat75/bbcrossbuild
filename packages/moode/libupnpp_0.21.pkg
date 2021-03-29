@@ -1,0 +1,14 @@
+# libupnpp_0.21
+PKG_URL="https://www.lesbonscomptes.com/upmpdcli/downloads/libupnpp-0.21.0.tar.gz"
+PATCHES=
+BUILD_PROCESS=configmake
+# CONF_FLAGS=""
+PKG_CXXFLAGS="-D_FILE_OFFSET_BITS=64 -I${BIN_PATH}${BUILD_INCLUDEDIR}/npupnp"
+INST_CMD=install-strip
+PKG_DEPS="moode/libnpupnp_4.1.1 moode/libmpdclient-2.19"
+
+PKG_PREBUILD="cd Project/GNU/CLI && ./autogen.sh
+    ln -fs ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libcurl.la ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/
+    ln -fs ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libcurl-gnutls.so ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/
+    "
+PKG_POSTBUILD="rm -f ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/{libcurl.la,libcurl-gnutls.so}"
