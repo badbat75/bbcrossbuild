@@ -1,5 +1,5 @@
-# bluez_5.56
-PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-5.56.tar.xz"
+# bluez_5.58
+PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-5.58.tar.xz"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-library --enable-deprecated"
 INST_CMD="libexecdir=${BUILD_EXECPREFIX}/sbin install-strip"

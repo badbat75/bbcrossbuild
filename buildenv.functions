@@ -18,8 +18,8 @@ then
 	mkdir -p ${GLOBAL_TOOLCHAIN_PATH}
 fi
 
-BINUTILS_VER=${BINUTILS_VER:-2.36}
-GCC_VER=${GCC_VER:-10}
+BINUTILS_VER=${BINUTILS_VER:-2.36.1}
+GCC_VER=${GCC_VER:-10.3.0}
 GMP_VER=${GMP_VER:-6.2.0}
 MPFR_VER=${MPFR_VER:-4.1.0}
 MPC_VER=${MPC_VER:-1.2.0}
@@ -286,9 +286,9 @@ function setup_gcc () {
 			echo "GCC version older than 10 and BINUTILS 2.34 or earlier..."
 			ln -fs ../binutils-${BINUTILS_VER}/config/debuginfod.m4 config/debuginfod.m4
 		fi
-		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 10 && test_version ${BINUTILS_VER} -ge 2.35
+		if [ ../binutils-${BINUTILS_VER}/libiberty -nt libiberty ]
 		then
-			echo "GCC version older than or equal to 10 and BINUTILS 2.35 or earlier..."
+			echo "binutils-${BINUTILS_VER}/libiberty newer than gcc-${GCC_VER}/libiberty..."
 			rm -rf libiberty
 			ln -fs ../binutils-${BINUTILS_VER}/libiberty .
 		fi
