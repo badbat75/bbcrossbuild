@@ -19,7 +19,7 @@ then
 fi
 
 BINUTILS_VER=${BINUTILS_VER:-2.36.1}
-GCC_VER=${GCC_VER:-10.3.0}
+GCC_VER=${GCC_VER:-11.1.0}
 GMP_VER=${GMP_VER:-6.2.0}
 MPFR_VER=${MPFR_VER:-4.1.0}
 MPC_VER=${MPC_VER:-1.2.0}
@@ -286,10 +286,10 @@ function setup_gcc () {
 			echo "GCC version older than 10 and BINUTILS 2.34 or earlier..."
 			ln -fs ../binutils-${BINUTILS_VER}/config/debuginfod.m4 config/debuginfod.m4
 		fi
-		if [ ../binutils-${BINUTILS_VER}/libiberty -nt libiberty ]
+		if [ ../binutils-${BINUTILS_VER}/libiberty/cp-demangle.c -nt libiberty/cp-demangle.c ]
 		then
 			echo "binutils-${BINUTILS_VER}/libiberty newer than gcc-${GCC_VER}/libiberty..."
-			rm -rf libiberty
+			mv libiberty libiberty.gcc
 			ln -fs ../binutils-${BINUTILS_VER}/libiberty .
 		fi
 		autoreconf${AUTOCONF_VER} -fiv
