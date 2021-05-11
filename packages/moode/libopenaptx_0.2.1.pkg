@@ -1,5 +1,5 @@
-# libopenaptx_0.2.0+5eb14ed
-PKG_URL="https://github.com/pali/libopenaptx/archive/5eb14ed25a73ebbc3c086f0807f379339e628146.tar.gz"
+# libopenaptx_0.2.1
+PKG_URL="https://github.com/pali/libopenaptx/releases/download/0.2.1/libopenaptx-0.2.1.tar.gz"
 #PATCHES=
 BUILD_PROCESS=simplemake
 #INST_CMD=install

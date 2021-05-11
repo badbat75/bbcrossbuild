@@ -1,5 +1,5 @@
-# librespot_0.1.6
-PKG_URL="https://github.com/librespot-org/librespot/archive/v0.1.6.tar.gz"
+# librespot_0.2.0
+PKG_URL="https://github.com/librespot-org/librespot/archive/v0.2.0.tar.gz"
 BUILD_PROCESS=cargobuild
 CONF_FLAGS="--features alsa-backend"
 #PKG_RUSTFLAGS=
