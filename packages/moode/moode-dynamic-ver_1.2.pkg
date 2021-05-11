@@ -6,7 +6,6 @@ else
 	PKG_URL="https://github.com/moode-player/moode/archive/${MOODEDEVCOMMIT}.tar.gz"
 fi
 PKG_SRCDIR=moode_${MOODEREL}
-echo -n ${PKG_SRCDIR}${MOODEDEVCOMMIT:++${MOODEDEVCOMMIT}}
 BUILD_PROCESS=downloadonly
 PKG_DEPS="python/RPi.GPIO python/python-musicpd raspbian/zip_3.0-8"
 if [ ${MOODEINSTALL:-1} -eq 1 ]

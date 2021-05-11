@@ -1,5 +1,5 @@
 # shairport-sync_3.3.8
-PKG_URL="https://github.com/mikebrady/shairport-sync/archive/030923b666e37b6509039ff9980fafec1f7238e3.tar.gz"
+PKG_URL="https://github.com/mikebrady/shairport-sync/archive/refs/tags/3.3.8.tar.gz"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--with-dummy --with-stdout --with-pipe --with-soxr --with-metadata \
 		--with-avahi --with-alsa --with-convolution --with-piddir=/run/shairport-sync --without-configfiles \
