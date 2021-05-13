@@ -2,7 +2,7 @@
 This is a framework to cross-compile defined packages using an optional predefined sysroot directory.
 ## Current Limitations
 
- - Tested only ARM cross-compile projects. Other platforms will need
+ - Tested only ARM and ARM64 cross-compile projects. Other platforms will need
    adjustments and integration
 
 ## QuickStart
