@@ -1,0 +1,5 @@
+# python-musicpd_0.4.4
+PKG_URL="https://files.pythonhosted.org/packages/14/37/d4523a77e0d43ee02e7d5c141d295bdcd5030843db03663a864ac0245983/python-musicpd-0.4.4.tar.bz2"
+BUILD_PROCESS=pythonbuild
+# CONF_FLAGS=""
+# PKG_DEPS=""

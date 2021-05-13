@@ -1,27 +1,25 @@
 # hostapd_2.9.0
 PKG_SRCDIR=wpa_2.9.0
-PKG_CFLAGS="-MMD -Wall -fPIC -I${BIN_PATH}${BUILD_INCLUDEDIR}/libnl3"
+PKG_CFLAGS="-MMD -Wall -fPIC -I${BIN_PATH}\${BUILD_INCLUDEDIR}/libnl3"
 PKG_LDFLAGS="-Wl,--as-needed -Wl,--build-id=none"
 BUILD_PROCESS=simplemake
 INST_CMD=all
 PKG_DEPS="raspbian/${PKG_SRCDIR} raspbian/libnl3_3.4.0-1"
-PKG_MAKEVARS="PREFIX=${BUILD_PREFIX} INCDIR=${BUILD_INCLUDEDIR} BINDIR=${BUILD_PREFIX}/sbin -C hostapd"
+PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} INCDIR=\${BUILD_INCLUDEDIR} BINDIR=\${BUILD_PREFIX}/sbin -C hostapd"
 PKG_PREBUILD="cp -v --remove-destination debian/config/hostapd/linux hostapd/.config"
-PKG_POSTBUILD="install -d ${PKG_PKGPATH}${BUILD_PREFIX}/sbin
-install -d ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/hostapd
-install -d ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/network/if-pre-up.d
-install -d ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/network/if-post-down.d
-install -d ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man1
-install -d ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man8
-install --mode=644 -D debian/ifupdown/hostapd/ifupdown.sh ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/hostapd/
-install -d ${PKG_PKGPATH}/lib/systemd/system
-install --mode=644 -D debian/hostapd.service ${PKG_PKGPATH}/lib/systemd/system/
-install --mode=644 -D debian/hostapd@.service ${PKG_PKGPATH}/lib/systemd/system/
-install --mode=644 -D debian/hostapd.default ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/default/hostapd
-install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D hostapd/hostapd ${PKG_PKGPATH}${BUILD_EXECPREFIX}/sbin/
-install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D hostapd/hostapd_cli ${PKG_PKGPATH}${BUILD_EXECPREFIX}/sbin/
-ln -fs ${BUILD_SYSCONFDIR}/hostapd/ifupdown.sh ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/network/if-pre-up.d/hostapd
-ln -fs ${BUILD_SYSCONFDIR}/hostapd/ifupdown.sh ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/network/if-post-down.d/hostapd
-install -d ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man{5,8}
-cp hostapd/hostapd.8 ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man8/ && gzip -f ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man8/hostapd.8
-cp hostapd/hostapd_cli.1 ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man5/ && gzip -f ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man5/hostapd_cli.1"
+PKG_POSTBUILD="install -d ${BIN_PATH}\${BUILD_PREFIX}/sbin
+install -d ${BIN_PATH}\${BUILD_SYSCONFDIR}/hostapd
+install -d ${BIN_PATH}\${BUILD_SYSCONFDIR}/network/if-pre-up.d
+install -d ${BIN_PATH}\${BUILD_SYSCONFDIR}/network/if-post-down.d
+install -d ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1
+install -d ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8
+install --mode=644 -D debian/ifupdown/hostapd/ifupdown.sh ${BIN_PATH}\${BUILD_SYSCONFDIR}/hostapd/
+install --mode=644 -D debian/hostapd.service ${BIN_PATH}/lib/systemd/system/
+install --mode=644 -D debian/hostapd@.service ${BIN_PATH}/lib/systemd/system/
+install --mode=644 -D debian/hostapd.default ${BIN_PATH}\${BUILD_SYSCONFDIR}/default/hostapd
+install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D hostapd/hostapd ${BIN_PATH}\${BUILD_PREFIX}/sbin/
+install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D hostapd/hostapd_cli ${BIN_PATH}\${BUILD_PREFIX}/sbin/
+ln -fs \${BUILD_SYSCONFDIR}/hostapd/ifupdown.sh ${BIN_PATH}\${BUILD_SYSCONFDIR}/network/if-pre-up.d/hostapd
+ln -fs \${BUILD_SYSCONFDIR}/hostapd/ifupdown.sh ${BIN_PATH}\${BUILD_SYSCONFDIR}/network/if-post-down.d/hostapd
+cp hostapd/hostapd.8 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8/ && gzip -f ${BIN_PATH}\${BUILD_PREFIX}/share/man/man8/hostapd.8
+cp hostapd/hostapd_cli.1 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man5/ && gzip -f ${BIN_PATH}\${BUILD_PREFIX}/share/man/man5/hostapd_cli.1"

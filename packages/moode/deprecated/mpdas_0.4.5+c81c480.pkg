@@ -5,12 +5,12 @@ BUILD_PROCESS=simplemake
 INST_CMD=all
 PKG_DEPS=
 PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} MANPREFIX=\${BUILD_PREFIX}/share"
-PKG_POSTBUILD="install -d ${PKG_PKGPATH}\${BUILD_PREFIX}/bin &&
-install -d ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man1 &&
-install -D -m 755 -s --strip-program=${HARCH:+${HARCH}-}strip mpdas ${PKG_PKGPATH}\${BUILD_PREFIX}/bin &&
-install -D -m 644 mpdas.1 ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man1/mpdas.1 &&
-install -D -m 644 mpdasrc.example ${PKG_PKGPATH}\${BUILD_SYSCONFDIR}/mpdasrc &&
-install -d ${PKG_PKGPATH}/usr/local/bin &&
-install -d ${PKG_PKGPATH}/usr/local/etc &&
-ln -fs /usr/bin/mpdas ${PKG_PKGPATH}/usr/local/bin/mpdas &&
-ln -fs /etc/mpdasrc ${PKG_PKGPATH}/usr/local/etc/mpdasrc"
+PKG_POSTBUILD="install -d ${BIN_PATH}\${BUILD_PREFIX}/bin &&
+install -d ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1 &&
+install -D -m 755 -s --strip-program=${HARCH:+${HARCH}-}strip mpdas ${BIN_PATH}\${BUILD_PREFIX}/bin &&
+install -D -m 644 mpdas.1 ${BIN_PATH}\${BUILD_PREFIX}/share/man/man1/mpdas.1 &&
+install -D -m 644 mpdasrc.example ${BIN_PATH}\${BUILD_SYSCONFDIR}/mpdasrc &&
+install -d ${BIN_PATH}/usr/local/bin &&
+install -d ${BIN_PATH}/usr/local/etc &&
+ln -fs /usr/bin/mpdas ${BIN_PATH}/usr/local/bin/mpdas &&
+ln -fs /etc/mpdasrc ${BIN_PATH}/usr/local/etc/mpdasrc"
