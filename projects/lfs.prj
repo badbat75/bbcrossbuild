@@ -15,7 +15,7 @@ bootstrap_sysroot raspberrypi/rpi-kernel_5.10 lfs/glibc_2.33 lfs/libxcrypt_4.4.1
 
 install_gcclibs
 
-build raspberrypi/rpi-firmware_1.20210201
+build raspberrypi/rpi-firmware_1.20210430
 build firmwares/linux-firmware_20210208
 build raspberrypi/rpi-kernel_5.10
 build lfs/glibc_2.33
@@ -75,7 +75,7 @@ build lfs/dosfstools_4.2
 build lfs/sudo_1.9.5p2
 build lfs/openssh_8.4p1
 ### System Utilities
-build raspberrypi/pi-bluetooth_0.1.15+63b706a
+build raspberrypi/pi-bluetooth_0.1.15+ae2efde
 build lfs/bluez_5.55
 build lfs/usb-utils_013
 #build lfs/pciutils_5.7.0
