@@ -1038,7 +1038,7 @@ function build () (
 				pwd
 				if [ ${PKG_SAVE_STATUS:-1} -eq 1 ]
 				then
-					tar cjfp ${PACKAGES_PATH}/${PKG_NAME}.tar.xz --owner=0 --group=0 -C ${PKG_PKGPATH} .
+					tar cJfp ${PACKAGES_PATH}/${PKG_NAME}.tar.xz --owner=0 --group=0 -C ${PKG_PKGPATH} .
 				fi
 				rsync -aKv ${PKG_PKGPATH}/ ${BIN_PATH}
 				sudo rm -rf ${PKG_PKGPATH}

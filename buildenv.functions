@@ -533,7 +533,7 @@ function setup_gcc () {
 	then
 		echo -n "   Removing .la libraries..."
 		local LA_LIBS="$(find ${TOOLCHAIN_PATH} -name "*.la" -printf "%P\n")"
-		tar cvjf ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz -C ${TOOLCHAIN_PATH} ${LA_LIBS} >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+		tar cvJf ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz -C ${TOOLCHAIN_PATH} ${LA_LIBS} >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		(cd ${TOOLCHAIN_PATH}; rm -f ${LA_LIBS})
 		echo "Done."
 	fi
