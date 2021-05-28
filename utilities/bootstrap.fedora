@@ -17,6 +17,9 @@ sudo dnf install -y python3-pip meson ninja-build
 # for Python 3.7
 sudo dnf install -y openssl-devel libffi-devel
 
+# for moode
+sudo dnf install -y sqlite
+
 # for wpa-supplicant
 sudo dnf install -y docbook-utils-pdf
 

@@ -736,27 +736,28 @@ function build () (
 		fi
 		if [ -f ${DISTOS_PATH}/etc/debian_version ]
 		then
-			local INSTALL_TARGET="-t ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
 			local PYTHON_PKGDIR="dist-packages"
 		else
-			local INSTALL_TARGET="--root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX}"
 			local PYTHON_PKGDIR="site-packages"
 		fi
-		PYTHONPATH=${BIN_PATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}
+		PYTHONPATH="${BIN_PATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
 		for pythonpkgdir in python${PYTHONBIN_MAJVER} python${PYTHONBIN_VER}
 		do
 			if [ -d ${DISTOS_PATH}${BUILD_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR} ]
 			then
-				PYTHONPATH+=:${DISTOS_PATH}${BUILD_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR}
+				PYTHONPATH+=":${DISTOS_PATH}${BUILD_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR}"
 			fi
-			export PYTHONPATH
 		done
+		#PYTHONUSERBASE="${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
+		export PYTHONPATH
+		#export PYTHONUSERBASE
 		cross-python -m site
 		if [ ${PKG_PYTHONBUILD:-1} -eq 1 ]
 		then
 			local PYTHONBUILD="--no-binary :all:"
 		fi
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+		#build-python -m pip ${VERBOSE} install --upgrade ${PKG_NAME}
 		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
 		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
 		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
@@ -775,7 +776,11 @@ function build () (
 		RANLIB=${HARCH}-gcc-ranlib \
 		STRIP=${HARCH}-strip \
 		OBJDUMP=${HARCH}-objdump \
-			cross-python -m pip ${VERBOSE} install ${PYTHONBUILD} ${INSTALL_TARGET} ${PKG_NAME}
+			cross-python -m pip ${VERBOSE} install ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX} ${PKG_NAME}
+		if [ ${PYTHON_PKGDIR} == dist-packages ]
+		then
+			mv ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages
+		fi
 		local BUILD_STATUS=${?}
 		set +x
 		return ${BUILD_STATUS}
