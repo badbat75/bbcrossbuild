@@ -1,5 +1,5 @@
-#wireless-regdb_2020.11.20
-PKG_URL="https://mirrors.edge.kernel.org/pub/software/network/wireless-regdb/wireless-regdb-2020.11.20.tar.xz"
+#wireless-regdb_2021.04.21
+PKG_URL="https://mirrors.edge.kernel.org/pub/software/network/wireless-regdb/wireless-regdb-2021.04.21.tar.xz"
 BUILD_PROCESS=downloadonly
 PKG_PREBUILD="set -x
     install -v -d -m755 ${PKG_PKGPATH}/lib/firmware

@@ -1,5 +1,5 @@
-# pi-bluetooth_0.1.15+ae2efde
-PKG_URL="https://github.com/RPi-Distro/pi-bluetooth/archive/ae2efdeee8e53e4e256782963f868bd5bb335514.tar.gz"
+# pi-bluetooth_0.1.17
+PKG_URL="https://github.com/RPi-Distro/pi-bluetooth/archive/fd4775bf90e037551532fc214a958074830bb80d.tar.gz"
 BUILD_PROCESS=downloadonly
 PKG_DEPS="raspberrypi/raspberrypi-sys-mods_0.1"
 PKG_PREBUILD="install -d -m0755 ${PKG_PKGPATH}\${BUILD_PREFIX}/bin

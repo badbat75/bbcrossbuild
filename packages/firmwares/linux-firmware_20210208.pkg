@@ -1,6 +1,0 @@
-#linux-firmware_20210208
-PKG_URL="https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/snapshot/linux-firmware-20210208.tar.gz"
-BUILD_PROCESS=downloadonly
-PKG_PREBUILD="set -x
-    make install DESTDIR=${PKG_PKGPATH}
-	set +x"

@@ -2,7 +2,7 @@
 PKG_URL="https://github.com/scripple/alsa_cdsp/archive/bbf06dd941b9225aa1f675acdbdf75a2b1516046.tar.gz"
 BUILD_PROCESS=simplemake
 # CONF_FLAGS=""
-PKG_DEPS="moode/camilladsp_0.5.1"
+PKG_DEPS="moode/camilladsp_0.5.2"
 PKG_PREBUILD="sed -i '/^CC =/ s/=/?=/' Makefile
 sed -i '/^LIBDIR :=/ s/:=/?=/' Makefile"
 PKG_MAKEVARS="LIBDIR=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
