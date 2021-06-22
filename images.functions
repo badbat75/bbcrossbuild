@@ -152,6 +152,7 @@ function mount_tag () {
 	sudo losetup -f -P ${IMAGEFILE_PATH} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	LOOPDEV=$(sudo losetup -j ${IMAGEFILE_PATH} | awk '{print $1}' | sed 's/.$//g') >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	sudo partprobe ${LOOPDEV} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+	sudo kpartx ${LOOPDEV} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo "Done."
 
 	if [ ! -z ${_param_resize} ]
