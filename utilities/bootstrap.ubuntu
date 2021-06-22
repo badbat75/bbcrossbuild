@@ -1,5 +1,5 @@
 #!/bin/bash
-sudo apt-get install -y bc parted curl ccache build-essential libzstd1 libzstd-dev \
+sudo apt-get install -y bc kpartx parted curl ccache build-essential libzstd1 libzstd-dev \
     gawk bison flex cmake ninja-build \
     autoconf autoconf2.64 autoconf-archive automake autopoint libtool \
     git xmltoman docbook-utils swig doxygen texinfo python3-docutils
