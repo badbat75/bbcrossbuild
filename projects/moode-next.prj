@@ -67,7 +67,7 @@ build moode/alsacap
 build raspbian/udevil_0.4.4-2
 
 # STEP 4 - Install enhanced networking and bluetooth stack
-build moode/bluez_5.58
+build moode/bluez_5.60
 build raspberrypi/pi-bluetooth_0.1.17
 WITH_APTX=libopenaptx build moode/bluez-alsa_3.1.0
 

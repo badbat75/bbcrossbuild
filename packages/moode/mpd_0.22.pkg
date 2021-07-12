@@ -1,4 +1,4 @@
-MPDVER=0.22.8
+MPDVER=0.22.9
 PKG_URL="http://www.musicpd.org/download/mpd/0.22/mpd-${MPDVER}.tar.xz"
 BUILD_PROCESS=mesonninja
 export BOOST_ROOT=${BIN_PATH}
