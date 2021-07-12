@@ -2,8 +2,8 @@
 
 MOODEREL=r730
 #MOODEDEVCOMMIT=16f9312ec6d5900bcc373a4752fd7fdb98597fb5
-RASPBIAN_IMAGE=2021-03-04-raspios-buster-armhf-lite
-RASPBIAN_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-03-25/
+RASPBIAN_IMAGE=2021-05-07-raspios-buster-armhf-lite
+RASPBIAN_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-05-28/
 
 ## Enable shared libraries (default) but disable static ones
 BUILD_LIBSHARED=1
