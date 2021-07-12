@@ -11,7 +11,7 @@ build lfs/create-base-config_1.0
 
 mkdir -p ${USERDATA_PATH}/postinstall
 
-bootstrap_sysroot raspberrypi/rpi-kernel_5.12 lfs/glibc_2.33 lfs/libxcrypt_4.4.17
+bootstrap_sysroot raspberrypi/rpi-kernel_5.13 lfs/glibc_2.33 lfs/libxcrypt_4.4.23
 
 install_gcclibs
 
