@@ -555,6 +555,11 @@ function build () (
 			fi
 			return ${STATUS}
 		}
+		trap 'STATUS=${?}; \
+		set +x; \
+		trap - ERR; \
+		return ${STATUS};' ERR
+
 		set -x
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
@@ -588,12 +593,6 @@ function build () (
 
 		# Install headers
 		make V=${MAKEVERBOSE:-0} ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_HDR_PATH=${PKG_PKGPATH}${BUILD_PREFIX} headers_install 
-		local STATUS=${?}
-		if [ ${STATUS} -ne 0 ]
-		then
-			set +x
-			return ${STATUS}
-		fi
 
 		# Break if only headers installation required
 		if [ ${KERN_HDRS_ONLY:-0} -eq 1 ]
@@ -604,12 +603,6 @@ function build () (
 
 		# Build and install kernel
 		make4kern ${KERN_IMAGE}
-		local STATUS=${?}
-		if [ ${STATUS} -ne 0 ]
-		then
-			set +x
-			return ${STATUS}
-		fi
 		case ${KERN_NAME}
 		in
 			kernel*)
@@ -619,14 +612,8 @@ function build () (
 			*)
 				[ ! -d ${PKG_PKGPATH}/boot ] && mkdir ${PKG_PKGPATH}/boot
 				make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_PATH=${PKG_PKGPATH}/boot ${INST_CMD} install
-				local STATUS=${?}
 				;;
 		esac
-		if [ ${STATUS} -ne 0 ]
-		then
-			set +x
-			return ${STATUS}
-		fi
 
 		# Build and install modules
 		make4kern modules
@@ -634,12 +621,6 @@ function build () (
 		local KERNELRELEASE=$(cat include/config/kernel.release)
 		rm ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/build
 		rm ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/source
-		local STATUS=${?}
-		if [ ${STATUS} -ne 0 ]
-		then
-			set +x
-			return ${STATUS}
-		fi
 
 		# Build and install DTBS
 		if [ ${KERN_DTBS:-0} -eq 1 ] && [ ${STATUS} -eq 0 ]
@@ -648,16 +629,20 @@ function build () (
 			then
 				mkdir -p ${PKG_PKGPATH}/boot/overlays
 			fi
-			make4kern dtbs &&
+			make4kern dtbs
 			make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_DTBS_PATH=${PKG_PKGPATH}/boot ${INST_CMD} dtbs_install
-			local STATUS=${?}
 		fi
 		cd ${BB_HOME}
 		set +x
-		return ${STATUS}
+		trap - ERR
 	}
 
 	function pythonbuild () {
+		trap 'STATUS=${?}; \
+		set +x; \
+		trap - ERR; \
+		return ${STATUS};' ERR
+
 		set -x
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
@@ -713,13 +698,17 @@ function build () (
 			eval '${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}'
 		eval '${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} \
 			${INSTALL_TARGET}'
-		local BUILD_STATUS=${?}
 		cd ${BB_HOME}
 		set +x
-		return ${BUILD_STATUS}
+		trap - ERR
 	}
 
 	function pythonpip () {
+		trap 'STATUS=${?}; \
+		set +x; \
+		trap - ERR; \
+		return ${STATUS};' ERR
+
 		set -x
 		local PYTHONBIN_VER=$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)
 		local PYTHONBIN_MAJVER=$(echo ${PYTHONBIN_VER} | cut -d'.' -f1,1)
@@ -781,13 +770,16 @@ function build () (
 		then
 			mv ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages
 		fi
-		local BUILD_STATUS=${?}
 		set +x
-		return ${BUILD_STATUS}
+		trap - ERR
 	}
 	
-
 	function boostbuild () {
+		trap 'STATUS=${?}; \
+		set +x; \
+		trap - ERR; \
+		return ${STATUS};' ERR
+
 		set -x
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
@@ -848,22 +840,18 @@ function build () (
 		./b2 -j${NPROCS} -q ${B2_FLAGS} \
 			architecture=${HM} address-model=${HMADDRMOD} binary-format=${HMBINFMT} abi=${HMABI} target-os=${HOS} \
 			toolset=gcc threading=multi cxxflags="-fPIC ${CXXFLAGS}" linkflags="${LDFLAGS}" install
-		local BUILD_STATUS=${?}
-		#a
 		cd ${BB_HOME}
 		set +x
-		return ${BUILD_STATUS}
+		trap - ERR
 	}
 
 	unset PKG_URL \
 		GIT_URL \
 		GIT_COMMIT \
-		PKG_SRCDIR \
 		BUILD_PROCESS \
 		STD_CONF_FLAGS \
 		CONF_CMD \
 		CONF_FLAGS \
-		PKG_COPYSRC \
 		CONF_PATH \
 		INST_CMD \
 		MAKEDIR \
@@ -872,7 +860,10 @@ function build () (
 		PATCHDEB \
 		PATCHES \
 		PKG_NAME \
+		PKG_SUFFIX \
+		PKG_SRCDIR \
 		PKG_DEPS \
+		PKG_COPYSRC \
 		PKG_CFLAGS \
 		PKG_CXXFLAGS \
 		PKG_FCFLAGS \
@@ -907,9 +898,10 @@ function build () (
 
 	settoolflags
 	
-	local PKG_NAME=$(basename ${1})
-	local PKG_PKGPATH=${PACKAGES_PATH}/${PKG_NAME}
+	local PKG_NAME=$(basename ${1})\${PKG_SUFFIX}
 	local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_NAME}}
+	local PKG_BLDPATH=${BLD_PATH}/${PKG_NAME}
+	local PKG_PKGPATH=${PACKAGES_PATH}/${PKG_NAME}
 
 	source ${PKG_PATH}/${1}.pkg
 
@@ -925,10 +917,21 @@ function build () (
 		trap - ERR; \
 		return ${STATUS}' ERR
 
+	eval local PKG_NAME=${PKG_NAME}
+	eval local PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
+	eval local PKG_BLDPATH=${PKG_BLDPATH}
+	eval local PKG_PKGPATH=${PKG_PKGPATH}
+
 	echo "Package ${PKG_NAME}"
 
-	local PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
-	local PKG_BLDPATH=${BLD_PATH}/${PKG_NAME}
+	if [ ${DEBUG:-0} -gt 0 ]
+	then
+		echo
+		echo "PKG_SRCPATH: ${PKG_SRCPATH}"
+		echo "PKG_BLDPATH: ${PKG_BLDPATH}"
+		echo "PKG_PKGPATH: ${PKG_PKGPATH}"
+		echo
+	fi
 
 	for deps in ${PKG_DEPS}
 	do
@@ -1043,7 +1046,7 @@ function build () (
 				pwd
 				if [ ${PKG_SAVE_STATUS:-1} -eq 1 ]
 				then
-					tar cJfp ${PACKAGES_PATH}/${PKG_NAME}.tar.xz --owner=0 --group=0 -C ${PKG_PKGPATH} .
+					tar cJfp ${PKG_PKGPATH}.tar.xz --owner=0 --group=0 -C ${PKG_PKGPATH} .
 				fi
 				rsync -aKv ${PKG_PKGPATH}/ ${BIN_PATH}
 				sudo rm -rf ${PKG_PKGPATH}

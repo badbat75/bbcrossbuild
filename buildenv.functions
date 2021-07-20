@@ -18,7 +18,7 @@ then
 	mkdir -p ${GLOBAL_TOOLCHAIN_PATH}
 fi
 
-BINUTILS_VER=${BINUTILS_VER:-2.36.1}
+BINUTILS_VER=${BINUTILS_VER:-2.37}
 GCC_VER=${GCC_VER:-11.1.0}
 GMP_VER=${GMP_VER:-6.2.0}
 MPFR_VER=${MPFR_VER:-4.1.0}
@@ -460,11 +460,11 @@ function setup_gcc () {
 		set +x; \
 		echo "fail."; \
 		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log ];
+		if [ -f ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log ];
 		then \
-			echo "Log ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log:"; \
+			echo "Log ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log:"; \
 			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log; \
+			tail -n24 ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log; \
 		fi;
 		trap ERR; \
 		exit ${STATUS}' ERR
@@ -500,23 +500,23 @@ function setup_gcc () {
 		|| (( ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1 ) \
 		&& [ ${BUILD_GCCNATIVE:-0} -eq 1 ] )
 	then
-		> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log
+		> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log
 		if [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER} ] || [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
 		then
 			echo -n "downloading..."
-			download_gcc >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+			download_gcc >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		fi
 		echo -n "building "
 		if ( ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1 ) \
 			&& [ ${BUILD_GCCNATIVE:-0} -eq 1 ]
 		then
 			echo -n "native..."
-			build_gcc ${BARCH}>> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+			build_gcc ${BARCH}>> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		fi
 		if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1
 		then
 			echo -n "${GCC_STAGE:-cross}..."
-			build_gcc ${HARCH} >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+			build_gcc ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		fi
 		echo "done."
 		if [[ ! "${GCC_STAGE}" =~ ^stage[123] ]]
@@ -533,7 +533,7 @@ function setup_gcc () {
 	then
 		echo -n "   Removing .la libraries..."
 		local LA_LIBS="$(find ${TOOLCHAIN_PATH} -name "*.la" -printf "%P\n")"
-		tar cvJf ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz -C ${TOOLCHAIN_PATH} ${LA_LIBS} >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+		tar cvJf ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz -C ${TOOLCHAIN_PATH} ${LA_LIBS} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		(cd ${TOOLCHAIN_PATH}; rm -f ${LA_LIBS})
 		echo "Done."
 	fi

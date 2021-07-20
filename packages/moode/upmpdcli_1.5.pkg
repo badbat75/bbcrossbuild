@@ -1,5 +1,6 @@
 # upmpdcli_1.5
-PKG_URL="https://www.lesbonscomptes.com/upmpdcli/downloads/upmpdcli-1.5.12.tar.gz"
+PKG_SUFFIX=.12
+PKG_URL="https://www.lesbonscomptes.com/upmpdcli/downloads/upmpdcli-1.5${PKG_SUFFIX}.tar.gz"
 PKG_PREBUILD="sed -i 's|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < web.tar.gz|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < \$(srcdir)/web.tar.gz|g' Makefile.am
 sed -i 's|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < rdpl2stream.tar.gz|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < \$(srcdir)/rdpl2stream.tar.gz|g' Makefile.am
 sed -i 's|cd \$(DESTDIR)\$(pkgdatadir); tar xzf -) < uprclbottle.tar.gz|cd\ \$(DESTDIR)\$(pkgdatadir); tar xzf -) < \$(srcdir)/uprclbottle.tar.gz|g' Makefile.am"
