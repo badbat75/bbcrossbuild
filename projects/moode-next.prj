@@ -51,7 +51,7 @@ setup_python 3.7.9
 
 #clean_project
 
-KEEP_BUILDDIR=1 build raspberrypi/rpi-kernel_5.12
+KEEP_BUILDDIR=1 build raspberrypi/rpi-kernel_5.14
 
 # Download and install moode-sources and pre-build environment
 build moode/moode-dynamic-ver_1.2
