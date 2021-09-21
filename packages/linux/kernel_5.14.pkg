@@ -1,0 +1,4 @@
+# kernel_5.14
+PKG_URL="https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.14.4.tar.xz"
+BUILD_PROCESS=kernelbuild
+INST_CMD="INSTALL_MOD_STRIP=1"

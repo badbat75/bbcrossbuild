@@ -60,7 +60,7 @@ build raspbian/iw_5.9-3
 build firmwares/wireless-regdb_2021.04.21
 build raspbian/hostapd_2.9.0
 build raspbian/wpa_supplicant_2.9.0
-build moode/mediainfo_21.03
+build moode/mediainfo_21.09
 build moode/alsacap
 
 # USB mounter
@@ -81,9 +81,9 @@ build raspbian/alsaequal_0.6-8
 build moode/caps_0.9.26-eqfa12p+22ef349
 
 # STEP 9b - CamillaDSP and alsa_cdsp
-build moode/camilladsp_0.5.2
+build moode/camilladsp_0.6.3
 build moode/alsa-cdsp+bbf06dd
-build moode/camillagui-backend_0.7.1
+build moode/camillagui-backend_0.8.0
 
 # COMPONENT 1 - MiniDLNA
 build moode/minidlna_1.3.0

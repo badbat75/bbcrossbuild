@@ -1,5 +1,5 @@
-# mediainfo_21.03
-PKG_URL="https://mediaarea.net/download/source/mediainfo/21.03/mediainfo_21.03.tar.xz"
+# mediainfo_21.09
+PKG_URL="https://mediaarea.net/download/source/mediainfo/21.09/mediainfo_21.09.tar.xz"
 PKG_PREBUILD="sed -i 's/ -O2//g' Project/GNU/CLI/configure.ac"
 BUILD_PROCESS=configmake
 AUTOCONF=0
@@ -8,7 +8,7 @@ PKG_COPYSRC=1
 CONF_PATH=Project/GNU/CLI
 CONF_FLAGS="LT_SYS_LIBRARY_PATH=${BIN_PATH}/usr/lib/arm-linux-gnueabihf"
 INST_CMD=install-strip
-PKG_DEPS="moode/libmediainfo_21.03"
+PKG_DEPS="moode/libmediainfo_21.09"
 PKG_PREBUILD="cd Project/GNU/CLI
     sed -i -e '/CXXFLAGS -O0/{n;N;N;d;}' configure.ac
     ./autogen.sh

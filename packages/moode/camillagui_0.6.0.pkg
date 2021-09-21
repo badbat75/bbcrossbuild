@@ -1,5 +1,5 @@
-# camillagui_0.4.1
-PKG_URL="https://github.com/HEnquist/camillagui/archive/refs/tags/v0.4.1.tar.gz"
+# camillagui_0.6.0
+PKG_URL="https://github.com/HEnquist/camillagui/archive/refs/tags/v0.6.0.tar.gz"
 BUILD_PROCESS=downloadonly
 PKG_COPYSRC=1
 PKG_POSTBUILD="npm install
