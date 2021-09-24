@@ -1,11 +1,9 @@
 # tfsxml-libmediainfo_21.09
 PKG_URL="https://mediaarea.net/download/source/libmediainfo/21.09/libmediainfo_21.09.tar.xz"
 BUILD_PROCESS=simplemake
-AUTOCONF=0
-PKG_COPYSRC=1
 CONF_PATH=Source/ThirdParty/tfsxml
 INST_CMD=install-strip
-PKG_DEPS="raspbian/libmms_0.6.4-3 raspbian/libzen_0.4.39-1 raspbian/tinyxml2_9.0.0+dfsg-3"
+#PKG_DEPS=
 PKG_PREBUILD="cat > Source/ThirdParty/tfsxml/Makefile <<EOF
 # For GNU conventions and targets see https://www.gnu.org/prep/standards/standards.html
 # Using GNU standards makes it easier for some users to keep doing what they are used to.
