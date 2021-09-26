@@ -1,0 +1,6 @@
+# trx_0.5
+PKG_URL="http://www.pogo.org.uk/~mark/trx/releases/trx-0.5.tar.gz"
+BUILD_PROCESS=simplemake
+# CONF_FLAGS=""
+#PKG_LDFLAGS=
+PKG_PREBUILD="sed -i 's/(INSTALL) rx tx/(INSTALL) -s --strip-program=\\\$(STRIP) rx tx/g' Makefile"

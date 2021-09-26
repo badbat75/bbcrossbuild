@@ -1,7 +1,7 @@
 # Build recipe for moode mediacenter
 
-MOODEREL=r730
-#MOODEDEVCOMMIT=16f9312ec6d5900bcc373a4752fd7fdb98597fb5
+MOODEREL=r740
+#MOODEDEVCOMMIT=00bb3569ca0f2f1d6d3bdaac11b59c304dbc3cc8
 RASPBIAN_IMAGE=2021-05-07-raspios-buster-armhf-lite
 RASPBIAN_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-05-28/
 
@@ -117,6 +117,7 @@ build firmwares/broadcom-bt-firmware-master
 build raspbian/bs2b-ladspa_0.9.1-3
 build raspbian/sox_14.4.2+git20190427-2
 build raspbian/flac_1.3.3-2
+build moode/trx_0.5
 
 install_gcclibs
 
