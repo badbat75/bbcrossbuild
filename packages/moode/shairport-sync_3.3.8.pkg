@@ -22,13 +22,13 @@ case x${WITH_ALAC} in
 esac
 
 case x${WITH_SSL} in
-	xmbedtls) ### Build with MBEDTLS
-		CONF_FLAGS+=" --with-ssl=mbedtls"
-		PKG_DEPS+=" raspbian/mbedtls_2.16.5-1"
-		PKG_LDFLAGS="-lssl -lcrypto"
-	;;
-	*) ### Build with OpenSSL
+	xopenssl) ### Build with OpenSSL
 		CONF_FLAGS+=" --with-ssl=openssl"
+	;;
+	*) ### Build with MBEDTLS
+		CONF_FLAGS+=" --with-ssl=mbedtls"
+		PKG_DEPS+=" raspbian/mbedtls_2.16.9-0.1"
+		PKG_LDFLAGS="-lssl -lcrypto"
 	;;
 esac
 

@@ -1,0 +1,7 @@
+# ortp_1.0.2-1
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/o/ortp/ortp_1.0.2.orig.tar.gz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/o/ortp/ortp_1.0.2-1.debian.tar.xz"
+PKG_DEPS="raspbian/bctoolbox_4.4.13-2"
+BUILD_PROCESS=configmake
+PKG_LDFLAGS="-Wl,--no-undefined"
+INST_CMD=install-strip
