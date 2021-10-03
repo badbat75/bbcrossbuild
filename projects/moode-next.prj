@@ -1,7 +1,7 @@
 # Build recipe for moode mediacenter
 
-MOODEREL=r740
-#MOODEDEVCOMMIT=00bb3569ca0f2f1d6d3bdaac11b59c304dbc3cc8
+MOODEREL=r741
+#MOODEDEVCOMMIT=d78c11d31d5e475920f2d432b7a017f05c35d19b
 RASPBIAN_IMAGE=2021-05-07-raspios-buster-armhf-lite
 RASPBIAN_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-05-28/
 
