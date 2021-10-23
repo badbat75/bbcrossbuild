@@ -15,7 +15,7 @@ bootstrap_sysroot raspberrypi/rpi-kernel_5.14 lfs/glibc_2.34 lfs/libxcrypt_4.4.2
 
 install_gcclibs
 
-build raspberrypi/rpi-firmware_1.20210831
+build raspberrypi/rpi-firmware_1.20211007
 build firmwares/linux-firmware_20210511
 build raspberrypi/rpi-kernel_5.14
 build lfs/glibc_2.34
