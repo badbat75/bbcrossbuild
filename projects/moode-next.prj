@@ -1,7 +1,7 @@
 # Build recipe for moode mediacenter
 
-MOODEREL=r741
-#MOODEDEVCOMMIT=d78c11d31d5e475920f2d432b7a017f05c35d19b
+MOODEREL=r750
+MOODEDEVCOMMIT=7792a3cfb99c0330d48644f680dfd25637769ee5
 RASPBIAN_IMAGE=2021-05-07-raspios-buster-armhf-lite
 RASPBIAN_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-05-28/
 
@@ -51,7 +51,7 @@ setup_python 3.7.9
 
 #clean_project
 
-KEEP_BUILDDIR=1 build raspberrypi/rpi-kernel_5.14
+KEEP_BUILDDIR=1 build raspberrypi/rpi-kernel_5.15
 
 # Download and install moode-sources and pre-build environment
 build moode/moode-dynamic-ver_1.2
@@ -73,7 +73,7 @@ build raspberrypi/pi-bluetooth_0.1.17
 WITH_APTX=libopenaptx build moode/bluez-alsa_3.1.0
 
 # STEP 6 - Compile and install MPD
-build moode/mpd_0.22
+build moode/mpd_0.23
 build moode/mpc_0.33
 
 # STEP 9a - Eq2Fa12p

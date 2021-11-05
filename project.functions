@@ -56,6 +56,14 @@ function remove_devfiles () {
 		fi
 		mv .${BUILD_INCLUDEDIR} ${TMP_PATH}/$(dirname .${BUILD_INCLUDEDIR})
 	fi
+	if [ -d .${BUILD_PREFIX}/src ]
+	then
+		if [ ! -d ${TMP_PATH}/$(dirname .${BUILD_PREFIX}/src ]
+		then
+			mkdir -p ${TMP_PATH}/$(dirname .${BUILD_PREFIX}/src)
+		fi
+		mv .${BUILD_PREFIX}/src ${TMP_PATH}/$(dirname .${BUILD_PREFIX}/src)
+	fi
 	cd ${TMP_PATH}
 	tar -cf - . | xz -T0 > ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/devfiles.tar.xz
 	cd ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}
