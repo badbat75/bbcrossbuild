@@ -95,7 +95,7 @@ build moode/ashuffle_3.11
 WITH_ALAC=1 build moode/shairport-sync_3.3.8
 
 # COMPONENT 4B - Librespot
-build moode/librespot_0.2.0
+build moode/librespot_0.3.1
 
 # COMPONENT 5 - Squeezelite
 build moode/squeezelite_master+cfab656
@@ -157,7 +157,7 @@ then
 	inject_into_mount_tag --remove_devfiles temp binaries
 
 	# Run /root/firstboot at first boot, enable verbose boot and set physical boot device
-	run_on_root_dir temp root "sed -i \"s|root=[^ ]*|root=/dev/mmcblk0p2|;s|init=/usr/lib/raspi-config/init_resize.sh|init=/root/firstboot|;s| quiet||\" /boot/cmdline.txt"
+	run_on_root_dir temp root "sed -i \"s|elevator=[^ ]*||;s|root=[^ ]*|root=/dev/mmcblk0p2|;s|init=/usr/lib/raspi-config/init_resize.sh|init=/root/firstboot|;s| quiet||\" /boot/cmdline.txt"
 	# Users and groups
 	run_on_root_dir temp root "useradd -r -M -s /usr/bin/nologin -G audio -c \"MediaPlayer Daemon\" -d /var/lib/mpd mpd || true"
 	run_on_root_dir temp root "useradd -r -M -s /usr/bin/nologin -G audio -c \"AirPlay Daemon\" -d /var/lib/shairport-sync shairport-sync || true"
