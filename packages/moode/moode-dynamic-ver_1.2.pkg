@@ -177,6 +177,9 @@ then
 		# Changes until moode support bullseye OS  #
 		sed -i 's/php7.3/php7.4/g' ${PKG_PKGPATH}/etc/nginx/nginx.conf
 		cp -frpv ${PKG_PKGPATH}/etc/php/7.3 ${PKG_PKGPATH}/etc/php/7.4
+		sed -i 's/php7.3/php7.4/g' ${PKG_PKGPATH}/etc/php/7.4/fpm/php-fpm.conf
+		sed -i 's|include=/etc/php/7.3|include=/etc/php/7.4|' ${PKG_PKGPATH}/etc/php/7.4/fpm/php-fpm.conf
+		sed -i 's/php7.3/php7.4/g' ${PKG_PKGPATH}/etc/php/7.4/fpm/pool.d/www.conf
 		############################################
 		sqlite3 ${PKG_PKGPATH}/var/local/www/db/moode-sqlite3.db \"
 			UPDATE cfg_hash SET value='\$(md5sum -z ${PKG_PKGPATH}/etc/nginx/nginx.conf | awk '{print \$1}')' WHERE param='/etc/nginx/nginx.conf';
