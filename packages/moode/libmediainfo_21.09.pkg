@@ -1,6 +1,5 @@
 # libmediainfo_21.09
 PKG_URL="https://mediaarea.net/download/source/libmediainfo/21.09/libmediainfo_21.09.tar.xz"
-PKG_PREBUILD="sed -i 's/ -O2//g' Project/GNU/Library/configure.ac"
 BUILD_PROCESS=configmake
 AUTOCONF=0
 #AUTOCONF_PATH=Project/GNU/Library
@@ -13,3 +12,4 @@ PKG_PREBUILD="cd Project/GNU/Library
 	sed -i -e '/CXXFLAGS -O0/{n;N;N;d;}' configure.ac
 	./autogen.sh"
 PKG_LDFLAGS="-ltfsxml"
+PKG_CONFIG_SYSROOT_DIR=${BIN_PATH}

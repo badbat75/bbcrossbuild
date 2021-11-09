@@ -1,5 +1,0 @@
-# pycamilladsp-plot_0.6.1
-PKG_URL="https://github.com/HEnquist/pycamilladsp-plot/archive/refs/tags/v0.6.1.tar.gz"
-BUILD_PROCESS=pythonbuild
-# CONF_FLAGS=""
-PKG_DEPS=python/jsonschema

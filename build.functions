@@ -653,7 +653,19 @@ function build () (
 			COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
 			COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
 		fi
-		COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
+		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER} ]
+		then
+			COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
+			COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
+		fi
+		if [ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libpython${PYTHONBIN_VER}m ]
+		then
+			COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
+		fi
+		if [ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libpython${PYTHONBIN_VER} ]
+		then
+			COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}"
+		fi
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ ${MAKEVERBOSE:-0} -eq 1 ]
 		then
@@ -717,7 +729,19 @@ function build () (
 			COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
 			COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
 		fi
-		COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
+		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER} ]
+		then
+			COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
+			COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
+		fi
+		if [ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libpython${PYTHONBIN_VER}m ]
+		then
+			COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
+		fi
+		if [ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libpython${PYTHONBIN_VER} ]
+		then
+			COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}"
+		fi
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ ${MAKEVERBOSE:-0} -eq 1 ]
 		then
@@ -787,6 +811,10 @@ function build () (
 		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
 		then
 			COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
+		fi
+		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER} ]
+		then
+			COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
 		fi
 		if [ ${MAKEVERBOSE} -eq 1 ]
 		then

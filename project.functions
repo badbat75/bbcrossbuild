@@ -58,7 +58,7 @@ function remove_devfiles () {
 	fi
 	if [ -d .${BUILD_PREFIX}/src ]
 	then
-		if [ ! -d ${TMP_PATH}/$(dirname .${BUILD_PREFIX}/src ]
+		if [ ! -d ${TMP_PATH}/$(dirname .${BUILD_PREFIX}/src) ]
 		then
 			mkdir -p ${TMP_PATH}/$(dirname .${BUILD_PREFIX}/src)
 		fi

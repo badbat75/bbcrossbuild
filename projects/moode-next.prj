@@ -1,9 +1,9 @@
 # Build recipe for moode mediacenter
 
 MOODEREL=r750
-MOODEDEVCOMMIT=7792a3cfb99c0330d48644f680dfd25637769ee5
-RASPBIAN_IMAGE=2021-05-07-raspios-buster-armhf-lite
-RASPBIAN_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-05-28/
+MOODEDEVCOMMIT=09cc2990c585816d81aa16967077b086a9abeca3
+RASPBIAN_IMAGE=2021-10-30-raspios-bullseye-armhf-lite
+RASPBIAN_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-11-08/
 
 ## Enable shared libraries (default) but disable static ones
 BUILD_LIBSHARED=1
@@ -14,38 +14,41 @@ LTOENABLE=1
 KERN_LTOENABLE=0
 
 mount_tag distos --url "${RASPBIAN_URL}${RASPBIAN_IMAGE}.zip" --imgfile "${RASPBIAN_IMAGE}.img" --mountlist "2:/ 1:/boot" --resize 2:3G
-run_on_root_dir distos root "apt-get -y purge --autoremove RPi.GPIO bluez wpasupplicant iw libnl-3-200 libnl-route-3-200"
-run_on_root_dir distos root "apt-get update --allow-releaseinfo-change"
-run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
-run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
-	libc6-dev libpython3-dev libsqlite3-dev \
-	libasound2-dev \
-	libusb-dev libglib2.0-dev libudev-dev libical-dev libreadline-dev libdbus-1-dev \
-	libbsd-dev libncurses5-dev libsndfile1-dev \
-	\
-	libcdio-paranoia-dev libmad0-dev libmpg123-dev libflac-dev libvorbis-dev libopus-dev libopusfile-dev libaudiofile-dev libfaad-dev \
-	libwavpack-dev libavcodec-dev libavformat-dev libmp3lame-dev libcurl4-gnutls-dev libshout3-dev libyajl-dev \
-	libavahi-client-dev libsystemd-dev libwrap0-dev libicu-dev libglib2.0-dev \
-	\
-	libao-dev libgsm1-dev libltdl3-dev libmagic-dev libopencore-amrnb-dev libopencore-amrwb-dev libpng-dev libpulse-dev \
-	libsamplerate0-dev libtwolame-dev libogg-dev \
-	\
-	libpopt-dev libavahi-client-dev libssl-dev \
-	libexpat1-dev libxml2-dev libxslt1-dev \
-	libjpeg62-turbo-dev \
-	\
-	libpython3-dev swig \
-	\
-	zlib1g-dev libbz2-dev liblzma-dev \
-	\
-	python3-dbus python3-matplotlib python3-aiohttp python3-yaml"
-run_on_root_dir distos root "apt-get clean"
+if [ -z ${SKIP_DISTOS_APTS} ]
+then
+	run_on_root_dir distos root "apt-get -y purge --autoremove raspberrypi-kernel RPi.GPIO bluez wpasupplicant iw htop libnl-3-200"
+	run_on_root_dir distos root "apt-get update --allow-releaseinfo-change"
+	run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
+	run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
+		libc6-dev libpython3-dev libsqlite3-dev \
+		libasound2-dev \
+		libusb-dev libglib2.0-dev libudev-dev libical-dev libreadline-dev libdbus-1-dev \
+		libbsd-dev libncurses5-dev libsndfile1-dev \
+		\
+		libcdio-paranoia-dev libmad0-dev libmpg123-dev libflac-dev libvorbis-dev libopus-dev libopusfile-dev libaudiofile-dev libfaad-dev \
+		libwavpack-dev libavcodec-dev libavformat-dev libmp3lame-dev libcurl4-gnutls-dev libshout3-dev libyajl-dev \
+		libavahi-client-dev libsystemd-dev libwrap0-dev libicu-dev libglib2.0-dev \
+		\
+		libao-dev libgsm1-dev libltdl3-dev libmagic-dev libopencore-amrnb-dev libopencore-amrwb-dev libpng-dev libpulse-dev \
+		libsamplerate0-dev libtwolame-dev libogg-dev \
+		\
+		libpopt-dev libavahi-client-dev libssl-dev \
+		libexpat1-dev libxml2-dev libxslt1-dev \
+		libjpeg62-turbo-dev \
+		\
+		libpython3-dev swig \
+		\
+		zlib1g-dev libbz2-dev liblzma-dev \
+		\
+		python3-dbus python3-matplotlib python3-aiohttp python3-yaml"
+	run_on_root_dir distos root "apt-get clean"
+fi
 prepare_sysroot
 
 #create_sysroot http://<url>/<rootfs.tar.gz>
 setup_gcc
 setup_rust
-setup_python 3.7.9
+setup_python 3.9.8
 
 #create_key_sscertificate
 
@@ -57,7 +60,7 @@ KEEP_BUILDDIR=1 build raspberrypi/rpi-kernel_5.15
 build moode/moode-dynamic-ver_1.2
 
 build raspbian/iw_5.9-3
-build firmwares/wireless-regdb_2021.04.21
+build firmwares/wireless-regdb_2021.08.28
 build raspbian/hostapd_2.9.0
 build raspbian/wpa_supplicant_2.9.0
 build moode/mediainfo_21.09
@@ -70,7 +73,7 @@ build raspbian/udevil_0.4.4-2
 # STEP 4 - Install enhanced networking and bluetooth stack
 build moode/bluez_5
 build raspberrypi/pi-bluetooth_0.1.17
-WITH_APTX=libopenaptx build moode/bluez-alsa_3.1.0
+WITH_APTX=libopenaptx build moode/bluez-alsa_3.1.0+e5282124
 
 # STEP 6 - Compile and install MPD
 build moode/mpd_0.23
@@ -127,12 +130,12 @@ if [ -z ${DISABLE_FINAL_IMG} ]
 then
 	mount_tag temp --url ${RASPBIAN_URL}${RASPBIAN_IMAGE}.zip --imgfile ${RASPBIAN_IMAGE}.img --mountlist "2:/ 1:/boot" --resize 2:3G
 
-	run_on_root_dir temp root "apt-get -y purge --autoremove gcc-8 build-essential libc6-dev raspberrypi-kernel RPi.GPIO bluez \
-		wpasupplicant iw"
+	run_on_root_dir temp root "apt-get -y purge --autoremove gcc-10 build-essential libc6-dev raspberrypi-kernel RPi.GPIO bluez \
+		wpasupplicant iw htop libnl-3-200"
 	run_on_root_dir temp root "apt-get update --allow-releaseinfo-change"
 	run_on_root_dir temp root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
 	run_on_root_dir temp root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
-		php-fpm nginx sqlite3 php-sqlite3 php7.3-gd php-yaml \
+		php-fpm nginx sqlite3 php-sqlite3 php7.4-gd php-yaml \
 		\
 		telnet sysstat squashfs-tools shellinabox \
 		samba smbclient exfat-fuse inotify-tools ffmpeg \

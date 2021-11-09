@@ -1,0 +1,20 @@
+# bluez-alsa_3.1.0+e5282124
+PKG_URL="https://github.com/Arkq/bluez-alsa/archive/e52821248cde041b3196cc1285edadebbd532ad4.tar.gz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--with-alsaplugindir=\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX}/alsa-lib --enable-hcitop --enable-aac --enable-ldac --enable-mpg123 --enable-manpages"
+CONF_FLAGS+=" --disable-payloadcheck"
+PKG_CFLAGS="-I${BIN_PATH}\${BUILD_INCLUDEDIR}/ldac"
+INST_CMD=install-strip
+PKG_DEPS="moode/bluez_5 raspbian/sbc-1.4 moode/libldac_2.0.2.3 moode/fdk-aac-2.0.1"
+PATCHES=
+PKG_POSTBUILD="install -d ${PKG_PKGPATH}/run/bluealsa"
+case ${WITH_APTX} in
+	openaptx)
+		PKG_DEPS+=" moode/openaptx_1.3.1+4f5b8fd"
+		CONF_FLAGS+=" --enable-aptx --enable-aptx-hd"
+		;;
+	libopenaptx)
+		PKG_DEPS+=" moode/libopenaptx_0.2.1"
+		CONF_FLAGS+=" --enable-aptx --enable-aptx-hd --with-libopenaptx"
+		;;
+esac

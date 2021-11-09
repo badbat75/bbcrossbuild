@@ -1,5 +1,5 @@
 # bluez_5
-PKG_SUFFIX=.61
+PKG_SUFFIX=.62
 PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-5${PKG_SUFFIX}.tar.xz"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-library --enable-deprecated"

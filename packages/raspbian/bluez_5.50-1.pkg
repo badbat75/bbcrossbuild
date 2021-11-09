@@ -1,8 +1,0 @@
-# bluez_5.50-1
-PKG_URL="http://archive.raspbian.org/raspbian/pool/main/b/bluez/bluez_5.50.orig.tar.xz"
-BUILD_PROCESS=configmake
-CONF_FLAGS="--enable-library --enable-deprecated"
-INST_CMD="libexecdir=\$(sbindir) install-strip"
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/b/bluez/bluez_5.50-1.debian.tar.xz"
-#PKG_POSTBUILD="ln -fs /usr/libexec/bluetooth/bluetoothd ${PKG_PKGPATH}/usr/sbin/bluetoothd
-#ln -fs /usr/libexec/bluetooth/obexd ${PKG_PKGPATH}/usr/sbin/obexd"
