@@ -1,0 +1,127 @@
+#!/bin/bash
+function param2value () {
+	# Requires at least one OPTS or OPTS_WITH_VALUE to run
+
+	local OPTS+=" -v"
+	local NUM=0
+
+	for p in $(( set -o posix ; set ) | grep ^_param_)
+	do
+		unset $(echo $p | awk 'BEGIN {FS="="} ; {print $1}')
+	done
+
+	#echo "${0} ${@}"
+
+	while(($#)) ; do
+		if [ "${1}" == "$(echo ${OPTS} ${OPTS_WITH_VALUE} | grep -o -- "${1}\b")" ]
+			then
+				local OPTION=${1}
+				local PARAMETER=$(echo ${1} | sed -e 's/^--\?//')
+				if [ "${1}" == "$(echo ${OPTS_WITH_VALUE} | grep -o -- "${1}\b")" ]
+				then
+					shift
+					if [ ! "x${1}" == "x" ]
+					then 
+						eval "_param_${PARAMETER}='${1}'"
+					else
+						echo "${OPTION} unset, no assigned value."
+						exit 1
+					fi
+				else
+					eval "_param_${PARAMETER}=1"
+				fi
+		else
+			if [[ ${1} == -* ]]
+			then
+				echo "Unrecognized option: ${1}"
+				exit 1
+			else
+				local NUM=$((NUM+1))
+				eval "_param_${NUM}=${1}"
+				local PARAMETER=${NUM}
+			fi
+		fi
+		[ ${_param_v:-0} -eq 1 ] && eval echo "_param_${PARAMETER}=\$_param_${PARAMETER}" || true
+		shift
+	done
+}
+
+function printlibs () {
+	readelf -d ${1} 2>/dev/null | grep 'NEEDED' | awk '{print $5}' | cut -d "[" -f2 | cut -d "]" -f1 2>/dev/null
+}
+
+set -e
+MYPATH=$(dirname $(realpath ${0}))
+
+OPTS="-h" OPTS_WITH_VALUE="" param2value "${@}"
+
+echo
+if [ ${_param_h:-0} -eq 1 ]
+then
+	echo "$(basename ${0}) <command> [options]"
+	echo
+	echo "Commands:"
+	echo "	search <directory> <library>"
+	echo "		search library dependency in the directory specified"
+	echo
+	echo "	show <file>"
+	echo "		show dependencies in file"
+	echo
+	echo "	showall <directory>"
+	echo "		show all the dependencies in all files in the directory specified"
+	echo
+	echo "Options:"
+	echo "	-h : Print this help"
+    echo "	-name : library name (or part of it)"
+	echo
+	exit 0
+fi
+
+case x${_param_1} in
+	xsearch|xs)
+		SEARCH_PATH="$(realpath ${_param_2})"
+		LIB_NAME=${_param_3}
+		echo "Searching ${LIB_NAME} in ${SEARCH_PATH}..."
+		FOUND=0
+		while IFS= read -r -d '' file
+		do
+			LIBRARIES="$(printlibs ${file})"
+			if [ "$(echo ${LIBRARIES} | grep "${LIB_NAME}")" ]
+			then
+				if [ ${FOUND} -eq 0 ]
+				then
+					echo
+					echo "Found in: "
+					FOUND=1
+				fi
+				basename $(realpath ${file})
+			fi
+		done < <(find ${SEARCH_PATH} -type f -print0)
+		if [ ${FOUND} -eq 0 ]
+		then
+			echo
+			echo "Not found."
+		fi
+		;;
+	xshow)
+		FILE_NAME=$(realpath ${_param_2})
+		echo "Library dependencies in ${FILE_NAME}:"
+		echo
+		printlibs ${FILE_NAME} | sort
+		;;
+	xshowall)
+		DIR_NAME=$(realpath ${_param_2})
+		echo "Library dependencies found in ${DIR_NAME}:"
+		echo
+		while IFS= read -r -d '' file
+		do
+			printlibs ${file}
+		done < <(find ${SEARCH_PATH} -type f -print0) | sort | uniq
+		;;
+	x)
+		echo "Command not specified."
+		;;
+	*)	echo "Command ${_param_1} not recognized"
+		;;
+esac
+echo

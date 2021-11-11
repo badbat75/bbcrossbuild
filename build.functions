@@ -65,6 +65,10 @@ function settoolflags () {
 	# Build LDFLAGS search paths
 	if [ -d ${DISTOS_PATH}/etc/ld.so.conf.d ]
 	then
+		for entry in ${GCCSEARCHLIBS}
+		do
+			COMMON_LDFLAGS+=" -L$entry -Wl,-rpath-link,$entry"
+		done
 		for entry in $(cat ${DISTOS_PATH}/etc/ld.so.conf.d/* | grep -v '#' | sort)
 		do
 			COMMON_LDFLAGS+=" -L${DISTOS_PATH}$entry -Wl,-rpath-link,${DISTOS_PATH}$entry"

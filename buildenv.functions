@@ -533,7 +533,7 @@ function setup_gcc () {
 			rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
 		fi
 	else
-	echo "already there."
+		echo "already there."
 	fi
 
 	if [ ! -f ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz ]
@@ -554,19 +554,22 @@ function setup_gcc () {
 		export LD_LIBRARY_PATH=${TOOLCHAIN_PATH}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 	fi
 	#set +x
+	GCCSEARCHLIBS="$( ( for lib in $(${HARCH:+${HARCH}-}gcc -print-search-dirs | grep 'libraries:' | sed 's/^libraries: =//;s/\:/ /g' ); do realpath "${lib}" 2>/dev/null; done ) | grep -v "${BIN_PATH}" | grep -v "${DISTOS_PATH}" | sort | uniq | xargs )" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+	LD_GCCLIBS=$( echo ${GCCSEARCHLIBS} | sed 's/ /:/g' ) >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+	echo "GCCSEARCHLIBS: ${GCCSEARCHLIBS}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+	echo "LD_GCCLIBS: ${LD_GCCLIBS}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 	trap ERR
 }
 
 function install_gcclibs () {
 	settoolflags
 	set -e
-	local GCCSEARCHLIBS="$( ( for lib in $(${HARCH:+${HARCH}-}gcc -print-search-dirs | grep 'libraries:' | sed 's/^libraries: =//;s/\:/ /g' ); do realpath "${lib}" 2>/dev/null; done ) | grep -v "${BIN_PATH}" | grep -v "${DISTOS_PATH}" | sort | uniq | xargs )"
 	local GCCLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 \( -name 'libgcc_s.so*' -o -name 'libssp.so*' \) 2>/dev/null | xargs )
 	local GCCLIBNAME="$( ( for name in ${GCCLIB}; do echo $(basename ${name}); done ) | sort | uniq | xargs )"
 	local GCCCXXLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 \( -name 'libstdc++.so.*' ! -name 'libstdc++.so.*-*.py' \) 2>/dev/null | xargs )
 	local GCCCXXLIBNAME="$( ( for name in ${GCCCXXLIB}; do echo $(basename ${name}); done ) | sort | uniq | xargs )"
 	echo -n "Installing ${GCCLIBNAME}, ${BASEGCCCXXLIBNAME} library..."
-	echo "GCCSEARCHLIBS: ${GCCSEARCHLIBS}" > ${LOG_PATH}/gcclibs.log
+	echo "GCCSEARCHLIBS: ${GCCSEARCHLIBS}"
 	echo "GCCLIB: ${GCCLIB}" >> ${LOG_PATH}/gcclibs.log
 	echo "GCCLIBNAME: ${GCCLIBNAME}" >> ${LOG_PATH}/gcclibs.log
 	echo "GCCCXXLIB: ${GCCCXXLIB}" >> ${LOG_PATH}/gcclibs.log
