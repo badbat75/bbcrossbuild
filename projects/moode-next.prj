@@ -123,7 +123,6 @@ build raspbian/flac_1.3.3-2
 build moode/trx_0.6
 
 install_gcclibs
-inject_into_mount_tag --remove_devfiles temp binaries
 
 unmount_tag distos
 
