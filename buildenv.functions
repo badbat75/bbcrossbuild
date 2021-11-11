@@ -38,7 +38,7 @@ function prepare_sysroot () {
 		trap ERR; \
 		return ${STATUS}' ERR
 
-	echo -n "Preparing sysroot..."
+	echo -n "Preparing sysroot... "
 	if [ -d ${DISTOS_PATH} ]
 	then
 		if [ ! $(stat -c '%u' ${DISTOS_PATH}) -eq $(id -u) ]
@@ -82,7 +82,7 @@ function create_sysroot () {
 		trap ERR; \
 		return ${STATUS}' ERR
 
-	echo -n "Creating sysroot with $(basename ${1})..."
+	echo -n "Creating sysroot with $(basename ${1})... "
 	if [ ! -d ${DISTOS_PATH} ]
 	then
 		local ARCHIVE_DIRS="./boot ./bin ./lib ./usr/bin ./usr/include ./usr/lib ./usr/share ./usr/local/bin ./usr/local/include ./usr/local/lib ./etc ./opt"
@@ -147,7 +147,7 @@ function bootstrap_sysroot () {
 		local BUILD_LIBSUFFIX="/${HARCH}"
 	fi
 
-	echo "Bootstrapping sysroot in ${BIN_PATH}..."
+	echo "Bootstrapping sysroot in ${BIN_PATH}... "
 	local SPACES="   "
 
 	# Build Kernel Headers
@@ -215,7 +215,7 @@ function bootstrap_sysroot () {
 	echo -n "${SPACES}"
 	setup_gcc stage3
 
-	echo -n "   Copying libraries and headers..."
+	echo -n "   Copying libraries and headers... "
 	if [ ! -d ${TOOLCHAIN_PATH}/${HARCH}/include/c++ ]
 	then
 		if [ -d ${TOOLCHAIN_PATH}/${HARCH}/lib64 ]
@@ -229,9 +229,6 @@ function bootstrap_sysroot () {
 	else
 		echo "already installed."
 	fi
-
-	#echo -n "${SPACES}"
-	#install_gcclibs
 
 	echo "Done."
 	echo
@@ -278,24 +275,24 @@ function setup_gcc () {
 		find ../binutils-${BINUTILS_VER} -maxdepth 1 -type d -exec ln -fs {} . \;
 		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 9 && test_version ${BINUTILS_VER} -ge 2.33
 		then
-			echo "GCC version older than 10 and BINUTILS 2.33 or earlier..."
+			echo "GCC version older than 10 and BINUTILS 2.33 or earlier... "
 			cp -f ../binutils-${BINUTILS_VER}/configure.ac .
 			cp -f ../binutils-${BINUTILS_VER}/Makefile.* .
 		fi
 		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 9 && test_version ${BINUTILS_VER} -ge 2.34
 		then
-			echo "GCC version older than 10 and BINUTILS 2.34 or earlier..."
+			echo "GCC version older than 10 and BINUTILS 2.34 or earlier... "
 			ln -fs ../binutils-${BINUTILS_VER}/config/debuginfod.m4 config/debuginfod.m4
 		fi
 		if test_version ${GCC_VER} -eq 11.2.0 && test_version ${BINUTILS_VER} -ge 2.37
 		then
-			echo "GCC version is 11.2.0 and BINUTILS 2.37 or earlier..."
+			echo "GCC version is 11.2.0 and BINUTILS 2.37 or earlier... "
 			mv libiberty libiberty.gcc
 			ln -fs ../binutils-${BINUTILS_VER}/libiberty .
 		fi
 		if [ ../binutils-${BINUTILS_VER}/libiberty/cp-demangle.c -nt libiberty/cp-demangle.c ]
 		then
-			echo "binutils-${BINUTILS_VER}/libiberty newer than gcc-${GCC_VER}/libiberty..."
+			echo "binutils-${BINUTILS_VER}/libiberty newer than gcc-${GCC_VER}/libiberty... "
 			mv libiberty libiberty.gcc
 			ln -fs ../binutils-${BINUTILS_VER}/libiberty .
 		fi
@@ -500,7 +497,7 @@ function setup_gcc () {
 	fi
 	#set +x
 
-	echo -n "-${GCC_VER}..."
+	echo -n "-${GCC_VER}... "
 	
 	#set -x
 	if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1 \
@@ -510,19 +507,19 @@ function setup_gcc () {
 		> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log
 		if [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER} ] || [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
 		then
-			echo -n "downloading..."
+			echo -n "downloading... "
 			download_gcc >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		fi
 		echo -n "building "
 		if ( ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1 ) \
 			&& [ ${BUILD_GCCNATIVE:-0} -eq 1 ]
 		then
-			echo -n "native..."
+			echo -n "native... "
 			build_gcc ${BARCH}>> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		fi
 		if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1
 		then
-			echo -n "${GCC_STAGE:-cross}..."
+			echo -n "${GCC_STAGE:-cross}... "
 			build_gcc ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		fi
 		echo "done."
@@ -538,7 +535,7 @@ function setup_gcc () {
 
 	if [ ! -f ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz ]
 	then
-		echo -n "   Removing .la libraries..."
+		echo -n "   Removing .la libraries... "
 		local LA_LIBS="$(find ${TOOLCHAIN_PATH} -name "*.la" -printf "%P\n")"
 		tar cvJf ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz -C ${TOOLCHAIN_PATH} ${LA_LIBS} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		(cd ${TOOLCHAIN_PATH}; rm -f ${LA_LIBS})
@@ -599,14 +596,14 @@ function setup_rust () {
 		trap ERR; \
 		exit ${STATUS}' ERR
 
-	echo -n "Setting up RUST..."
+	echo -n "Setting up RUST... "
 	export CARGO_HOME=${GLOBAL_TOOLCHAIN_PATH}
 	export RUSTUP_HOME=${GLOBAL_TOOLCHAIN_PATH}/var/rustup
 	if [ ! -x ${GLOBAL_TOOLCHAIN_PATH}/bin/cargo ] || [ ! -x ${GLOBAL_TOOLCHAIN_PATH}/bin/rustc ]
 	then
-		echo -n "downloading..."
+		echo -n "downloading... "
 		curl -sSf https://sh.rustup.rs -o /tmp/rustup-init
-		echo -n "installing..."
+		echo -n "installing... "
 		chmod +x /tmp/rustup-init &&
 		/tmp/rustup-init -v -y --no-modify-path >> ${GLOBAL_LOG_PATH}/rust.log 2>&1
 		rm -f /tmp/rustup-init
@@ -615,7 +612,7 @@ function setup_rust () {
 		echo "already there."
 	fi
 	CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
-	echo -n "Adding ${CARGO_TARGET} libraries..."
+	echo -n "Adding ${CARGO_TARGET} libraries... "
 	rustup -v target add ${CARGO_TARGET} >> ${GLOBAL_LOG_PATH}/rust.log 2>&1
 	echo "done."
 	echo
@@ -750,15 +747,15 @@ function setup_python () {
 		local PYTHON_VER=$(find ${PYTHON_SEARCHPATH}/usr/include -maxdepth 1 -name 'python*' -exec grep '#define PY_VERSION ' {}/patchlevel.h \; | awk '{print $3}' | sed 's/\"//g' | sort -u | tail -n1)
 		if [ "x${PYTHON_VER}" == "x" ]
 		then
-			echo "...no way to guess its version and not specified. Exiting..."
+			echo "...no way to guess its version and not specified. Exiting... "
 			echo
 			return 1
 		else
-			echo -n "-${PYTHON_VER} (guessed)..."
+			echo -n "-${PYTHON_VER} (guessed)... "
 		fi
 	else
 		local PYTHON_VER=${1}
-		echo -n "-${PYTHON_VER}..."
+		echo -n "-${PYTHON_VER}... "
 	fi
 	PYTHONBIN_VER=$( echo ${PYTHON_VER} | cut -d'.' -f1,2)
 	BUILD_PYTHON=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/python${PYTHONBIN_VER}
@@ -769,9 +766,9 @@ function setup_python () {
 	export LD_LIBRARY_PATH=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 	if [ ! -x ${BUILD_PYTHON} ] || [ ! -x ${BUILD_PYTHONPIP} ]
 	then
-		echo -n "downloading..."
+		echo -n "downloading... "
 		download_pyton > ${GLOBAL_LOG_PATH}/python-${PYTHONBIN_VER}.log 2>&1
-		echo -n "building..."
+		echo -n "building... "
 		build_python >> ${GLOBAL_LOG_PATH}/python-${PYTHONBIN_VER}.log 2>&1
 		echo "done."
 		rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}
@@ -808,7 +805,7 @@ function setup_python () {
 
 	if [ ${SKIP_PYTHONVENV:-0} -eq 0 ]
 	then
-		echo -n "Creating virtual cross environment..."
+		echo -n "Creating virtual cross environment... "
 		if [ ! -d ${TOOLCHAIN_PATH}/venv-${HARCH} ]
 		then
 			build_python_crossenv >> ${LOG_PATH}/toolchain_python-crossenv.log 2>&1
