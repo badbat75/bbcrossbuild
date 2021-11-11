@@ -180,6 +180,7 @@ then
 		sed -i 's/php7.3/php7.4/g' ${PKG_PKGPATH}/etc/php/7.4/fpm/php-fpm.conf
 		sed -i 's|include=/etc/php/7.3|include=/etc/php/7.4|' ${PKG_PKGPATH}/etc/php/7.4/fpm/php-fpm.conf
 		sed -i 's/php7.3/php7.4/g' ${PKG_PKGPATH}/etc/php/7.4/fpm/pool.d/www.conf
+		sed -i 's|/usr/local/lib/python3.7|/usr/lib/python3.9|g' ${PKG_PKGPATH}/var/www/command/sysinfo.sh
 		############################################
 		sqlite3 ${PKG_PKGPATH}/var/local/www/db/moode-sqlite3.db \"
 			UPDATE cfg_hash SET value='\$(md5sum -z ${PKG_PKGPATH}/etc/nginx/nginx.conf | awk '{print \$1}')' WHERE param='/etc/nginx/nginx.conf';
