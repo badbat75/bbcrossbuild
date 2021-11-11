@@ -49,12 +49,12 @@ function prepare_sysroot () {
 		echo "DISTOS_PATH: ${DISTOS_PATH}" >> ${LOG_PATH}/sysroot.log 2>&1
 		echo >> ${LOG_PATH}/sysroot.log 2>&1
 
-		for i in $(find -L ${DISTOS_PATH}/usr/lib/${HARCH} -lname "/lib/${HARCH}*");
+		while read -r link
 		do
-			echo -n "Relinking $i... " >> ${LOG_PATH}/sysroot.log 2>&1
-			eval ${SUDO_CMD} ln -f -s ../../..$(readlink $i) $i >> ${LOG_PATH}/sysroot.log 2>&1
+			echo -n "Relinking $link... " >> ${LOG_PATH}/sysroot.log 2>&1
+			eval ${SUDO_CMD} ln -f -s ../../..$(readlink $link) $link >> ${LOG_PATH}/sysroot.log 2>&1
 			echo "done." >> ${LOG_PATH}/sysroot.log 2>&1
-		done
+		done < <(find -L ${DISTOS_PATH}/usr/lib/${HARCH} -lname "/lib/${HARCH}*")
 		if [ -f ${DISTOS_PATH}/usr/lib/${HARCH}/pkgconfig/libical.pc ]
 		then
 			eval ${SUDO_CMD} sed -i "s#/usr/lib/${HARCH:+${HARCH}/}libicu#${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}libicu#g" ${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}pkgconfig/libical.pc
@@ -568,8 +568,8 @@ function install_gcclibs () {
 	local GCCLIBNAME="$( ( for name in ${GCCLIB}; do echo $(basename ${name}); done ) | sort | uniq | xargs )"
 	local GCCCXXLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 \( -name 'libstdc++.so.*' ! -name 'libstdc++.so.*-*.py' \) 2>/dev/null | xargs )
 	local GCCCXXLIBNAME="$( ( for name in ${GCCCXXLIB}; do echo $(basename ${name}); done ) | sort | uniq | xargs )"
-	echo -n "Installing ${GCCLIBNAME}, ${BASEGCCCXXLIBNAME} library..."
-	echo "GCCSEARCHLIBS: ${GCCSEARCHLIBS}"
+	echo -n "Installing GCC libraries... "
+	echo "GCCSEARCHLIBS: ${GCCSEARCHLIBS}" >> ${LOG_PATH}/gcclibs.log
 	echo "GCCLIB: ${GCCLIB}" >> ${LOG_PATH}/gcclibs.log
 	echo "GCCLIBNAME: ${GCCLIBNAME}" >> ${LOG_PATH}/gcclibs.log
 	echo "GCCCXXLIB: ${GCCCXXLIB}" >> ${LOG_PATH}/gcclibs.log
@@ -578,7 +578,9 @@ function install_gcclibs () {
 	then
 		mkdir -p ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 	fi
-	cp -P -fv ${GCCLIB} ${GCCCXXLIB} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} >> ${LOG_PATH}/gcclibs.log 2>&1 &&
+	cp -P -fv ${GCCLIB} ${GCCCXXLIB} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} >> ${LOG_PATH}/gcclibs.log 2>&1
+	echo "done."
+	echo
 	set +e
 }
 

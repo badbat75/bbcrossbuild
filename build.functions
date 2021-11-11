@@ -137,7 +137,8 @@ function build () (
 			echo "Done."
 			if [ -f ${PKG_SRCPATH}/debian/patches/series ]
 			then
-				while read patch; do
+				while read patch
+				do
 					if [[ ! "${patch}" =~ ^\#.*|^//.* ]]
 					then
 						local PATCHARRAY=(${patch})
@@ -163,13 +164,13 @@ function build () (
 				echo -n "${SPACES}Copying $scanpatch patch..."
 				cp -v ${PATCH_PATH}/$scanpatch ${PKG_SRCPATH}/bbxb_patches >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 			fi
-			for file in $(find ${PKG_SRCPATH}/bbxb_patches -type f)
+			while read -r file
 			do
 				echo -n "Applying ${file} patch..."
 				patch -f -p1 < ${file} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 				echo "Done."
 				rm ${file}
-			done
+			done < <(find ${PKG_SRCPATH}/bbxb_patches -type f)
 		done
 		if [ -f "${PKG_SRCPATH}/${CONF_CMD}" ] && [ ! -x "${PKG_SRCPATH}/${CONF_CMD}" ]
 		then
@@ -252,7 +253,6 @@ function build () (
 			done
 		fi
 		make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${INST_CMD:-}
-		#forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -311,7 +311,6 @@ function build () (
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
 			eval "make ${PKG_MAKEVARS} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}"
-		#forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -368,7 +367,6 @@ function build () (
 			${CONF_FLAGS}
 		make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0}
 		make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${INST_CMD}
-		#forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -470,7 +468,6 @@ function build () (
 			${CONF_FLAGS}
 		ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH}
 		DESTDIR=${PKG_PKGPATH} ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH} install
-		#forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -1098,31 +1095,6 @@ function build () (
 	echo
 	trap - ERR
 )
-
-function forge_la_libs () {
-	### List .la files in build package and forge .la in the Installation directory
-	function forge_la_file () {
-		set -x
-		local DEPENDENCY_LIBS="$(grep "dependency_libs=" ${1} | grep -o -E "([ '=]-l[^ ']*)" | xargs)"
-		sed -i "s/dependency_libs='.*'/dependency_libs='${DEPENDENCY_LIBS}'/g;/^relink_command=/d" ${1}
-		set +x
-	}
-	set -x
-	export -f forge_la_file
-	local LIB_LAs_LIST=$(find ${1} -name '*.la' -exec basename {} \; | sort -u)
-	if [ "x${LIB_LAs_LIST}" != "x" ]
-	then
-		local FIRST=1
-		for LIB_LA in ${LIB_LAs_LIST}
-		do
-			[ ${FIRST} -ne 1 ] && SEARCH_STRING+=" -o "
-			local SEARCH_STRING+="-name ${LIB_LA}"
-			local FIRST=0
-		done
-		find ${BIN_PATH}/lib ${BIN_PATH}${BUILD_LIBDIR} \( ${SEARCH_STRING} \) -exec bash -c "forge_la_file {}" \;
-	fi
-	set +x
-}
 
 function is_build_functions () {
 	return 0

@@ -50,27 +50,27 @@ function create_image() {
 	fi
 	dd if=/dev/zero of=${IMAGE_PATH} bs=1KiB count=${SIZE} status=progress >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo "ok."
-	echo -n "Partitioning..."
+	echo -n "Partitioning... "
 	echo "${LAYOUT}" | sfdisk ${IMAGE_PATH} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo "ok."
-	echo -n "Creating loopback devices..."
+	echo -n "Creating loopback devices... "
 	sudo losetup -f -P ${IMAGE_PATH} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	LODEVICE=$(sudo losetup -l --raw | grep ${IMAGE_PATH} | tail -n1 | awk '{print $1}')
 	echo "ok."
 	#echo -n "Scanning for partitions."
 	#sudo kpartx ${LODEVICE}
-	echo -n "Creating filesystems..."
+	echo -n "Creating filesystems... "
 	sudo mkfs.vfat ${LODEVICE}p1 >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	sudo mkfs.${ROOTFS_TYPE} ${LODEVICE}p2 >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo "ok."
-	echo -n "Mounting image..."
+	echo -n "Mounting image... "
 	mkdir -pv ${MOUNT_DIR} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	sudo mount ${LODEVICE}p2 ${MOUNT_DIR} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	sudo mkdir -pv ${MOUNT_DIR}/{boot,dev/pts,etc,proc} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	sudo install -dv -m 1777 ${MOUNT_DIR}/tmp >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	sudo mount ${LODEVICE}p1 ${MOUNT_DIR}/boot >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo "ok."
-	echo -n "Creating /etc/fstab..."
+	echo -n "Creating /etc/fstab... "
 	sudo bash -c "cat > ${MOUNT_DIR}/etc/fstab <<-EOF
 		proc                 /proc proc defaults 0 0
 		PARTUUID=$(sudo blkid ${LODEVICE}p1 -o value -s PARTUUID) /boot $(sudo blkid ${LODEVICE}p1 -o value -s TYPE) defaults 0 2
@@ -78,11 +78,11 @@ function create_image() {
 		EOF
 		" >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo "ok."
-	echo -n "Unmounting image..."
+	echo -n "Unmounting image... "
 	sudo umount ${MOUNT_DIR}/boot ${MOUNT_DIR} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	rmdir ${MOUNT_DIR} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo "ok."
-	echo -n "Flushing loop devices..."
+	echo -n "Flushing loop devices... "
 	sudo losetup -D >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo "ok."
 	set +x
@@ -122,7 +122,7 @@ function mount_tag () {
 		fi
 		if [ ! -f ${DISKIMAGES_PATH}/${_param_1}.img ]
 		then
-			echo -n "Downloading and uncompress ${_param_imgfile}..."
+			echo -n "Downloading and uncompress ${_param_imgfile}... "
 			NODELETEDESTDIR=1 download_uncompress ${_param_url} ${DISKIMAGES_PATH} ${_param_imgfile} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 			echo "done."
 			mv ${DISKIMAGES_PATH}/${_param_imgfile} ${DISKIMAGES_PATH}/${_param_1}.img
@@ -136,11 +136,11 @@ function mount_tag () {
 		local PARTNO=$(echo ${_param_resize} | awk -F: '{print $1}')
 		local IMGSIZE=$(echo ${_param_resize} | awk -F: '{print $2}')
 		# Extend the image size to ${IMGSIZE}
-		echo -n "Extend image size to ${IMGSIZE}..."
+		echo -n "Extend image size to ${IMGSIZE}... "
 		truncate -s ${IMGSIZE} ${IMAGEFILE_PATH} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		echo "Done."
 		# Expand root partition in the image
-		echo -n "Expand root partition..."
+		echo -n "Expand root partition... "
 		local PARTINFO=$(sfdisk -d ${IMAGEFILE_PATH} | tail -n1)
 		sfdisk --delete ${IMAGEFILE_PATH} ${PARTNO} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		echo ${PARTINFO} | sed '$s/ size.*,//' | sfdisk --append ${IMAGEFILE_PATH} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
@@ -148,7 +148,7 @@ function mount_tag () {
 	fi
 
 	# Create loopback devices for the image and its partitions
-	echo -n "Creating loop devices..."
+	echo -n "Creating loop devices... "
 	sudo losetup -f -P ${IMAGEFILE_PATH} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	LOOPDEV=$(sudo losetup -j ${IMAGEFILE_PATH} | awk '{print $1}' | sed 's/.$//g') >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	sudo partprobe ${LOOPDEV} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
@@ -158,17 +158,17 @@ function mount_tag () {
 	if [ ! -z ${_param_resize} ]
 	then
 		# Check the root partition
-		echo -n "Check root filesystems..."
+		echo -n "Check root filesystems... "
 		sudo e2fsck -fp ${LOOPDEV}"p"${PARTNO} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		echo "Done."
 		# Resize the root partition
-		echo -n "Resize root partition..."
+		echo -n "Resize root partition... "
 		sudo resize2fs ${LOOPDEV}"p"${PARTNO} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		echo "Done."
 	fi
 
 	# Mount the image filesystems
-	echo -n "Mounting all the partitions in ${MOUNT_DIR}..."
+	echo -n "Mounting all the partitions in ${MOUNT_DIR}... "
 	for e in ${_param_mountlist}
 	do
 		local PARTNO=$(echo ${e} | awk -F: '{print $1}')
@@ -203,7 +203,7 @@ function mount_tag () {
 	# Temporary configuration for mounted image
 	if [ -f ${MOUNT_DIR}/etc/resolv.conf ]
 	then
-		echo -n "Configure local resolv.conf..."
+		echo -n "Configure local resolv.conf... "
 		sudo mv ${MOUNT_DIR}/etc/resolv.conf ${MOUNT_DIR}/etc/resolv.conf.bbxb >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		sudo cp /etc/resolv.conf ${MOUNT_DIR}/etc/resolv.conf >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		echo "Done."
@@ -232,11 +232,11 @@ function unmount_tag () {
 	else
 		local MOUNT_DIR=${PLATFORM_PATH}/${_param_1}
 
-		echo -n "Unmounting ${_param_1}..."
+		echo -n "Unmounting ${_param_1}... "
 
 		if [ ${_param_kill:-0} -eq 1 ]
 		then
-			echo -n "killing processes using filesystem..."
+			echo -n "killing processes using filesystem... "
 			local PROC="$(lsof -t -w ${MOUNT_DIR} | xargs)"
 			while [ ! "${PROC}" == "" ]
 			do
@@ -245,22 +245,22 @@ function unmount_tag () {
 				sleep 1
 				local PROC="$(lsof -t -w ${MOUNT_DIR} | xargs)"
 			done
-			echo -n "..."
+			echo -n "... "
 		fi
 
 		# Restore configuration for mounted image
-		echo -n "Restore local resolv.conf..."
+		echo -n "Restore local resolv.conf... "
 		if [ -f ${MOUNT_DIR}/etc/resolv.conf.bbxb ]
 		then
 			sudo mv ${MOUNT_DIR}/etc/resolv.conf.bbxb ${MOUNT_DIR}/etc/resolv.conf >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		fi
 		# Unmount everything
-		echo -n "Unmount all partitions..."
+		echo -n "Unmount all partitions... "
 		if [ "x${MOUNTPOINTS[${MOUNT_DIR}]}" != "x" ]
 		then
 			for dir in ${MOUNTPOINTS[${MOUNT_DIR}]}
 			do
-				echo -n "Unmounting ${dir}..." >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+				echo -n "Unmounting ${dir}... " >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 				local STATUS=1
 				while [ ! ${STATUS} -eq 0 ]
 				do
@@ -271,7 +271,7 @@ function unmount_tag () {
 							echo "done." >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 							;;
 						*)
-							echo "failed ${STATUS}, sleeping..." >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+							echo "failed ${STATUS}, sleeping... " >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 							sleep 1
 							;;
 					esac
@@ -280,7 +280,7 @@ function unmount_tag () {
 		fi
 		MOUNTED_IMAGES=$(echo ${MOUNTED_IMAGES} | sed "s/ *${_param_1}//")
 		# Delete the loopback devices
-		echo -n "Delete loopback device..."
+		echo -n "Delete loopback device... "
 		sudo losetup -D ${LOOPDEV} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		echo "Done."
 	fi
@@ -314,14 +314,14 @@ function mount_from () {
 	if [ ! -d ${DISKIMAGES_PATH} ] ; then mkdir -p ${DISKIMAGES_PATH} ; fi
 	if [ ! -f ${DISKIMAGES_PATH}/${_param_tag}.img ]
 	then
-		echo -n "Downloading and uncompress ${_param_imgfile}..."
+		echo -n "Downloading and uncompress ${_param_imgfile}... "
 		NODELETEDESTDIR=1 download_uncompress ${_param_url} ${DISKIMAGES_PATH} ${_param_imgfile} >> ${LOG_PATH}/images_${_param_tag}.log 2>&1
 		echo "done."
 		mv ${DISKIMAGES_PATH}/${_param_imgfile} ${DISKIMAGES_PATH}/${_param_tag}.img
 	else
 		echo "Image ${_param_tag}.img already ready."
 	fi
-	echo -n "Mounting ${_param_imgfile} to ${_param_tag} as ${_param_tag}.img..."
+	echo -n "Mounting ${_param_imgfile} to ${_param_tag} as ${_param_tag}.img... "
 	# mount_from --tag <MountPointName> --resize <partnumber:size> --mountlist <partnumber1:/> [partnumber2:mountpoint2]...[partnumbern:mountpointn]
 
 	mount_tag "${_param_tag}" --mountlist "${_param_mountlist}" --resize "${_param_resize}"
@@ -411,37 +411,36 @@ function inject_into_mount_tag () {
 			;;
 	esac
 
-	echo -n "Injecting ${TARGET_FILE} into ${TARGET_DIR:-/}..."
+	echo -n "Injecting ${TARGET_FILE} into ${ROOT_DIR}${TARGET_DIR:+/${TARGET_DIR}}... "
 	[ ${_param_remove_devfiles:-0} -eq 1 ] && remove_devfiles no-exitstatus || true
 	if [ ! -d ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} ]
 	then
 		sudo mkdir -p ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-		echo -n "setting ownership of ${TARGET_OWNER} on ${TARGET_DIR}..."
+		echo -n "setting ownership of ${TARGET_OWNER} on ${TARGET_DIR}... "
 		sudo chown -h ${TARGET_OWNER} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}
 	fi
-	#sudo cp -fr --preserve=mode,timestamps ${SOURCE_PATH}/${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	cd ${SOURCE_PATH}
 	sudo rsync -K -a --no-owner --no-group ${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-	cd -
-	echo -n "setting ownership of ${TARGET_OWNER} on ${TARGET_FILE}..."
+	cd - > /dev/null
+	echo -n "Setting ownership of ${TARGET_OWNER} on ${TARGET_FILE}... "
 	case ${OBJECT} in
 		binaries)
-			local SUIDFILES=$(find ${BIN_PATH} -perm /4000 -printf "${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}%P\n")
-			echo -e "Files with SUID:\n${SUIDFILES}" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+			#echo "Files with SUID:" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 			find ${BIN_PATH} -printf "${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}%P\n" | xargs -d'\n' -n1 -P${NPROCS} sudo chown -h ${TARGET_OWNER}
-			for f in ${SUIDFILES}
+			while read -r SUIDFILE >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 			do
-				sudo chmod -v u+s ${f} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-			done
+				#echo "${SUIDFILE}" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+				sudo chmod -v u+s ${SUIDFILE} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+			done < <(find ${BIN_PATH} -perm /4000 -printf "${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}%P\n")
 			;;
 		*)
-			local SUIDFILES=$(find ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}/${TARGET_FILE} -perm /4000)
-			echo -e "Files with SUID:\n${SUIDFILES}" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+			#echo "Files with SUID:" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 			sudo chown -hRv ${TARGET_OWNER} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}/${TARGET_FILE} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-			for f in ${SUIDFILES}
+			while read -r SUIDFILE >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 			do
-				sudo chmod -v u+s ${f} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-			done
+				#echo "${SUIDFILE}" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+				sudo chmod -v u+s ${SUIDFILE} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+			done < <(find ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}/${TARGET_FILE} -perm /4000)
 			;;
 	esac
 	[ ${_param_remove_devfiles:-0} -eq 1 ] && resume_devfiles no-exitstatus || true

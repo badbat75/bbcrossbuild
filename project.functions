@@ -26,7 +26,7 @@ function remove_devfiles () {
 		return ${STATUS};' ERR
 
 	settoolflags
-	echo -n "Removing development files..."
+	echo -n "Removing development files... "
 	if [ ! -d ${BIN_PATH} ]
 	then
 		echo "No binaries directory present. Nothing to do."
@@ -84,7 +84,7 @@ function resume_devfiles () {
 		trap ERR; \
 		return ${STATUS};' ERR
 
-	echo -n "Resuming development files..."
+	echo -n "Resuming development files... "
 	tar xf ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/devfiles.tar.xz -C${BIN_PATH}
 	rm -f ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/devfiles.tar.xz
 	if [ ! "$(echo ${@} | grep -o no-exitstatus)" == "no-exitstatus" ]
@@ -107,7 +107,7 @@ function zip_project () {
 	then
 		remove_devfiles no-exitstatus
 	fi
-	echo -n "Creating compressed file ${PRJ_NAME}.tar.xz..."
+	echo -n "Creating compressed file ${PRJ_NAME}.tar.xz... "
 	cd ${BIN_PATH}	
 	[ -f ../${PRJ_NAME}.tar.xz ] && rm -f ../${PRJ_NAME}.tar.xz
 	tar cf ../${PRJ_NAME}.tar --owner=0 --group=0 .
@@ -141,7 +141,7 @@ function create_sfx_archive () {
 	fi
 
 	zip_project ${ZIP_PARAMS} no-exitstatus
-	echo -n "Creating self-extracting file ${PRJ_NAME}.sfx..."
+	echo -n "Creating self-extracting file ${PRJ_NAME}.sfx... "
 	cat >${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx <<-EOF
 		#!/bin/sh -ex
 		echo ""
