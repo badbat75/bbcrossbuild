@@ -116,7 +116,7 @@ case x${_param_1} in
 		while IFS= read -r -d '' file
 		do
 			printlibs ${file}
-		done < <(find ${SEARCH_PATH} -type f -print0) | sort | uniq
+		done < <(find ${DIR_NAME} -type f -print0) | sort | uniq
 		;;
 	x)
 		echo "Command not specified."
