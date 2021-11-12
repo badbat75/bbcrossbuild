@@ -123,6 +123,7 @@ build raspbian/flac_1.3.3-2
 build moode/trx_0.6
 
 unmount_tag distos
+inject_into_mount_tag temp gcclibs
 
 if [ -z ${DISABLE_FINAL_IMG} ]
 then

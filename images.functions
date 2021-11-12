@@ -402,13 +402,15 @@ function inject_into_mount_tag () {
 	local TARGET_DIR=$(echo ${_param_3} | sed 's/^//g')
 	local TARGET_OWNER=${_param_4:-"root:root"}
 
+	settoolflags
+
 	case ${OBJECT} in
 		binaries)
 			local SOURCE_PATH=${PLATFORM_PATH}/binaries
 			local TARGET_FILE=*
 			;;
 		gcclibs)
-			local GCCLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 \( -name 'libgcc_s.so*' -o -name 'libssp.so*' -name 'libstdc++.so.*' ! -name 'libstdc++.so.*-*.py' \) 2>/dev/null )
+			local GCCLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 \( -name 'libgcc_s.so*' -o -name 'libssp.so*' -o -name 'libstdc++.so.*' ! -name 'libstdc++.so.*-*.py' \) 2>/dev/null )
 			local GCCLIBNAME="$( ( for name in ${GCCLIB}; do echo $(basename ${name}); done ) | sort | uniq )"
 			local GCCLIBPATH="$( ( for name in ${GCCLIB}; do echo $(dirname ${name}); done ) | sort | uniq )"
 			local TARGET_FILE="${GCCLIBNAME}"
@@ -420,6 +422,7 @@ function inject_into_mount_tag () {
 			local SOURCE_PATH=$(dirname ${OBJECT})
 			;;
 	esac
+
 	echo "Source path: ${SOURCE_PATH}" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	echo "Target path: ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	echo -e "Target files:\n${TARGET_FILE}\n" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
@@ -429,7 +432,6 @@ function inject_into_mount_tag () {
 	if [ ! -d ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR} ]
 	then
 		sudo mkdir -p ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-		echo -n "setting ownership of ${TARGET_OWNER} on ${TARGET_DIR}... "
 		sudo chown -h ${TARGET_OWNER} ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}
 	fi
 	echo -n "Syncing ${SOURCE_PATH} to ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}... " >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
@@ -437,7 +439,7 @@ function inject_into_mount_tag () {
 	sudo rsync -K -a --no-owner --no-group ${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	cd - > /dev/null
 	echo -e "Done.\n" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-	echo -n "Setting ownership of ${TARGET_OWNER} on ${TARGET_FILE}... "
+	echo -n "Setting ownership... "
 	case ${OBJECT} in
 		binaries)
 			find ${BIN_PATH} -printf "%P\n" | xargs -I{} -d'\n' -n1 -P${NPROCS} bash -c "
