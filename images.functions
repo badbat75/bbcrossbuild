@@ -169,6 +169,7 @@ function mount_tag () {
 
 	# Mount the image filesystems
 	echo -n "Mounting all the partitions in ${MOUNT_DIR}... "
+	#set -x
 	for e in ${_param_mountlist}
 	do
 		local PARTNO=$(echo ${e} | awk -F: '{print $1}')
@@ -182,6 +183,7 @@ function mount_tag () {
 		if [ ! -d ${MOUNT_DIR}${MPOINT} ] ; then mkdir -p ${MOUNT_DIR}${MPOINT} ; fi
 		sudo mount ${LOOPDEV}"p"${PARTNO} ${MOUNT_DIR}${MPOINT} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	done
+	#set +x
 	if [ "${ROOTREADY}" -eq 1 ]
 	then
 		#sudo mount -t tmpfs -o nosuid,nodev,mode=755 /run ${MOUNT_DIR}/run >> ${LOG_PATH}/images_${_param_1}.log 2>&1
@@ -371,6 +373,14 @@ function run_on_root_dir () {
 }
 
 function inject_into_mount_tag () {
+	# inject_into_mount_tag <mount_tag> <object> <directory> <owner>
+	#   mount_tag: name of the mount tag
+	#   object:
+	#		binary: copy the built binary targets into mount tag
+	#		<filename>: copy the filename into mount tag
+	#	directory: directory where to copy under mount_tag
+	#   owner: file ownership (default: "root:root")
+
 	trap 'STATUS=${?}; \
 		echo "fail. Unmounting ${ROOT_DIR}."; \
 		echo; \
@@ -393,60 +403,75 @@ function inject_into_mount_tag () {
 	local TARGET_OWNER=${_param_4:-"root:root"}
 
 	case ${OBJECT} in
-		sfx_archive)
-			local TARGET_FILE=${PRJ_NAME}.sfx
-			local SOURCE_PATH=${PLATFORM_PATH}
-			;;
-		archive)
-			local TARGET_FILE=${PRJ_NAME}.tar.xz
-			local SOURCE_PATH=${PLATFORM_PATH}
-			;;
 		binaries)
-			local TARGET_FILE=*
 			local SOURCE_PATH=${PLATFORM_PATH}/binaries
+			local TARGET_FILE=*
+			;;
+		gcclibs)
+			local GCCLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 \( -name 'libgcc_s.so*' -o -name 'libssp.so*' -name 'libstdc++.so.*' ! -name 'libstdc++.so.*-*.py' \) 2>/dev/null )
+			local GCCLIBNAME="$( ( for name in ${GCCLIB}; do echo $(basename ${name}); done ) | sort | uniq )"
+			local GCCLIBPATH="$( ( for name in ${GCCLIB}; do echo $(dirname ${name}); done ) | sort | uniq )"
+			local TARGET_FILE="${GCCLIBNAME}"
+			local SOURCE_PATH="${GCCLIBPATH}"
+			local TARGET_DIR="${TARGET_DIR:-${BUILD_LIBDIR}${BUILD_LIBSUFFIX}}"
 			;;
 		*)
 			local TARGET_FILE=$(basename ${OBJECT})
 			local SOURCE_PATH=$(dirname ${OBJECT})
 			;;
 	esac
+	echo "Source path: ${SOURCE_PATH}" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+	echo "Target path: ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+	echo -e "Target files:\n${TARGET_FILE}\n" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 
-	echo -n "Injecting ${TARGET_FILE} into ${ROOT_DIR}${TARGET_DIR:+/${TARGET_DIR}}... "
+	echo -n "Injecting ${OBJECT} into ${ROOT_DIR}${TARGET_DIR}... "
 	[ ${_param_remove_devfiles:-0} -eq 1 ] && remove_devfiles no-exitstatus || true
-	if [ ! -d ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} ]
+	if [ ! -d ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR} ]
 	then
-		sudo mkdir -p ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+		sudo mkdir -p ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 		echo -n "setting ownership of ${TARGET_OWNER} on ${TARGET_DIR}... "
-		sudo chown -h ${TARGET_OWNER} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}
+		sudo chown -h ${TARGET_OWNER} ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}
 	fi
+	echo -n "Syncing ${SOURCE_PATH} to ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}... " >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	cd ${SOURCE_PATH}
-	sudo rsync -K -a --no-owner --no-group ${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+	sudo rsync -K -a --no-owner --no-group ${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	cd - > /dev/null
+	echo -e "Done.\n" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	echo -n "Setting ownership of ${TARGET_OWNER} on ${TARGET_FILE}... "
 	case ${OBJECT} in
 		binaries)
-			#echo "Files with SUID:" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-			find ${BIN_PATH} -printf "${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}%P\n" | xargs -d'\n' -n1 -P${NPROCS} sudo chown -h ${TARGET_OWNER}
-			while read -r SUIDFILE >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-			do
-				#echo "${SUIDFILE}" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-				sudo chmod -v u+s ${SUIDFILE} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-			done < <(find ${BIN_PATH} -perm /4000 -printf "${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}%P\n")
+			find ${BIN_PATH} -printf "%P\n" | xargs -I{} -d'\n' -n1 -P${NPROCS} bash -c "
+				sudo chown -v -h ${TARGET_OWNER} \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\"
+				# Check SUID from source path to change it on destination path
+				if [ -u \"${BIN_PATH}/{}\" ]
+				then
+					sudo chmod -v u+s \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\"
+				fi
+				if [ -g \"${BIN_PATH}/{}\" ]
+				then
+					sudo chmod -v g+s \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\"
+				fi
+			" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 			;;
 		*)
-			#echo "Files with SUID:" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-			sudo chown -hRv ${TARGET_OWNER} ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}/${TARGET_FILE} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-			while read -r SUIDFILE >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-			do
-				#echo "${SUIDFILE}" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-				sudo chmod -v u+s ${SUIDFILE} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
-			done < <(find ${PLATFORM_PATH}/${ROOT_DIR}/${TARGET_DIR}/${TARGET_FILE} -perm /4000)
+			echo "${TARGET_FILE}" | xargs -I{} -d'\n' -n1 -P${NPROCS} bash -c "
+				sudo chown -v -h ${TARGET_OWNER} \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\"
+				# Check SUID from source path to change it on destination path
+				if [ -u \"${BIN_PATH}/{}\" ]
+				then
+					sudo chmod -v u+s \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\"
+				fi
+				if [ -g \"${BIN_PATH}/{}\" ]
+				then
+					sudo chmod -v g+s \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\"
+				fi
+			" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 			;;
 	esac
 	[ ${_param_remove_devfiles:-0} -eq 1 ] && resume_devfiles no-exitstatus || true
 
-	echo "done."
-	echo
+	echo -e "Done.\n"
+	echo >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 
 	set +x
 	trap - ERR

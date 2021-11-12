@@ -164,13 +164,11 @@ function build () (
 				echo -n "${SPACES}Copying $scanpatch patch..."
 				cp -v ${PATCH_PATH}/$scanpatch ${PKG_SRCPATH}/bbxb_patches >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 			fi
-			while read -r file
-			do
-				echo -n "Applying ${file} patch..."
-				patch -f -p1 < ${file} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			find ${PKG_SRCPATH}/bbxb_patches -type f | xargs -I{} -d'\n' -n1 -P${NPROCS} bash -c "
+				echo -n 'Applying {} patch...'
+				patch -f -p1 < \"{}\" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 				echo "Done."
-				rm ${file}
-			done < <(find ${PKG_SRCPATH}/bbxb_patches -type f)
+			"
 		done
 		if [ -f "${PKG_SRCPATH}/${CONF_CMD}" ] && [ ! -x "${PKG_SRCPATH}/${CONF_CMD}" ]
 		then

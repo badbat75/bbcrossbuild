@@ -49,12 +49,14 @@ function prepare_sysroot () {
 		echo "DISTOS_PATH: ${DISTOS_PATH}" >> ${LOG_PATH}/sysroot.log 2>&1
 		echo >> ${LOG_PATH}/sysroot.log 2>&1
 
-		while read -r link
-		do
-			echo -n "Relinking $link... " >> ${LOG_PATH}/sysroot.log 2>&1
-			eval ${SUDO_CMD} ln -f -s ../../..$(readlink $link) $link >> ${LOG_PATH}/sysroot.log 2>&1
-			echo "done." >> ${LOG_PATH}/sysroot.log 2>&1
-		done < <(find -L ${DISTOS_PATH}/usr/lib/${HARCH} -lname "/lib/${HARCH}*")
+		find -L ${DISTOS_PATH}/usr/lib/${HARCH} -lname "/lib/${HARCH}*" | xargs -I{} -d'\n' -n1 -P${NPROCS} bash -c "
+			echo -n 'Relinking {}... ' >> ${LOG_PATH}/sysroot.log 2>&1
+			set -x
+			eval ${SUDO_CMD} ln -f -s ../../..\$(readlink \"{}\") \"{}\" >> ${LOG_PATH}/sysroot.log 2>&1
+			set +x
+			echo 'done.' >> ${LOG_PATH}/sysroot.log 2>&1
+		"
+
 		if [ -f ${DISTOS_PATH}/usr/lib/${HARCH}/pkgconfig/libical.pc ]
 		then
 			eval ${SUDO_CMD} sed -i "s#/usr/lib/${HARCH:+${HARCH}/}libicu#${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}libicu#g" ${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}pkgconfig/libical.pc

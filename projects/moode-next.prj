@@ -122,7 +122,7 @@ build raspbian/sox_14.4.2+git20190427-2
 build raspbian/flac_1.3.3-2
 build moode/trx_0.6
 
-install_gcclibs
+#install_gcclibs
 
 unmount_tag distos
 
@@ -157,7 +157,8 @@ then
 	run_on_root_dir temp root "apt-get clean"
 
 	#create_sfx_archive remove_devfiles
-	inject_into_mount_tag --remove_devfiles temp binaries
+	inject_into_mount_tag temp binaries --remove_devfiles
+	inject_into_mount_tag temp gcclibs
 
 	# Run /root/firstboot at first boot, enable verbose boot and set physical boot device
 	run_on_root_dir temp root "sed -i \"s|elevator=[^ ]*||;s|root=[^ ]*|root=/dev/mmcblk0p2|;s|init=/usr/lib/raspi-config/init_resize.sh|init=/root/firstboot|;s| quiet||\" /boot/cmdline.txt"
