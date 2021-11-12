@@ -25,7 +25,7 @@ then
 		libusb-dev libglib2.0-dev libudev-dev libical-dev libreadline-dev libdbus-1-dev \
 		libbsd-dev libncurses5-dev libsndfile1-dev \
 		\
-		libcdio-paranoia-dev libmad0-dev libmpg123-dev libflac-dev libvorbis-dev libopus-dev libopusfile-dev libaudiofile-dev libfaad-dev \
+		libcdio-paranoia-dev libmad0-dev libmpg123-dev libflac-dev libvorbis-dev libopus-dev libaudiofile-dev libfaad-dev \
 		libwavpack-dev libavcodec-dev libavformat-dev libmp3lame-dev libcurl4-gnutls-dev libshout3-dev libyajl-dev \
 		libavahi-client-dev libsystemd-dev libwrap0-dev libicu-dev libglib2.0-dev \
 		\
@@ -122,8 +122,6 @@ build raspbian/sox_14.4.2+git20190427-2
 build raspbian/flac_1.3.3-2
 build moode/trx_0.6
 
-#install_gcclibs
-
 unmount_tag distos
 
 if [ -z ${DISABLE_FINAL_IMG} ]
@@ -131,7 +129,7 @@ then
 	mount_tag temp --url ${RASPBIAN_URL}${RASPBIAN_IMAGE}.zip --imgfile ${RASPBIAN_IMAGE}.img --mountlist "2:/ 1:/boot" --resize 2:3G
 
 	run_on_root_dir temp root "apt-get -y purge --autoremove gcc-10 build-essential libc6-dev raspberrypi-kernel RPi.GPIO bluez \
-		wpasupplicant iw htop libnl-3-200"
+		wpasupplicant iw htop libnl-3-200 libboost-program-options1.74.0 libboost-regex1.71.0 "
 	run_on_root_dir temp root "apt-get update --allow-releaseinfo-change"
 	run_on_root_dir temp root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
 	run_on_root_dir temp root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
@@ -148,7 +146,6 @@ then
 		\
 		expect \
 		\
-		libopusfile0 \
 		xinit xorg xserver-xorg-legacy chromium-browser libgtk-3-0 libgles2 \
 		\
 		python3-dbus python3-matplotlib python3-aiohttp python3-yaml"
