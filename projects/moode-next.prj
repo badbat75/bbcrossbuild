@@ -16,7 +16,8 @@ KERN_LTOENABLE=0
 mount_tag distos --url "${RASPBIAN_URL}${RASPBIAN_IMAGE}.zip" --imgfile "${RASPBIAN_IMAGE}.img" --mountlist "2:/ 1:/boot" --resize 2:3G
 if [ -z ${SKIP_DISTOS_APTS} ]
 then
-	run_on_root_dir distos root "apt-get -y purge --autoremove raspberrypi-kernel RPi.GPIO bluez wpasupplicant iw htop libnl-3-200"
+	run_on_root_dir distos root "apt-get -y purge --autoremove raspberrypi-kernel RPi.GPIO \
+		bluez wpasupplicant iw htop libnl-3-200 libcamera-apps-lite libsource-highlight4v5"
 	run_on_root_dir distos root "apt-get update --allow-releaseinfo-change"
 	run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
 	run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
@@ -73,7 +74,7 @@ build raspbian/udevil_0.4.4-2
 # STEP 4 - Install enhanced networking and bluetooth stack
 build moode/bluez_5
 build raspberrypi/pi-bluetooth_0.1.17
-WITH_APTX=libopenaptx build moode/bluez-alsa_3.1.0+e5282124
+WITH_APTX=libopenaptx build moode/bluez-alsa_3.1.0+24b7300
 
 # STEP 6 - Compile and install MPD
 build moode/mpd_0.23
@@ -92,7 +93,7 @@ build moode/camillagui-backend_0.8.0
 build moode/minidlna_1.3.0
 
 # COMPONENT 2 - Auto-shuffle
-build moode/ashuffle_3.11
+build moode/ashuffle_3.12
 
 # COMPONENT 4A - Shairport-sync
 WITH_ALAC=1 build moode/shairport-sync_3.3.8
@@ -123,14 +124,13 @@ build raspbian/flac_1.3.3-2
 build moode/trx_0.6
 
 unmount_tag distos
-inject_into_mount_tag temp gcclibs
 
 if [ -z ${DISABLE_FINAL_IMG} ]
 then
 	mount_tag temp --url ${RASPBIAN_URL}${RASPBIAN_IMAGE}.zip --imgfile ${RASPBIAN_IMAGE}.img --mountlist "2:/ 1:/boot" --resize 2:3G
 
 	run_on_root_dir temp root "apt-get -y purge --autoremove gcc-10 build-essential libc6-dev raspberrypi-kernel RPi.GPIO bluez \
-		wpasupplicant iw htop libnl-3-200 libboost-program-options1.74.0 libboost-regex1.71.0 "
+		wpasupplicant iw htop libnl-3-200 libcamera-apps-lite libsource-highlight4v5"
 	run_on_root_dir temp root "apt-get update --allow-releaseinfo-change"
 	run_on_root_dir temp root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
 	run_on_root_dir temp root "DEBIAN_FRONTEND=noninteractive apt-get -y install \

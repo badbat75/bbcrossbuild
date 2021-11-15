@@ -872,6 +872,18 @@ function build () (
 		trap - ERR
 	}
 
+	trap 'local STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${LOG_PATH}/${PKG_NAME}.log ]; \
+		then \
+			echo "Log ${LOG_PATH}/${PKG_NAME}.log:"; \
+			echo; \
+			tail -n24 ${LOG_PATH}/${PKG_NAME}.log; \
+		fi; \
+		trap - ERR; \
+		return ${STATUS}' ERR
+
 	unset PKG_URL \
 		GIT_URL \
 		GIT_COMMIT \
@@ -931,18 +943,6 @@ function build () (
 	local PKG_PKGPATH=${PACKAGES_PATH}/${PKG_NAME}
 
 	source ${PKG_PATH}/${1}.pkg
-
-	trap 'local STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		if [ -f ${LOG_PATH}/${PKG_NAME}.log ]; \
-		then \
-			echo "Log ${LOG_PATH}/${PKG_NAME}.log:"; \
-			echo; \
-			tail -n24 ${LOG_PATH}/${PKG_NAME}.log; \
-		fi; \
-		trap - ERR; \
-		return ${STATUS}' ERR
 
 	eval local PKG_NAME=${PKG_NAME}
 	eval local PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}

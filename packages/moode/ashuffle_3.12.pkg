@@ -1,6 +1,6 @@
-# ashuffle_3.11
+# ashuffle_3.12
 GIT_URL=https://github.com/joshkunz/ashuffle
-GIT_COMMIT=v3.11.1
+GIT_COMMIT=v3.12.5
 #PATCHES=
 BUILD_PROCESS=mesonninja
 INST_CMD=install-strip

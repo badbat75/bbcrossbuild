@@ -370,11 +370,7 @@ function setup_gcc () {
 		local HOST_CFLAGS+=" -march=native"
 		local HOST_CXXFLAGS="${HOST_CFLAGS}"
 		local HOST_LDFLAGS="${COMMON_LDFLAGS} ${GCC_OPTLINK_FLAGS}"
-		### Compile workarounds
-		### if no system-zlib specified:
-		#local HOST_CFLAGS+=" -fPIC"
-		#local HOST_LDFLAGS+=" -lgcc_s"
-		###
+
 		if [ "${BUILD_ARCH}" == "${BARCH}" ]
 		then
 			# If BUILD_ARCH then install in GLOBAL_TOOLCHAIN_PATH
@@ -460,8 +456,6 @@ function setup_gcc () {
 		trap ERR;
 	}
 
-	local GCC_STAGE=${1}
-
 	trap 'STATUS=${?}; \
 		set +x; \
 		echo "fail."; \
@@ -475,9 +469,10 @@ function setup_gcc () {
 		trap ERR; \
 		exit ${STATUS}' ERR
 
+	local GCC_STAGE=${1}
+
 	echo -n "Setting up gcc"
 
-	#set -x
 	local GCC_LTOENABLE=${GCC_LTOENABLE:-0}
 	export PATH=${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin:${PATH}
 	local CURRENT_AUTOCONF_VER=$(autoconf -V | head -n1 | awk '{print $NF}')
@@ -497,11 +492,9 @@ function setup_gcc () {
 	then
 		unset AUTOCONF_VER
 	fi
-	#set +x
 
 	echo -n "-${GCC_VER}... "
 	
-	#set -x
 	if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1 \
 		|| (( ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1 ) \
 		&& [ ${BUILD_GCCNATIVE:-0} -eq 1 ] )
@@ -552,7 +545,7 @@ function setup_gcc () {
 	then
 		export LD_LIBRARY_PATH=${TOOLCHAIN_PATH}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 	fi
-	#set +x
+
 	GCCSEARCHLIBS="$( ( for lib in $(${HARCH:+${HARCH}-}gcc -print-search-dirs | grep 'libraries:' | sed 's/^libraries: =//;s/\:/ /g' ); do realpath "${lib}" 2>/dev/null; done ) | grep -v "${BIN_PATH}" | grep -v "${DISTOS_PATH}" | sort | uniq | xargs )" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 	LD_GCCLIBS=$( echo ${GCCSEARCHLIBS} | sed 's/ /:/g' ) >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 	echo "GCCSEARCHLIBS: ${GCCSEARCHLIBS}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1

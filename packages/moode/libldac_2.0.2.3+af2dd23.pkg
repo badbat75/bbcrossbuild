@@ -1,5 +1,5 @@
-# libldac_2.0.2.3
-PKG_URL="https://github.com/EHfive/ldacBT/archive/v2.0.2.3.tar.gz"
+# libldac_2.0.2.3+af2dd23
+PKG_URL="https://github.com/EHfive/ldacBT/archive/af2dd23979453bcd1cad7c4086af5fb421a955c5.tar.gz"
 BUILD_PROCESS=cmakemake
 CONF_FLAGS="-DLDAC_SOFT_FLOAT=OFF"
 VAR_INSTALL_LIBDIR="INSTALL_LIBDIR"
