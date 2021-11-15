@@ -1,5 +1,4 @@
 # minidlna_1.3.0
-#PKG_URL="https://sourceforge.net/code-snapshots/git/m/mi/minidlna/git.git/minidlna-git-0763719f2776f91114bc5564919896f28e078c77.zip"
 GIT_URL="https://git.code.sf.net/p/minidlna/git"
 GIT_COMMIT="v1_3_0"
 BUILD_PROCESS=configmake

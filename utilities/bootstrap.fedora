@@ -1,5 +1,6 @@
 #!/bin/bash
-sudo dnf install -y gcc g++ binutils ccache libzstd libzstd-devel\
+sudo dnf install -y bc parted e2fsprogs bzip2 rsync \
+    gcc g++ binutils ccache libzstd libzstd-devel\
     curl gawk bison flex cmake ninja-build \
 	autoconf autoconf-archive automake gettext-devel libtool \
     git xmltoman docbook-utils swig doxygen texinfo python3-docutils
@@ -15,6 +16,9 @@ sudo dnf install -y python3-pip meson ninja-build
 
 # for Python 3.7
 sudo dnf install -y openssl-devel libffi-devel
+
+# for moode
+sudo dnf install -y sqlite
 
 # for wpa-supplicant
 sudo dnf install -y docbook-utils-pdf

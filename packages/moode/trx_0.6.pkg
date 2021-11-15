@@ -1,0 +1,9 @@
+# trx_0.6
+PKG_SRCDIR=moode_${MOODEREL}
+CONF_PATH=other/trx/trx-0.6.0
+PKG_DEPS="moode/moode-dynamic-ver_1.2 raspbian/ortp_1.0.2-1"
+BUILD_PROCESS=simplemake
+# CONF_FLAGS=""
+PKG_PREBUILD="sed -i 's/(INSTALL) rx tx/(INSTALL) -s --strip-program=\\\$(STRIP) rx tx/g' other/trx/trx-0.6.0/Makefile"
+PKG_POSTBUILD="mkdir -p ${PKG_PKGPATH}/usr/local/bin
+    ln -fs /usr/bin/{tx,rx} ${PKG_PKGPATH}/usr/local/bin/"

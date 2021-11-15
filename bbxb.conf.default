@@ -71,12 +71,12 @@ KERN_OPTLINK_FLAGS=
 ######
 
 ###### Versions for GCC and its dependencies
-#GCC_VER=11.1.0
-#BINUTILS_VER=2.36
-#GMP_VER=6.2.0
-#MPFR_VER=4.0.2
-#MPC_VER=1.2.0
-#ISL_VER=0.22
+#GCC_VER=11.2.0
+#BINUTILS_VER=2.37
+#GMP_VER=6.2.1
+#MPFR_VER=4.1.0
+#MPC_VER=1.2.1
+#ISL_VER=0.24
 ### Kernel optimization level (s, 0, 1, 2, 3). Set -O options to compiler
 GCC_OPTLEVEL=3
 ### Optional gcc compiler flags

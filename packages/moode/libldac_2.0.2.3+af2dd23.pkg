@@ -1,0 +1,8 @@
+# libldac_2.0.2.3+af2dd23
+PKG_URL="https://github.com/EHfive/ldacBT/archive/af2dd23979453bcd1cad7c4086af5fb421a955c5.tar.gz"
+BUILD_PROCESS=cmakemake
+CONF_FLAGS="-DLDAC_SOFT_FLOAT=OFF"
+VAR_INSTALL_LIBDIR="INSTALL_LIBDIR"
+INST_CMD=install/strip
+PKG_MAKEVARS=-j1
+PKG_PREBUILD="NODELETEDESTDIR=1 STRIPCOMPONENTS=0 download_uncompress https://android.googlesource.com/platform/external/libldac/+archive/82b6a1abee84787b8fa167efe20290073f60db2d.tar.gz \${PKG_SRCPATH}/libldac"

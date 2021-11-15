@@ -7,4 +7,6 @@ BUILD_PROCESS=simplemake
 INST_CMD="install"
 PKG_DEPS="raspbian/lz4_1.9.3-1+rpi1"
 PKG_MAKEVARS="PREFIX=${BUILD_PREFIX} libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:${LD_GCCLIBS}
+
 # Note: Build-Depends: d-shlibs, debhelper-compat (= 13), help2man, liblz4-dev, liblzma-dev, zlib1g-dev

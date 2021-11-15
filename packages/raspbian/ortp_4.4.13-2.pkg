@@ -1,0 +1,9 @@
+# ortp_4.4.13-2
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/o/ortp/ortp_4.4.13.orig.tar.gz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/o/ortp/ortp_4.4.13-2.debian.tar.xz"
+PKG_DEPS="raspbian/bctoolbox_4.4.13-2"
+PKG_PREBUILD="sed -i 's/ AUTHORS ChangeLog COPYING/ AUTHORS.md CHANGELOG.md/g' Makefile.am"
+BUILD_PROCESS=configmake
+PKG_CFLAGS="-Wno-error=maybe-uninitialized -Wno-maybe-uninitialized"
+PKG_LDFLAGS="-Wl,--no-undefined"
+INST_CMD=install-strip

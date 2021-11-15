@@ -88,7 +88,7 @@ download_uncompress () {
 	# if download file does not exists in database download package
 	if [ -z "${HASH_ROW}" ]
 	then
-		local DOWNLOAD_FILE="$(curl -vLsI -o /dev/null "${URL}" 2>&1 | egrep -i '^< content-disposition:' | tr -d "\n\r" | sed -e 's/^.*filename="\?//;s/"\?$//')"
+		local DOWNLOAD_FILE="$(curl -vLsI -o /dev/null "${URL}" 2>&1 | egrep -i '^< content-disposition:' | tr -d "\n\r" | sed -e 's/^.*filename="\?//;s/".*//')"
 		if [ -z ${DOWNLOAD_FILE} ]
 		then
 			local DOWNLOAD_FILE="$(basename ${URL})"

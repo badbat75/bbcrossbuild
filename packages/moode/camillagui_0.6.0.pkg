@@ -1,0 +1,9 @@
+# camillagui_0.6.0
+PKG_URL="https://github.com/HEnquist/camillagui/archive/refs/tags/v0.6.0.tar.gz"
+BUILD_PROCESS=downloadonly
+PKG_COPYSRC=1
+PKG_POSTBUILD="npm install
+    npm run build
+    mkdir -pv ${PKG_PKGPATH}/opt/camillagui
+    cp -frv build ${PKG_PKGPATH}/opt/camillagui/"
+# CONF_FLAGS=""

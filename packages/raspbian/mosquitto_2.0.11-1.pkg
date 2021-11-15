@@ -1,0 +1,27 @@
+# mosquitto_2.0.11-1
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/m/mosquitto/mosquitto_2.0.11.orig.tar.gz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/m/mosquitto/mosquitto_2.0.11-1.debian.tar.xz"
+PKG_DEPS="raspbian/libwebsockets_4.0.20-1 raspbian/dlt-daemon_2.18.6-1"
+BUILD_PROCESS=cmakemake
+CONF_FLAGS="-DWITH_BUNDLED_DEPS=yes -DWITH_ADNS=yes -DUSE_LIBWRAP=ON -DWITH_WEBSOCKETS=ON -DWITH_DLT=ON -DWITH_SRV=ON \
+    -DWITH_SYSTEMD=yes \
+    -DOPENSSL_ROOT_DIR=${DISTOS_PATH}${BUILD_PREFIX} \
+    -DOPENSSL_SSL_LIBRARY=${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+    -DOPENSSL_CRYPTO_LIBRARY=${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+    -DSYSTEMD_LIBRARY=${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
+VAR_INSTALL_CONFDIR="CMAKE_INSTALL_SYSCONFDIR"
+VAR_INSTALL_LIBDIR="CMAKE_INSTALL_LIBDIR"
+PKG_LDFLAGS="-lssl -lcrypto -lpthread -luv -lev -lz -lsystemd"
+PKG_POSTBUILD="install -d ${PKG_PKGPATH}/etc/mosquitto/conf.d/
+	install -m 644 \${PKG_SRCPATH}/debian/README-conf-d ${PKG_PKGPATH}/etc/mosquitto/conf.d/README
+	install -d ${PKG_PKGPATH}/etc/mosquitto/ca_certificates/
+	install -m 644 \${PKG_SRCPATH}/debian/README-ca_certificates ${PKG_PKGPATH}/etc/mosquitto/ca_certificates/README
+	install -d ${PKG_PKGPATH}/etc/mosquitto/certs/
+	install -m 644 \${PKG_SRCPATH}/debian/README-certs ${PKG_PKGPATH}/etc/mosquitto/certs/README
+	install -m 644 \${PKG_SRCPATH}/debian/mosquitto.conf ${PKG_PKGPATH}/etc/mosquitto/mosquitto.conf
+	install -d ${PKG_PKGPATH}/lib/systemd/system/
+	install -m 644 \${PKG_SRCPATH}/service/systemd/mosquitto.service.notify ${PKG_PKGPATH}/lib/systemd/system/mosquitto.service"
+INST_CMD=install/strip
+
+# Note:
+# Dependencies: cmake, doxygen, python, libwebsocket, dlt-daemon

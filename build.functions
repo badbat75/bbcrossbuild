@@ -65,6 +65,10 @@ function settoolflags () {
 	# Build LDFLAGS search paths
 	if [ -d ${DISTOS_PATH}/etc/ld.so.conf.d ]
 	then
+		for entry in ${GCCSEARCHLIBS}
+		do
+			COMMON_LDFLAGS+=" -L$entry -Wl,-rpath-link,$entry"
+		done
 		for entry in $(cat ${DISTOS_PATH}/etc/ld.so.conf.d/* | grep -v '#' | sort)
 		do
 			COMMON_LDFLAGS+=" -L${DISTOS_PATH}$entry -Wl,-rpath-link,${DISTOS_PATH}$entry"
@@ -133,7 +137,8 @@ function build () (
 			echo "Done."
 			if [ -f ${PKG_SRCPATH}/debian/patches/series ]
 			then
-				while read patch; do
+				while read patch
+				do
 					if [[ ! "${patch}" =~ ^\#.*|^//.* ]]
 					then
 						local PATCHARRAY=(${patch})
@@ -159,13 +164,11 @@ function build () (
 				echo -n "${SPACES}Copying $scanpatch patch..."
 				cp -v ${PATCH_PATH}/$scanpatch ${PKG_SRCPATH}/bbxb_patches >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 			fi
-			for file in $(find ${PKG_SRCPATH}/bbxb_patches -type f)
-			do
-				echo -n "Applying ${file} patch..."
-				patch -f -p1 < ${file} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			find ${PKG_SRCPATH}/bbxb_patches -type f | xargs -I{} -d'\n' -n1 -P${NPROCS} bash -c "
+				echo -n 'Applying {} patch...'
+				patch -f -p1 < \"{}\" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 				echo "Done."
-				rm ${file}
-			done
+			"
 		done
 		if [ -f "${PKG_SRCPATH}/${CONF_CMD}" ] && [ ! -x "${PKG_SRCPATH}/${CONF_CMD}" ]
 		then
@@ -248,7 +251,6 @@ function build () (
 			done
 		fi
 		make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${INST_CMD:-}
-		#forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -307,7 +309,6 @@ function build () (
 		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
 			eval "make ${PKG_MAKEVARS} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}"
-		#forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -364,7 +365,6 @@ function build () (
 			${CONF_FLAGS}
 		make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0}
 		make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${INST_CMD}
-		#forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -466,7 +466,6 @@ function build () (
 			${CONF_FLAGS}
 		ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH}
 		DESTDIR=${PKG_PKGPATH} ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH} install
-		#forge_la_libs ${PWD}
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -555,6 +554,11 @@ function build () (
 			fi
 			return ${STATUS}
 		}
+		trap 'STATUS=${?}; \
+		set +x; \
+		trap - ERR; \
+		return ${STATUS};' ERR
+
 		set -x
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
@@ -588,12 +592,6 @@ function build () (
 
 		# Install headers
 		make V=${MAKEVERBOSE:-0} ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_HDR_PATH=${PKG_PKGPATH}${BUILD_PREFIX} headers_install 
-		local STATUS=${?}
-		if [ ${STATUS} -ne 0 ]
-		then
-			set +x
-			return ${STATUS}
-		fi
 
 		# Break if only headers installation required
 		if [ ${KERN_HDRS_ONLY:-0} -eq 1 ]
@@ -604,12 +602,6 @@ function build () (
 
 		# Build and install kernel
 		make4kern ${KERN_IMAGE}
-		local STATUS=${?}
-		if [ ${STATUS} -ne 0 ]
-		then
-			set +x
-			return ${STATUS}
-		fi
 		case ${KERN_NAME}
 		in
 			kernel*)
@@ -619,14 +611,8 @@ function build () (
 			*)
 				[ ! -d ${PKG_PKGPATH}/boot ] && mkdir ${PKG_PKGPATH}/boot
 				make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_PATH=${PKG_PKGPATH}/boot ${INST_CMD} install
-				local STATUS=${?}
 				;;
 		esac
-		if [ ${STATUS} -ne 0 ]
-		then
-			set +x
-			return ${STATUS}
-		fi
 
 		# Build and install modules
 		make4kern modules
@@ -634,12 +620,6 @@ function build () (
 		local KERNELRELEASE=$(cat include/config/kernel.release)
 		rm ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/build
 		rm ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/source
-		local STATUS=${?}
-		if [ ${STATUS} -ne 0 ]
-		then
-			set +x
-			return ${STATUS}
-		fi
 
 		# Build and install DTBS
 		if [ ${KERN_DTBS:-0} -eq 1 ] && [ ${STATUS} -eq 0 ]
@@ -648,16 +628,20 @@ function build () (
 			then
 				mkdir -p ${PKG_PKGPATH}/boot/overlays
 			fi
-			make4kern dtbs &&
+			make4kern dtbs
 			make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_DTBS_PATH=${PKG_PKGPATH}/boot ${INST_CMD} dtbs_install
-			local STATUS=${?}
 		fi
 		cd ${BB_HOME}
 		set +x
-		return ${STATUS}
+		trap - ERR
 	}
 
 	function pythonbuild () {
+		trap 'STATUS=${?}; \
+		set +x; \
+		trap - ERR; \
+		return ${STATUS};' ERR
+
 		set -x
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
@@ -668,7 +652,19 @@ function build () (
 			COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
 			COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
 		fi
-		COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
+		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER} ]
+		then
+			COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
+			COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
+		fi
+		if [ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libpython${PYTHONBIN_VER}m ]
+		then
+			COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
+		fi
+		if [ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libpython${PYTHONBIN_VER} ]
+		then
+			COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}"
+		fi
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ ${MAKEVERBOSE:-0} -eq 1 ]
 		then
@@ -713,13 +709,17 @@ function build () (
 			eval '${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}'
 		eval '${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} \
 			${INSTALL_TARGET}'
-		local BUILD_STATUS=${?}
 		cd ${BB_HOME}
 		set +x
-		return ${BUILD_STATUS}
+		trap - ERR
 	}
 
 	function pythonpip () {
+		trap 'STATUS=${?}; \
+		set +x; \
+		trap - ERR; \
+		return ${STATUS};' ERR
+
 		set -x
 		local PYTHONBIN_VER=$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)
 		local PYTHONBIN_MAJVER=$(echo ${PYTHONBIN_VER} | cut -d'.' -f1,1)
@@ -728,7 +728,19 @@ function build () (
 			COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
 			COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
 		fi
-		COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
+		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER} ]
+		then
+			COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
+			COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
+		fi
+		if [ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libpython${PYTHONBIN_VER}m ]
+		then
+			COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
+		fi
+		if [ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libpython${PYTHONBIN_VER} ]
+		then
+			COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}"
+		fi
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ ${MAKEVERBOSE:-0} -eq 1 ]
 		then
@@ -736,27 +748,28 @@ function build () (
 		fi
 		if [ -f ${DISTOS_PATH}/etc/debian_version ]
 		then
-			local INSTALL_TARGET="-t ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
 			local PYTHON_PKGDIR="dist-packages"
 		else
-			local INSTALL_TARGET="--root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX}"
 			local PYTHON_PKGDIR="site-packages"
 		fi
-		PYTHONPATH=${BIN_PATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}
+		PYTHONPATH="${BIN_PATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
 		for pythonpkgdir in python${PYTHONBIN_MAJVER} python${PYTHONBIN_VER}
 		do
 			if [ -d ${DISTOS_PATH}${BUILD_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR} ]
 			then
-				PYTHONPATH+=:${DISTOS_PATH}${BUILD_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR}
+				PYTHONPATH+=":${DISTOS_PATH}${BUILD_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR}"
 			fi
-			export PYTHONPATH
 		done
+		#PYTHONUSERBASE="${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
+		export PYTHONPATH
+		#export PYTHONUSERBASE
 		cross-python -m site
 		if [ ${PKG_PYTHONBUILD:-1} -eq 1 ]
 		then
 			local PYTHONBUILD="--no-binary :all:"
 		fi
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+		#build-python -m pip ${VERBOSE} install --upgrade ${PKG_NAME}
 		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
 		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
 		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
@@ -775,14 +788,21 @@ function build () (
 		RANLIB=${HARCH}-gcc-ranlib \
 		STRIP=${HARCH}-strip \
 		OBJDUMP=${HARCH}-objdump \
-			cross-python -m pip ${VERBOSE} install ${PYTHONBUILD} ${INSTALL_TARGET} ${PKG_NAME}
-		local BUILD_STATUS=${?}
+			cross-python -m pip ${VERBOSE} install ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX} ${PKG_NAME}
+		if [ ${PYTHON_PKGDIR} == dist-packages ]
+		then
+			mv ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages
+		fi
 		set +x
-		return ${BUILD_STATUS}
+		trap - ERR
 	}
 	
-
 	function boostbuild () {
+		trap 'STATUS=${?}; \
+		set +x; \
+		trap - ERR; \
+		return ${STATUS};' ERR
+
 		set -x
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
@@ -790,6 +810,10 @@ function build () (
 		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
 		then
 			COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
+		fi
+		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER} ]
+		then
+			COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
 		fi
 		if [ ${MAKEVERBOSE} -eq 1 ]
 		then
@@ -843,22 +867,30 @@ function build () (
 		./b2 -j${NPROCS} -q ${B2_FLAGS} \
 			architecture=${HM} address-model=${HMADDRMOD} binary-format=${HMBINFMT} abi=${HMABI} target-os=${HOS} \
 			toolset=gcc threading=multi cxxflags="-fPIC ${CXXFLAGS}" linkflags="${LDFLAGS}" install
-		local BUILD_STATUS=${?}
-		#a
 		cd ${BB_HOME}
 		set +x
-		return ${BUILD_STATUS}
+		trap - ERR
 	}
+
+	trap 'local STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${LOG_PATH}/${PKG_NAME}.log ]; \
+		then \
+			echo "Log ${LOG_PATH}/${PKG_NAME}.log:"; \
+			echo; \
+			tail -n24 ${LOG_PATH}/${PKG_NAME}.log; \
+		fi; \
+		trap - ERR; \
+		return ${STATUS}' ERR
 
 	unset PKG_URL \
 		GIT_URL \
 		GIT_COMMIT \
-		PKG_SRCDIR \
 		BUILD_PROCESS \
 		STD_CONF_FLAGS \
 		CONF_CMD \
 		CONF_FLAGS \
-		PKG_COPYSRC \
 		CONF_PATH \
 		INST_CMD \
 		MAKEDIR \
@@ -867,7 +899,10 @@ function build () (
 		PATCHDEB \
 		PATCHES \
 		PKG_NAME \
+		PKG_SUFFIX \
+		PKG_SRCDIR \
 		PKG_DEPS \
+		PKG_COPYSRC \
 		PKG_CFLAGS \
 		PKG_CXXFLAGS \
 		PKG_FCFLAGS \
@@ -902,28 +937,28 @@ function build () (
 
 	settoolflags
 	
-	local PKG_NAME=$(basename ${1})
-	local PKG_PKGPATH=${PACKAGES_PATH}/${PKG_NAME}
+	local PKG_NAME=$(basename ${1})\${PKG_SUFFIX}
 	local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_NAME}}
+	local PKG_BLDPATH=${BLD_PATH}/${PKG_NAME}
+	local PKG_PKGPATH=${PACKAGES_PATH}/${PKG_NAME}
 
 	source ${PKG_PATH}/${1}.pkg
 
-	trap 'local STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		if [ -f ${LOG_PATH}/${PKG_NAME}.log ]; \
-		then \
-			echo "Log ${LOG_PATH}/${PKG_NAME}.log:"; \
-			echo; \
-			tail -n24 ${LOG_PATH}/${PKG_NAME}.log; \
-		fi; \
-		trap - ERR; \
-		return ${STATUS}' ERR
+	eval local PKG_NAME=${PKG_NAME}
+	eval local PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
+	eval local PKG_BLDPATH=${PKG_BLDPATH}
+	eval local PKG_PKGPATH=${PKG_PKGPATH}
 
 	echo "Package ${PKG_NAME}"
 
-	local PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
-	local PKG_BLDPATH=${BLD_PATH}/${PKG_NAME}
+	if [ ${DEBUG:-0} -gt 0 ]
+	then
+		echo
+		echo "PKG_SRCPATH: ${PKG_SRCPATH}"
+		echo "PKG_BLDPATH: ${PKG_BLDPATH}"
+		echo "PKG_PKGPATH: ${PKG_PKGPATH}"
+		echo
+	fi
 
 	for deps in ${PKG_DEPS}
 	do
@@ -1038,7 +1073,7 @@ function build () (
 				pwd
 				if [ ${PKG_SAVE_STATUS:-1} -eq 1 ]
 				then
-					tar cjfp ${PACKAGES_PATH}/${PKG_NAME}.tar.xz --owner=0 --group=0 -C ${PKG_PKGPATH} .
+					tar cJfp ${PKG_PKGPATH}.tar.xz --owner=0 --group=0 -C ${PKG_PKGPATH} .
 				fi
 				rsync -aKv ${PKG_PKGPATH}/ ${BIN_PATH}
 				sudo rm -rf ${PKG_PKGPATH}
@@ -1058,31 +1093,6 @@ function build () (
 	echo
 	trap - ERR
 )
-
-function forge_la_libs () {
-	### List .la files in build package and forge .la in the Installation directory
-	function forge_la_file () {
-		set -x
-		local DEPENDENCY_LIBS="$(grep "dependency_libs=" ${1} | grep -o -E "([ '=]-l[^ ']*)" | xargs)"
-		sed -i "s/dependency_libs='.*'/dependency_libs='${DEPENDENCY_LIBS}'/g;/^relink_command=/d" ${1}
-		set +x
-	}
-	set -x
-	export -f forge_la_file
-	local LIB_LAs_LIST=$(find ${1} -name '*.la' -exec basename {} \; | sort -u)
-	if [ "x${LIB_LAs_LIST}" != "x" ]
-	then
-		local FIRST=1
-		for LIB_LA in ${LIB_LAs_LIST}
-		do
-			[ ${FIRST} -ne 1 ] && SEARCH_STRING+=" -o "
-			local SEARCH_STRING+="-name ${LIB_LA}"
-			local FIRST=0
-		done
-		find ${BIN_PATH}/lib ${BIN_PATH}${BUILD_LIBDIR} \( ${SEARCH_STRING} \) -exec bash -c "forge_la_file {}" \;
-	fi
-	set +x
-}
 
 function is_build_functions () {
 	return 0

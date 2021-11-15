@@ -18,12 +18,12 @@ then
 	mkdir -p ${GLOBAL_TOOLCHAIN_PATH}
 fi
 
-BINUTILS_VER=${BINUTILS_VER:-2.36.1}
-GCC_VER=${GCC_VER:-11.1.0}
-GMP_VER=${GMP_VER:-6.2.0}
+BINUTILS_VER=${BINUTILS_VER:-2.37}
+GCC_VER=${GCC_VER:-11.2.0}
+GMP_VER=${GMP_VER:-6.2.1}
 MPFR_VER=${MPFR_VER:-4.1.0}
-MPC_VER=${MPC_VER:-1.2.0}
-ISL_VER=${ISL_VER:-0.22}
+MPC_VER=${MPC_VER:-1.2.1}
+ISL_VER=${ISL_VER:-0.24}
 
 function prepare_sysroot () {
 	trap 'STATUS=${?}; \
@@ -38,7 +38,7 @@ function prepare_sysroot () {
 		trap ERR; \
 		return ${STATUS}' ERR
 
-	echo -n "Preparing sysroot..."
+	echo -n "Preparing sysroot... "
 	if [ -d ${DISTOS_PATH} ]
 	then
 		if [ ! $(stat -c '%u' ${DISTOS_PATH}) -eq $(id -u) ]
@@ -49,12 +49,14 @@ function prepare_sysroot () {
 		echo "DISTOS_PATH: ${DISTOS_PATH}" >> ${LOG_PATH}/sysroot.log 2>&1
 		echo >> ${LOG_PATH}/sysroot.log 2>&1
 
-		for i in $(find -L ${DISTOS_PATH}/usr/lib/${HARCH} -lname "/lib/${HARCH}*");
-		do
-			echo -n "Relinking $i... " >> ${LOG_PATH}/sysroot.log 2>&1
-			eval ${SUDO_CMD} ln -f -s ../../..$(readlink $i) $i >> ${LOG_PATH}/sysroot.log 2>&1
-			echo "done." >> ${LOG_PATH}/sysroot.log 2>&1
-		done
+		find -L ${DISTOS_PATH}/usr/lib/${HARCH} -lname "/lib/${HARCH}*" | xargs -I{} -d'\n' -n1 -P${NPROCS} bash -c "
+			echo -n 'Relinking {}... ' >> ${LOG_PATH}/sysroot.log 2>&1
+			set -x
+			eval ${SUDO_CMD} ln -f -s ../../..\$(readlink \"{}\") \"{}\" >> ${LOG_PATH}/sysroot.log 2>&1
+			set +x
+			echo 'done.'
+		" >> ${LOG_PATH}/sysroot.log 2>&1
+
 		if [ -f ${DISTOS_PATH}/usr/lib/${HARCH}/pkgconfig/libical.pc ]
 		then
 			eval ${SUDO_CMD} sed -i "s#/usr/lib/${HARCH:+${HARCH}/}libicu#${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}libicu#g" ${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}pkgconfig/libical.pc
@@ -82,7 +84,7 @@ function create_sysroot () {
 		trap ERR; \
 		return ${STATUS}' ERR
 
-	echo -n "Creating sysroot with $(basename ${1})..."
+	echo -n "Creating sysroot with $(basename ${1})... "
 	if [ ! -d ${DISTOS_PATH} ]
 	then
 		local ARCHIVE_DIRS="./boot ./bin ./lib ./usr/bin ./usr/include ./usr/lib ./usr/share ./usr/local/bin ./usr/local/include ./usr/local/lib ./etc ./opt"
@@ -147,7 +149,7 @@ function bootstrap_sysroot () {
 		local BUILD_LIBSUFFIX="/${HARCH}"
 	fi
 
-	echo "Bootstrapping sysroot in ${BIN_PATH}..."
+	echo "Bootstrapping sysroot in ${BIN_PATH}... "
 	local SPACES="   "
 
 	# Build Kernel Headers
@@ -215,7 +217,7 @@ function bootstrap_sysroot () {
 	echo -n "${SPACES}"
 	setup_gcc stage3
 
-	echo -n "   Copying libraries and headers..."
+	echo -n "   Copying libraries and headers... "
 	if [ ! -d ${TOOLCHAIN_PATH}/${HARCH}/include/c++ ]
 	then
 		if [ -d ${TOOLCHAIN_PATH}/${HARCH}/lib64 ]
@@ -229,9 +231,6 @@ function bootstrap_sysroot () {
 	else
 		echo "already installed."
 	fi
-
-	#echo -n "${SPACES}"
-	#install_gcclibs
 
 	echo "Done."
 	echo
@@ -262,7 +261,8 @@ function setup_gcc () {
 		local GMPURL=https://gmplib.org/download/gmp/gmp-${GMP_VER}.tar.xz
 		local MPFRURL=https://www.mpfr.org/mpfr-${MPFR_VER}/mpfr-${MPFR_VER}.tar.xz
 		local MPCURL=https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VER}.tar.gz
-		local ISLURL=http://isl.gforge.inria.fr/isl-${ISL_VER}.tar.xz
+		#local ISLURL=http://isl.gforge.inria.fr/isl-${ISL_VER}.tar.xz
+		local ISLURL=https://mirror.sobukus.de/files/src/isl/isl-${ISL_VER}.tar.xz
 		local BINUTILSURL=https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz
 		#local GCCURL=https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.xz
 		local GCCURL=https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz
@@ -277,18 +277,24 @@ function setup_gcc () {
 		find ../binutils-${BINUTILS_VER} -maxdepth 1 -type d -exec ln -fs {} . \;
 		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 9 && test_version ${BINUTILS_VER} -ge 2.33
 		then
-			echo "GCC version older than 10 and BINUTILS 2.33 or earlier..."
+			echo "GCC version older than 10 and BINUTILS 2.33 or earlier... "
 			cp -f ../binutils-${BINUTILS_VER}/configure.ac .
 			cp -f ../binutils-${BINUTILS_VER}/Makefile.* .
 		fi
 		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 9 && test_version ${BINUTILS_VER} -ge 2.34
 		then
-			echo "GCC version older than 10 and BINUTILS 2.34 or earlier..."
+			echo "GCC version older than 10 and BINUTILS 2.34 or earlier... "
 			ln -fs ../binutils-${BINUTILS_VER}/config/debuginfod.m4 config/debuginfod.m4
+		fi
+		if test_version ${GCC_VER} -eq 11.2.0 && test_version ${BINUTILS_VER} -ge 2.37
+		then
+			echo "GCC version is 11.2.0 and BINUTILS 2.37 or earlier... "
+			mv libiberty libiberty.gcc
+			ln -fs ../binutils-${BINUTILS_VER}/libiberty .
 		fi
 		if [ ../binutils-${BINUTILS_VER}/libiberty/cp-demangle.c -nt libiberty/cp-demangle.c ]
 		then
-			echo "binutils-${BINUTILS_VER}/libiberty newer than gcc-${GCC_VER}/libiberty..."
+			echo "binutils-${BINUTILS_VER}/libiberty newer than gcc-${GCC_VER}/libiberty... "
 			mv libiberty libiberty.gcc
 			ln -fs ../binutils-${BINUTILS_VER}/libiberty .
 		fi
@@ -364,11 +370,7 @@ function setup_gcc () {
 		local HOST_CFLAGS+=" -march=native"
 		local HOST_CXXFLAGS="${HOST_CFLAGS}"
 		local HOST_LDFLAGS="${COMMON_LDFLAGS} ${GCC_OPTLINK_FLAGS}"
-		### Compile workarounds
-		### if no system-zlib specified:
-		#local HOST_CFLAGS+=" -fPIC"
-		#local HOST_LDFLAGS+=" -lgcc_s"
-		###
+
 		if [ "${BUILD_ARCH}" == "${BARCH}" ]
 		then
 			# If BUILD_ARCH then install in GLOBAL_TOOLCHAIN_PATH
@@ -454,24 +456,23 @@ function setup_gcc () {
 		trap ERR;
 	}
 
-	local GCC_STAGE=${1}
-
 	trap 'STATUS=${?}; \
 		set +x; \
 		echo "fail."; \
 		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log ];
+		if [ -f ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log ];
 		then \
-			echo "Log ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log:"; \
+			echo "Log ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log:"; \
 			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log; \
+			tail -n24 ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log; \
 		fi;
 		trap ERR; \
 		exit ${STATUS}' ERR
 
+	local GCC_STAGE=${1}
+
 	echo -n "Setting up gcc"
 
-	#set -x
 	local GCC_LTOENABLE=${GCC_LTOENABLE:-0}
 	export PATH=${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin:${PATH}
 	local CURRENT_AUTOCONF_VER=$(autoconf -V | head -n1 | awk '{print $NF}')
@@ -491,32 +492,30 @@ function setup_gcc () {
 	then
 		unset AUTOCONF_VER
 	fi
-	#set +x
 
-	echo -n "-${GCC_VER}..."
+	echo -n "-${GCC_VER}... "
 	
-	#set -x
 	if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1 \
 		|| (( ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1 ) \
 		&& [ ${BUILD_GCCNATIVE:-0} -eq 1 ] )
 	then
-		> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log
+		> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log
 		if [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER} ] || [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
 		then
-			echo -n "downloading..."
-			download_gcc >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+			echo -n "downloading... "
+			download_gcc >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		fi
 		echo -n "building "
 		if ( ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-gcc-${GCC_VER} -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin/${BARCH}-g++ -v > /dev/null 2>&1 ) \
 			&& [ ${BUILD_GCCNATIVE:-0} -eq 1 ]
 		then
-			echo -n "native..."
-			build_gcc ${BARCH}>> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+			echo -n "native... "
+			build_gcc ${BARCH}>> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		fi
 		if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1
 		then
-			echo -n "${GCC_STAGE:-cross}..."
-			build_gcc ${HARCH} >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+			echo -n "${GCC_STAGE:-cross}... "
+			build_gcc ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		fi
 		echo "done."
 		if [[ ! "${GCC_STAGE}" =~ ^stage[123] ]]
@@ -526,14 +525,14 @@ function setup_gcc () {
 			rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
 		fi
 	else
-	echo "already there."
+		echo "already there."
 	fi
 
 	if [ ! -f ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz ]
 	then
-		echo -n "   Removing .la libraries..."
+		echo -n "   Removing .la libraries... "
 		local LA_LIBS="$(find ${TOOLCHAIN_PATH} -name "*.la" -printf "%P\n")"
-		tar cvjf ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz -C ${TOOLCHAIN_PATH} ${LA_LIBS} >> ${GLOBAL_LOG_PATH}/gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+		tar cvJf ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz -C ${TOOLCHAIN_PATH} ${LA_LIBS} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		(cd ${TOOLCHAIN_PATH}; rm -f ${LA_LIBS})
 		echo "Done."
 	fi
@@ -546,20 +545,23 @@ function setup_gcc () {
 	then
 		export LD_LIBRARY_PATH=${TOOLCHAIN_PATH}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 	fi
-	#set +x
+
+	GCCSEARCHLIBS="$( ( for lib in $(${HARCH:+${HARCH}-}gcc -print-search-dirs | grep 'libraries:' | sed 's/^libraries: =//;s/\:/ /g' ); do realpath "${lib}" 2>/dev/null; done ) | grep -v "${BIN_PATH}" | grep -v "${DISTOS_PATH}" | sort | uniq | xargs )" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+	LD_GCCLIBS=$( echo ${GCCSEARCHLIBS} | sed 's/ /:/g' ) >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+	echo "GCCSEARCHLIBS: ${GCCSEARCHLIBS}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+	echo "LD_GCCLIBS: ${LD_GCCLIBS}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 	trap ERR
 }
 
 function install_gcclibs () {
 	settoolflags
 	set -e
-	local GCCSEARCHLIBS="$( ( for lib in $(${HARCH:+${HARCH}-}gcc -print-search-dirs | grep 'libraries:' | sed 's/^libraries: =//;s/\:/ /g' ); do realpath "${lib}" 2>/dev/null; done ) | grep -v "${BIN_PATH}" | grep -v "${DISTOS_PATH}" | sort | uniq | xargs )"
 	local GCCLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 \( -name 'libgcc_s.so*' -o -name 'libssp.so*' \) 2>/dev/null | xargs )
 	local GCCLIBNAME="$( ( for name in ${GCCLIB}; do echo $(basename ${name}); done ) | sort | uniq | xargs )"
 	local GCCCXXLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 \( -name 'libstdc++.so.*' ! -name 'libstdc++.so.*-*.py' \) 2>/dev/null | xargs )
 	local GCCCXXLIBNAME="$( ( for name in ${GCCCXXLIB}; do echo $(basename ${name}); done ) | sort | uniq | xargs )"
-	echo -n "Installing ${GCCLIBNAME}, ${BASEGCCCXXLIBNAME} library..."
-	echo "GCCSEARCHLIBS: ${GCCSEARCHLIBS}" > ${LOG_PATH}/gcclibs.log
+	echo -n "Installing GCC libraries... "
+	echo "GCCSEARCHLIBS: ${GCCSEARCHLIBS}" >> ${LOG_PATH}/gcclibs.log
 	echo "GCCLIB: ${GCCLIB}" >> ${LOG_PATH}/gcclibs.log
 	echo "GCCLIBNAME: ${GCCLIBNAME}" >> ${LOG_PATH}/gcclibs.log
 	echo "GCCCXXLIB: ${GCCCXXLIB}" >> ${LOG_PATH}/gcclibs.log
@@ -568,7 +570,9 @@ function install_gcclibs () {
 	then
 		mkdir -p ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 	fi
-	cp -P -fv ${GCCLIB} ${GCCCXXLIB} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} >> ${LOG_PATH}/gcclibs.log 2>&1 &&
+	cp -P -fv ${GCCLIB} ${GCCCXXLIB} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} >> ${LOG_PATH}/gcclibs.log 2>&1
+	echo "done."
+	echo
 	set +e
 }
 
@@ -587,14 +591,14 @@ function setup_rust () {
 		trap ERR; \
 		exit ${STATUS}' ERR
 
-	echo -n "Setting up RUST..."
+	echo -n "Setting up RUST... "
 	export CARGO_HOME=${GLOBAL_TOOLCHAIN_PATH}
 	export RUSTUP_HOME=${GLOBAL_TOOLCHAIN_PATH}/var/rustup
 	if [ ! -x ${GLOBAL_TOOLCHAIN_PATH}/bin/cargo ] || [ ! -x ${GLOBAL_TOOLCHAIN_PATH}/bin/rustc ]
 	then
-		echo -n "downloading..."
+		echo -n "downloading... "
 		curl -sSf https://sh.rustup.rs -o /tmp/rustup-init
-		echo -n "installing..."
+		echo -n "installing... "
 		chmod +x /tmp/rustup-init &&
 		/tmp/rustup-init -v -y --no-modify-path >> ${GLOBAL_LOG_PATH}/rust.log 2>&1
 		rm -f /tmp/rustup-init
@@ -603,7 +607,7 @@ function setup_rust () {
 		echo "already there."
 	fi
 	CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
-	echo -n "Adding ${CARGO_TARGET} libraries..."
+	echo -n "Adding ${CARGO_TARGET} libraries... "
 	rustup -v target add ${CARGO_TARGET} >> ${GLOBAL_LOG_PATH}/rust.log 2>&1
 	echo "done."
 	echo
@@ -690,7 +694,7 @@ function setup_python () {
 		${BUILD_PYTHONPIP} install crossenv
 		${BUILD_PYTHON} -m crossenv ${HOST_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH}
 		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate
-		build-python -m pip install --upgrade pip cython setuptools wheel
+		build-python -m pip install --upgrade cython setuptools wheel
 		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
 		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
 		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
@@ -707,7 +711,7 @@ function setup_python () {
 		RANLIB=${HARCH}-gcc-ranlib \
 		STRIP=${HARCH}-strip \
 		OBJDUMP=${HARCH}-objdump \
-			cross-pip -v install --upgrade pip cython setuptools wheel
+			cross-pip -v install --upgrade cython
 		set +x
 		trap ERR
 	}
@@ -738,15 +742,15 @@ function setup_python () {
 		local PYTHON_VER=$(find ${PYTHON_SEARCHPATH}/usr/include -maxdepth 1 -name 'python*' -exec grep '#define PY_VERSION ' {}/patchlevel.h \; | awk '{print $3}' | sed 's/\"//g' | sort -u | tail -n1)
 		if [ "x${PYTHON_VER}" == "x" ]
 		then
-			echo "...no way to guess its version and not specified. Exiting..."
+			echo "...no way to guess its version and not specified. Exiting... "
 			echo
 			return 1
 		else
-			echo -n "-${PYTHON_VER} (guessed)..."
+			echo -n "-${PYTHON_VER} (guessed)... "
 		fi
 	else
 		local PYTHON_VER=${1}
-		echo -n "-${PYTHON_VER}..."
+		echo -n "-${PYTHON_VER}... "
 	fi
 	PYTHONBIN_VER=$( echo ${PYTHON_VER} | cut -d'.' -f1,2)
 	BUILD_PYTHON=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/python${PYTHONBIN_VER}
@@ -757,9 +761,9 @@ function setup_python () {
 	export LD_LIBRARY_PATH=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 	if [ ! -x ${BUILD_PYTHON} ] || [ ! -x ${BUILD_PYTHONPIP} ]
 	then
-		echo -n "downloading..."
+		echo -n "downloading... "
 		download_pyton > ${GLOBAL_LOG_PATH}/python-${PYTHONBIN_VER}.log 2>&1
-		echo -n "building..."
+		echo -n "building... "
 		build_python >> ${GLOBAL_LOG_PATH}/python-${PYTHONBIN_VER}.log 2>&1
 		echo "done."
 		rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}
@@ -796,7 +800,7 @@ function setup_python () {
 
 	if [ ${SKIP_PYTHONVENV:-0} -eq 0 ]
 	then
-		echo -n "Creating virtual cross environment..."
+		echo -n "Creating virtual cross environment... "
 		if [ ! -d ${TOOLCHAIN_PATH}/venv-${HARCH} ]
 		then
 			build_python_crossenv >> ${LOG_PATH}/toolchain_python-crossenv.log 2>&1
