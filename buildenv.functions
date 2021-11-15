@@ -54,8 +54,8 @@ function prepare_sysroot () {
 			set -x
 			eval ${SUDO_CMD} ln -f -s ../../..\$(readlink \"{}\") \"{}\" >> ${LOG_PATH}/sysroot.log 2>&1
 			set +x
-			echo 'done.' >> ${LOG_PATH}/sysroot.log 2>&1
-		"
+			echo 'done.'
+		" >> ${LOG_PATH}/sysroot.log 2>&1
 
 		if [ -f ${DISTOS_PATH}/usr/lib/${HARCH}/pkgconfig/libical.pc ]
 		then
