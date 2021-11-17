@@ -5,7 +5,7 @@ CONF_FLAGS="--with-alsaplugindir=\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX}/alsa-lib --
 CONF_FLAGS+=" --disable-payloadcheck"
 PKG_CFLAGS="-I${BIN_PATH}\${BUILD_INCLUDEDIR}/ldac"
 INST_CMD=install-strip
-PKG_DEPS="moode/bluez_5 raspbian/sbc-1.4 moode/libldac_2.0.2.3+af2dd23 moode/fdk-aac-2.0.1"
+PKG_DEPS="moode/bluez_5 raspbian/sbc-1.4 moode/libldac_2.0.2.3+af2dd23 moode/fdk-aac_2.0.1"
 PATCHES=
 PKG_POSTBUILD="install -d ${PKG_PKGPATH}/run/bluealsa"
 case ${WITH_APTX} in

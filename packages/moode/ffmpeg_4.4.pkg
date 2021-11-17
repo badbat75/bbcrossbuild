@@ -1,0 +1,31 @@
+# ffmpeg-4.4
+PKG_URL="https://ffmpeg.org/releases/ffmpeg-4.4.tar.xz"
+AUTOCONF=0
+BUILD_PROCESS=configmake
+STD_CONF_FLAGS=0
+CONF_FLAGS="--prefix=${BUILD_PREFIX} --incdir=${BUILD_INCLUDEDIR}${BUILD_LIBSUFFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+            --enable-cross-compile --cross-prefix=${HARCH}- --arch=${HARCH} --target-os=linux \
+            --cc=\"${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc\" \
+            --nm=${HARCH}-gcc-nm \
+            --ar=${HARCH}-gcc-ar \
+            --ranlib=${HARCH}-gcc-ranlib \
+            --pkg-config=pkg-config \
+			--enable-gpl         \
+            --enable-version3    \
+            --enable-nonfree     \
+            --disable-debug      \
+            --enable-avresample  \
+            --enable-libfdk-aac  \
+            --enable-libfreetype \
+            --enable-libmp3lame  \
+            --enable-libopus     \
+            --enable-libtheora   \
+            --enable-libvorbis   \
+            --enable-openssl     \
+            --docdir=${BUILD_PREFIX}/share/doc/ffmpeg-4.4"
+[ ${BUILD_LIBSHARED} -eq 1 ] && CONF_FLAGS+=" --enable-shared" || CONF_FLAGS+=" --disable-shared"
+[ ${BUILD_LIBSTATIC} -eq 1 ] && CONF_FLAGS+=" --enable-static" || CONF_FLAGS+=" --disable-static"
+[ ${LTOENABLE:-0} -eq 1 ] && CONF_FLAGS+=" --enable-lto" || true
+INST_CMD=install-strip
+PKG_DEPS="moode/fdk-aac_2.0.1"
+LTOENABLE=0
