@@ -96,6 +96,7 @@ build moode/minidlna_1.3.0
 build moode/ashuffle_3.12
 
 # COMPONENT 4A - Shairport-sync
+#WITH_SSL=openssl WITH_ALAC=1 build moode/shairport-sync_4.1
 WITH_ALAC=1 build moode/shairport-sync_3.3.8
 
 # COMPONENT 4B - Librespot
@@ -129,7 +130,8 @@ if [ -z ${DISABLE_FINAL_IMG} ]
 then
 	mount_tag temp --url ${RASPBIAN_URL}${RASPBIAN_IMAGE}.zip --imgfile ${RASPBIAN_IMAGE}.img --mountlist "2:/ 1:/boot" --resize 2:3G
 
-	run_on_root_dir temp root "apt-get -y purge --autoremove gcc-10 build-essential libc6-dev raspberrypi-kernel RPi.GPIO bluez \
+	run_on_root_dir temp root "apt-get -y purge --autoremove raspberrypi-kernel libraspberrypi-dev \
+		gcc-10 build-essential libc6-dev dpkg-dev manpages-dev RPi.GPIO bluez \
 		wpasupplicant iw htop libnl-3-200 libcamera-apps-lite libsource-highlight4v5"
 	run_on_root_dir temp root "apt-get update --allow-releaseinfo-change"
 	run_on_root_dir temp root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"

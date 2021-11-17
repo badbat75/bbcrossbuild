@@ -1,0 +1,11 @@
+# libgpg-error_1.42-3
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libg/libgpg-error/libgpg-error_1.42.orig.tar.bz2"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libg/libgpg-error/libgpg-error_1.42-3.debian.tar.xz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--disable-rpath"
+INST_CMD=install-strip
+PKG_DEPS=
+PKG_PREBUILD="sed -i 's/\`echo -n\`/\"\`echo -n\`\"/' src/gen-lock-obj.sh"
+
+# Dependencies:
+
