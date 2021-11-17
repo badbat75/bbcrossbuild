@@ -26,6 +26,6 @@ CONF_FLAGS="--prefix=${BUILD_PREFIX} --incdir=${BUILD_INCLUDEDIR}${BUILD_LIBSUFF
 [ ${BUILD_LIBSHARED} -eq 1 ] && CONF_FLAGS+=" --enable-shared" || CONF_FLAGS+=" --disable-shared"
 [ ${BUILD_LIBSTATIC} -eq 1 ] && CONF_FLAGS+=" --enable-static" || CONF_FLAGS+=" --disable-static"
 [ ${LTOENABLE:-0} -eq 1 ] && CONF_FLAGS+=" --enable-lto" || true
-INST_CMD=install-strip
+INST_CMD=install
 PKG_DEPS="moode/fdk-aac_2.0.1"
 LTOENABLE=0
