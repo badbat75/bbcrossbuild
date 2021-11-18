@@ -16,13 +16,17 @@ CONF_FLAGS="--prefix=${BUILD_PREFIX} --incdir=${BUILD_INCLUDEDIR}${BUILD_LIBSUFF
             --disable-debug      \
             --enable-avresample  \
             --enable-libfdk-aac  \
-            --enable-libfreetype \
             --enable-libmp3lame  \
             --enable-libopus     \
             --enable-libtheora   \
             --enable-libvorbis   \
             --enable-openssl     \
             --docdir=${BUILD_PREFIX}/share/doc/ffmpeg-4.4"
+if [ ${FFMPEG_VIDEO:-0} -eq 1 ]
+then
+    # Video enablement
+    CONF_FLAGS+=" --enable-libfreetype"
+fi
 [ ${BUILD_LIBSHARED} -eq 1 ] && CONF_FLAGS+=" --enable-shared" || CONF_FLAGS+=" --disable-shared"
 [ ${BUILD_LIBSTATIC} -eq 1 ] && CONF_FLAGS+=" --enable-static" || CONF_FLAGS+=" --disable-static"
 [ ${LTOENABLE:-0} -eq 1 ] && CONF_FLAGS+=" --enable-lto" || true

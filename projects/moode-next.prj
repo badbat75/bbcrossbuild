@@ -27,7 +27,7 @@ then
 		libbsd-dev libncurses5-dev libsndfile1-dev \
 		\
 		libcdio-paranoia-dev libmad0-dev libmpg123-dev libflac-dev libvorbis-dev libopus-dev libaudiofile-dev libfaad-dev \
-		libwavpack-dev libavcodec-dev libavformat-dev libmp3lame-dev libcurl4-gnutls-dev libshout3-dev libyajl-dev \
+		libwavpack-dev libmp3lame-dev libcurl4-gnutls-dev libshout3-dev libyajl-dev \
 		libavahi-client-dev libsystemd-dev libwrap0-dev libicu-dev libglib2.0-dev \
 		\
 		libao-dev libgsm1-dev libltdl3-dev libmagic-dev libopencore-amrnb-dev libopencore-amrwb-dev libpng-dev libpulse-dev \
@@ -139,7 +139,7 @@ then
 		php-fpm nginx sqlite3 php-sqlite3 php7.4-gd php-yaml \
 		\
 		telnet sysstat squashfs-tools shellinabox \
-		samba smbclient exfat-fuse inotify-tools ffmpeg \
+		samba smbclient exfat-fuse inotify-tools \
 		avahi-utils winbind libnss-winbind djmount haveged xfsprogs zip id3v2 \
 		udisks2 libatasmart4 libdbus-glib-1-2 libgudev-1.0-0 libsgutils2-2 libdevmapper-event1.02.1 \
 		\
