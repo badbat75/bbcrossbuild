@@ -17,21 +17,22 @@ mount_tag distos --url "${RASPBIAN_URL}${RASPBIAN_IMAGE}.zip" --imgfile "${RASPB
 if [ -z ${SKIP_DISTOS_APTS} ]
 then
 	run_on_root_dir distos root "apt-get -y purge --autoremove raspberrypi-kernel firmware-* RPi.GPIO \
-		bluez wpasupplicant iw htop libnl-3-200 libcamera-apps-lite libsource-highlight4v5"
+		bluez wpasupplicant iw htop libnl-3-200 libcamera-apps-lite libsource-highlight4v5 \
+		libtheora"
 	run_on_root_dir distos root "apt-get update --allow-releaseinfo-change"
 	run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
 	run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
 		libc6-dev libpython3-dev libsqlite3-dev \
 		libasound2-dev \
 		libusb-dev libglib2.0-dev libudev-dev libical-dev libreadline-dev libdbus-1-dev \
-		libbsd-dev libncurses5-dev libsndfile1-dev \
+		libbsd-dev libncurses5-dev \
 		\
-		libcdio-paranoia-dev libmad0-dev libmpg123-dev libflac-dev libvorbis-dev libopus-dev libaudiofile-dev libfaad-dev \
-		libwavpack-dev libmp3lame-dev libcurl4-gnutls-dev libshout3-dev libyajl-dev \
+		libcdio-paranoia-dev libmad0-dev libmpg123-dev libfaad-dev \
+		libwavpack-dev libmp3lame-dev libcurl4-gnutls-dev libyajl-dev \
 		libavahi-client-dev libsystemd-dev libwrap0-dev libicu-dev libglib2.0-dev \
 		\
 		libao-dev libgsm1-dev libltdl3-dev libmagic-dev libopencore-amrnb-dev libopencore-amrwb-dev libpng-dev libpulse-dev \
-		libsamplerate0-dev libtwolame-dev libogg-dev \
+		libsamplerate0-dev libtwolame-dev \
 		\
 		libpopt-dev libavahi-client-dev libssl-dev \
 		libexpat1-dev libxml2-dev libxslt1-dev \
@@ -132,7 +133,8 @@ then
 
 	run_on_root_dir temp root "apt-get -y purge --autoremove raspberrypi-kernel libraspberrypi-dev \
 		gcc-10 build-essential libc6-dev dpkg-dev manpages-dev RPi.GPIO bluez \
-		wpasupplicant iw htop libnl-3-200 libcamera-apps-lite libsource-highlight4v5"
+		wpasupplicant iw htop libnl-3-200 libcamera-apps-lite libsource-highlight4v5 \
+		libtheora"
 	run_on_root_dir temp root "apt-get update --allow-releaseinfo-change"
 	run_on_root_dir temp root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
 	run_on_root_dir temp root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
@@ -149,10 +151,11 @@ then
 		\
 		expect \
 		\
-		xinit xorg xserver-xorg-legacy chromium-browser libgtk-3-0 libgles2 \
+		\
 		\
 		python3-dbus python3-matplotlib python3-aiohttp python3-yaml"
-
+	#run_on_root_dir temp root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
+	#	xinit xorg xserver-xorg-legacy chromium-browser libgtk-3-0 libgles2"
 	run_on_root_dir temp root "apt-get -y purge --autoremove libcephfs2"
 	run_on_root_dir temp root "apt-get clean"
 

@@ -5,5 +5,5 @@ BUILD_PROCESS=configmake
 CONF_FLAGS=""
 PKG_CFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}/bs2b"
 INST_CMD=install-strip
-PKG_DEPS="raspbian/libbs2b_3.1.0+dfsg-2.2 raspbian/ladspa-sdk_1.15-2"
+PKG_DEPS="raspbian/libbs2b_3.1.0+dfsg-2.2 raspbian/ladspa-sdk_1.15-2 moode/libsndfile_1.0.31"
 PKG_PREBUILD="sed -i 's/dist-bzip2 dist-lzma/dist-bzip2/' configure.ac"

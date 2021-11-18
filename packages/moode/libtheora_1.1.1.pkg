@@ -1,0 +1,10 @@
+# libtheora_1.1.1
+#PKG_URL="https://github.com/xiph/Icecast-libshout/archive/refs/tags/v2.4.3.tar.gz"
+GIT_URL="https://github.com/xiph/theora"
+GIT_COMMIT="7288b539"
+BUILD_PROCESS=configmake
+PKG_DEPS="moode/libogg_1.3.5 moode/libvorbis_1.3.7 moode/SDL_1.2.15"
+CONF_FLAGS=""
+INST_CMD=install-strip
+AUTOCONF=0
+PKG_PREBUILD="autoreconf -fi -Im4"

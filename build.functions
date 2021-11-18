@@ -101,12 +101,12 @@ function build () (
 			then
 				if [ ! -d ${PKG_SRCPATH} ]
 				then
-					git clone --single-branch ${GIT_URL} ${PKG_SRCPATH}
+					git clone --recursive ${GIT_URL} ${PKG_SRCPATH}
 					if  [ ! -z ${GIT_COMMIT} ]
 					then
 						git -C ${PKG_SRCPATH} checkout ${GIT_COMMIT}
 					fi
-					git -C ${PKG_SRCPATH} submodule update --init --recursive
+					#git -C ${PKG_SRCPATH} submodule update --init --recursive
 				fi
 			fi
 		fi
@@ -227,7 +227,15 @@ function build () (
 		fi
 		export PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR}
 		export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}
-		export PATH=${PATH}:${BIN_PATH}${BUILD_EXECPREFIX}/bin${DISTOS_PATH:+:${DISTOS_PATH}/usr/bin}
+		export PATH=${PATH}:${BIN_PATH}${BUILD_EXECPREFIX}/bin${DISTOS_PATH:+:${DISTOS_PATH}/usr/bin}:${PWD}
+		cat > ${HARCH}-pkg-config <<-EOF
+		#!/bin/sh
+		export PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR}
+		export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}
+		echo $(which pkg-config) \$@ >> ${HARCH}-pkg-config.log
+		$(which pkg-config) \$@ | tee -a ${HARCH}-pkg-config.log
+		EOF
+		chmod +x ${HARCH}-pkg-config
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 			CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS} ${PKG_CFLAGS}" \
 			CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
@@ -337,8 +345,17 @@ function build () (
 			CONF_FLAGS+=" -DBUILD_STATIC_LIBS=OFF"
 		fi
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}} \
+		export PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR}
+		export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}
+		export PATH=${PATH}:${BIN_PATH}${BUILD_EXECPREFIX}/bin${DISTOS_PATH:+:${DISTOS_PATH}/usr/bin}:${PWD}
+		cat > ${HARCH}-pkg-config <<-EOF
+			#!/bin/sh
+			export PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR}
+			export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}
+			echo $(which pkg-config) \$@ >> ${HARCH}-pkg-config.log
+			$(which pkg-config) \$@ | tee -a ${HARCH}-pkg-config.log
+		EOF
+		chmod +x ${HARCH}-pkg-config
 		cmake ${PKG_SRCPATH} \
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DTOOLCHAIN_PREFIX=${HARCH}- \
