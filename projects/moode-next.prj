@@ -22,7 +22,6 @@ then
 	run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
 	run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
 		libc6-dev libpython3-dev libsqlite3-dev \
-		libasound2-dev \
 		libusb-dev libglib2.0-dev libudev-dev libical-dev libreadline-dev libdbus-1-dev \
 		libbsd-dev libncurses5-dev \
 		\

@@ -7,8 +7,6 @@ sudo dnf install -y bc parted e2fsprogs bzip2 rsync vim-common \
 
 #autoconf2.64
 
-sudo dnf install -y alsa-lib-devel
-
 # For Image emulation
 sudo dnf install -y qemu-user-static
 

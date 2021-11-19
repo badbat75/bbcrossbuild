@@ -197,8 +197,10 @@ function build () (
 		then
 			echo -n "${SPACES}AutoReconf ${PKG_NAME}..."
 			[ ! -z ${AUTOCONF_PATH} ] && cd ${AUTOCONF_PATH}
-			mkdir -p m4
-			autoreconf -fi -Im4 >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			[ -d m4 ] && local ACINCLUDE="-Im4" || mkdir m4
+			[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" -I${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal"
+			[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" -I${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
+			autoreconf -fi ${ACINCLUDE} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 			local STATUS=${?}
 			if [ ${STATUS} -ne 0 ]
 			then
@@ -518,6 +520,8 @@ function build () (
 
 	function kernelbuild () {
 		function make4kern () {
+			env
+			set -x
 			if [ ${KERN_LTOENABLE:-0} -eq 1 ] 
 			then
 				KERN_OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
@@ -549,6 +553,7 @@ function build () (
 				${@} ${PKG_MAKEVARS}
 				local STATUS=${?}
 			fi
+			set x
 			return ${STATUS}
 		}
 		trap 'STATUS=${?}; \
@@ -557,6 +562,9 @@ function build () (
 		return ${STATUS};' ERR
 
 		set -x
+		unset PKG_CONFIG_LIBDIR
+		unset PKG_CONFIG_SYSROOT_DIR
+
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
 		KERN_VER=$(make kernelversion)
