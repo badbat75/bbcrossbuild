@@ -26,12 +26,10 @@ then
 		libusb-dev libglib2.0-dev libudev-dev libical-dev libreadline-dev libdbus-1-dev \
 		libbsd-dev libncurses5-dev \
 		\
-		libcdio-paranoia-dev libmad0-dev libmpg123-dev libfaad-dev \
-		libwavpack-dev libmp3lame-dev libcurl4-gnutls-dev libyajl-dev \
+		libcurl4-gnutls-dev libyajl-dev \
 		libavahi-client-dev libsystemd-dev libwrap0-dev libicu-dev libglib2.0-dev \
 		\
-		libao-dev libgsm1-dev libltdl3-dev libmagic-dev libopencore-amrnb-dev libopencore-amrwb-dev libpng-dev \
-		libsamplerate0-dev libtwolame-dev \
+		libltdl3-dev libmagic-dev libopencore-amrnb-dev libopencore-amrwb-dev libpng-dev \
 		\
 		libpopt-dev libavahi-client-dev libssl-dev \
 		libexpat1-dev libxml2-dev libxslt1-dev \
@@ -96,7 +94,7 @@ build moode/minidlna_1.3.0
 build moode/ashuffle_3.12
 
 # COMPONENT 4A - Shairport-sync
-#WITH_SSL=openssl WITH_ALAC=1 build moode/shairport-sync_4.1
+#WITH_ALAC=1 build moode/shairport-sync_4.1
 WITH_ALAC=1 build moode/shairport-sync_3.3.8
 
 # COMPONENT 4B - Librespot
@@ -144,7 +142,7 @@ then
 		avahi-utils winbind libnss-winbind djmount haveged xfsprogs zip id3v2 \
 		udisks2 libatasmart4 libdbus-glib-1-2 libgudev-1.0-0 libsgutils2-2 libdevmapper-event1.02.1 \
 		\
-		libyajl2 libfaad2 libmad0 libavahi-client3 libcurl3-gnutls \
+		libyajl2 libavahi-client3 libcurl3-gnutls \
 		\
 		dnsmasq \
 		\

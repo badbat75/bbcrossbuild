@@ -1,0 +1,7 @@
+#faad2_2.10.0
+GIT_URL="https://github.com/knik0/faad2"
+GIT_COMMIT="2_10_0"
+BUILD_PROCESS=configmake
+PKG_DEPS=""
+CONF_FLAGS=""
+INST_CMD=install-strip

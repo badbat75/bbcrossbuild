@@ -457,8 +457,7 @@ function build () (
 		local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n '-v')"
 		createmesoncross
 		CMAKE=cmake \
-		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}} \
+		PKG_CONFIG=${HARCH}-pkg-config \
 		meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release --strip -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} \
 			--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
 			--includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} \

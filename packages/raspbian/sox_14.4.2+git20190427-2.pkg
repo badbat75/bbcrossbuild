@@ -6,7 +6,7 @@ CONF_FLAGS="--with-dyn-default"
 PKG_CFLAGS="-I${DISTOS_PATH}/${BUILD_INCLUDEDIR}/opus"
 INST_CMD=install-strip
 PKG_PREBUILD="sed -i 's/#if 1/#if 0/' src/sox_i.h"
-PKG_DEPS="raspbian/ladspa-sdk_1.15-2 raspbian/libid3tag_0.15.1b-14 moode/opusfile_0.12"
+PKG_DEPS="raspbian/ladspa-sdk_1.15-2 raspbian/libid3tag_0.15.1b-14 moode/opusfile_0.12 raspbian/libgsm_1.0.18-2"
 PKG_CONFIG_SYSROOT_DIR=${BIN_PATH}
 
 # Note:
