@@ -17,7 +17,7 @@ mount_tag distos --url "${RASPBIAN_URL}${RASPBIAN_IMAGE}.zip" --imgfile "${RASPB
 if [ -z ${SKIP_DISTOS_APTS} ]
 then
 	run_on_root_dir distos root "apt-get -y purge --autoremove raspberrypi-kernel firmware-* RPi.GPIO \
-		bluez wpasupplicant iw htop libnl-3-200 libcamera-apps-lite libsource-highlight4v5"
+		libasound2 bluez wpasupplicant iw htop libnl-3-200 libcamera-apps-lite libsource-highlight4v5"
 	run_on_root_dir distos root "apt-get update --allow-releaseinfo-change"
 	run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
 	run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
@@ -54,6 +54,7 @@ setup_python 3.9.8
 #clean_project
 
 KEEP_BUILDDIR=1 build raspberrypi/rpi-kernel_5.15
+build moode/alsa-utils_1.2.5.1
 
 # Download and install moode-sources and pre-build environment
 build moode/moode-dynamic-ver_1.2

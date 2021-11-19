@@ -21,6 +21,7 @@ CONF_FLAGS="-Dalsa=enabled -Dbzip2=enabled -Dcurl=enabled -Ddatabase=true -Ddsd=
 	-Dwildmidi=disabled -Dsoundcloud=disabled -Dqobuz=disabled"
 PKG_DEPS="moode/boost_1.77.0 \
 	moode/libmpdclient-2.19 \
+	moode/alsa-lib_1.2.5.1 \
 	moode/ffmpeg_4.4 \
 	moode/lame_3.100 \
 	moode/mpg123_1.29.2 \
