@@ -24,6 +24,8 @@ function settoolflags () {
 	BUILD_LIBDIR="${BUILD_LIBDIR:-$(readlink -m ${BUILD_EXECPREFIX}/lib)}"
 	BUILD_SYSCONFDIR="${BUILD_SYSCONFDIR:-/etc}"
 	BUILD_LOCALSTATEDIR="${BUILD_LOCALSTATEDIR:-/var}"
+	BUILD_SYSTEMDDIR="${BUILD_SYSTEMDDIR:-/lib/systemd/system}"
+	BUILD_USERSYSTEMDDIR="${BUILD_USERSYSTEMDDIR:-${BUILD_PREFIX}/lib/systemd/system}"
 	export BUILD_PREFIX BUILD_EXECPREFIX BUILD_INCLUDEDIR BUILD_LIBDIR BUILD_SYSCONFDIR BUILD_LOCALSTATEDIR
 	export QEMU_LD_PREFIX="${BIN_PATH}"
 	if [ ${MULTI_ARCH} -eq 1 ]
@@ -211,7 +213,8 @@ function build () (
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 		then
-			CONF_FLAGS="--prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --libexecdir=${BUILD_LIBDIR} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} ${CONF_FLAGS}"
+			CONF_FLAGS="--prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --libexecdir=${BUILD_LIBDIR} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} \
+				--with-systemdsystemunitdir=${BUILD_SYSTEMDDIR} --with-systemduserunitdir=${BUILD_USERSYSTEMDDIR} --localstatedir=${BUILD_LOCALSTATEDIR} ${CONF_FLAGS}"
 			CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH} ${CONF_FLAGS}"
 			if [ ${BUILD_LIBSHARED} -eq 1 ]
 			then
