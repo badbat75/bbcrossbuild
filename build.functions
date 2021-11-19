@@ -226,19 +226,6 @@ function build () (
 				CONF_FLAGS=" --disable-static ${CONF_FLAGS}"
 			fi
 		fi
-		#export PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR}
-		#export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}
-		export PATH=${PATH}:${BIN_PATH}${BUILD_EXECPREFIX}/bin${DISTOS_PATH:+:${DISTOS_PATH}/usr/bin}
-		cat > ${HARCH}-pkg-config <<-EOF
-			#!/bin/sh
-			set -e -o pipefail
-			export PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR}
-			export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}
-			echo $(which pkg-config) \$@ >> ${PWD}/${HARCH}-pkg-config.log
-			$(which pkg-config) \$@ | tee -a ${PWD}/${HARCH}-pkg-config.log
-			set +e +o pipefail
-		EOF
-		chmod +x ${HARCH}-pkg-config
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 			CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS} ${PKG_CFLAGS}" \
 			CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
@@ -253,7 +240,7 @@ function build () (
 			RANLIB=${HARCH}-gcc-ranlib \
 			STRIP=${HARCH}-strip \
 			OBJDUMP=${HARCH}-objdump \
-			PKG_CONFIG=${PWD}/${HARCH}-pkg-config \
+			PKG_CONFIG=${HARCH}-pkg-config \
 			eval "${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS}"
 		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
 		then
@@ -298,8 +285,7 @@ function build () (
 				RANLIB=${HARCH}-gcc-ranlib \
 				STRIP=${HARCH}-strip \
 				OBJDUMP=${HARCH}-objdump \
-				PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-				PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}} \
+				PKG_CONFIG=${HARCH}-pkg-config \
 					eval "make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}"
 			done
 		fi
@@ -318,8 +304,7 @@ function build () (
 		RANLIB=${HARCH}-gcc-ranlib \
 		STRIP=${HARCH}-strip \
 		OBJDUMP=${HARCH}-objdump \
-		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
+		PKG_CONFIG=${HARCH}-pkg-config \
 			eval "make ${PKG_MAKEVARS} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}"
 		cd ${BB_HOME}
 		set +x
@@ -349,20 +334,7 @@ function build () (
 			CONF_FLAGS+=" -DBUILD_STATIC_LIBS=OFF"
 		fi
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-		#export PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR}
-		#export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}
-		export PATH=${PATH}:${BIN_PATH}${BUILD_EXECPREFIX}/bin${DISTOS_PATH:+:${DISTOS_PATH}/usr/bin}
-		cat > ${HARCH}-pkg-config <<-EOF
-			#!/bin/sh
-			set -e -o pipefail
-			export PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR}
-			export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}
-			echo $(which pkg-config) \$@ >> ${PWD}/${HARCH}-pkg-config.log
-			$(which pkg-config) \$@ | tee -a ${PWD}/${HARCH}-pkg-config.log
-			set +e +o pipefail
-		EOF
-		chmod +x ${HARCH}-pkg-config
-		PKG_CONFIG=${PWD}/${HARCH}-pkg-config \
+		PKG_CONFIG=${HARCH}-pkg-config \
 		cmake ${PKG_SRCPATH} \
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DTOOLCHAIN_PREFIX=${HARCH}- \
@@ -452,7 +424,7 @@ function build () (
 				strip = '${STRIP}'
 				nm = '${NM}'
 				ranlib = '${RANLIB}'
-				pkgconfig = 'pkg-config'
+				pkgconfig = '${HARCH}-pkg-config'
 
 				[host_machine]
 				system = '${HOS}'
@@ -517,10 +489,9 @@ function build () (
 		EOF
 		chmod +x ${HARCH}-gcc
 		local CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
-		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
 		RUSTFLAGS="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} \
 			-C linker=${PKG_BLDPATH}/${HARCH}-gcc ${PKG_RUSTFLAGS}" \
+		PKG_CONFIG=${HARCH}-pkg-config \
 			cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}
 		for file in ${CARGO_BINLIST}
 		do
@@ -730,6 +701,7 @@ function build () (
 		RANLIB=${HARCH}-gcc-ranlib \
 		STRIP=${HARCH}-strip \
 		OBJDUMP=${HARCH}-objdump \
+		PKG_CONFIG=${HARCH}-pkg-config \
 			eval '${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}'
 		eval '${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} \
 			${INSTALL_TARGET}'
@@ -812,6 +784,7 @@ function build () (
 		RANLIB=${HARCH}-gcc-ranlib \
 		STRIP=${HARCH}-strip \
 		OBJDUMP=${HARCH}-objdump \
+		PKG_CONFIG=${HARCH}-pkg-config \
 			cross-python -m pip ${VERBOSE} install ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX} ${PKG_NAME}
 		if [ ${PYTHON_PKGDIR} == dist-packages ]
 		then
@@ -886,8 +859,7 @@ function build () (
 		local LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}"
 		./bootstrap.sh --prefix=${PKG_PKGPATH}${BUILD_PREFIX} --exec-prefix=${PKG_PKGPATH}${BUILD_EXECPREFIX} --libdir=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${PKG_PKGPATH}${BUILD_INCLUDEDIR} --with-python-version=${PYTHONBIN_VER} &&
 		sed -i "s|using gcc ;|using gcc : : ${CXX} ;|" project-config.jam &&
-		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}} \
+		PKG_CONFIG=${HARCH}-pkg-config \
 		./b2 -j${NPROCS} -q ${B2_FLAGS} \
 			architecture=${HM} address-model=${HMADDRMOD} binary-format=${HMBINFMT} abi=${HMABI} target-os=${HOS} \
 			toolset=gcc threading=multi cxxflags="-fPIC ${CXXFLAGS}" linkflags="${LDFLAGS}" install
@@ -972,6 +944,9 @@ function build () (
 	eval local PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
 	eval local PKG_BLDPATH=${PKG_BLDPATH}
 	eval local PKG_PKGPATH=${PKG_PKGPATH}
+
+	export PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR}
+	export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}
 
 	echo "Package ${PKG_NAME}"
 

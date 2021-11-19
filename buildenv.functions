@@ -3,28 +3,6 @@
 check_core_functions
 check_build_functions
 
-export MAKEFLAGS="-j${NPROCS} ${MAKEFLAGS:+ ${MAKEFLAGS}}"
-
-TOOLCHAIN_SRCPATH=${SRC_PATH}/toolchain
-TOOLCHAIN_BLDPATH=${BLD_PATH}/toolchain
-if [ ! -d ${TOOLCHAIN_PATH} ]
-then
-	mkdir -p ${TOOLCHAIN_PATH}
-fi
-GLOBAL_TOOLCHAIN_SRCPATH=${GLOBAL_SRC_PATH}
-GLOBAL_TOOLCHAIN_BLDPATH=${GLOBAL_BLD_PATH}
-if [ ! -d ${GLOBAL_TOOLCHAIN_PATH} ]
-then
-	mkdir -p ${GLOBAL_TOOLCHAIN_PATH}
-fi
-
-BINUTILS_VER=${BINUTILS_VER:-2.37}
-GCC_VER=${GCC_VER:-11.2.0}
-GMP_VER=${GMP_VER:-6.2.1}
-MPFR_VER=${MPFR_VER:-4.1.0}
-MPC_VER=${MPC_VER:-1.2.1}
-ISL_VER=${ISL_VER:-0.24}
-
 function prepare_sysroot () {
 	trap 'STATUS=${?}; \
 		echo "fail."; \
@@ -815,6 +793,49 @@ function setup_python () {
 	trap ERR
 }
 
+function setup_pkgconfig () {
+	if [ ! -d ${TOOLCHAIN_PATH}/bin ]
+	then
+		mkdir ${TOOLCHAIN_PATH}/bin
+	fi
+	settoolflags
+	cat > ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config <<-EOF
+		#!/bin/sh
+		set -o pipefail
+		echo "PKG_CONFIG_LIBDIR=\${PKG_CONFIG_LIBDIR} \\\\" >> pkg-config.log
+		echo "PKG_CONFIG_SYSROOT_DIR=\${PKG_CONFIG_SYSROOT_DIR} \\\\" >> pkg-config.log
+		echo $(which pkg-config) \$@ >> pkg-config.log
+		$(which pkg-config) \$@ | tee -a pkg-config.log
+		STATUS=\$?
+		echo >> pkg-config.log
+		set +o pipefail
+		exit \${STATUS}
+	EOF
+	chmod +x ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config
+}
+
+export MAKEFLAGS="-j${NPROCS} ${MAKEFLAGS:+ ${MAKEFLAGS}}"
+
+TOOLCHAIN_SRCPATH=${SRC_PATH}/toolchain
+TOOLCHAIN_BLDPATH=${BLD_PATH}/toolchain
+if [ ! -d ${TOOLCHAIN_PATH} ]
+then
+	mkdir -p ${TOOLCHAIN_PATH}
+fi
+GLOBAL_TOOLCHAIN_SRCPATH=${GLOBAL_SRC_PATH}
+GLOBAL_TOOLCHAIN_BLDPATH=${GLOBAL_BLD_PATH}
+if [ ! -d ${GLOBAL_TOOLCHAIN_PATH} ]
+then
+	mkdir -p ${GLOBAL_TOOLCHAIN_PATH}
+fi
+
+BINUTILS_VER=${BINUTILS_VER:-2.37}
+GCC_VER=${GCC_VER:-11.2.0}
+GMP_VER=${GMP_VER:-6.2.1}
+MPFR_VER=${MPFR_VER:-4.1.0}
+MPC_VER=${MPC_VER:-1.2.1}
+ISL_VER=${ISL_VER:-0.24}
+
 # Check the toolchains
 gcc -v > /dev/null 2>&1
 if [ ! ${?} -eq 0 ]
@@ -823,3 +844,5 @@ then
 	exit 1
 fi
 BARCH=$(gcc -dumpmachine)
+
+setup_pkgconfig
