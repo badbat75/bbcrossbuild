@@ -5,5 +5,3 @@ BUILD_PROCESS=configmake
 PKG_DEPS="moode/SpeexDSP-1.2.0 moode/libogg_1.3.5"
 CONF_FLAGS=""
 INST_CMD=install-strip
-AUTOCONF=0
-PKG_PREBUILD="autoreconf -fi -Im4"

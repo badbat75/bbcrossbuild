@@ -4,5 +4,3 @@ BUILD_PROCESS=configmake
 CONF_FLAGS=""
 INST_CMD=install
 AUTOCONF=0
-#PKG_PREBUILD="autoreconf -fi -Im4"
-#PKG_CFLAGS="-I${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/dbus-1.0/include"
