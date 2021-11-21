@@ -5,4 +5,3 @@ BUILD_PROCESS=configmake
 PKG_DEPS="moode/libogg_1.3.5 moode/libvorbis_1.3.7"
 CONF_FLAGS=""
 INST_CMD=install-strip
-PKG_CONFIG_SYSROOT_DIR=${BIN_PATH}

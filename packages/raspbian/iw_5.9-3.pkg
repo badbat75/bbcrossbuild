@@ -4,7 +4,7 @@ PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/i/iw/iw_5.9-3.debian.ta
 #LTOENABLE=0
 PKG_CFLAGS='-DNETNS_RUN_DIR=\"/run/netns\"'
 PKG_LDFLAGS=
-PKG_CONFIG_SYSROOT_DIR=${BIN_PATH}
+
 BUILD_PROCESS=simplemake
 INST_CMD=install
 PKG_DEPS="raspbian/libnl3_3.4.0-1"

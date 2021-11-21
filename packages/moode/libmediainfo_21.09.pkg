@@ -12,4 +12,3 @@ PKG_PREBUILD="cd Project/GNU/Library
 	sed -i -e '/CXXFLAGS -O0/{n;N;N;d;}' configure.ac
 	./autogen.sh"
 PKG_LDFLAGS="-ltfsxml"
-PKG_CONFIG_SYSROOT_DIR=${BIN_PATH}

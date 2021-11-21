@@ -13,6 +13,9 @@ BUILD_LIBSTATIC=0
 LTOENABLE=1
 KERN_LTOENABLE=0
 
+## Set default sysroot pkg-config library path
+PKG_CONFIG_SYSROOT_DIR=${BIN_PATH}
+
 mount_tag distos --url "${RASPBIAN_URL}${RASPBIAN_IMAGE}.zip" --imgfile "${RASPBIAN_IMAGE}.img" --mountlist "2:/ 1:/boot" --resize 2:3G
 if [ -z ${SKIP_DISTOS_APTS} ]
 then
