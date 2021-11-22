@@ -4,7 +4,7 @@ AUTOCONF=0
 BUILD_PROCESS=configmake
 STD_CONF_FLAGS=0
 CONF_FLAGS="--prefix=${BUILD_PREFIX} --incdir=${BUILD_INCLUDEDIR} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-            --enable-cross-compile --cross-prefix=${HARCH}- --arch=${HARCH} --target-os=linux \
+            --enable-cross-compile --cross-prefix=${HARCH}- --arch=${HARCH} --cpu=${HMCPU} --target-os=linux \
             --cc=\"${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc\" \
             --nm=${HARCH}-gcc-nm \
             --ar=${HARCH}-gcc-ar \
@@ -20,6 +20,13 @@ CONF_FLAGS="--prefix=${BUILD_PREFIX} --incdir=${BUILD_INCLUDEDIR} --libdir=${BUI
             --enable-libopus     \
             --enable-libvorbis   \
             --enable-libtheora   \
+            --enable-libsoxr     \
+            --enable-libmp3lame \
+            --enable-libgsm      \
+            --enable-libcdio     \
+            --enable-libbs2b     \
+            --enable-libtwolame  \
+            --enable-ladspa      \
             --enable-openssl     \
             --docdir=${BUILD_PREFIX}/share/doc/ffmpeg-4.4"
 PKG_DEPS="moode/alsa-lib_1.2.5.1 \
@@ -28,7 +35,15 @@ PKG_DEPS="moode/alsa-lib_1.2.5.1 \
     moode/libvorbis_1.3.7 \
     moode/lame_3.100 \
     moode/fdk-aac_2.0.1 \
-    moode/libtheora_1.1.1"
+    moode/libtheora_1.1.1 \
+    raspbian/libsoxr_0.1.3-1 \
+    moode/lame_3.100 \
+    raspbian/libcdio-paranoia_10.2+2.0.0-1 \
+    raspbian/libgsm_1.0.18-2 \
+    raspbian/libbs2b_3.1.0+dfsg-2.2 \
+    moode/libtwolame_0.4.0 \
+    raspbian/ladspa-sdk_1.15-2
+"
 if [ ${FFMPEG_VIDEO:-0} -eq 1 ]
 then
     # Video enablement

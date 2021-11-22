@@ -13,6 +13,7 @@ PKG_POSTBUILD="install -d ${PKG_PKGPATH}/usr/local/bin &&
 install -d ${PKG_PKGPATH}/usr/local/etc &&
 ln -fs /usr/bin/shairport-sync ${PKG_PKGPATH}/usr/local/bin/shairport-sync &&
 ln -fs /etc/shairport-sync.conf ${PKG_PKGPATH}/usr/local/etc/shairport-sync.conf"
+PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH}
 
 case x${WITH_ALAC} in
 	xyes|x1)
@@ -33,4 +34,4 @@ case x${WITH_SSL} in
 esac
 
 # Dependencies:
-# libasound2-dev libpopt-dev libconfig-dev avahi-daemon libavahi-client-dev libssl-dev libsoxr-dev
+# libpopt-dev avahi-daemon libavahi-client-dev glib2.0
