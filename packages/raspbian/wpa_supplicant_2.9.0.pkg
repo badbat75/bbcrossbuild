@@ -44,6 +44,7 @@ cp wpa_supplicant/doc/docbook/wpa_cli.8 ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/
 cp wpa_supplicant/doc/docbook/wpa_passphrase.8 ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man8/ && gzip -f ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man8/wpa_passphrase.8
 cp wpa_supplicant/doc/docbook/wpa_supplicant.8 ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man8/ && gzip -f ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man8/wpa_supplicant.8
 cp wpa_supplicant/doc/docbook/wpa_supplicant.conf.5 ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man5/ && gzip -f ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man5/wpa_supplicant.conf.5"
+PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH}
 
 # Bug in Fedora OpenJade
 if test_version $(cat /dev/null | openjade -vh 2>&1 | head -n 1 | awk '{print $4}' | sed 's|\"||g') -le 1.3.2

@@ -3,6 +3,6 @@ PKG_URL="https://github.com/RPi-Distro/raspberrypi-net-mods/archive/5f4d3a2e9c93
 BUILD_PROCESS=downloadonly
 PKG_PREBUILD="find etc -type f -exec install -v -D -m644 \"{}\" \"${PKG_PKGPATH}/{}\" \;
     install -v -D -m644 debian/raspberrypi-net-mods.service ${PKG_PKGPATH}/lib/systemd/system/raspberrypi-net-mods.service
-    install -d ${PKG_PKGPATH}/etc/systemd/system
-    ln -s /lib/systemd/system/raspberrypi-net-mods.service ${PKG_PKGPATH}/etc/systemd/system/"
+    install -d ${PKG_PKGPATH}/etc/systemd/system/multi-user.target.wants
+    ln -s /lib/systemd/system/raspberrypi-net-mods.service ${PKG_PKGPATH}/etc/systemd/system/multi-user.target.wants/"
 PKG_DEPS="lfs/rfkill_1.0"

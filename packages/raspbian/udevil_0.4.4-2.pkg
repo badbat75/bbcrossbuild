@@ -17,5 +17,6 @@ PKG_POSTBUILD="install -m 0755 -d \${PKG_PKGPATH}/media
     install -d ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man1
     cp debian/devmon.1 ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man1/ && gzip -f ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man1/devmon.1
     cp debian/udevil.1 ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man1/ && gzip -f ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man1/udevil.1"
+PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH}
 
 # Note: Build-Depends: debhelper (>= 10), libglib2.0-dev, intltool, libudev-dev, dh-systemd (>= 1.5)
