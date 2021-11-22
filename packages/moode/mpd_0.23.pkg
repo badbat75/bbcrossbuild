@@ -72,7 +72,7 @@ ln -fs /usr/bin/mpd ${PKG_PKGPATH}/usr/local/bin/mpd
 rm -f ${PKG_PKGPATH}/usr/lib/systemd/system/mpd.service
 rm -f ${PKG_PKGPATH}/usr/lib/systemd/system/mpd.socket
 rm -f ${PKG_PKGPATH}/usr/lib/systemd/user/mpd.service
-if test_version ${MOODEREL} -ge r660
+if test_version ${MOODEREL} -ge r660 && test_version ${MOODEREL} -lt r760
 then
 	install -D ${PKG_PKGPATH}${BUILD_EXECPREFIX}/bin/mpd ${PKG_PKGPATH}/var/local/www/mpd_versions/mpd-${MPDVER}
 	echo \"${MPDVER};${MPDVER} (Default)\" >> ${PKG_PKGPATH}/var/local/www/mpd_versions.conf
