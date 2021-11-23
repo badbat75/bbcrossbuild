@@ -149,7 +149,7 @@ then
 		\
 		telnet sysstat squashfs-tools shellinabox \
 		samba smbclient exfat-fuse inotify-tools \
-		avahi-utils winbind libnss-winbind djmount haveged xfsprogs zip id3v2 \
+		avahi-utils winbind libnss-winbind djmount xfsprogs id3v2 \
 		udisks2 libatasmart4 libdbus-glib-1-2 libgudev-1.0-0 libsgutils2-2 libdevmapper-event1.02.1 \
 		\
 		libyajl2 libavahi-client3 libcurl3-gnutls \
@@ -157,8 +157,6 @@ then
 		dnsmasq \
 		\
 		expect \
-		\
-		\
 		\
 		python3-dbus python3-matplotlib python3-aiohttp python3-yaml"
 	if [ ${ENABLE_DISPLAY:-0} -eq 1 ]
@@ -292,6 +290,10 @@ then
 			EOF"
 		;;
 	esac
+	run_on_root_dir temp root "ssh -A -v"
+	run_on_root_dir temp root "find /etc/ssh -name "ssh_host_*.pub" | xargs sed -i \"s/\$(id -un)@\$(uname -n)/moode/\""
+	run_on_root_dir temp root "systemctl disable regenerate_ssh_host_keys"
+	run_on_root_dir temp root "systemctl enable ssh"
 
 	[ -f ~/moodecfg.ini ] && inject_into_mount_tag temp ~/moodecfg.ini /boot || true
 
