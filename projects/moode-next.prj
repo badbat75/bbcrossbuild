@@ -53,6 +53,7 @@ setup_rust
 setup_python 3.9.8
 
 #create_key_sscertificate
+generate_ssh_keys --install binaries
 
 #clean_project
 
@@ -283,15 +284,13 @@ then
 	EOF"
 	run_on_root_dir temp root "chmod +x /root/firstboot"
 	case x${PLATFORM_NAME} in
-		xarm)
+		xrpi)
 			run_on_root_dir temp root "cat >>/boot/config.txt <<-EOF
 				arm_freq=900
 				cpu_freq=300
 			EOF"
 		;;
 	esac
-	run_on_root_dir temp root "ssh -A -v"
-	run_on_root_dir temp root "find /etc/ssh -name "ssh_host_*.pub" | xargs sed -i \"s/\$(id -un)@\$(uname -n)/moode/\""
 	run_on_root_dir temp root "systemctl disable regenerate_ssh_host_keys"
 	run_on_root_dir temp root "systemctl enable ssh"
 
