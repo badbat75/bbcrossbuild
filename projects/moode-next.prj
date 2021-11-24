@@ -1,7 +1,7 @@
 # Build recipe for moode mediacenter
 
-MOODEREL=r760
-#MOODEDEVCOMMIT=efc021ee1382acfaa49bd718823b5a593cf9bf31
+MOODEREL=r761
+MOODEDEVCOMMIT=86003235434f47fcf48fd46dd71d227cfcaa5c78
 RASPBIAN_IMAGE=2021-10-30-raspios-bullseye-armhf-lite
 RASPBIAN_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-11-08/
 
@@ -222,7 +222,7 @@ then
 	run_on_root_dir temp root "systemctl stop apt-daily-upgrade.timer"
 	run_on_root_dir temp root "systemctl disable apt-daily-upgrade.timer"
 	run_on_root_dir temp root "systemctl mask apt-daily-upgrade.timer"
-	run_on_root_dir temp root "systemctl enable haveged"
+	#run_on_root_dir temp root "systemctl enable haveged"
 	run_on_root_dir temp root "systemctl disable shellinabox"
 	run_on_root_dir temp root "systemctl disable phpsessionclean.service"
 	run_on_root_dir temp root "systemctl disable phpsessionclean.timer"
@@ -293,6 +293,7 @@ then
 	esac
 	run_on_root_dir temp root "systemctl disable regenerate_ssh_host_keys"
 	run_on_root_dir temp root "systemctl enable ssh"
+	run_on_root_dir temp root "chown upmpdcli /var/cache/upmpdcli/ohcreds/credkey.pem"
 
 	[ -f ~/moodecfg.ini ] && inject_into_mount_tag temp ~/moodecfg.ini /boot || true
 
