@@ -2,11 +2,15 @@
 PKG_SUFFIX=.62
 PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-5${PKG_SUFFIX}.tar.xz"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--enable-library --enable-deprecated"
-INST_CMD="libexecdir=${BUILD_EXECPREFIX}/sbin install-strip"
+CONF_FLAGS="--libexecdir=${BUILD_EXECPREFIX}/sbin --with-dbusconfdir=${BUILD_SYSCONFDIR}/dbus-1 \
+    --with-dbussystembusdir=${BUILD_PREFIX}/share/dbus-1/system-services \
+    --with-dbussessionbusdir=${BUILD_PREFIX}/share/dbus-1/services \
+    --enable-library --enable-deprecated"
+INST_CMD="install-strip"
 #PATCHDEB=""
 # Moode directory location search for bluetoothd and obexd
 PKG_POSTBUILD="mkdir -p ${PKG_PKGPATH}/bin
 mv ${PKG_PKGPATH}/usr/bin/hciconfig ${PKG_PKGPATH}/bin
 ln -fs bluetooth/bluetoothd ${PKG_PKGPATH}/usr/sbin/bluetoothd
 ln -fs bluetooth/obexd ${PKG_PKGPATH}/usr/sbin/obexd"
+PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH}

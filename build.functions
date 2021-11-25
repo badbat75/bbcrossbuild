@@ -24,6 +24,8 @@ function settoolflags () {
 	BUILD_LIBDIR="${BUILD_LIBDIR:-$(readlink -m ${BUILD_EXECPREFIX}/lib)}"
 	BUILD_SYSCONFDIR="${BUILD_SYSCONFDIR:-/etc}"
 	BUILD_LOCALSTATEDIR="${BUILD_LOCALSTATEDIR:-/var}"
+	BUILD_SYSTEMDDIR="${BUILD_SYSTEMDDIR:-/lib/systemd/system}"
+	BUILD_USERSYSTEMDDIR="${BUILD_USERSYSTEMDDIR:-${BUILD_PREFIX}/lib/systemd/system}"
 	export BUILD_PREFIX BUILD_EXECPREFIX BUILD_INCLUDEDIR BUILD_LIBDIR BUILD_SYSCONFDIR BUILD_LOCALSTATEDIR
 	export QEMU_LD_PREFIX="${BIN_PATH}"
 	if [ ${MULTI_ARCH} -eq 1 ]
@@ -101,12 +103,12 @@ function build () (
 			then
 				if [ ! -d ${PKG_SRCPATH} ]
 				then
-					git clone --single-branch ${GIT_URL} ${PKG_SRCPATH}
+					git clone --recursive ${GIT_URL} ${PKG_SRCPATH}
 					if  [ ! -z ${GIT_COMMIT} ]
 					then
 						git -C ${PKG_SRCPATH} checkout ${GIT_COMMIT}
 					fi
-					git -C ${PKG_SRCPATH} submodule update --init --recursive
+					#git -C ${PKG_SRCPATH} submodule update --init --recursive
 				fi
 			fi
 		fi
@@ -195,7 +197,10 @@ function build () (
 		then
 			echo -n "${SPACES}AutoReconf ${PKG_NAME}..."
 			[ ! -z ${AUTOCONF_PATH} ] && cd ${AUTOCONF_PATH}
-			autoreconf -fi >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			[ -d m4 ] && local ACINCLUDE="-Im4" || mkdir m4
+			[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" -I${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal"
+			[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" -I${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
+			autoreconf -fi ${ACINCLUDE} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 			local STATUS=${?}
 			if [ ${STATUS} -ne 0 ]
 			then
@@ -210,7 +215,8 @@ function build () (
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 		then
-			CONF_FLAGS="--prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --libexecdir=${BUILD_LIBDIR} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} ${CONF_FLAGS}"
+			CONF_FLAGS="--prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --libexecdir=${BUILD_LIBDIR} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} \
+				--with-systemdsystemunitdir=${BUILD_SYSTEMDDIR} --with-systemduserunitdir=${BUILD_USERSYSTEMDDIR} --localstatedir=${BUILD_LOCALSTATEDIR} ${CONF_FLAGS}"
 			CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH} ${CONF_FLAGS}"
 			if [ ${BUILD_LIBSHARED} -eq 1 ]
 			then
@@ -239,9 +245,7 @@ function build () (
 			RANLIB=${HARCH}-gcc-ranlib \
 			STRIP=${HARCH}-strip \
 			OBJDUMP=${HARCH}-objdump \
-			PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-			PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}} \
-			PATH=${PATH}:${BIN_PATH}${BUILD_EXECPREFIX}/bin${DISTOS_PATH:+:${DISTOS_PATH}/usr/bin} \
+			PKG_CONFIG=${HARCH}-pkg-config \
 			eval "${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS}"
 		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
 		then
@@ -286,8 +290,7 @@ function build () (
 				RANLIB=${HARCH}-gcc-ranlib \
 				STRIP=${HARCH}-strip \
 				OBJDUMP=${HARCH}-objdump \
-				PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-				PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}} \
+				PKG_CONFIG=${HARCH}-pkg-config \
 					eval "make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}"
 			done
 		fi
@@ -306,8 +309,7 @@ function build () (
 		RANLIB=${HARCH}-gcc-ranlib \
 		STRIP=${HARCH}-strip \
 		OBJDUMP=${HARCH}-objdump \
-		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
+		PKG_CONFIG=${HARCH}-pkg-config \
 			eval "make ${PKG_MAKEVARS} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}"
 		cd ${BB_HOME}
 		set +x
@@ -337,8 +339,7 @@ function build () (
 			CONF_FLAGS+=" -DBUILD_STATIC_LIBS=OFF"
 		fi
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}} \
+		PKG_CONFIG=${HARCH}-pkg-config \
 		cmake ${PKG_SRCPATH} \
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DTOOLCHAIN_PREFIX=${HARCH}- \
@@ -428,7 +429,7 @@ function build () (
 				strip = '${STRIP}'
 				nm = '${NM}'
 				ranlib = '${RANLIB}'
-				pkgconfig = 'pkg-config'
+				pkgconfig = '${HARCH}-pkg-config'
 
 				[host_machine]
 				system = '${HOS}'
@@ -458,8 +459,7 @@ function build () (
 		local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n '-v')"
 		createmesoncross
 		CMAKE=cmake \
-		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}} \
+		PKG_CONFIG=${HARCH}-pkg-config \
 		meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release --strip -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} \
 			--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
 			--includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} \
@@ -493,10 +493,9 @@ function build () (
 		EOF
 		chmod +x ${HARCH}-gcc
 		local CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
-		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${DISTOS_PATH}} \
 		RUSTFLAGS="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} \
 			-C linker=${PKG_BLDPATH}/${HARCH}-gcc ${PKG_RUSTFLAGS}" \
+		PKG_CONFIG=${HARCH}-pkg-config \
 			cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}
 		for file in ${CARGO_BINLIST}
 		do
@@ -521,6 +520,8 @@ function build () (
 
 	function kernelbuild () {
 		function make4kern () {
+			env
+			set -x
 			if [ ${KERN_LTOENABLE:-0} -eq 1 ] 
 			then
 				KERN_OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
@@ -552,6 +553,7 @@ function build () (
 				${@} ${PKG_MAKEVARS}
 				local STATUS=${?}
 			fi
+			set x
 			return ${STATUS}
 		}
 		trap 'STATUS=${?}; \
@@ -560,6 +562,9 @@ function build () (
 		return ${STATUS};' ERR
 
 		set -x
+		unset PKG_CONFIG_LIBDIR
+		unset PKG_CONFIG_SYSROOT_DIR
+
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
 		KERN_VER=$(make kernelversion)
@@ -706,6 +711,7 @@ function build () (
 		RANLIB=${HARCH}-gcc-ranlib \
 		STRIP=${HARCH}-strip \
 		OBJDUMP=${HARCH}-objdump \
+		PKG_CONFIG=${HARCH}-pkg-config \
 			eval '${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}'
 		eval '${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} \
 			${INSTALL_TARGET}'
@@ -788,6 +794,7 @@ function build () (
 		RANLIB=${HARCH}-gcc-ranlib \
 		STRIP=${HARCH}-strip \
 		OBJDUMP=${HARCH}-objdump \
+		PKG_CONFIG=${HARCH}-pkg-config \
 			cross-python -m pip ${VERBOSE} install ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX} ${PKG_NAME}
 		if [ ${PYTHON_PKGDIR} == dist-packages ]
 		then
@@ -862,8 +869,7 @@ function build () (
 		local LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}"
 		./bootstrap.sh --prefix=${PKG_PKGPATH}${BUILD_PREFIX} --exec-prefix=${PKG_PKGPATH}${BUILD_EXECPREFIX} --libdir=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${PKG_PKGPATH}${BUILD_INCLUDEDIR} --with-python-version=${PYTHONBIN_VER} &&
 		sed -i "s|using gcc ;|using gcc : : ${CXX} ;|" project-config.jam &&
-		PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR} \
-		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}} \
+		PKG_CONFIG=${HARCH}-pkg-config \
 		./b2 -j${NPROCS} -q ${B2_FLAGS} \
 			architecture=${HM} address-model=${HMADDRMOD} binary-format=${HMBINFMT} abi=${HMABI} target-os=${HOS} \
 			toolset=gcc threading=multi cxxflags="-fPIC ${CXXFLAGS}" linkflags="${LDFLAGS}" install
@@ -948,6 +954,9 @@ function build () (
 	eval local PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
 	eval local PKG_BLDPATH=${PKG_BLDPATH}
 	eval local PKG_PKGPATH=${PKG_PKGPATH}
+
+	export PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR}
+	export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}
 
 	echo "Package ${PKG_NAME}"
 

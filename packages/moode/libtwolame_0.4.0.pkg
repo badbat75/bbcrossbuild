@@ -1,0 +1,10 @@
+# libtwolame_0.4.0
+GIT_URL="https://github.com/njh/twolame"
+GIT_COMMIT="0.4.0"
+BUILD_PROCESS=configmake
+PKG_DEPS="moode/libsndfile_1.0.31"
+CONF_FLAGS="--enable-maintainer-mode"
+INST_CMD=install-strip
+PKG_PREBUILD="mkdir -p build-scripts
+    touch NEWS README doc/html/doxygen.png"
+PKG_COPYSRC=1

@@ -13,3 +13,32 @@ function create_key_sscertificate () {
 		openssl req -newkey rsa:2048 -nodes -keyout ${USERDATA_PATH}/pki/${PKI_KEY_NAME}.key.pem -x509 -days 1461 -subj "${PKI_SUBJECT}" -out ${USERDATA_PATH}/pki/${PKI_KEY_NAME}.x509.pem >> ${LOG_PATH}/pki.log 2>&1
 	fi
 }
+function generate_ssh_keys () {
+	(
+	OPTS="" OPTS_WITH_VALUE="--install" param2value "${@}"
+	[ ${_param_v:-0} -eq 1 ] && set -x || true
+
+	echo Generating SSH Keys in ${USERDATA_PATH}...
+	if [ ! -d ${USERDATA_PATH}/etc/ssh ]
+	then
+		mkdir -pv ${USERDATA_PATH}/etc/ssh
+	fi
+	ssh-keygen -A -v -f ${USERDATA_PATH}
+	find ${USERDATA_PATH}/etc/ssh -name "ssh_host_*.pub" | xargs sed -i "s/$(id -un)@$(uname -n)/${PRJ_NAME}/"			
+	if [ ! -z ${_param_install} ]
+	then
+		if [ -d ${PLATFORM_PATH}/${_param_install} ]
+		then
+			if [ ! $(stat -c '%u' ${PLATFORM_PATH}/${_param_install}) -eq $(id -u) ]
+			then
+				local SUDO_CMD='sudo' 
+			fi
+		fi
+		echo -e "Done.\n"
+		echo Installing SSH keys in ${PLATFORM_PATH}/${_param_install}
+		eval ${SUDO_CMD} mkdir -pv ${PLATFORM_PATH}/${_param_install}/etc/ssh
+		eval ${SUDO_CMD} cp -fpv ${USERDATA_PATH}/etc/ssh/* ${PLATFORM_PATH}/${_param_install}/etc/ssh/
+		echo -e "Done.\n"
+	fi
+	) >> ${LOG_PATH}/sshkeys.log 2>&1 
+}

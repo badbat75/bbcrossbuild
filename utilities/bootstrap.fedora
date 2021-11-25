@@ -1,5 +1,5 @@
 #!/bin/bash
-sudo dnf install -y bc parted e2fsprogs bzip2 rsync \
+sudo dnf install -y bc parted e2fsprogs bzip2 rsync vim-common \
     gcc g++ binutils ccache libzstd libzstd-devel\
     curl gawk bison flex cmake ninja-build \
 	autoconf autoconf-archive automake gettext-devel libtool \

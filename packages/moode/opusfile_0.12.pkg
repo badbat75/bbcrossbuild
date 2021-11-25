@@ -1,0 +1,7 @@
+# opusfile_0.12
+GIT_URL="https://github.com/xiph/opusfile"
+GIT_COMMIT="tags/v0.12"
+BUILD_PROCESS=configmake
+PKG_DEPS="moode/libogg_1.3.5 moode/libvorbis_1.3.7"
+CONF_FLAGS=""
+INST_CMD=install-strip

@@ -1,0 +1,6 @@
+# lame_3.100
+PKG_URL="https://downloads.sourceforge.net/lame/lame-3.100.tar.gz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--enable-mp3rtp"
+INST_CMD=install-strip
+PKG_DEPS="moode/libsndfile_1.0.31"

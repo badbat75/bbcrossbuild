@@ -5,7 +5,7 @@ BUILD_PROCESS=configmake
 CONF_FLAGS="--disable-rpath --disable-xmms-plugin --disable-thorough-tests --with-ogg=${DISTOS_PATH}/usr"
 #CONF_FLAGS+=" --disable-asm-optimizations --disable-sse --disable-altivec"
 INST_CMD=install-strip
-PKG_DEPS=""
+PKG_DEPS="moode/libogg_1.3.5"
 
 # Note:
 # Install autopoint in build host

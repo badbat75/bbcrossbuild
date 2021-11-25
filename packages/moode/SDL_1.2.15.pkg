@@ -1,0 +1,6 @@
+# SDL_1.2.15
+PKG_URL="https://www.libsdl.org/release/SDL-1.2.15.tar.gz"
+BUILD_PROCESS=configmake
+CONF_FLAGS=""
+INST_CMD=install
+AUTOCONF=0
