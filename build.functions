@@ -78,6 +78,64 @@ function settoolflags () {
 	fi
 }
 
+function crossapt () {
+	if [ ! -d ${CACHE_PATH}/apt/state ]
+	then
+		mkdir -pv ${CACHE_PATH}/apt/state
+	fi
+	if [ ! -d ${CACHE_PATH}/dpkg ]
+	then
+		mkdir -pv ${CACHE_PATH}/dpkg
+	fi
+	if [ ! -f ${CACHE_PATH}/status ]
+	then
+		touch -v ${CACHE_PATH}/status
+	fi
+	echo "Updating apt..."
+	apt \
+		-o Dir::Etc="${DISTOS_PATH}/etc/apt" \
+		-o Dir::Cache="${CACHE_PATH}/apt" \
+		-o Dir::State="${CACHE_PATH}/apt/state" \
+		-o Dir::State::status="${CACHE_PATH}/dpkg/status" \
+		-o APT::Sandbox::User="$(whoami)" \
+		update
+	echo "Done"
+	echo running "apt ${@}"
+	apt \
+		-o Dir::Etc="${DISTOS_PATH}/etc/apt" \
+		-o Dir::Cache="${CACHE_PATH}/apt" \
+		-o Dir::State="${CACHE_PATH}/apt/state" \
+		-o Dir::State::status="${CACHE_PATH}/dpkg/status" \
+		-o APT::Sandbox::User="$(whoami)" \
+		${@}
+	echo "Done"
+	echo
+}
+
+function setbuildenv () {
+	settoolflags
+	export CC="\"${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc\""
+	export CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}"
+	export CXX="\"${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++\""
+	export CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}"
+	export CPP="\"${CCWRAPPER:+${CCWRAPPER} }${HARCH}-cpp\""
+	export CPPFLAGS="${SYSROOT_CFLAGS} ${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS}"
+	export LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS}"
+	export AR=${HARCH}-gcc-ar
+	export AS=${HARCH}-as
+	export NM=${HARCH}-gcc-nm
+	export RANLIB=${HARCH}-gcc-ranlib
+	export STRIP=${HARCH}-strip
+	export OBJDUMP=${HARCH}-objdump
+	export PKG_CONFIG=${HARCH}-pkg-config
+	export DEF_CFLAGS="-march=native -O3 -pipe"
+
+	echo "CC:		${CC}"
+	echo "CXX:		${CXX}"
+	echo "CFLAGS:	${CFLAGS}"
+	echo
+}
+
 function build () (
 	function downloadsources () {
 		trap 'STATUS=${?}; \

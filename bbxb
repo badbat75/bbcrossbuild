@@ -1,20 +1,24 @@
 #!/bin/bash
-
 START_PWD=${PWD}
-BB_HOME=$(dirname $(realpath ${0}))
-PROGRAM_NAME=$(basename ${0})
+BB_HOME=$(dirname $(realpath ${BASH_SOURCE}))
+PROGRAM_NAME=$(basename ${BASH_SOURCE})
 
-PRJ_NAME=${1}
-PLATFORM_NAME=${2}
+. ${BB_HOME}/core.functions
+check_core_functions
+
+OPTS="--prjdebug" OPTS_WITH_VALUE="" param2value "${@}"
+[ ${_param_v:-0} -eq 1 ] && set -x || true
+
+PRJ_NAME=${_param_1}
+PLATFORM_NAME=${_param_2}
 
 if [ -z "${PRJ_NAME}" ]
 then
 	echo "No project name specified!!!"
 	exit 1
 fi
-	
-. ${BB_HOME}/core.functions
-check_core_functions
+
+. setenv
 . ${BB_HOME}/build.functions
 . ${BB_HOME}/project.functions
 . ${BB_HOME}/buildenv.functions
@@ -31,8 +35,16 @@ fi
 echo "Project path: ${DATA_PATH}/${PRJ_NAME}"
 echo
 
-trap 'STATUS=${?}; echo; echo "ERR received."; echo; read -p "Press ENTER to continue"; check_images_functions && unmount_tag --all --kill || true; trap - ERR SIGINT; exit ${STATUS}' ERR
-trap 'echo; echo "SIGINT received."; trap - ERR SIGINT; echo; check_images_functions && unmount_tag --all --kill || true; exit 0' SIGINT
-. $PRJ
-check_images_functions && unmount_tag --all || true
-trap - ERR SIGINT
+if [ ${_param_prjdebug:-0} -eq 0 ]
+then
+	trap 'STATUS=${?}; echo; echo "ERR received."; echo; read -p "Press ENTER to continue"; check_images_functions && unmount_tag --all --kill || true; trap - ERR SIGINT; exit ${STATUS}' ERR
+	trap 'echo; echo "SIGINT received."; trap - ERR SIGINT; echo; check_images_functions && unmount_tag --all --kill || true; exit 0' SIGINT
+	. $PRJ
+	check_images_functions && unmount_tag --all || true
+	trap - ERR SIGINT
+else
+	echo "Interactive debug session."
+	echo "=========================="
+	echo
+	cd ${PLATFORM_PATH}
+fi
