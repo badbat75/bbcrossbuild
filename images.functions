@@ -341,7 +341,7 @@ function run_on_root_dir () {
 		echo; \
 		set +x; \
 		trap - ERR; \
-		if [ -f ${LOG_PATH}/images_${_param_1}.log ];
+		if [ -f ${LOG_PATH}/images_${_param_1}.log ]; \
 		then \
 			echo "Log ${LOG_PATH}/images_${_param_1}.log:"; \
 			echo; \
@@ -368,7 +368,7 @@ function run_on_root_dir () {
 		${_param_2} -c "${_param_3}" >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 
-	set +x
+	[ ${_param_v:-0} -eq 1 ] && set +x || true
 	trap - ERR
 }
 

@@ -27,10 +27,17 @@ function prepare_sysroot () {
 		echo "DISTOS_PATH: ${DISTOS_PATH}" >> ${LOG_PATH}/sysroot.log 2>&1
 		echo >> ${LOG_PATH}/sysroot.log 2>&1
 
-		find -L ${DISTOS_PATH}/usr/lib/${HARCH} -lname "/lib/${HARCH}*" | xargs -I{} -d'\n' -n1 -P${NPROCS} bash -c "
+		find -L ${DISTOS_PATH}/usr/lib/${HARCH} \( -lname "/lib/${HARCH}*" -o -lname "/etc/alternatives*" \) | xargs -I{} -d'\n' -n1 -P${NPROCS} bash -c "
 			echo -n 'Relinking {}... ' >> ${LOG_PATH}/sysroot.log 2>&1
 			set -x
 			eval ${SUDO_CMD} ln -f -s ../../..\$(readlink \"{}\") \"{}\" >> ${LOG_PATH}/sysroot.log 2>&1
+			set +x
+			echo 'done.'
+		" >> ${LOG_PATH}/sysroot.log 2>&1
+		find -L ${DISTOS_PATH}/etc/alternatives \( -lname "/lib/${HARCH}*" -o -lname "/usr/lib/${HARCH}*" \) | xargs -I{} -d'\n' -n1 -P${NPROCS} bash -c "
+			echo -n 'Relinking {}... ' >> ${LOG_PATH}/sysroot.log 2>&1
+			set -x
+			eval ${SUDO_CMD} ln -f -s ../..\$(readlink \"{}\") \"{}\" >> ${LOG_PATH}/sysroot.log 2>&1
 			set +x
 			echo 'done.'
 		" >> ${LOG_PATH}/sysroot.log 2>&1

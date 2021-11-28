@@ -936,6 +936,52 @@ function build () (
 		trap - ERR
 	}
 
+	function builddebpkg () {
+		trap 'STATUS=${?}; \
+		set +x; \
+		trap - ERR; \
+		return ${STATUS};' ERR
+
+		cd $(find ${PKG_BLDPATH} -mindepth 1 -maxdepth 1 -type d)
+		run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt -y build-dep ${PKG_NAME}"
+		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+		set -x
+		debuild \
+			-e DEB_BUILD_OPTIONS="nocheck" \
+			-e CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
+			-e CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
+			-e CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++" \
+			-e CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
+			-e CPP="${HARCH}-cpp" \
+			-e CPPFLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS} ${PKG_CFLAGS}" \
+			-e FC=${HARCH}-gfortran \
+			-e FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
+			-e F90=${HARCH}-gfortran \
+			-e F90FLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
+			-e LD="${HARCH}-ld.gold ${PKG_LDFLAGS}" \
+			-e LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+			-e AR=${HARCH}-gcc-ar \
+			-e AS=${HARCH}-as \
+			-e NM=${HARCH}-gcc-nm \
+			-e RANLIB=${HARCH}-gcc-ranlib \
+			-e STRIP=${HARCH}-strip \
+			-e OBJDUMP=${HARCH}-objdump \
+			-e PKG_CONFIG=${HARCH}-pkg-config \
+			-e PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR} \
+			-e PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR} \
+			-e PATH="/usr/bin:${TOOLCHAIN_PATH}/bin" \
+			-e QEMU_LD_PREFIX=${QEMU_LD_PREFIX} \
+			--host-arch=${HM} \
+			--host-type=${HM}-${HOS}-${HLIBC} \
+			--target-arch=${HM} \
+			--target-type=${HM}-${HOS}-${HLIBC} \
+			-d -b -uc -us
+		set +x
+		echo "Done"
+		trap - ERR
+	}
+
+
 	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
@@ -1048,10 +1094,6 @@ function build () (
 			return 0
 		else
 			rm -f ${STATUS_PATH}/${PKG_NAME}
-			if [ -d ${PKG_SRCPATH} ]
-			then
-				rm -rf ${PKG_SRCPATH}
-			fi
 		fi
 	fi
 
@@ -1061,6 +1103,10 @@ function build () (
 	fi
 	echo -n "${SPACES}"
 	# Build defaults
+	if [ -d ${PKG_SRCPATH} ]
+	then
+		rm -rf ${PKG_SRCPATH}
+	fi
 	if [ ! -d ${BLD_PATH} ]
 	then
 		mkdir -p ${BLD_PATH}
@@ -1085,6 +1131,62 @@ function build () (
 		then
 			(eval "trap 'exit 1' ERR; set -x && ${PKG_POSTBUILD} 2>&1 && set +x") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 		fi
+		;;
+	xbuilddebpkg)
+		if [ ! -d ${CACHE_PATH}/apt/state ]
+		then
+			mkdir -pv ${CACHE_PATH}/apt/state
+		fi
+		if [ ! -d ${CACHE_PATH}/dpkg ]
+		then
+			mkdir -pv ${CACHE_PATH}/dpkg
+		fi
+		if [ ! -f ${CACHE_PATH}/dpkg/status ]
+		then
+			touch ${CACHE_PATH}/dpkg/status
+		fi
+		if [ ! -d ${CACHE_PATH}/apt/conf ]
+		then
+			mkdir -pv ${CACHE_PATH}/apt/conf
+		fi
+		mkdir -p ${PKG_SRCPATH}
+		cd ${PKG_SRCPATH}
+		echo -n "Downloading ${PKG_NAME}..."
+		(
+		apt \
+			-o Dir::Etc="${DISTOS_PATH}/etc/apt" \
+			-o Dir::Cache="${CACHE_PATH}/apt" \
+			-o Dir::State="${CACHE_PATH}/apt/state" \
+			-o Dir::State::status="${CACHE_PATH}/dpkg/status" \
+			-o APT::Sandbox::User="$(whoami)" \
+			update
+		apt \
+			-o Dir::Etc="${DISTOS_PATH}/etc/apt" \
+			-o Dir::Cache="${CACHE_PATH}/apt" \
+			-o Dir::State="${CACHE_PATH}/apt/state" \
+			-o Dir::State::status="${CACHE_PATH}/dpkg/status" \
+			-o APT::Sandbox::User="$(whoami)" \
+			source ${PKG_NAME}
+		) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		if [ ! -z "${PKG_PREBUILD}" ]
+		then
+			(
+			trap 'exit 1' ERR
+			set -x
+			cd $(find ${PKG_SRCPATH} -mindepth 1 -maxdepth 1 -type d)
+			eval "${PKG_PREBUILD}" 2>&1
+			set +x
+			) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		fi
+		if [ -d ${PKG_BLDPATH} ]
+		then
+			rm -rf ${PKG_BLDPATH}
+		fi
+		cp -R ${PKG_SRCPATH} ${PKG_BLDPATH} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		echo -n "Building ${PKG_NAME}..."
+		${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		echo "Return: ${?}"
+		pause
 		;;
 	x*)
 		if [ ! -z ${PKG_URL} ] || [ ! -z ${GIT_URL} ]

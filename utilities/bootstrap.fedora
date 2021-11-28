@@ -1,9 +1,23 @@
 #!/bin/bash
 sudo dnf install -y bc parted e2fsprogs bzip2 rsync vim-common \
-    gcc g++ binutils ccache libzstd libzstd-devel\
+    gcc g++ binutils ccache nasm tree libzstd libzstd-devel\
     curl gawk bison flex cmake ninja-build \
 	autoconf autoconf-archive automake gettext-devel libtool \
     git xmltoman docbook-utils swig doxygen texinfo python3-docutils
+
+# Debian Packages
+sudo dnf install -y dpkg-dev devscripts apt debhelper \
+    perl-ExtUtils-MakeMaker perl-Archive-Zip
+(
+    cd /tmp
+    git clone https://salsa.debian.org/reproducible-builds/strip-nondeterminism.git
+    cd strip-nondeterminism
+    perl Makefile.PL PREFIX=/usr INSTALLSITELIB="\$(INSTALLPRIVLIB)"
+    make
+    sudo make install
+    cd -
+    rm -rf strip-nondeterminism
+)
 
 #autoconf2.64
 

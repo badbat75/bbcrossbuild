@@ -1,0 +1,39 @@
+# Build recipe for moode mediacenter
+
+RASPBIAN_IMAGE=2021-10-30-raspios-bullseye-armhf-lite
+RASPBIAN_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-11-08/
+
+## Enable shared libraries (default) but disable static ones
+BUILD_LIBSHARED=1
+BUILD_LIBSTATIC=0
+
+## Enable LTO both for kernel and applications
+LTOENABLE=1
+KERN_LTOENABLE=0
+
+## Set default sysroot pkg-config library path
+#PKG_CONFIG_SYSROOT_DIR=${BIN_PATH}
+
+mount_tag distos --url "${RASPBIAN_URL}${RASPBIAN_IMAGE}.zip" --imgfile "${RASPBIAN_IMAGE}.img" --mountlist "2:/ 1:/boot" --resize 2:3G
+if [ -z ${SKIP_DISTOS_APTS} ]
+then
+	run_on_root_dir distos root "sed -i 's/#deb-src/deb-src/g' /etc/apt/sources.list"
+	run_on_root_dir distos root "apt-get update --allow-releaseinfo-change"
+	run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
+	run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y install libc6-dev "
+fi
+prepare_sysroot
+
+#create_sysroot http://<url>/<rootfs.tar.gz>
+setup_gcc
+#setup_rust
+#setup_python 3.9.8
+
+#create_key_sscertificate
+#generate_ssh_keys --install binaries
+
+#clean_project
+
+build raspios/ffmpeg
+
+unmount_tag distos

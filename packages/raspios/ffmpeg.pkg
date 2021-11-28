@@ -1,0 +1,14 @@
+# ffmpeg
+BUILD_PROCESS=builddebpkg
+PKG_PREBUILD="sed -i 's/-flto/-flto=${NPROCS}/g' configure
+    #sed -i '/--disable-stripping/d' debian/rules
+    sed -i '/--enable-sdl2/ s/$/ --enable-mmal --enable-lto/' debian/rules
+    sed -i 's/--with pkgkde_symbolshelper//' debian/rules
+    sed -i 's/--arch=\$(DEB_HOST_ARCH_CPU)/--arch=${HMARCH}/' debian/rules
+    sed -i -e '/disables autodetection needed for cross-building./a \
+    ifneq (pkg-config,\$(PKG_CONFIG))\n \
+        CONFIG += --pkg-config=\$(PKG_CONFIG)\n \
+    endif' debian/rules
+    sed -i 's/=\$(CC)/=\"\$(CC)\"/' debian/rules
+    sed -i 's/=\$(CXX)/=\"\$(CXX)\"/' debian/rules"
+LTOENABLE=0
