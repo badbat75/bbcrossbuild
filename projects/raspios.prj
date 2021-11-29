@@ -34,6 +34,9 @@ setup_gcc
 
 #clean_project
 
+inject_into_mount_tag distos gcclibs
+
 build raspios/ffmpeg
+build raspios/chromium
 
 unmount_tag distos

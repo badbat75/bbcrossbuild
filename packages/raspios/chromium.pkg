@@ -1,0 +1,47 @@
+# ffmpeg
+BUILD_PROCESS=builddebpkg
+LTOENABLE=0
+PLATFORM_CFLAGS="$(echo ${PLATFORM_CFLAGS} | sed 's/-mtls-dialect=gnu2//')"
+PKG_PREBUILD="sed -i 's/use_vaapi=false arm_use_neon=false//' debian/rules
+    sed -i 's/optimize_webui=false/optimize_webui=true/' debian/rules
+#    sed -i '/use_system_libopenjpeg2/a \ \ \ \ \ \ \ use_system_ffmpeg=1 \\\\' debian/rules
+    sed -i '/ffmpeg_branding/d' debian/rules
+    sed -i '/proprietary_codecs/d' debian/rules
+#    sed -i '/export AR=ar/d' debian/rules
+#    sed -i '/export NM=nm/d' debian/rules
+#    sed -i '/export CC=clang/d' debian/rules
+#    sed -i '/export CXX=clang++/d' debian/rules
+    sed -i 's/universal_newlines=True)$/universal_newlines=True, shell=True)/' printing/cups_config_helper.py
+    cat <<EOF > third_party/node/node_modules.py
+#!/usr/bin/env python
+# Copyright 2016 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+from os import path as os_path
+NODE_MODULES = os_path.join(os_path.dirname(__file__), 'node_modules')
+def _path_in_node_modules(*args):
+  return os_path.join(NODE_MODULES, *args)
+def PathToBundler():
+  return _path_in_node_modules(
+      'polymer-bundler', 'lib', 'bin', 'polymer-bundler')
+def PathToCrisper():
+  return _path_in_node_modules('crisper', 'bin', 'crisper')
+def PathToEsLint():
+  return _path_in_node_modules('eslint', 'bin', 'eslint')
+def PathToPolymerCssBuild():
+  return _path_in_node_modules('polymer-css-build', 'bin', 'polymer-css-build')
+def PathToRollup():
+  return _path_in_node_modules('rollup', 'dist', 'bin', 'rollup')
+def PathToSvgo():
+  return _path_in_node_modules('svgo', 'bin', 'svgo')
+def PathToTerser():
+  return _path_in_node_modules('terser', 'bin', 'terser')
+# Typescript is not approved for general use in Chromium. Email chromium-dev
+# if you want to use it.
+def PathToTypescript():
+  return _path_in_node_modules('typescript', 'bin', 'tsc')
+EOF
+    echo '31d731fb82ea62a6dae24d2bdfe6f0aa6164b949' > third_party/node/node_modules.tar.gz.sha1
+    mkdir -pv third_party/node/linux
+    echo 'ab9544e24e752d3d17f335fb7b2055062e582d11' > third_party/node/linux/node-linux-x64.tar.gz.sha1
+    "

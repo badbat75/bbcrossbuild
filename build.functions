@@ -946,6 +946,14 @@ function build () (
 		run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt -y build-dep ${PKG_NAME}"
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 		set -x
+		case ${HM} in
+			arm) [ "${HMFLOATABI}" == "hard" ] && local DEBARCH=armhf || local DEBARCH=arm
+			;;
+			aarch64) DEBARCH=arm64
+			;;
+			*) local DEBARCH=${HM}
+			;;
+		esac
 #		debuild \
 #			-e DEB_BUILD_OPTIONS="nocheck" \
 #			-e CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
@@ -969,53 +977,54 @@ function build () (
 #			-e PKG_CONFIG=${HARCH}-pkg-config \
 #			-e PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR} \
 #			-e PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR} \
+#			-e DPKG_ROOT=${DISTOS_PATH} \
+#			-e DPKG_ADMINDIR=${DISTOS_PATH}/var/lib/dpkg \
+#			-e CONFIG_SITE=${DISTOS_PATH}/etc/dpkg \
 #			-e PATH="/usr/bin:${TOOLCHAIN_PATH}/bin" \
 #			-e QEMU_LD_PREFIX=${QEMU_LD_PREFIX} \
 #			-e LD_LIBRARY_PATH=${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-#			-e DPKG_ROOT=${DISTOS_PATH} \
-#			-e DPKG_ADMINDIR=${DISTOS_PATH}/var/lib/dpkg \
-#			-e DPKG_PAGER=less \
-#			-e DEB_GAIN_ROOT_CMD=sudo \
-#			-e DH_OPTIONS=--dpkg-shlibdeps-params=--ignore-missing-info \
-#			--host-arch=${HM} \
+#			-e DH_OPTIONS=-v --dpkg-shlibdeps-params=--ignore-missing-info \
+#			--host-arch=${DEBARCH} \
 #			--host-type=${HM}-${HOS}-${HLIBC} \
-#			--target-arch=${HM} \
+#			--target-arch=${DEBARCH} \
 #			--target-type=${HM}-${HOS}-${HLIBC} \
 #			-d -b -uc -us
-		DEB_BUILD_OPTIONS="nocheck" \
 		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
-		CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
 		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++" \
-		CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
 		CPP="${HARCH}-cpp" \
-		CPPFLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS} ${PKG_CFLAGS}" \
 		FC=${HARCH}-gfortran \
-		FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
 		F90=${HARCH}-gfortran \
-		F90FLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
-		LD="${HARCH}-ld.gold ${PKG_LDFLAGS}" \
-		LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 		AR=${HARCH}-gcc-ar \
 		AS=${HARCH}-as \
 		NM=${HARCH}-gcc-nm \
 		RANLIB=${HARCH}-gcc-ranlib \
 		STRIP=${HARCH}-strip \
 		OBJDUMP=${HARCH}-objdump \
+		CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
+		CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
+		CPPFLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS} ${PKG_CFLAGS}" \
+		FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
+		F90FLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
+		LD="${HARCH}-ld.gold ${PKG_LDFLAGS}" \
+		LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 		PKG_CONFIG=${HARCH}-pkg-config \
 		PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR} \
 		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR} \
 		DPKG_ROOT=${DISTOS_PATH} \
 		CONFIG_SITE=${DISTOS_PATH}/etc/dpkg \
 		LD_LIBRARY_PATH=${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+		DEB_BUILD_OPTIONS="nocheck" \
 		DH_OPTIONS="-v --dpkg-shlibdeps-params=--ignore-missing-info" \
 		dpkg-buildpackage \
-			--host-arch=${HM}hf \
-			--host-type=${HM}-${HOS}-${HLIBC} \
-			--target-arch=${HM}hf \
-			--target-type=${HM}-${HOS}-${HLIBC} \
+			--host-arch=${DEBARCH} \
+			--host-type=${HARCH} \
+			--target-arch=${DEBARCH} \
+			--target-type=${HARCH} \
 			-d -b -uc -us \
 			-Pcross,nocheck \
 			--admindir=${DISTOS_PATH}/var/lib/dpkg
+		cd ..
+		cp -v *.deb ${PKG_PKGPATH}
 		set +x
 		echo "Done"
 		trap - ERR
@@ -1208,6 +1217,7 @@ function build () (
 			-o APT::Sandbox::User="$(whoami)" \
 			source ${PKG_NAME}
 		) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		mkdir -pv ${PKG_PKGPATH}
 		if [ ! -z "${PKG_PREBUILD}" ]
 		then
 			(
@@ -1276,6 +1286,22 @@ function build () (
 	fi
 	#rm -rf ${PKG_SRCPATH} &&
 	case x${BUILD_PROCESS} in
+	xbuilddebpkg)
+			(
+				set -ex
+				pwd
+				if [ ${PKG_SAVE_STATUS:-1} -eq 1 ]
+				then
+					tar cJfp ${PKG_PKGPATH}.tar.xz --owner=0 --group=0 -C ${PKG_PKGPATH} .
+				fi
+				sudo rm -rf ${PKG_PKGPATH}
+				set +ex
+			) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			if [ ${KEEP_BUILDDIR:-0} -eq 0 ]
+			then
+				rm -rf ${PKG_BLDPATH}
+			fi
+		;;
 		*)
 			(
 				set -ex
