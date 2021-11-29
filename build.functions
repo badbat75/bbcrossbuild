@@ -946,36 +946,76 @@ function build () (
 		run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt -y build-dep ${PKG_NAME}"
 		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 		set -x
-		debuild \
-			-e DEB_BUILD_OPTIONS="nocheck" \
-			-e CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
-			-e CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
-			-e CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++" \
-			-e CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-			-e CPP="${HARCH}-cpp" \
-			-e CPPFLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS} ${PKG_CFLAGS}" \
-			-e FC=${HARCH}-gfortran \
-			-e FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
-			-e F90=${HARCH}-gfortran \
-			-e F90FLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
-			-e LD="${HARCH}-ld.gold ${PKG_LDFLAGS}" \
-			-e LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-			-e AR=${HARCH}-gcc-ar \
-			-e AS=${HARCH}-as \
-			-e NM=${HARCH}-gcc-nm \
-			-e RANLIB=${HARCH}-gcc-ranlib \
-			-e STRIP=${HARCH}-strip \
-			-e OBJDUMP=${HARCH}-objdump \
-			-e PKG_CONFIG=${HARCH}-pkg-config \
-			-e PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR} \
-			-e PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR} \
-			-e PATH="/usr/bin:${TOOLCHAIN_PATH}/bin" \
-			-e QEMU_LD_PREFIX=${QEMU_LD_PREFIX} \
-			--host-arch=${HM} \
+#		debuild \
+#			-e DEB_BUILD_OPTIONS="nocheck" \
+#			-e CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
+#			-e CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
+#			-e CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++" \
+#			-e CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
+#			-e CPP="${HARCH}-cpp" \
+#			-e CPPFLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS} ${PKG_CFLAGS}" \
+#			-e FC=${HARCH}-gfortran \
+#			-e FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
+#			-e F90=${HARCH}-gfortran \
+#			-e F90FLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
+#			-e LD="${HARCH}-ld.gold ${PKG_LDFLAGS}" \
+#			-e LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+#			-e AR=${HARCH}-gcc-ar \
+#			-e AS=${HARCH}-as \
+#			-e NM=${HARCH}-gcc-nm \
+#			-e RANLIB=${HARCH}-gcc-ranlib \
+#			-e STRIP=${HARCH}-strip \
+#			-e OBJDUMP=${HARCH}-objdump \
+#			-e PKG_CONFIG=${HARCH}-pkg-config \
+#			-e PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR} \
+#			-e PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR} \
+#			-e PATH="/usr/bin:${TOOLCHAIN_PATH}/bin" \
+#			-e QEMU_LD_PREFIX=${QEMU_LD_PREFIX} \
+#			-e LD_LIBRARY_PATH=${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+#			-e DPKG_ROOT=${DISTOS_PATH} \
+#			-e DPKG_ADMINDIR=${DISTOS_PATH}/var/lib/dpkg \
+#			-e DPKG_PAGER=less \
+#			-e DEB_GAIN_ROOT_CMD=sudo \
+#			-e DH_OPTIONS=--dpkg-shlibdeps-params=--ignore-missing-info \
+#			--host-arch=${HM} \
+#			--host-type=${HM}-${HOS}-${HLIBC} \
+#			--target-arch=${HM} \
+#			--target-type=${HM}-${HOS}-${HLIBC} \
+#			-d -b -uc -us
+		DEB_BUILD_OPTIONS="nocheck" \
+		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
+		CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
+		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++" \
+		CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
+		CPP="${HARCH}-cpp" \
+		CPPFLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS} ${PKG_CFLAGS}" \
+		FC=${HARCH}-gfortran \
+		FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
+		F90=${HARCH}-gfortran \
+		F90FLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
+		LD="${HARCH}-ld.gold ${PKG_LDFLAGS}" \
+		LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+		AR=${HARCH}-gcc-ar \
+		AS=${HARCH}-as \
+		NM=${HARCH}-gcc-nm \
+		RANLIB=${HARCH}-gcc-ranlib \
+		STRIP=${HARCH}-strip \
+		OBJDUMP=${HARCH}-objdump \
+		PKG_CONFIG=${HARCH}-pkg-config \
+		PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR} \
+		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR} \
+		DPKG_ROOT=${DISTOS_PATH} \
+		CONFIG_SITE=${DISTOS_PATH}/etc/dpkg \
+		LD_LIBRARY_PATH=${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+		DH_OPTIONS="-v --dpkg-shlibdeps-params=--ignore-missing-info" \
+		dpkg-buildpackage \
+			--host-arch=${HM}hf \
 			--host-type=${HM}-${HOS}-${HLIBC} \
-			--target-arch=${HM} \
+			--target-arch=${HM}hf \
 			--target-type=${HM}-${HOS}-${HLIBC} \
-			-d -b -uc -us
+			-d -b -uc -us \
+			-Pcross,nocheck \
+			--admindir=${DISTOS_PATH}/var/lib/dpkg
 		set +x
 		echo "Done"
 		trap - ERR
