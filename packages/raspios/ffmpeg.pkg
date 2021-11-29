@@ -1,6 +1,6 @@
 # ffmpeg
 BUILD_PROCESS=builddebpkg
-PKG_PREBUILD="sed -i 's/-flto/-flto=${NPROCS}/g' configure
+PKG_PREBUILD="sed -i 's/-flto/-flto=$((${NPROCS}+1))/g' configure
     #sed -i '/--disable-stripping/d' debian/rules
     sed -i '/--enable-sdl2/ s/$/ --enable-mmal --enable-lto/' debian/rules
     sed -i 's/--with pkgkde_symbolshelper//' debian/rules
