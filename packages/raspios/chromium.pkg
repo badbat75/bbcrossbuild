@@ -4,7 +4,7 @@ LTOENABLE=0
 PKG_COMPILER="llvm"
 PLATFORM_CFLAGS="$(echo ${PLATFORM_CFLAGS} | sed 's/-mtls-dialect=gnu2//')"
 PKG_PREBUILD="sed -i 's/use_vaapi=false arm_use_neon=false//' debian/rules
-    sed -i 's/optimize_webui=false/optimize_webui=true/' debian/rules
+#    sed -i 's/optimize_webui=false/optimize_webui=true/' debian/rules
 #    sed -i '/ffmpeg_branding/d' debian/rules
 #    sed -i '/proprietary_codecs/d' debian/rules
     sed -i '/export AR=ar/d' debian/rules
@@ -50,11 +50,8 @@ EOF
     echo 'ab9544e24e752d3d17f335fb7b2055062e582d11' > third_party/node/linux/node-linux-x64.tar.gz.sha1
     "
 
-# Notes:  openjpeg.h missing header in /usr/include instead of /usr/include/openjpeg2.4
-#         sudo apt install libopenjp2-7-dev
-#         sudo apt install libjpeg-dev
-#         ln -s openjpeg2.pc ${DISTOS_PATH}/usr/lib/arm-linux-gnueabihf/libopenjpeg.pc
-#         wget  https://bootstrap.pypa.io/pip/2.7/get-pip.py
+# On DISTOS:         
 #         apt install libcups2-dev
-#         python2 get-pip.py
+# On Build host:
+#         python2 <(curl -s https://bootstrap.pypa.io/pip/2.7/get-pip.py)
 #         pip2 install setuptools

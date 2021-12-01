@@ -1,7 +1,8 @@
 #!/bin/bash
 sudo dnf install -y bc parted e2fsprogs bzip2 rsync vim-common \
-    gcc g++ binutils ccache nasm tree libzstd libzstd-devel\
-    curl gawk bison flex cmake ninja-build \
+    gcc g++ binutils libzstd libzstd-devel \
+    ccache clang-tools-extra lld nasm \
+    tree curl gawk bison flex cmake ninja-build npm \
 	autoconf autoconf-archive automake gettext-devel libtool \
     git xmltoman docbook-utils swig doxygen texinfo python3-docutils
 
@@ -18,6 +19,7 @@ sudo dnf install -y dpkg-dev devscripts apt debhelper \
     cd -
     rm -rf strip-nondeterminism
 )
+sudo sed -i "s/'0755'/0755/g" /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm
 
 #autoconf2.64
 
@@ -64,5 +66,5 @@ sudo dnf install -y groff
 # for btrfs-progs
 sudo dnf install -y xmlto asciidoc
 
-# for camillagui
-sudo dnf install -y npm
+# for chromium
+sudo dnf install -y libevent-devel
