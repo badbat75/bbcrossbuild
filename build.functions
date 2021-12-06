@@ -17,6 +17,42 @@ function setbuildenv () {
 		export CROSS_COMPILING=yes
 		export PKG_CONFIG_ALLOW_CROSS=1
 	fi
+	case ${TOOLCHAIN} in
+		llvm)
+			TOOLCHAIN_CC=clang
+			TOOLCHAIN_CXX=clang++
+			TOOLCHAIN_CPP=flang
+			TOOLCHAIN_FC=flang
+			TOOLCHAIN_F90=flang
+			TOOLCHAIN_AR=llvm-ar
+			TOOLCHAIN_AS=llvm-as
+			TOOLCHAIN_NM=llvm-nm
+			TOOLCHAIN_RANLIB=llvm-ranlib
+			TOOLCHAIN_STRIP=llvm-strip
+			TOOLCHAIN_OBJDUMP=llvm-objdump
+			TOOLCHAIN_LD=ld.lld
+			TOOLCHAIN_COMPFLAGS="--target=${HARCH}"
+			TOOLCHAIN_LDFLAGS="-fuse-ld=lld -Wl,--threads=${NPROCS} -Wl,--thinlto-jobs=${NPROCS}"
+			TOOLCHAIN_LTOFLAGS="-flto=thin"
+			;;
+		*|gnu)
+			TOOLCHAIN_CC=${HARCH}-gcc
+			TOOLCHAIN_CXX=${HARCH}-g++
+			TOOLCHAIN_CPP="${HARCH}-cpp"
+			TOOLCHAIN_FC=${HARCH}-gfortran
+			TOOLCHAIN_F90=${HARCH}-gfortran
+			TOOLCHAIN_AR=${HARCH}-gcc-ar
+			TOOLCHAIN_AS=${HARCH}-as
+			TOOLCHAIN_NM=${HARCH}-gcc-nm
+			TOOLCHAIN_RANLIB=${HARCH}-gcc-ranlib
+			TOOLCHAIN_STRIP=${HARCH}-strip
+			TOOLCHAIN_OBJDUMP=${HARCH}-objdump
+			TOOLCHAIN_LD=${HARCH}-ld.gold
+			TOOLCHAIN_COMPFLAGS=""
+			TOOLCHAIN_LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count ${NPROCS}"
+			TOOLCHAIN_LTOFLAGS="-flto=${NPROC}"
+			;;
+	esac
 	MULTI_ARCH=${MULTIARCH:-1}
 	BUILD_PREFIX="${BUILD_PREFIX:-/usr}"
 	BUILD_EXECPREFIX="${BUILD_EXECPREFIX:-${BUILD_PREFIX}}"
@@ -76,43 +112,6 @@ function setbuildenv () {
 			COMMON_LDFLAGS+=" -L${DISTOS_PATH}$entry -Wl,-rpath-link,${DISTOS_PATH}$entry"
 		done
 	fi
-	TOOLCHAIN=${TOOLCHAIN:-gnu}
-	case toolchain in
-		llvm)
-			TOOLCHAIN_CC=clang
-			TOOLCHAIN_CXX=clang++
-			TOOLCHAIN_CPP=flang
-			TOOLCHAIN_FC=flang
-			TOOLCHAIN_F90=flang
-			TOOLCHAIN_AR=llvm-ar
-			TOOLCHAIN_AS=llvm-as
-			TOOLCHAIN_NM=llvm-nm
-			TOOLCHAIN_RANLIB=llvm-ranlib
-			TOOLCHAIN_STRIP=llvm-strip
-			TOOLCHAIN_OBJDUMP=llvm-objdump
-			TOOLCHAIN_LD=ld.lld
-			TOOLCHAIN_COMPFLAGS="--target=${HARCH}"
-			TOOLCHAIN_LDFLAGS="-fuse-ld=lld -Wl,--threads=${NPROCS} -Wl,--thinlto-jobs=${NPROCS}"
-			TOOLCHAIN_LTOFLAGS="-flto=thin"
-			;;
-		*|gnu)
-			TOOLCHAIN_CC=${HARCH}-gcc
-			TOOLCHAIN_CXX=${HARCH}-g++
-			TOOLCHAIN_CPP="${HARCH}-cpp"
-			TOOLCHAIN_FC=${HARCH}-gfortran
-			TOOLCHAIN_F90=${HARCH}-gfortran
-			TOOLCHAIN_AR=${HARCH}-gcc-ar
-			TOOLCHAIN_AS=${HARCH}-as
-			TOOLCHAIN_NM=${HARCH}-gcc-nm
-			TOOLCHAIN_RANLIB=${HARCH}-gcc-ranlib
-			TOOLCHAIN_STRIP=${HARCH}-strip
-			TOOLCHAIN_OBJDUMP=${HARCH}-objdump
-			TOOLCHAIN_LD=${HARCH}-ld.gold
-			TOOLCHAIN_COMPFLAGS=""
-			TOOLCHAIN_LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count ${NPROCS}"
-			TOOLCHAIN_LTOFLAGS="-flto=${NPROC}"
-			;;
-	esac
 }
 
 function crossapt () {

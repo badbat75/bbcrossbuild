@@ -63,3 +63,5 @@ PRJ_PATH=${BB_HOME}/${PRJ_DIR:-projects}
 PKG_PATH=${BB_HOME}/${PKG_DIR:-packages}
 PATCH_PATH=${BB_HOME}/${PATCH_DIR:-patches}
 IMG_PATH=${BB_HOME}/${IMG_DIR:-images}
+
+TOOLCHAIN=${TOOLCHAIN:-gnu}
