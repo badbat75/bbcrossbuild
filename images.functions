@@ -402,7 +402,7 @@ function inject_into_mount_tag () {
 	local TARGET_DIR=$(echo ${_param_3} | sed 's/^//g')
 	local TARGET_OWNER=${_param_4:-"root:root"}
 
-	settoolflags
+	setbuildenv
 
 	case ${OBJECT} in
 		binaries)

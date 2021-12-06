@@ -39,7 +39,7 @@ MAKEVERBOSE=0
 
 ###### Common flags and parameters for LTO building
 ### Default flags for LTO building
-COMMON_LTOFLAGS="-flto=${NPROCS} -fno-fat-lto-objects -fuse-linker-plugin"
+COMMON_GNULTOFLAGS="-flto=${NPROCS} -fno-fat-lto-objects -fuse-linker-plugin"
 ######
 
 ###### Application toolchain flags and parameters

@@ -68,3 +68,4 @@ sudo dnf install -y xmlto asciidoc
 
 # for chromium
 sudo dnf install -y libevent-devel
+python2 <(curl -s https://bootstrap.pypa.io/pip/2.7/get-pip.py)

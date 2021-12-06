@@ -121,7 +121,7 @@ function bootstrap_sysroot () {
 	local GLIBC_PACKAGE=${2}
 	local LIBXCRYPT_PACKAGE=${3:-none}
 
-	#settoolflags
+	#setbuildenv
 	local MULTI_ARCH=${MULTIARCH:-1}
 	local BUILD_PREFIX="${BUILD_PREFIX:-/usr}"
 	local BUILD_EXECPREFIX="${BUILD_EXECPREFIX:-${BUILD_PREFIX}}"
@@ -386,8 +386,8 @@ function setup_gcc () {
 		fi
 		if [ ${GCC_LTOENABLE} -eq 1 ]
 		then
-			local HOST_CFLAGS+=" ${COMMON_LTOFLAGS}"
-			local HOST_CXXFLAGS+=" ${COMMON_LTOFLAGS}"
+			local HOST_CFLAGS+=" ${COMMON_GNULTOFLAGS}"
+			local HOST_CXXFLAGS+=" ${COMMON_GNULTOFLAGS}"
 		fi
 		local BUILD_ENV_SHELL="CC_FOR_BUILD='${HOST_CC}' CXX_FOR_BUILD='${HOST_CXX}' AR_FOR_BUILD='${HOST_AR}' NM_FOR_BUILD='${HOST_NM}' RANLIB_FOR_BUILD='${HOST_RANLIB}' \
 			CFLAGS_FOR_BUILD='${HOST_CFLAGS}' CXXFLAGS_FOR_BUILD='${HOST_CXXFLAGS}' LDFLAGS_FOR_BUILD='${HOST_LDFLAGS}' \
@@ -539,7 +539,7 @@ function setup_gcc () {
 }
 
 function install_gcclibs () {
-	settoolflags
+	setbuildenv
 	set -e
 	local GCCLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 \( -name 'libgcc_s.so*' -o -name 'libssp.so*' \) 2>/dev/null | xargs )
 	local GCCLIBNAME="$( ( for name in ${GCCLIB}; do echo $(basename ${name}); done ) | sort | uniq | xargs )"
@@ -674,7 +674,7 @@ function setup_python () {
 			return ${STATUS}' ERR
 
 		set -x
-		settoolflags
+		setbuildenv
 		#local LTO_PLUGIN_PATH="$(${BARCH}-gcc --print-prog-name=liblto_plugin.so)"
 		${BUILD_PYTHONPIP} install crossenv
 		${BUILD_PYTHON} -m crossenv ${HOST_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH}
@@ -805,7 +805,7 @@ function setup_pkgconfig () {
 	then
 		mkdir ${TOOLCHAIN_PATH}/bin
 	fi
-	settoolflags
+	setbuildenv
 	cat > ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config <<-EOF
 		#!/bin/sh
 		set -o pipefail

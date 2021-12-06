@@ -11,6 +11,7 @@ CONF_FLAGS="--prefix=${BUILD_PREFIX} --incdir=${BUILD_INCLUDEDIR} --libdir=${BUI
             --ranlib=${HARCH}-gcc-ranlib \
             --pkg-config=${HARCH}-pkg-config \
 			--enable-gpl         \
+            --enable-hardcoded-tables \
             --enable-version3    \
             --enable-nonfree     \
             --disable-debug      \

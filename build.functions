@@ -11,7 +11,7 @@ function check_build_functions () {
 	fi
 }
 
-function settoolflags () {
+function setbuildenv () {
 	if [ ${HARCH} != ${BARCH} ]
 	then
 		export CROSS_COMPILING=yes
@@ -76,6 +76,43 @@ function settoolflags () {
 			COMMON_LDFLAGS+=" -L${DISTOS_PATH}$entry -Wl,-rpath-link,${DISTOS_PATH}$entry"
 		done
 	fi
+	TOOLCHAIN=${TOOLCHAIN:-gnu}
+	case toolchain in
+		llvm)
+			TOOLCHAIN_CC=clang
+			TOOLCHAIN_CXX=clang++
+			TOOLCHAIN_CPP=flang
+			TOOLCHAIN_FC=flang
+			TOOLCHAIN_F90=flang
+			TOOLCHAIN_AR=llvm-ar
+			TOOLCHAIN_AS=llvm-as
+			TOOLCHAIN_NM=llvm-nm
+			TOOLCHAIN_RANLIB=llvm-ranlib
+			TOOLCHAIN_STRIP=llvm-strip
+			TOOLCHAIN_OBJDUMP=llvm-objdump
+			TOOLCHAIN_LD=ld.lld
+			TOOLCHAIN_COMPFLAGS="--target=${HARCH}"
+			TOOLCHAIN_LDFLAGS="-fuse-ld=lld -Wl,--threads=${NPROCS} -Wl,--thinlto-jobs=${NPROCS}"
+			TOOLCHAIN_LTOFLAGS="-flto=thin"
+			;;
+		*|gnu)
+			TOOLCHAIN_CC=${HARCH}-gcc
+			TOOLCHAIN_CXX=${HARCH}-g++
+			TOOLCHAIN_CPP="${HARCH}-cpp"
+			TOOLCHAIN_FC=${HARCH}-gfortran
+			TOOLCHAIN_F90=${HARCH}-gfortran
+			TOOLCHAIN_AR=${HARCH}-gcc-ar
+			TOOLCHAIN_AS=${HARCH}-as
+			TOOLCHAIN_NM=${HARCH}-gcc-nm
+			TOOLCHAIN_RANLIB=${HARCH}-gcc-ranlib
+			TOOLCHAIN_STRIP=${HARCH}-strip
+			TOOLCHAIN_OBJDUMP=${HARCH}-objdump
+			TOOLCHAIN_LD=${HARCH}-ld.gold
+			TOOLCHAIN_COMPFLAGS=""
+			TOOLCHAIN_LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count ${NPROCS}"
+			TOOLCHAIN_LTOFLAGS="-flto=${NPROC}"
+			;;
+	esac
 }
 
 function crossapt () {
@@ -109,30 +146,6 @@ function crossapt () {
 		-o APT::Sandbox::User="$(whoami)" \
 		${@}
 	echo "Done"
-	echo
-}
-
-function setbuildenv () {
-	settoolflags
-	export CC="\"${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc\""
-	export CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}"
-	export CXX="\"${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++\""
-	export CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}"
-	export CPP="\"${CCWRAPPER:+${CCWRAPPER} }${HARCH}-cpp\""
-	export CPPFLAGS="${SYSROOT_CFLAGS} ${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS}"
-	export LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS}"
-	export AR=${HARCH}-gcc-ar
-	export AS=${HARCH}-as
-	export NM=${HARCH}-gcc-nm
-	export RANLIB=${HARCH}-gcc-ranlib
-	export STRIP=${HARCH}-strip
-	export OBJDUMP=${HARCH}-objdump
-	export PKG_CONFIG=${HARCH}-pkg-config
-	export DEF_CFLAGS="-march=native -O3 -pipe"
-
-	echo "CC:		${CC}"
-	echo "CXX:		${CXX}"
-	echo "CFLAGS:	${CFLAGS}"
 	echo
 }
 
@@ -289,7 +302,7 @@ function build () (
 				CONF_FLAGS=" --disable-static ${CONF_FLAGS}"
 			fi
 		fi
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS}"
 			CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS} ${PKG_CFLAGS}" \
 			CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
 			CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS} ${PKG_CXXFLAGS}" \
@@ -327,7 +340,7 @@ function build () (
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS}"
 		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
 		then
 			for target in ${PKG_MAKETARGETS:-all}
@@ -396,7 +409,7 @@ function build () (
 		else
 			CONF_FLAGS+=" -DBUILD_STATIC_LIBS=OFF"
 		fi
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS}"
 		PKG_CONFIG=${HARCH}-pkg-config \
 		cmake ${PKG_SRCPATH} \
 			-DCMAKE_BUILD_TYPE="Release" \
@@ -458,7 +471,7 @@ function build () (
 					CONF_FLAGS+=" --default-library=shared"
 				fi
 			fi
-			[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+			[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS}"
 			local CC="${HARCH}-gcc"
 			local CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}"
 			local CXX="${HARCH}-g++"
@@ -582,7 +595,7 @@ function build () (
 			set -x
 			if [ ${KERN_LTOENABLE:-0} -eq 1 ] 
 			then
-				KERN_OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+				KERN_OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS}"
 				KBUILD_BUILD_TIMESTAMP='' make V=${MAKEVERBOSE:-0} \
 				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
 				LD="scripts/gcc-ld" \
@@ -750,7 +763,7 @@ function build () (
 			export PYTHONPATH
 		done
 		cross-python -m site
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS}"
 		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
 		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
 		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
@@ -832,7 +845,7 @@ function build () (
 		then
 			local PYTHONBUILD="--no-binary :all:"
 		fi
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS}"
 		#build-python -m pip ${VERBOSE} install --upgrade ${PKG_NAME}
 		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
 		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
@@ -919,7 +932,7 @@ function build () (
 			windows) local HMBINFMT=pe;;
 			macosx|ios) local HMBINFMT=mach-o;;
 		esac
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS}"
 
 		local PLATFORM_CFLAGS=$(echo ${PLATFORM_CFLAGS} | sed 's/-mtls-dialect=gnu2//g')
 		local CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS} ${PKG_CXXFLAGS}"
@@ -944,7 +957,6 @@ function build () (
 
 		cd $(find ${PKG_BLDPATH} -mindepth 1 -maxdepth 1 -type d)
 		run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt -y build-dep ${PKG_NAME}"
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 		set -x
 		case ${HM} in
 			arm) [ "${HMFLOATABI}" == "hard" ] && local DEBARCH=armhf || local DEBARCH=arm
@@ -992,6 +1004,7 @@ function build () (
 		case x${PKG_COMPILER} in
 			xllvm)
 				PLATFORM_FLAGS="${PLATFORM_CFLAGS}"
+				[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LLVMLTOFLAGS}"
 				OPTLINK_FLAGS+=" -fuse-ld=lld"
 				CC="${CCWRAPPER:+${CCWRAPPER} }clang ${HARCH:+--target=${HARCH}}"
 				CXX="${CCWRAPPER:+${CCWRAPPER} }clang++ ${HARCH:+--target=${HARCH}}"
@@ -1005,6 +1018,7 @@ function build () (
 			;;
 			*)
 				PLATFORM_FLAGS="${PLATFORM_CFLAGS}"
+				[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS}"
 				OPTLINK_FLAGS+=" -fuse-ld=gold"
 				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc"
 				CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++"
@@ -1148,7 +1162,7 @@ function build () (
 		return 1
 	fi
 
-	settoolflags
+	setbuildenv
 	
 	local PKG_NAME=$(basename ${1})\${PKG_SUFFIX}
 	local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_NAME}}
