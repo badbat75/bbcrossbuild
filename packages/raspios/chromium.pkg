@@ -1,21 +1,28 @@
-# ffmpeg
+# chromium
 BUILD_PROCESS=builddebpkg
 LTOENABLE=0
 TOOLCHAIN=llvm
 PLATFORM_CFLAGS="$(echo ${PLATFORM_CFLAGS} | sed 's/-mtls-dialect=gnu2//')"
-#PKG_CFLAGS="-mllvm -polly"
-#PKG_CXXFLAGS="-mllvm -polly"
-PKG_PREBUILD="sed -i 's/use_vaapi=false arm_use_neon=false//' debian/rules
-#    sed -i '/concurrent_links=/a \ \ \ \ \ \ \ \ \ use_thin_lto=true \\' debian/rules
+#PKG_CFLAGS="-mllvm -polly -Wno-deprecated-copy -Wno-deprecated-copy-with-user-provided-copy"
+#PKG_CXXFLAGS="-mllvm -polly -Wno-deprecated-copy -Wno-deprecated-copy-with-user-provided-copy"
+PKG_PREBUILD="
+     sed -i 's/use_sysroot=false/use_sysroot=true/' debian/rules
+     sed -i '/use_sysroot=/a  \         sysroot=\\\\\"${DISTOS_PATH}\\\\\" \\\\' debian/rules
+     sed -i '/concurrent_links=1/d' debian/rules
+     sed -i 's/use_vaapi=false arm_use_neon=false//' debian/rules
+     sed -i '/use_system_libopenjpeg2=/a \         use_thin_lto=true \\\\' debian/rules
 #    sed -i 's/optimize_webui=false/optimize_webui=true/' debian/rules
 #    sed -i '/ffmpeg_branding/d' debian/rules
 #    sed -i '/proprietary_codecs/d' debian/rules
-    sed -i '/export AR=\${TOOLCHAIN_AR}/d' debian/rules
-    sed -i '/export NM=\${TOOLCHAIN_NM}/d' debian/rules
-    sed -i '/export CC=\${TOOLCHAIN_CC}/d' debian/rules
-    sed -i '/export CXX=\${TOOLCHAIN_CXX}/d' debian/rules
+    sed -i '/export AR=ar/d' debian/rules
+    sed -i '/export NM=nm/d' debian/rules
+    sed -i '/export CC=clang/d' debian/rules
+    sed -i '/export CXX=clang++/d' debian/rules
+    sed -i 's/export CXXFLAGS=/export CXXFLAGS+=/' debian/rules
     sed -i 's|./tools/gn/bootstrap/bootstrap.py|CXX=\"${CCWRAPPER:+${CCWRAPPER} }clang++\" CXXFLAGS=\"-march=native -O3\" CFLAGS= LDFLAGS=\"-fuse-ld=lld\" ./tools/gn/bootstrap/bootstrap.py|' debian/rules
-    sed -i 's/universal_newlines=True)$/universal_newlines=True, shell=True)/' printing/cups_config_helper.py
+    sed -i 's/ninja -j/ninja -v -j/' debian/rules
+    sed -i \"/os.environ\['PKG_CONFIG_LIBDIR'\] = libdir/d\" build/config/linux/pkg-config.py
+    sed -i 's/-isystem/-I/g' build/config/linux/pkg_config.gni
     sed -i 's|/usr/include/openjpeg-2|${DISTOS_PATH}/usr/include/openjpeg-2|g' third_party/pdfium/BUILD.gn
     [ ! -f /usr/bin/nodejs ] && sed -i 's|/usr/bin/nodejs|/usr/bin/node|' third_party/node/node.py || true
     [ ! -f /usr/bin/nodejs ] && sed -i 's|/usr/bin/nodejs|/usr/bin/node|' third_party/devtools-frontend/src/scripts/devtools_paths.py || true
@@ -54,7 +61,7 @@ EOF
     "
 
 # On DISTOS:         
-#         apt install libcups2-dev
+#         apt install libcups2-dev libpipewire-0.3-dev
 # On Build host:
 #         python2 <(curl -s https://bootstrap.pypa.io/pip/2.7/get-pip.py)
 #         pip2 install setuptools

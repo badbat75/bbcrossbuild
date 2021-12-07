@@ -21,7 +21,7 @@ function setbuildenv () {
 		llvm)
 			TOOLCHAIN_CC=clang
 			TOOLCHAIN_CXX=clang++
-			TOOLCHAIN_CPP=flang
+			TOOLCHAIN_CPP="clang -E"
 			TOOLCHAIN_FC=flang
 			TOOLCHAIN_F90=flang
 			TOOLCHAIN_AR=llvm-ar
@@ -33,7 +33,7 @@ function setbuildenv () {
 			TOOLCHAIN_LD=ld.lld
 			TOOLCHAIN_COMPFLAGS="--target=${HARCH}"
 			TOOLCHAIN_LDFLAGS="-fuse-ld=lld -Wl,--threads=${NPROCS} -Wl,--thinlto-jobs=${NPROCS}"
-			TOOLCHAIN_LTOFLAGS="-flto=thin"
+			TOOLCHAIN_LTOFLAGS="${COMMONLLVM_LTOFLAGS:--flto=thin}"
 			;;
 		*|gnu)
 			TOOLCHAIN_CC=${HARCH}-gcc
@@ -49,8 +49,8 @@ function setbuildenv () {
 			TOOLCHAIN_OBJDUMP=${HARCH}-objdump
 			TOOLCHAIN_LD=${HARCH}-ld.gold
 			TOOLCHAIN_COMPFLAGS=""
-			TOOLCHAIN_LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count ${NPROCS}"
-			TOOLCHAIN_LTOFLAGS="-flto=${NPROC}"
+			TOOLCHAIN_LDFLAGS="-B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}"
+			TOOLCHAIN_LTOFLAGS="${COMMON_GNULTOFLAGS:-flto=${NPROC}}"
 			;;
 	esac
 	MULTI_ARCH=${MULTIARCH:-1}
@@ -71,7 +71,6 @@ function setbuildenv () {
 	BUILD_LIBSHARED=${BUILD_LIBSHARED:-1}
 	BUILD_LIBSTATIC=${BUILD_LIBSTATIC:-1}
 	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
-	PLATFORM_LLVMFLAGS="${HMCPU:+ -mcpu=${HMCPU}}${HMARCH_RUST:+ -mllvm -mattr=${HMARCH_RUST}}"
 	PLATFORM_RUSTFLAGS="${HMCPU:+-C target-cpu=${HMCPU}}${HMARCH_RUST:+ -C target-feature=${HMARCH_RUST} }"
 	COMMON_CFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
 	COMMON_CXXFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
@@ -112,6 +111,90 @@ function setbuildenv () {
 			COMMON_LDFLAGS+=" -L${DISTOS_PATH}$entry -Wl,-rpath-link,${DISTOS_PATH}$entry"
 		done
 	fi
+	case ${TOOLCHAIN} in
+		llvm)
+			TOOLCHAIN_CC=clang
+			TOOLCHAIN_CXX=clang++
+			TOOLCHAIN_CPP="clang -E"
+			TOOLCHAIN_FC=flang
+			TOOLCHAIN_F90=flang
+			TOOLCHAIN_AR=llvm-ar
+			TOOLCHAIN_AS=llvm-as
+			TOOLCHAIN_NM=llvm-nm
+			TOOLCHAIN_RANLIB=llvm-ranlib
+			TOOLCHAIN_STRIP=llvm-strip
+			TOOLCHAIN_OBJDUMP=llvm-objdump
+			TOOLCHAIN_LD=ld.lld
+			TOOLCHAIN_COMPFLAGS="--target=${HARCH}"
+			TOOLCHAIN_LDFLAGS="-fuse-ld=lld -Wl,--threads=${NPROCS} -Wl,--thinlto-jobs=${NPROCS}"
+			TOOLCHAIN_LTOFLAGS="${COMMONLLVM_LTOFLAGS:--flto=thin}"
+			### Search of crtbeginS.o and crtendS.o under /usr/lib/gcc...
+			if [ -d ${DISTOS_PATH}${BUILD_LIBDIR} ]
+			then
+				while read path
+				do
+					COMMON_LDFLAGS+=" -B${path}"
+				done < <(find ${DISTOS_PATH}${BUILD_LIBDIR} \
+					\( -name "crt1.o" -o -name "crti.o" -o -name "crtn.o" -o -name "crtbeginS.o" -o -name "crtendS.o" \) \
+					-exec dirname {} \; | sort -u)
+			fi
+			;;
+		*|gnu)
+			TOOLCHAIN_CC=${HARCH}-gcc
+			TOOLCHAIN_CXX=${HARCH}-g++
+			TOOLCHAIN_CPP="${HARCH}-cpp"
+			TOOLCHAIN_FC=${HARCH}-gfortran
+			TOOLCHAIN_F90=${HARCH}-gfortran
+			TOOLCHAIN_AR=${HARCH}-gcc-ar
+			TOOLCHAIN_AS=${HARCH}-as
+			TOOLCHAIN_NM=${HARCH}-gcc-nm
+			TOOLCHAIN_RANLIB=${HARCH}-gcc-ranlib
+			TOOLCHAIN_STRIP=${HARCH}-strip
+			TOOLCHAIN_OBJDUMP=${HARCH}-objdump
+			TOOLCHAIN_LD=${HARCH}-ld.gold
+			TOOLCHAIN_COMPFLAGS=""
+			TOOLCHAIN_LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}"
+			TOOLCHAIN_LTOFLAGS="${COMMON_GNULTOFLAGS:-flto=${NPROC}}"
+			;;
+	esac
+}
+
+function create_environment_source () {
+		cat <<-EOF > environment.source
+		#################################################################################
+		### Source file with all the environment specified
+		### Tool chain: ${TOOLCHAIN}
+		### C Wrapper: ${CCWRAPPER}
+		###### Other environment variables:
+		### DISTOS_PATH=${DISTOS_PATH}
+		### BIN_PATH=${BIN_PATH}
+		### PKG_SRCDIR=${PKG_SRCDIR}
+		### PKG_BLDDIR=${PKG_BLDDIR}
+		#################################################################################
+
+		export CC="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}"
+		export CXX="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX}"
+		export CPP="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CPP}"
+		export FC="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_FC}"
+		export F90="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_F90}"
+		export AR="${TOOLCHAIN_AR}"
+		export AS="${TOOLCHAIN_AS}"
+		export NM="${TOOLCHAIN_NM}"
+		export RANLIB="${TOOLCHAIN_RANLIB}"
+		export STRIP="${TOOLCHAIN_STRIP}"
+		export OBJDUMP="${TOOLCHAIN_OBJDUMP}"
+		export LD="${TOOLCHAIN_LD}"
+		export CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_CFLAGS}"
+		export CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_CXXFLAGS}"
+		export CPPFLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_CFLAGS}"
+		export FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_FCFLAGS}"
+		export F90FLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_FCFLAGS}"
+		export LDFLAGS="${SYSROOT_CFLAGS} ${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${TOOLCHAIN_LDFLAGS} ${PKG_LDFLAGS}"
+		export PKG_CONFIG=${HARCH}-pkg-config
+		export PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR}
+		export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR}
+		export PKG_CONFIG_ALLOW_CROSS=${PKG_CONFIG_ALLOW_CROSS}
+	EOF
 }
 
 function crossapt () {
@@ -262,11 +345,10 @@ function build () (
 			trap - ERR; \
 			return ${STATUS};' ERR
 		set -x
-		cd ${PKG_SRCPATH}
 		if [ ${AUTOCONF:-1} -eq 1 ]
 		then
 			echo -n "${SPACES}AutoReconf ${PKG_NAME}..."
-			[ ! -z ${AUTOCONF_PATH} ] && cd ${AUTOCONF_PATH}
+			cd ${PKG_SRCPATH}/${AUTOCONF_PATH}
 			[ -d m4 ] && local ACINCLUDE="-Im4" || mkdir m4
 			[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" -I${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal"
 			[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" -I${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
@@ -282,7 +364,6 @@ function build () (
 		fi
 		mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 		cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
-		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 		then
 			CONF_FLAGS="--prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --libexecdir=${BUILD_LIBDIR} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} \
@@ -301,27 +382,17 @@ function build () (
 				CONF_FLAGS=" --disable-static ${CONF_FLAGS}"
 			fi
 		fi
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS}"
-			CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS} ${PKG_CFLAGS}" \
-			CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
-			CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS} ${PKG_CXXFLAGS}" \
-			CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-			CPP="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-cpp ${SYSROOT_CFLAGS}" \
-			CPPFLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS}" \
-			LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-			AR=${HARCH}-gcc-ar \
-			AS=${HARCH}-as \
-			NM=${HARCH}-gcc-nm \
-			RANLIB=${HARCH}-gcc-ranlib \
-			STRIP=${HARCH}-strip \
-			OBJDUMP=${HARCH}-objdump \
-			PKG_CONFIG=${HARCH}-pkg-config \
-			eval "${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS}"
+		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${TOOLCHAIN_LTOFLAGS}"
+		create_environment_source
+		source environment.source
+
+		eval "${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS}"
 		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
 		then
 			for target in ${PKG_MAKETARGETS:-all}
 			do
-				eval "make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}"
+				make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}
 			done
 		fi
 		make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${INST_CMD:-}
@@ -339,48 +410,18 @@ function build () (
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS}"
+		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${TOOLCHAIN_LTOFLAGS}"
+		create_environment_source
+		source environment.source
 		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
 		then
 			for target in ${PKG_MAKETARGETS:-all}
 			do
 				echo "Making ${target}..."
-				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
-				CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
-				CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
-				CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-				FC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gfortran ${SYSROOT_CFLAGS}" \
-				FFLAGS="${COMMON_FFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FFLAGS}" \
-				CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
-				CPPFLAGS="${COMMON_CPPFLAGS}" \
-				LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-				AR=${HARCH}-gcc-ar \
-				AS=${HARCH}-as \
-				NM=${HARCH}-gcc-nm \
-				RANLIB=${HARCH}-gcc-ranlib \
-				STRIP=${HARCH}-strip \
-				OBJDUMP=${HARCH}-objdump \
-				PKG_CONFIG=${HARCH}-pkg-config \
-					eval "make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}"
+				make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}
 			done
 		fi
-		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
-		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
-		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
-		CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-		FC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gfortran ${SYSROOT_CFLAGS}" \
-		FFLAGS="${COMMON_FFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FFLAGS}" \
-		CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
-		CPPFLAGS="${COMMON_CPPFLAGS}" \
-		LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-		AR=${HARCH}-gcc-ar \
-		AS=${HARCH}-as \
-		NM=${HARCH}-gcc-nm \
-		RANLIB=${HARCH}-gcc-ranlib \
-		STRIP=${HARCH}-strip \
-		OBJDUMP=${HARCH}-objdump \
-		PKG_CONFIG=${HARCH}-pkg-config \
-			eval "make ${PKG_MAKEVARS} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}"
+		make ${PKG_MAKEVARS} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -592,37 +633,17 @@ function build () (
 		function make4kern () {
 			env
 			set -x
-			if [ ${KERN_LTOENABLE:-0} -eq 1 ] 
-			then
-				KERN_OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS}"
-				KBUILD_BUILD_TIMESTAMP='' make V=${MAKEVERBOSE:-0} \
-				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
-				LD="scripts/gcc-ld" \
-				AR="${HARCH}-gcc-ar" \
-				RANLIB="${HARCH}-gcc-ranlib" \
-				KCFLAGS="${PKG_CFLAGS}" \
-				KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-				LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-				ARCH=${KERN_ARCH} \
-				CROSS_COMPILE=${HARCH}- \
-				EXTRAVERSION=${KERN_EXTRAVERSION} \
-				${EXTRA_PARMS} \
-				DISABLE_LTO=-fno-lto \
-				${@} ${PKG_MAKEVARS}
-				local STATUS=${?}
-			else
-				KBUILD_BUILD_TIMESTAMP='' make V=${MAKEVERBOSE:-0} \
-				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
-				KCFLAGS="${PKG_CFLAGS}" \
-				KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-				LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-				ARCH=${KERN_ARCH} \
-				CROSS_COMPILE=${HARCH}- \
-				EXTRAVERSION=${KERN_EXTRAVERSION} \
-				${EXTRA_PARMS} \
-				${@} ${PKG_MAKEVARS}
-				local STATUS=${?}
-			fi
+			KBUILD_BUILD_TIMESTAMP='' make V=${MAKEVERBOSE:-0} \
+			CC="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}" \
+			KCFLAGS="${PKG_CFLAGS}" \
+			KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+			LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+			ARCH=${KERN_ARCH} \
+			CROSS_COMPILE=${HARCH}- \
+			EXTRAVERSION=${KERN_EXTRAVERSION} \
+			${EXTRA_PARMS} \
+			${@} ${PKG_MAKEVARS}
+			local STATUS=${?}
 			set x
 			return ${STATUS}
 		}
@@ -966,50 +987,9 @@ function build () (
 			;;
 		esac
 		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
-		cat <<-EOF > environment.source
-			export CC="${TOOLCHAIN_CC}"
-			export CXX="${TOOLCHAIN_CXX}"
-			export CPP="${TOOLCHAIN_CPP}"
-			export FC="${TOOLCHAIN_FC}"
-			export F90="${TOOLCHAIN_F90}"
-			export AR="${TOOLCHAIN_AR}"
-			export AS="${TOOLCHAIN_AS}"
-			export NM="${TOOLCHAIN_NM}"
-			export RANLIB="${TOOLCHAIN_RANLIB}"
-			export STRIP="${TOOLCHAIN_STRIP}"
-			export OBJDUMP="${TOOLCHAIN_OBJDUMP}"
-			export LD="${TOOLCHAIN_LD}"
-			export CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_FLAGS} ${OPTCOMP_FLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_CFLAGS}"
-			export CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_FLAGS} ${OPTCOMP_FLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_CXXFLAGS}"
-			export CPPFLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_CFLAGS}"
-			export FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_FCFLAGS}"
-			export F90FLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_FCFLAGS}"
-			export LDFLAGS="${SYSROOT_CFLAGS} ${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${TOOLCHAIN_LDFLAGS} ${PKG_LDFLAGS}"
-			export PKG_CONFIG=${HARCH}-pkg-config
-			export PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR}
-			export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR}
-		EOF
-		CC="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}" \
-		CXX="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX}" \
-		CPP="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CPP}" \
-		FC="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_FC}" \
-		F90="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_F90}" \
-		AR="${TOOLCHAIN_AR}" \
-		AS="${TOOLCHAIN_AS}" \
-		NM="${TOOLCHAIN_NM}" \
-		RANLIB="${TOOLCHAIN_RANLIB}" \
-		STRIP="${TOOLCHAIN_STRIP}" \
-		OBJDUMP="${TOOLCHAIN_OBJDUMP}" \
-		LD="${TOOLCHAIN_LD}" \
-		CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_FLAGS} ${OPTCOMP_FLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_CFLAGS}" \
-		CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_FLAGS} ${OPTCOMP_FLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_CXXFLAGS}" \
-		CPPFLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_CFLAGS}" \
-		FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_FCFLAGS}" \
-		F90FLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_FCFLAGS}" \
-		LDFLAGS="${SYSROOT_CFLAGS} ${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${TOOLCHAIN_LDFLAGS} ${PKG_LDFLAGS}" \
-		PKG_CONFIG=${HARCH}-pkg-config \
-		PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR} \
-		PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR} \
+		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${TOOLCHAIN_LTOFLAGS}"
+		create_environment_source
+		source environment.source
 		DPKG_ROOT=${DISTOS_PATH} \
 		CONFIG_SITE=${DISTOS_PATH}/etc/dpkg \
 		LD_LIBRARY_PATH=${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
