@@ -17,42 +17,6 @@ function setbuildenv () {
 		export CROSS_COMPILING=yes
 		export PKG_CONFIG_ALLOW_CROSS=1
 	fi
-	case ${TOOLCHAIN} in
-		llvm)
-			TOOLCHAIN_CC=clang
-			TOOLCHAIN_CXX=clang++
-			TOOLCHAIN_CPP="clang -E"
-			TOOLCHAIN_FC=flang
-			TOOLCHAIN_F90=flang
-			TOOLCHAIN_AR=llvm-ar
-			TOOLCHAIN_AS=llvm-as
-			TOOLCHAIN_NM=llvm-nm
-			TOOLCHAIN_RANLIB=llvm-ranlib
-			TOOLCHAIN_STRIP=llvm-strip
-			TOOLCHAIN_OBJDUMP=llvm-objdump
-			TOOLCHAIN_LD=ld.lld
-			TOOLCHAIN_COMPFLAGS="--target=${HARCH}"
-			TOOLCHAIN_LDFLAGS="-fuse-ld=lld -Wl,--threads=${NPROCS} -Wl,--thinlto-jobs=${NPROCS}"
-			TOOLCHAIN_LTOFLAGS="${COMMONLLVM_LTOFLAGS:--flto=thin}"
-			;;
-		*|gnu)
-			TOOLCHAIN_CC=${HARCH}-gcc
-			TOOLCHAIN_CXX=${HARCH}-g++
-			TOOLCHAIN_CPP="${HARCH}-cpp"
-			TOOLCHAIN_FC=${HARCH}-gfortran
-			TOOLCHAIN_F90=${HARCH}-gfortran
-			TOOLCHAIN_AR=${HARCH}-gcc-ar
-			TOOLCHAIN_AS=${HARCH}-as
-			TOOLCHAIN_NM=${HARCH}-gcc-nm
-			TOOLCHAIN_RANLIB=${HARCH}-gcc-ranlib
-			TOOLCHAIN_STRIP=${HARCH}-strip
-			TOOLCHAIN_OBJDUMP=${HARCH}-objdump
-			TOOLCHAIN_LD=${HARCH}-ld.gold
-			TOOLCHAIN_COMPFLAGS=""
-			TOOLCHAIN_LDFLAGS="-B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}"
-			TOOLCHAIN_LTOFLAGS="${COMMON_GNULTOFLAGS:-flto=${NPROC}}"
-			;;
-	esac
 	MULTI_ARCH=${MULTIARCH:-1}
 	BUILD_PREFIX="${BUILD_PREFIX:-/usr}"
 	BUILD_EXECPREFIX="${BUILD_EXECPREFIX:-${BUILD_PREFIX}}"
@@ -133,7 +97,8 @@ function setbuildenv () {
 			then
 				while read path
 				do
-					COMMON_LDFLAGS+=" -B${path}"
+					COMMON_CFLAGS+=" -B${path}"
+					COMMON_CXXFLAGS+=" -B${path}"
 				done < <(find ${DISTOS_PATH}${BUILD_LIBDIR} \
 					\( -name "crt1.o" -o -name "crti.o" -o -name "crtn.o" -o -name "crtbeginS.o" -o -name "crtendS.o" \) \
 					-exec dirname {} \; | sort -u)
