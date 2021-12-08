@@ -28,6 +28,12 @@ sudo dnf install -y dpkg-dev devscripts apt debhelper \
     cd -
     rm -rf strip-nondeterminism
 )
+if [ ! -f /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm.orig ]
+then
+    sudo cp -v /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm.orig
+else
+    sudo cp -fv /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm.orig /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm
+fi
 sudo sed -i "s/'0755'/0755/g" /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm
 
 #autoconf2.64
