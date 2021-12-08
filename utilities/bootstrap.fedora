@@ -6,6 +6,15 @@ sudo dnf install -y bc parted e2fsprogs bzip2 rsync vim-common \
 	autoconf autoconf-archive automake gettext-devel libtool \
     git xmltoman docbook-utils swig doxygen texinfo python3-docutils
 
+# Libtool updates
+if [ ! -f /usr/share/libtool/build-aux/ltmain.sh.orig ]
+then
+    sudo cp -v /usr/share/libtool/build-aux/ltmain.sh /usr/share/libtool/build-aux/ltmain.sh.orig
+else
+    sudo cp -fv /usr/share/libtool/build-aux/ltmain.sh.orig /usr/share/libtool/build-aux/ltmain.sh
+fi
+sudo sed -i 's/-specs=\*)/-specs=\*|-fuse-ld=\*)/' /usr/share/libtool/build-aux/ltmain.sh
+
 # Debian Packages
 sudo dnf install -y dpkg-dev devscripts apt debhelper \
     perl-ExtUtils-MakeMaker perl-Archive-Zip
