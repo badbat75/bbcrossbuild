@@ -91,7 +91,9 @@ function settcenv () {
 			TOOLCHAIN_NM=llvm-nm
 			TOOLCHAIN_RANLIB=llvm-ranlib
 			TOOLCHAIN_STRIP=llvm-strip
+			TOOLCHAIN_OBJCOPY=llvm-objcopy
 			TOOLCHAIN_OBJDUMP=llvm-objdump
+			TOOLCHAIN_READELF=llvm-readelf
 			TOOLCHAIN_LD=ld.lld
 			TOOLCHAIN_COMPFLAGS="--target=${HARCH}"
 			TOOLCHAIN_LDFLAGS="--target=${HARCH} -fuse-ld=lld -Wl,--threads=${NPROCS}"
@@ -121,7 +123,9 @@ function settcenv () {
 			TOOLCHAIN_NM=${HARCH}-gcc-nm
 			TOOLCHAIN_RANLIB=${HARCH}-gcc-ranlib
 			TOOLCHAIN_STRIP=${HARCH}-strip
+			TOOLCHAIN_OBJCOPY=${HARCH}-objcopy
 			TOOLCHAIN_OBJDUMP=${HARCH}-objdump
+			TOOLCHAIN_READELF=${HARCH}-readelf
 			TOOLCHAIN_LD=${HARCH}-ld.gold
 			TOOLCHAIN_COMPFLAGS=""
 			TOOLCHAIN_LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}"
@@ -160,7 +164,9 @@ function create_environment_source () {
 		export NM="${TOOLCHAIN_NM}"
 		export RANLIB="${TOOLCHAIN_RANLIB}"
 		export STRIP="${TOOLCHAIN_STRIP}"
+		export OBJCOPY="${TOOLCHAIN_OBJCOPY}"
 		export OBJDUMP="${TOOLCHAIN_OBJDUMP}"
+		export READELF="${TOOLCHAIN_READELF}"
 		export LD="${TOOLCHAIN_LD}"
 		export CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_CFLAGS}"
 		export CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_CXXFLAGS}"
@@ -589,6 +595,10 @@ function build () (
 			AS="${TOOLCHAIN_AS}" \
 			NM="${TOOLCHAIN_NM}" \
 			AR="${TOOLCHAIN_AR}" \
+			OBJCOPY="${TOOLCHAIN_OBJCOPY}" \
+			OBJDUMP="${TOOLCHAIN_OBJDUMP}" \
+			READELF="${TOOLCHAIN_READELF}" \
+			STRIP="${TOOLCHAIN_STRIP}" \
 			KCFLAGS="${PKG_CFLAGS}" \
 			KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 			LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
