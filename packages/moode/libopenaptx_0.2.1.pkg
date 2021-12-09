@@ -5,8 +5,10 @@ BUILD_PROCESS=simplemake
 #INST_CMD=install
 PKG_DEPS=
 PKG_MAKEVARS="PREFIX=${BUILD_PREFIX} LIBDIR=lib${BUILD_LIBSUFFIX}"
+PKG_LDFLAGS="-s"
 PKG_PREBUILD="
     sed -i 's/CFLAGS = /CFLAGS ?= /g' Makefile
+    sed -i 's/LDFLAGS = /LDFLAGS ?= /g' Makefile
     sed -i 's/PREFIX = /PREFIX ?= /g' Makefile
     sed -i 's/BINDIR = /BINDIR ?= /g' Makefile
     sed -i 's/LIBDIR = /LIBDIR ?= /g' Makefile"

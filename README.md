@@ -79,7 +79,7 @@ Copy sources in the build directory (often needed for buggy build processes). No
 Define what build process to use:  
 `downloadonly`: it only downloads the package and creates the source directory  
 `configmake`: it downloads, creates source directory and run a standard configure/make build process  
-`cmakemake`: it downloads, creates source directory and run a standard cmake/make build process  
+`cmakeninja`: it downloads, creates source directory and run a standard cmake/make build process  
 `mesonninja`: it downloads, creates source directory and run a standard meson/ninja build process  
 `cargobuild`: it downloads, creates source directory and run a standard Rust cargo build process  
 `simplemake`: it downloads, creates source directory, copy to build directory and run a standard make process  

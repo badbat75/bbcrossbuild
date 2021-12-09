@@ -1,7 +1,7 @@
 # libldac_2.0.2.3+af2dd23
 GIT_URL="https://github.com/EHfive/ldacBT"
 GIT_COMMIT="af2dd23979453bcd1cad7c4086af5fb421a955c5"
-BUILD_PROCESS=cmakemake
+BUILD_PROCESS=cmakeninja
 CONF_FLAGS="-DLDAC_SOFT_FLOAT=OFF"
 VAR_INSTALL_LIBDIR="INSTALL_LIBDIR"
 INST_CMD=install/strip

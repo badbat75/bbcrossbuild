@@ -59,7 +59,7 @@ then
 fi
 
 PKG_CXXFLAGS="-Wno-shadow"
-INST_CMD=install-strip
+INST_CMD=install
 PKG_POSTBUILD="install -d ${PKG_PKGPATH}/var/lib/mpd
 install -d ${PKG_PKGPATH}/var/lib/mpd/music
 install -d ${PKG_PKGPATH}/var/lib/mpd/playlists

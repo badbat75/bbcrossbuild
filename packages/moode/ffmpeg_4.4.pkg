@@ -5,10 +5,10 @@ BUILD_PROCESS=configmake
 STD_CONF_FLAGS=0
 CONF_FLAGS="--prefix=${BUILD_PREFIX} --incdir=${BUILD_INCLUDEDIR} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
             --enable-cross-compile --cross-prefix=${HARCH}- --arch=${HARCH} --cpu=${HMCPU} --target-os=linux \
-            --cc=\"${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}\" \
-            --nm=\"${TOOLCHAIN_NM}\" \
-            --ar=\"${TOOLCHAIN_AR}\" \
-            --ranlib=\"${TOOLCHAIN_RANLIB}\" \
+            --cc=\"${CCWRAPPER:+${CCWRAPPER} }\${TOOLCHAIN_CC}\" \
+            --nm=\"\${TOOLCHAIN_NM}\" \
+            --ar=\"\${TOOLCHAIN_AR}\" \
+            --ranlib=\"\${TOOLCHAIN_RANLIB}\" \
             --pkg-config=${HARCH}-pkg-config \
 			--enable-gpl         \
             --enable-hardcoded-tables \

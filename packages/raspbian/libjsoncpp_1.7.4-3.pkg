@@ -1,11 +1,10 @@
 # libjsoncpp_1.7.4-3
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libj/libjsoncpp/libjsoncpp_1.7.4.orig.tar.gz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libj/libjsoncpp/libjsoncpp_1.7.4-3.debian.tar.xz"
-BUILD_PROCESS=cmakemake
+BUILD_PROCESS=cmakeninja
 CONF_FLAGS="-DJSONCPP_WITH_CMAKE_PACKAGE=ON \
 	-DJSONCPP_WITH_TESTS=Off"
 INST_CMD=install/strip
-PKG_MAKEVARS=-j1
 
 # Note:
 # Dependencies: cmake, doxygen, python

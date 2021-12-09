@@ -85,7 +85,7 @@ build raspberrypi/pi-bluetooth_0.1.17
 TOOLCHAIN=llvm WITH_APTX=libopenaptx build moode/bluez-alsa_3.1.0+24b7300
 
 # STEP 6 - Compile and install MPD
-build moode/mpd_0.23
+TOOLCHAIN=llvm build moode/mpd_0.23
 build moode/mpc_0.33
 
 # STEP 9a - Eq2Fa12p

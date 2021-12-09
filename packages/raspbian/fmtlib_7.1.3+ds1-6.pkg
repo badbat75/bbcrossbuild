@@ -2,7 +2,7 @@
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/f/fmtlib/fmtlib_7.1.3%2Bds1.orig.tar.gz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/f/fmtlib/fmtlib_7.1.3%2Bds1-6.debian.tar.xz"
 PKG_DEPS="raspbian/googletest_1.11.0-2"
-BUILD_PROCESS=cmakemake
+BUILD_PROCESS=cmakeninja
 CONF_FLAGS="-DFMT_DOC=off -DFMT_PEDANTIC=on -DCMAKE_POSITION_INDEPENDENT_CODE=on -DCMAKE_SYSTEM_PREFIX_PATH=${BIN_PATH}"
 #VAR_INSTALL_CONFDIR="CMAKE_INSTALL_SYSCONFDIR"
 VAR_INSTALL_LIBDIR="CMAKE_INSTALL_LIBDIR"

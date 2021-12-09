@@ -2,7 +2,7 @@
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libw/libwebsockets/libwebsockets_4.0.20.orig.tar.gz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libw/libwebsockets/libwebsockets_4.0.20-1.debian.tar.xz"
 PKG_DEPS="raspbian/libev_4.33-1 raspbian/libuv_0.10.36-3"
-BUILD_PROCESS=cmakemake
+BUILD_PROCESS=cmakeninja
 CONF_FLAGS="-DLWS_WITHOUT_DAEMONIZE=OFF \
 	-DLWS_WITH_LIBEV=ON -DLWS_WITH_LIBUV=ON \
 	-DLWS_UNIX_SOCK=ON \

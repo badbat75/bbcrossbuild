@@ -1,7 +1,7 @@
 #!/bin/bash
 sudo dnf install -y bc parted e2fsprogs bzip2 rsync vim-common \
     gcc g++ binutils libzstd libzstd-devel \
-    ccache clang-tools-extra lld nasm \
+    ccache \
     tree curl gawk bison flex cmake ninja-build npm \
 	autoconf autoconf-archive automake gettext-devel libtool \
     git xmltoman docbook-utils swig doxygen texinfo python3-docutils
@@ -13,7 +13,7 @@ then
 else
     sudo cp -fv /usr/share/libtool/build-aux/ltmain.sh.orig /usr/share/libtool/build-aux/ltmain.sh
 fi
-sudo sed -i 's/-specs=\*)/-specs=\*|-fsanitize=\*|-fuse-ld=\*|-Wa,\*)/' /usr/share/libtool/build-aux/ltmain.sh
+sudo sed -i 's/-specs=\*)/-specs=\*|-fsanitize=\*|-fuse-ld=\*|-Wa,\*|--target=\*|-B\*)/' /usr/share/libtool/build-aux/ltmain.sh
 
 # Debian Packages
 sudo dnf install -y dpkg-dev devscripts apt debhelper \

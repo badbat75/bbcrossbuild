@@ -9,7 +9,7 @@ PKG_DEPS="moode/alsa-lib_1.2.5.1 \
     moode/libmad_0.15.1b \
     moode/libao_1.2.2 \
     raspbian/libgsm_1.0.18-2"
-BUILD_PROCESS=cmakemake
+BUILD_PROCESS=cmakeninja
 CONF_FLAGS="-DBUILD_TESTS=0 -DBUILD_EXAMPLES=0"
 INST_CMD=install/strip
 

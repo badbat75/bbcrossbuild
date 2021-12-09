@@ -75,6 +75,10 @@ function setbuildenv () {
 			COMMON_LDFLAGS+=" -L${DISTOS_PATH}$entry -Wl,-rpath-link,${DISTOS_PATH}$entry"
 		done
 	fi
+	### Search of crtbeginS.o and crtendS.o under /usr/lib/gcc...
+}
+
+function settcenv () {
 	case ${TOOLCHAIN} in
 		llvm)
 			TOOLCHAIN_CC=clang
@@ -88,17 +92,19 @@ function setbuildenv () {
 			TOOLCHAIN_RANLIB=llvm-ranlib
 			TOOLCHAIN_STRIP=llvm-strip
 			TOOLCHAIN_OBJDUMP=llvm-objdump
-			TOOLCHAIN_LD=ld.lld
+			TOOLCHAIN_LD=lld
 			TOOLCHAIN_COMPFLAGS="--target=${HARCH}"
-			TOOLCHAIN_LDFLAGS="-fuse-ld=lld -Wl,--threads=${NPROCS} -Wl,--thinlto-jobs=${NPROCS}"
-			TOOLCHAIN_LTOFLAGS="${COMMONLLVM_LTOFLAGS:--flto=thin}"
-			### Search of crtbeginS.o and crtendS.o under /usr/lib/gcc...
+			TOOLCHAIN_LDFLAGS="--target=${HARCH} -fuse-ld=lld -Wl,--threads=${NPROCS}"
+			if [ ${LTOENABLE:-0} -eq 1 ]
+			then
+				OPTCOMP_FLAGS+=" ${COMMONLLVM_LTOFLAGS:--flto=thin}"
+				OPTLINK_FLAGS+=" -Wl,--thinlto-jobs=${NPROCS}"
+			fi
 			if [ -d ${DISTOS_PATH}${BUILD_LIBDIR} ]
 			then
 				while read path
 				do
-					COMMON_CFLAGS+=" -B${path}"
-					COMMON_CXXFLAGS+=" -B${path}"
+					COMMON_LDFLAGS+=" -B${path}"
 				done < <(find ${DISTOS_PATH}${BUILD_LIBDIR} \
 					\( -name "crt1.o" -o -name "crti.o" -o -name "crtn.o" -o -name "crtbeginS.o" -o -name "crtendS.o" \) \
 					-exec dirname {} \; | sort -u)
@@ -119,13 +125,19 @@ function setbuildenv () {
 			TOOLCHAIN_LD=${HARCH}-ld.gold
 			TOOLCHAIN_COMPFLAGS=""
 			TOOLCHAIN_LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}"
-			TOOLCHAIN_LTOFLAGS="${COMMON_GNULTOFLAGS:-flto=${NPROC}}"
+			if [ ${LTOENABLE:-0} -eq 1 ]
+			then
+				OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS:--flto=${NPROCS} -fno-fat-lto-objects}"
+				OPTLINK_FLAGS+=" -fuse-linker-plugin"
+			fi
 			;;
 	esac
+	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 }
 
 function create_environment_source () {
-		cat <<-EOF > environment.source
+	settcenv
+	cat <<-EOF > environment.source
 		#################################################################################
 		### Source file with all the environment specified
 		### Tool chain: ${TOOLCHAIN}
@@ -135,6 +147,7 @@ function create_environment_source () {
 		### BIN_PATH=${BIN_PATH}
 		### PKG_SRCDIR=${PKG_SRCDIR}
 		### PKG_BLDDIR=${PKG_BLDDIR}
+		### PATH=${PATH}
 		#################################################################################
 
 		export CC="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}"
@@ -159,6 +172,7 @@ function create_environment_source () {
 		export PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR}
 		export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR}
 		export PKG_CONFIG_ALLOW_CROSS=${PKG_CONFIG_ALLOW_CROSS}
+		export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}
 	EOF
 }
 
@@ -347,8 +361,6 @@ function build () (
 				CONF_FLAGS=" --disable-static ${CONF_FLAGS}"
 			fi
 		fi
-		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${TOOLCHAIN_LTOFLAGS}"
 		create_environment_source
 		source environment.source
 
@@ -374,8 +386,6 @@ function build () (
 		set -x
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
-		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${TOOLCHAIN_LTOFLAGS}"
 		create_environment_source
 		source environment.source
 		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
@@ -392,7 +402,7 @@ function build () (
 		trap - ERR
 	}
 
-	function cmakemake () {
+	function cmakeninja () {
 		trap 'STATUS=${?}; \
 		set +x; \
 		trap - ERR; \
@@ -401,7 +411,6 @@ function build () (
 		set -x
 		mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 		cd ${PKG_BLDPATH}
-		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ ${BUILD_LIBSHARED} -eq 1 ]
 		then
 			CONF_FLAGS+=" -DBUILD_SHARED_LIBS=ON"
@@ -414,34 +423,22 @@ function build () (
 		else
 			CONF_FLAGS+=" -DBUILD_STATIC_LIBS=OFF"
 		fi
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS}"
-		PKG_CONFIG=${HARCH}-pkg-config \
+		create_environment_source
+		source environment.source
 		cmake ${PKG_SRCPATH} \
+			-G Ninja \
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DTOOLCHAIN_PREFIX=${HARCH}- \
 			-DCMAKE_CROSSCOMPILING="TRUE" \
-			-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \
-			-DCMAKE_C_COMPILER="${HARCH}-gcc" \
-			-DCMAKE_C_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
-			-DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \
-			-DCMAKE_CXX_COMPILER="${HARCH}-g++" \
-			-DCMAKE_CXX_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-			-DCMAKE_CPP_COMPILER="${HARCH}-cpp" \
-			-DCMAKE_CPP_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS}" \
-			-DCMAKE_EXE_LINKER_FLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-			-DCMAKE_AR=${TOOLCHAIN_PATH}/bin/${HARCH}-gcc-ar \
-			-DCMAKE_NM=${HARCH}-gcc-nm \
-			-DCMAKE_CC_COMPILER_RANLIB=${HARCH}-gcc-ranlib \
-			-DCMAKE_CXX_COMPILER_RANLIB=${HARCH}-gcc-ranlib \
-			-DCMAKE_STRIP=${HARCH}-strip \
 			-DCMAKE_INSTALL_PREFIX=${BUILD_PREFIX} \
 			-D${VAR_INSTALL_LIBDIR:-"LIB_INSTALL_DIR"}=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
 			-D${VAR_INSTALL_LIBSUFFIX:-"LIB_SUFFIX"}=${BUILD_LIBSUFFIX} \
 			-D${VAR_INSTALL_INCDIR:-"INCLUDE_INSTALL_DIR"}=${BUILD_INCLUDEDIR} \
 			-D${VAR_INSTALL_CONFDIR:-"SYSCONF_INSTALL_DIR"}=${BUILD_SYSCONFDIR} \
 			${CONF_FLAGS}
-		make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0}
-		make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${INST_CMD}
+		local NINJA_FLAGS="-j${NPROCS}$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v')"
+		ninja ${NINJA_FLAGS} ${PKG_MAKEVARS}
+		DESTDIR=${PKG_PKGPATH} ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} ${INST_CMD:-install}
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -463,7 +460,6 @@ function build () (
 				echo
 			}
 			set +x
-			OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 			if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 			then
 				CONF_FLAGS+=" --prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR}"
@@ -476,20 +472,6 @@ function build () (
 					CONF_FLAGS+=" --default-library=shared"
 				fi
 			fi
-			[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS}"
-			local CC="${HARCH}-gcc"
-			local CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}"
-			local CXX="${HARCH}-g++"
-			local CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-			local FC=${HARCH}-gfortran
-			local FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FFLAGS}"
-			local CPP=${HARCH}-cpp
-			local CPPFLAGS="${COMMON_CPPFLAGS}"
-			local LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}"
-			local AR=${HARCH}-gcc-ar
-			local NM=${HARCH}-gcc-nm
-			local RANLIB=${HARCH}-gcc-ranlib
-			local STRIP=${HARCH}-strip
 			local C_ARGS=$(buildmesonargs "${CFLAGS}")
 			local CPP_ARGS=$(buildmesonargs "${CXXFLAGS}")
 			local FORTRAN_ARGS=$(buildmesonargs "${FFLAGS}")
@@ -498,14 +480,16 @@ function build () (
 			local FORTRAN_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
 			cat > cross-${PLATFORM_NAME} <<-EOF
 				[binaries]
-				c = '${CC}'
-				cpp = '${CXX}'
-				fortran = '${FC}'
+				c = [${CCWRAPPER:+'${CCWRAPPER}', }'${TOOLCHAIN_CC}']
+				c_ld = '${LD}'
+				cpp = [${CCWRAPPER:+'${CCWRAPPER}', }'${TOOLCHAIN_CXX}']
+				cpp_ld = '${LD}'
+				fortran = [${CCWRAPPER:+'${CCWRAPPER}', }'${TOOLCHAIN_FC}']
 				ar = '${AR}'
 				strip = '${STRIP}'
 				nm = '${NM}'
 				ranlib = '${RANLIB}'
-				pkgconfig = '${HARCH}-pkg-config'
+				pkgconfig = '${PKG_CONFIG}'
 
 				[host_machine]
 				system = '${HOS}'
@@ -532,16 +516,17 @@ function build () (
 
 		mkdir -p ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
-		local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n '-v')"
+		create_environment_source
+		source environment.source
 		createmesoncross
 		CMAKE=cmake \
-		PKG_CONFIG=${HARCH}-pkg-config \
 		meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release --strip -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} \
 			--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
 			--includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} \
 			${CONF_FLAGS}
-		ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH}
-		DESTDIR=${PKG_PKGPATH} ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH} install
+		local NINJA_FLAGS="-j${NPROCS}$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v')"
+		ninja ${NINJA_FLAGS} ${PKG_MAKEVARS}
+		DESTDIR=${PKG_PKGPATH} ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} ${INST_CMD:-install}
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
