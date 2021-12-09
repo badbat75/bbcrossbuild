@@ -913,7 +913,13 @@ function build () (
 		local CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS} ${PKG_CXXFLAGS}"
 		local CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}"
 		local LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}"
-		./bootstrap.sh --prefix=${PKG_PKGPATH}${BUILD_PREFIX} --exec-prefix=${PKG_PKGPATH}${BUILD_EXECPREFIX} --libdir=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${PKG_PKGPATH}${BUILD_INCLUDEDIR} --with-python-version=${PYTHONBIN_VER} &&
+		./bootstrap.sh \
+			--prefix=${PKG_PKGPATH}${BUILD_PREFIX} \
+			--exec-prefix=${PKG_PKGPATH}${BUILD_EXECPREFIX} \
+			--libdir=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+			--includedir=${PKG_PKGPATH}${BUILD_INCLUDEDIR} \
+			--with-python-version=${PYTHONBIN_VER} 
+			--with-toolset=gcc &&
 		sed -i "s|using gcc ;|using gcc : : ${CXX} ;|" project-config.jam &&
 		PKG_CONFIG=${HARCH}-pkg-config \
 		./b2 -j${NPROCS} -q ${B2_FLAGS} \
