@@ -92,7 +92,7 @@ function settcenv () {
 			TOOLCHAIN_RANLIB=llvm-ranlib
 			TOOLCHAIN_STRIP=llvm-strip
 			TOOLCHAIN_OBJDUMP=llvm-objdump
-			TOOLCHAIN_LD=lld
+			TOOLCHAIN_LD=ld.lld
 			TOOLCHAIN_COMPFLAGS="--target=${HARCH}"
 			TOOLCHAIN_LDFLAGS="--target=${HARCH} -fuse-ld=lld -Wl,--threads=${NPROCS}"
 			if [ ${LTOENABLE:-0} -eq 1 ]
@@ -585,6 +585,10 @@ function build () (
 			set -x
 			KBUILD_BUILD_TIMESTAMP='' make V=${MAKEVERBOSE:-0} \
 			CC="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}" \
+			LD="$([ ${TOOLCHAIN_LD} == ${HARCH}-ld.gold ] && echo ${HARCH}-ld.bfd || echo ${TOOLCHAIN_LD})" \
+			AS="${TOOLCHAIN_AS}" \
+			NM="${TOOLCHAIN_NM}" \
+			AR="${TOOLCHAIN_AR}" \
 			KCFLAGS="${PKG_CFLAGS}" \
 			KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 			LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
@@ -605,6 +609,7 @@ function build () (
 		set -x
 		unset PKG_CONFIG_LIBDIR
 		unset PKG_CONFIG_SYSROOT_DIR
+		settcenv
 
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
