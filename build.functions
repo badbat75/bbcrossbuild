@@ -487,9 +487,9 @@ function build () (
 			cat > cross-${PLATFORM_NAME} <<-EOF
 				[binaries]
 				c = [${CCWRAPPER:+'${CCWRAPPER}', }'${TOOLCHAIN_CC}']
-				c_ld = '${LD}'
+				c_ld = '$(echo ${LD} | sed "s/ld.//;s/${HARCH}-//" )'
 				cpp = [${CCWRAPPER:+'${CCWRAPPER}', }'${TOOLCHAIN_CXX}']
-				cpp_ld = '${LD}'
+				cpp_ld = '$(echo ${LD} | sed "s/ld.//;s/${HARCH}-//" )'
 				fortran = [${CCWRAPPER:+'${CCWRAPPER}', }'${TOOLCHAIN_FC}']
 				ar = '${AR}'
 				strip = '${STRIP}'
