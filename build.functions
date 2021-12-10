@@ -589,6 +589,21 @@ function build () (
 		function make4kern () {
 			env
 			set -x
+			case ${TOOLCHAIN} in
+				gnu)
+					local HOSTCC=gcc
+					local HOSTCXX=g++
+					local HOSTAR=gcc-ar
+					local HOSTLD=ld.bfd
+					;;
+				llvm)
+					local HOSTCC=clang
+					local HOSTCXX=clang++
+					local HOSTAR=llvm-ar
+					local HOSTLD=ld.lld
+					;;
+			esac
+
 			KBUILD_BUILD_TIMESTAMP='' make V=${MAKEVERBOSE:-0} \
 			CC="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}" \
 			LD="$([ ${TOOLCHAIN_LD} == ${HARCH}-ld.gold ] && echo ${HARCH}-ld.bfd || echo ${TOOLCHAIN_LD})" \
@@ -604,6 +619,11 @@ function build () (
 			LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
 			ARCH=${KERN_ARCH} \
 			CROSS_COMPILE=${HARCH}- \
+			HOSTCC="${CCWRAPPER:+${CCWRAPPER} }${HOSTCC}" \
+			HOSTCXX="${CCWRAPPER:+${CCWRAPPER} }${HOSTCXX}" \
+			HOSTAR=${HOSTAR} \
+			HOSTLD=${HOSTLD} \
+			LLVM_IAS=0 \
 			EXTRAVERSION=${KERN_EXTRAVERSION} \
 			${EXTRA_PARMS} \
 			${@} ${PKG_MAKEVARS}
@@ -626,7 +646,7 @@ function build () (
 		KERN_VER=$(make kernelversion)
 
 		# Config kernel build
-		make V=${MAKEVERBOSE:-0} ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} ${KERN_DEFCONFIG} .config
+		make4kern ${KERN_DEFCONFIG} .config
 
 		case ${KERN_OPTLEVEL:-null} in
 			s|S)	scripts/config -e CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3
@@ -644,7 +664,22 @@ function build () (
 			scripts/config ${CONF_FLAGS}
 		fi
 
-		make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} oldconfig
+		if [ ${TOOLCHAIN} == llvm ]
+		then
+			echo "LTO type: ${KERN_LTOENABLE}"
+			case x${KERN_LTOENABLE} in
+				x1|xlto)
+					scripts/config -d FTRACE -d KASAN -d GCOV_KERNEL
+					scripts/config -e LTO_CLANG
+					;;
+				x2|xthin)
+					scripts/config -d FTRACE -d KASAN -d GCOV_KERNEL
+					scripts/config -e LTO_CLANG_THIN
+					;;
+			esac
+		fi
+
+		make4kern olddefconfig
 	
 		if [ ! -d ${PKG_PKGPATH}/boot ]
 		then
@@ -652,7 +687,7 @@ function build () (
 		fi
 
 		# Install headers
-		make V=${MAKEVERBOSE:-0} ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_HDR_PATH=${PKG_PKGPATH}${BUILD_PREFIX} headers_install 
+		make4kern INSTALL_HDR_PATH=${PKG_PKGPATH}${BUILD_PREFIX} headers_install 
 
 		# Break if only headers installation required
 		if [ ${KERN_HDRS_ONLY:-0} -eq 1 ]

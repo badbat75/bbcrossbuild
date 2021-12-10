@@ -11,7 +11,7 @@ BUILD_LIBSTATIC=0
 
 ## Enable LTO both for kernel and applications
 LTOENABLE=1
-KERN_LTOENABLE=0
+KERN_LTOENABLE=thin
 
 ## Set default sysroot pkg-config library path
 PKG_CONFIG_SYSROOT_DIR=${BIN_PATH}
@@ -58,7 +58,7 @@ generate_ssh_keys --install binaries
 #clean_project
 
 ##### RaspberryPi Packages
-#TOOLCHAIN=gnu KEEP_BUILDDIR=1 build raspberrypi/rpi-kernel_5.15
+TOOLCHAIN=llvm KEEP_BUILDDIR=1 build raspberrypi/rpi-kernel_5.15
 #####
 build raspberrypi/raspi-config
 build raspberrypi/raspberrypi-sys-mods_20211005
