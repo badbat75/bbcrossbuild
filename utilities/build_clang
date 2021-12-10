@@ -49,7 +49,6 @@ cmake -S llvm -B build -G Ninja \
         -DCLANG_LINK_CLANG_DYLIB=ON \
         -DCLANG_DEFAULT_UNWINDLIB=libgcc
         
-#	-DLLVM_USE_LINKER=lld \
 pushd build
 ninja ${NINJA_FLAGS}
 set +x
