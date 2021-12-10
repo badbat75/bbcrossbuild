@@ -1,0 +1,57 @@
+#!/bin/bash
+pushd llvm-project-13.0.0.src
+CFLAGS="-march=native"
+LDFLAGS="-fuse-ld=lld -Wl,--threads=6 -Wl,--thinlto-jobs=6"
+NINJA_FLAGS="-v"
+#EXTRA_PROJS="libcxx;libcxxabi;libunwind"
+set -x
+cmake -S llvm -B build -G Ninja \
+	-DLLVM_PARALLEL_COMPILE_JOBS=6 \
+	-DLLVM_PARALLEL_LINK_JOBS=1 \
+	\
+	-DLLVM_CCACHE_BUILD=true \
+	-DCMAKE_C_COMPILER=clang \
+	-DCMAKE_CXX_COMPILER=clang++ \
+	-DLLVM_USE_LINKER=lld \
+	\
+	-DCMAKE_C_FLAGS="${CFLAGS}" \
+	-DCMAKE_CXX_FLAGS="${CFLAGS}" \
+	-DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}" \
+        -DLLVM_ENABLE_LTO=Thin \
+	\
+	-DCMAKE_INSTALL_PREFIX=/opt/llvm-13 \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lldb;compiler-rt;lld;polly${EXTRA_PROJS:+;${EXTRA_PROJS}}" \
+        -DLLVM_LIBDIR_SUFFIX=64 \
+	\
+	-DBUILD_SHARED_LIBS:BOOL=OFF \
+	-DCMAKE_SKIP_RPATH:BOOL=ON \
+        -DLLVM_ENABLE_LIBCXX:BOOL=OFF \
+        -DLLVM_ENABLE_ZLIB:BOOL=ON \
+        -DLLVM_ENABLE_FFI:BOOL=ON \
+        -DLLVM_ENABLE_RTTI:BOOL=ON \
+        -DLLVM_USE_PERF:BOOL=ON \
+        -DLLVM_BUILD_TESTS:BOOL=OFF \
+        -DLLVM_LIT_EXTRA_ARGS=-v \
+        -DLLVM_INCLUDE_EXAMPLES:BOOL=ON \
+        -DLLVM_BUILD_EXAMPLES:BOOL=OFF \
+        -DLLVM_INCLUDE_UTILS:BOOL=ON \
+        -DLLVM_BUILD_LLVM_DYLIB:BOOL=ON \
+	-DLLVM_BINUTILS_INCDIR=/usr/include \
+        -DLLVM_LINK_LLVM_DYLIB:BOOL=ON \
+        -DLLVM_BUILD_EXTERNAL_COMPILER_RT:BOOL=ON \
+        -DLLVM_INSTALL_TOOLCHAIN_ONLY:BOOL=OFF \
+        \
+        -DCLANG_PLUGIN_SUPPORT:BOOL=ON \
+        -DENABLE_LINKER_BUILD_ID:BOOL=ON \
+        -DLLVM_ENABLE_EH=ON \
+        -DLLVM_ENABLE_NEW_PASS_MANAGER=ON \
+        -DCLANG_LINK_CLANG_DYLIB=ON \
+        -DCLANG_DEFAULT_UNWINDLIB=libgcc
+        
+#	-DLLVM_USE_LINKER=lld \
+pushd build
+ninja ${NINJA_FLAGS}
+set +x
+popd
+popd
