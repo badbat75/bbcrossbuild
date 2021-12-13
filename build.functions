@@ -97,11 +97,16 @@ function settcenv () {
 			TOOLCHAIN_LD=ld.lld
 			TOOLCHAIN_COMPFLAGS="--target=${HARCH}"
 			TOOLCHAIN_LDFLAGS="--target=${HARCH} -fuse-ld=lld -Wl,--threads=${NPROCS}"
-			if [ ${LTOENABLE:-0} -eq 1 ]
-			then
-				OPTCOMP_FLAGS+=" ${COMMONLLVM_LTOFLAGS:--flto=thin}"
-				OPTLINK_FLAGS+=" -Wl,--thinlto-jobs=${NPROCS}"
-			fi
+			case ${LTOENABLE:-0} in
+				1|fat)
+					OPTCOMP_FLAGS+=" -flto=fat"
+					OPTLINK_FLAGS+=" -fuse-linker-plugin -Wl,--thinlto-jobs=${NPROCS}"
+					;;
+				2|thin)
+					OPTCOMP_FLAGS+=" -flto=thin"
+					OPTLINK_FLAGS+=" -fuse-linker-plugin -Wl,--thinlto-jobs=${NPROCS}"
+					;;
+			esac
 			if [ -d ${DISTOS_PATH}${BUILD_LIBDIR} ]
 			then
 				while read path
@@ -129,11 +134,16 @@ function settcenv () {
 			TOOLCHAIN_LD=${HARCH}-ld.gold
 			TOOLCHAIN_COMPFLAGS=""
 			TOOLCHAIN_LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}"
-			if [ ${LTOENABLE:-0} -eq 1 ]
-			then
-				OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS:--flto=${NPROCS} -fno-fat-lto-objects}"
-				OPTLINK_FLAGS+=" -fuse-linker-plugin"
-			fi
+			case ${LTOENABLE:-0} in
+				1|fat)
+					OPTCOMP_FLAGS+=" -flto=${NPROCS}"
+					OPTLINK_FLAGS+=" -fuse-linker-plugin"
+					;;
+				2|thin)
+					OPTCOMP_FLAGS+=" -flto=${NPROCS}"
+					OPTLINK_FLAGS+=" -fuse-linker-plugin"
+					;;
+			esac
 			;;
 	esac
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
@@ -408,7 +418,7 @@ function build () (
 		trap - ERR
 	}
 
-	function cmakeninja () {
+	function cmakebuild () {
 		trap 'STATUS=${?}; \
 		set +x; \
 		trap - ERR; \
@@ -547,21 +557,23 @@ function build () (
 	
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
-		OPTCOMP_FLAGS+="${OPTLEVEL:+ -C opt-level=${OPTLEVEL}}"
+		settcenv
 		local CARGO_BIN=${CARGO_BIN:-${BUILD_EXECPREFIX}/bin}
 		local CARGO_LIB=${CARGO_LIB:-${BUILD_LIBDIR}${BUILD_LIBSUFFIX}}
-		[ ${CARGO_STRIP:-0} -eq 1 ] && local STRIP_FLAG=-s
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_RUSTFLAGS+=" -C lto"
-		cat > ${HARCH}-gcc <<-EOF
-			#!/bin/bash
-			echo "$(which ${HARCH}-gcc) \${@} ${STRIP_FLAG} ${SYSROOT_CFLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS}" >> ${LOG_PATH}/${PKG_NAME}.log
-			exec $(which ${HARCH}-gcc) \${@} ${STRIP_FLAG} ${SYSROOT_CFLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS}
-			return \${?}
-		EOF
-		chmod +x ${HARCH}-gcc
 		local CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
-		RUSTFLAGS="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} \
-			-C linker=${PKG_BLDPATH}/${HARCH}-gcc ${PKG_RUSTFLAGS}" \
+		export CARGO_PROFILE_RELEASE_OPT_LEVEL=${OPTLEVEL}
+		case ${LTOENABLE:-0} in
+			1|fat) export CARGO_PROFILE_RELEASE_LTO=fat
+				;;
+			2|thin)	export CARGO_PROFILE_RELEASE_LTO=thin
+				;;
+		esac
+		for param in $(echo ${STRIP_FLAG} ${SYSROOT_CFLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS} ${TOOLCHAIN_LDFLAGS} ${PKG_LDFLAGS})
+		do
+			export RUSTFLAGS+=" -C link-arg=${param}"
+		done
+		export RUSTFLAGS+=" ${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}"
+		echo ${RUSTFLAGS}
 		PKG_CONFIG=${HARCH}-pkg-config \
 			cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}
 		for file in ${CARGO_BINLIST}
@@ -1065,8 +1077,7 @@ function build () (
 		CARGO_BIN \
 		CARGO_LIB \
 		CARGO_BINLIST \
-		CARGO_LIBLIST \
-		CARGO_STRIP
+		CARGO_LIBLIST
 
 	if [ -z "${NUMSPACES}" ]
 	then

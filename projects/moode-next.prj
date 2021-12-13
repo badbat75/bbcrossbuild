@@ -5,12 +5,14 @@ MOODEDEVCOMMIT=86003235434f47fcf48fd46dd71d227cfcaa5c78
 RASPBIAN_IMAGE=2021-10-30-raspios-bullseye-armhf-lite
 RASPBIAN_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-11-08/
 
+TOOLCHAIN=llvm
+
 ## Enable shared libraries (default) but disable static ones
 BUILD_LIBSHARED=1
 BUILD_LIBSTATIC=0
 
 ## Enable LTO both for kernel and applications
-LTOENABLE=1
+LTOENABLE=thin
 KERN_LTOENABLE=thin
 
 ## Set default sysroot pkg-config library path
@@ -58,7 +60,7 @@ generate_ssh_keys --install binaries
 #clean_project
 
 ##### RaspberryPi Packages
-TOOLCHAIN=llvm KEEP_BUILDDIR=1 build raspberrypi/rpi-kernel_5.15
+KEEP_BUILDDIR=1 build raspberrypi/rpi-kernel_5.15
 #####
 build raspberrypi/raspi-config
 build raspberrypi/raspberrypi-sys-mods_20211005
@@ -82,10 +84,10 @@ build raspbian/udevil_0.4.4-2
 # STEP 4 - Install enhanced networking and bluetooth stack
 build moode/bluez_5
 build raspberrypi/pi-bluetooth_0.1.17
-TOOLCHAIN=llvm WITH_APTX=libopenaptx build moode/bluez-alsa_3.1.0+24b7300
+WITH_APTX=libopenaptx build moode/bluez-alsa_3.1.0+24b7300
 
 # STEP 6 - Compile and install MPD
-TOOLCHAIN=llvm build moode/mpd_0.23
+build moode/mpd_0.23
 build moode/mpc_0.33
 
 # STEP 9a - Eq2Fa12p

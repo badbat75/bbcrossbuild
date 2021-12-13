@@ -5,4 +5,6 @@ BUILD_PROCESS=configmake
 PKG_DEPS="moode/alsa-ucmconf_1.2.5.1"
 CONF_FLAGS=""
 INST_CMD=install-strip
-LTOENABLE=0
+## alsa-lib cannot be compiled with clang and LTO
+PKG_CFLAGS="-flto-partition=none"
+TOOLCHAIN=gnu

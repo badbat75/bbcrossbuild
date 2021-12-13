@@ -7,8 +7,7 @@ PKG_DEPS="moode/alsa-lib_1.2.5.1"
 #CARGO_BIN=/usr/bin
 #CARGO_LIB=/usr/lib/${HARCH}
 CARGO_BINLIST="camilladsp"
-CARGO_STRIP=1
-LTOENABLE=0
+PKG_LDFLAGS=-s
 PKG_POSTBUILD="
 	mkdir -p ${PKG_PKGPATH}/usr/local/bin
 	ln -fs /usr/bin/camilladsp ${PKG_PKGPATH}/usr/local/bin/camilladsp

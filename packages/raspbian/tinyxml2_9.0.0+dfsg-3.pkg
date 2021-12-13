@@ -1,7 +1,7 @@
 # tinyxml2_9.0.0+dfsg-3
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/t/tinyxml2/tinyxml2_9.0.0%2Bdfsg.orig.tar.xz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/t/tinyxml2/tinyxml2_9.0.0%2Bdfsg-3.debian.tar.xz"
-BUILD_PROCESS=cmakeninja
+BUILD_PROCESS=cmakebuild
 # CONF_FLAGS=""
 INST_CMD=install/strip
 VAR_INSTALL_LIBDIR=CMAKE_INSTALL_LIBDIR

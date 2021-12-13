@@ -2,7 +2,7 @@
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libw/libwebsockets/libwebsockets_4.0.20.orig.tar.gz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libw/libwebsockets/libwebsockets_4.0.20-1.debian.tar.xz"
 PKG_DEPS="raspbian/libev_4.33-1 raspbian/libuv_0.10.36-3"
-BUILD_PROCESS=cmakeninja
+BUILD_PROCESS=cmakebuild
 CONF_FLAGS="-DLWS_WITHOUT_DAEMONIZE=OFF \
 	-DLWS_WITH_LIBEV=ON -DLWS_WITH_LIBUV=ON \
 	-DLWS_UNIX_SOCK=ON \
@@ -14,7 +14,8 @@ CONF_FLAGS="-DLWS_WITHOUT_DAEMONIZE=OFF \
 	-DLIBEV_LIBRARIES=${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libev.so \
 	-DLIBUV_INCLUDE_DIRS=${BIN_PATH}${BUILD_INCLUDEDIR} \
 	-DLIBUV_LIBRARIES=${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libuv.so "
-PKG_CFLAGS="-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -Wno-strict-aliasing -Wno-error=maybe-uninitialized"
+PKG_CFLAGS="-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -Wno-strict-aliasing"
+[ "${TOOLCHAIN}" = "gnu" ] && PKG_CFLAGS+=" -Wno-error=maybe-uninitialized"
 PKG_LDFLAGS=
 #PKG_MAKEVARS=-j1
 INST_CMD=install/strip

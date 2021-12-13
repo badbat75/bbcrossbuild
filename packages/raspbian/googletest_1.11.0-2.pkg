@@ -1,7 +1,7 @@
 # googletest_1.11.0-2
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/g/googletest/googletest_1.11.0.orig.tar.gz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/g/googletest/googletest_1.11.0-2.debian.tar.xz"
-BUILD_PROCESS=cmakeninja
+BUILD_PROCESS=cmakebuild
 CONF_FLAGS=""
 #VAR_INSTALL_CONFDIR="CMAKE_INSTALL_SYSCONFDIR"
 VAR_INSTALL_LIBDIR="CMAKE_INSTALL_LIBDIR"

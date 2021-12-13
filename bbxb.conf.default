@@ -26,6 +26,12 @@ PKI_KEY_NAME=badbat75
 PKI_SUBJECT="/C=IT/ST=Bologna/L=Bologna/O=BadBat75 LTD/CN=badbat75/emailAddress=emiliano.desimoni@outlook.com"
 ######
 
+### Specify C Toolkit to use
+# gnu:  gcc, g++, gfortran...
+# llvm: clang, clang++...
+#
+# TOOLCHAIN=gnu
+
 ### Specify boot C compiler (default: gcc)
 # TOOLCHAIN_CC="cc"
 
@@ -37,25 +43,23 @@ MAKEVERBOSE=0
 ### Enable build of native GCC (host compiler) (0 disabled [default], 1 enabled)
 # BUILD_GCCNATIVE=0
 
-###### Common flags and parameters for LTO building
-### Default flags for LTO building
-COMMON_GNULTOFLAGS="-flto=${NPROCS} -fno-fat-lto-objects -fuse-linker-plugin"
-######
-
 ###### Application toolchain flags and parameters
 ### Application optimization level (s, 0, 1, 2, 3). Set -O options to compiler
 OPTLEVEL=3
-### Optional gcc compiler flags
+### Optional C/C++ compiler flags
 OPTCOMP_FLAGS="-pipe"
-### Optional gcc compiler flags to enable profiling
-#OPTCOMP_FLAGS="${OPTCOMP_FLAGS} -fprofile-generate=/tmp/pgo --coverage"
-#OPTCOMP_FLAGS="${OPTCOMP_FLAGS} -fprofile-use=/tmp/pgo -fprofile-correction -Wno-error=coverage-mismatch -Wno-error=missing-profile"
-### Optional rustc compiler flags
-OPTCOMP_RUSTFLAGS="-C codegen-units=1"
-### Optional gcc-ld linker flags
-OPTLINK_FLAGS="-fuse-ld=gold"
+### Optional C/C++ compiler flags to enable profiling
+# OPTCOMP_FLAGS="${OPTCOMP_FLAGS} -fprofile-generate=/tmp/pgo --coverage"
+# OPTCOMP_FLAGS="${OPTCOMP_FLAGS} -fprofile-use=/tmp/pgo -fprofile-correction -Wno-error=coverage-mismatch -Wno-error=missing-profile"
+### Optional RUSTC compiler flags
+# OPTCOMP_RUSTFLAGS=
+### Optional linker flags
 OPTLINK_FLAGS+=" -Wl,-z,relro -Wl,-z,now"
 ### Enable LTO building for the applications (can be set up in the project definition)
+# 0:         Disabled
+# 1 or fat:  Fat LTO
+# 2 or thin: Thin LTO
+###
 # LTOENABLE=1
 ######
 
@@ -67,6 +71,10 @@ KERN_OPTCOMP_FLAGS=
 ### Optional ld linker flags
 KERN_OPTLINK_FLAGS=
 ### Enable LTO building for the kernel (can be set up in the project definition)
+# 0:         Disabled
+# 1 or fat:  Fat LTO
+# 2 or thin: Thin LTO
+###
 # KERN_LTOENABLE=1
 ######
 

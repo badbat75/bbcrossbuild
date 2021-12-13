@@ -8,7 +8,7 @@ BUILD_PROCESS=configmake
 # CONF_FLAGS=""
 PKG_CXXFLAGS="-D_FILE_OFFSET_BITS=64"
 INST_CMD=install-strip
-PKG_DEPS="moode/libupnpp_0.21 raspbian/libmicrohttpd_0.9.72-2 raspbian/libjsoncpp_1.7.4-3 python/bottle"
+PKG_DEPS="moode/libupnpp_0.21 raspbian/libmicrohttpd_0.9.72-2 raspbian/libjsoncpp_1.9.4-5 python/bottle"
 PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/var/cache/upmpdcli/ohcreds
     	openssl genrsa -out ${PKG_PKGPATH}/var/cache/upmpdcli/ohcreds/credkey.pem 4096
 		chmod 600 ${PKG_PKGPATH}/var/cache/upmpdcli/ohcreds/credkey.pem"
