@@ -5,6 +5,5 @@ CONF_FLAGS="--enable-opt"
 INST_CMD=install-strip
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libs/libsodium/libsodium_1.0.18-1.debian.tar.xz"
 #PKG_DEPS=
-LTOENABLE=0
 
 # Note:

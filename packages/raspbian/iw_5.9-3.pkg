@@ -1,7 +1,6 @@
 # iw_5.9-3
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/i/iw/iw_5.9.orig.tar.xz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/i/iw/iw_5.9-3.debian.tar.xz"
-#LTOENABLE=0
 PKG_CFLAGS='-DNETNS_RUN_DIR=\"/run/netns\"'
 PKG_LDFLAGS=
 

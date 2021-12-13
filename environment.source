@@ -1,0 +1,37 @@
+#################################################################################
+### Source file with all the environment specified
+### Tool chain: gnu
+### C Wrapper: ccache
+###### Other environment variables:
+### DISTOS_PATH=/home/desimonie/.bbxb/moode-next/rpi/distos
+### BIN_PATH=/home/desimonie/.bbxb/moode-next/rpi/binaries
+### PKG_SRCDIR=jsonschema${PKG_SUFFIX}
+### PKG_BLDDIR=
+### PATH=/home/desimonie/.bbxb/moode-next/rpi/toolchain/venv-arm-linux-gnueabihf/bin:/home/desimonie/.bbxb/moode-next/rpi/toolchain/venv-arm-linux-gnueabihf/cross/bin:/home/desimonie/.bbxb/toolchain/python-3.9.8/bin:/home/desimonie/.bbxb/toolchain/gcc-11.2.0/bin:/home/desimonie/.bbxb/toolchain/bin:/home/desimonie/.bbxb/moode-next/rpi/toolchain/bin:/home/desimonie/.local/bin:/home/desimonie/bin:/usr/lib64/ccache:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/Program Files/WindowsApps/Microsoft.WindowsTerminal_1.11.2921.0_x64__8wekyb3d8bbwe:/mnt/c/Program Files (x86)/Common Files/Oracle/Java/javapath:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/Git/cmd:/mnt/c/Users/desimonie/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/desimonie/AppData/Local/Programs/Microsoft VS Code/bin:/opt/llvm-13/bin
+#################################################################################
+
+export CC='ccache arm-linux-gnueabihf-gcc'
+export CXX='ccache arm-linux-gnueabihf-g++'
+export CPP='ccache arm-linux-gnueabihf-cpp'
+export FC='ccache arm-linux-gnueabihf-gfortran'
+export F90='ccache arm-linux-gnueabihf-gfortran'
+export AR='arm-linux-gnueabihf-gcc-ar'
+export AS='arm-linux-gnueabihf-as'
+export NM='arm-linux-gnueabihf-gcc-nm'
+export RANLIB='arm-linux-gnueabihf-gcc-ranlib'
+export STRIP='arm-linux-gnueabihf-strip'
+export OBJCOPY='arm-linux-gnueabihf-objcopy'
+export OBJDUMP='arm-linux-gnueabihf-objdump'
+export READELF='arm-linux-gnueabihf-readelf'
+export LD='arm-linux-gnueabihf-ld.gold'
+export CFLAGS='--sysroot=/home/desimonie/.bbxb/moode-next/rpi/distos -I/home/desimonie/.bbxb/moode-next/rpi/binaries/usr/include -I/home/desimonie/.bbxb/moode-next/rpi/distos/usr/include  -I/home/desimonie/.bbxb/moode-next/rpi/distos/usr/include/arm-linux-gnueabihf -I/home/desimonie/.bbxb/moode-next/rpi/distos/usr/include/python3.9 -march=armv6kz -mtune=arm1176jzf-s -mfpu=vfpv2 -mfloat-abi=hard -marm -pipe -O3 -flto=5 -O3  '
+export CXXFLAGS='--sysroot=/home/desimonie/.bbxb/moode-next/rpi/distos -I/home/desimonie/.bbxb/moode-next/rpi/binaries/usr/include -I/home/desimonie/.bbxb/moode-next/rpi/distos/usr/include  -I/home/desimonie/.bbxb/moode-next/rpi/distos/usr/include/arm-linux-gnueabihf -march=armv6kz -mtune=arm1176jzf-s -mfpu=vfpv2 -mfloat-abi=hard -marm -pipe -O3 -flto=5 -O3  '
+export CPPFLAGS='--sysroot=/home/desimonie/.bbxb/moode-next/rpi/distos -I/home/desimonie/.bbxb/moode-next/rpi/binaries/usr/include -I/home/desimonie/.bbxb/moode-next/rpi/distos/usr/include  -I/home/desimonie/.bbxb/moode-next/rpi/distos/usr/include/arm-linux-gnueabihf -I/home/desimonie/.bbxb/moode-next/rpi/distos/usr/include/python3.9  '
+export FFLAGS='--sysroot=/home/desimonie/.bbxb/moode-next/rpi/distos -I/home/desimonie/.bbxb/moode-next/rpi/binaries/usr/include -I/home/desimonie/.bbxb/moode-next/rpi/distos/usr/include  -I/home/desimonie/.bbxb/moode-next/rpi/distos/usr/include/arm-linux-gnueabihf -march=armv6kz -mtune=arm1176jzf-s -mfpu=vfpv2 -mfloat-abi=hard -marm -pipe -O3 -flto=5 -O3  '
+export F90FLAGS='--sysroot=/home/desimonie/.bbxb/moode-next/rpi/distos -I/home/desimonie/.bbxb/moode-next/rpi/binaries/usr/include -I/home/desimonie/.bbxb/moode-next/rpi/distos/usr/include  -I/home/desimonie/.bbxb/moode-next/rpi/distos/usr/include/arm-linux-gnueabihf -march=armv6kz -mtune=arm1176jzf-s -mfpu=vfpv2 -mfloat-abi=hard -marm -pipe -O3 -flto=5 -O3  '
+export LDFLAGS='--sysroot=/home/desimonie/.bbxb/moode-next/rpi/distos -Wl,--sysroot=/home/desimonie/.bbxb/moode-next/rpi/distos -Wl,-rpath-link,/home/desimonie/.bbxb/moode-next/rpi/binaries/lib/arm-linux-gnueabihf -L/home/desimonie/.bbxb/moode-next/rpi/binaries/lib/arm-linux-gnueabihf -Wl,-rpath-link,/home/desimonie/.bbxb/moode-next/rpi/binaries/usr/lib/arm-linux-gnueabihf -L/home/desimonie/.bbxb/moode-next/rpi/binaries/usr/lib/arm-linux-gnueabihf  -L/home/desimonie/.bbxb/moode-next/rpi/toolchain/arm-linux-gnueabihf/lib -Wl,-rpath-link,/home/desimonie/.bbxb/moode-next/rpi/toolchain/arm-linux-gnueabihf/lib -L/home/desimonie/.bbxb/moode-next/rpi/toolchain/arm-linux-gnueabihf/lib/arm-linux-gnueabihf -Wl,-rpath-link,/home/desimonie/.bbxb/moode-next/rpi/toolchain/arm-linux-gnueabihf/lib/arm-linux-gnueabihf -L/home/desimonie/.bbxb/moode-next/rpi/toolchain/lib/gcc/arm-linux-gnueabihf/11.2.0 -Wl,-rpath-link,/home/desimonie/.bbxb/moode-next/rpi/toolchain/lib/gcc/arm-linux-gnueabihf/11.2.0 -L/home/desimonie/.bbxb/moode-next/rpi/distos/lib/arm-linux-gnueabihf -Wl,-rpath-link,/home/desimonie/.bbxb/moode-next/rpi/distos/lib/arm-linux-gnueabihf -L/home/desimonie/.bbxb/moode-next/rpi/distos/usr/lib/arm-linux-gnueabihf -Wl,-rpath-link,/home/desimonie/.bbxb/moode-next/rpi/distos/usr/lib/arm-linux-gnueabihf -L/home/desimonie/.bbxb/moode-next/rpi/distos/usr/lib/arm-linux-gnueabihf/libfakeroot -Wl,-rpath-link,/home/desimonie/.bbxb/moode-next/rpi/distos/usr/lib/arm-linux-gnueabihf/libfakeroot -L/home/desimonie/.bbxb/moode-next/rpi/distos/usr/local/lib -Wl,-rpath-link,/home/desimonie/.bbxb/moode-next/rpi/distos/usr/local/lib -L/home/desimonie/.bbxb/moode-next/rpi/distos/usr/local/lib/arm-linux-gnueabihf -Wl,-rpath-link,/home/desimonie/.bbxb/moode-next/rpi/distos/usr/local/lib/arm-linux-gnueabihf  -Wl,-z,relro -Wl,-z,now -fuse-linker-plugin -fuse-ld=gold -Wl,--threads -Wl,--thread-count,5 '
+export PKG_CONFIG=arm-linux-gnueabihf-pkg-config
+export PKG_CONFIG_LIBDIR=/home/desimonie/.bbxb/moode-next/rpi/binaries/lib/arm-linux-gnueabihf/pkgconfig:/home/desimonie/.bbxb/moode-next/rpi/binaries/usr/lib/arm-linux-gnueabihf/pkgconfig:/home/desimonie/.bbxb/moode-next/rpi/binaries/usr/share/pkgconfig:/home/desimonie/.bbxb/moode-next/rpi/distos/usr/lib/arm-linux-gnueabihf/pkgconfig:/home/desimonie/.bbxb/moode-next/rpi/distos/usr/share/pkgconfig
+export PKG_CONFIG_SYSROOT_DIR=/home/desimonie/.bbxb/moode-next/rpi/binaries
+export PKG_CONFIG_ALLOW_CROSS=1
+export LD_LIBRARY_PATH=/home/desimonie/.bbxb/toolchain/python-3.9.8/lib:/home/desimonie/.bbxb/moode-next/rpi/toolchain/lib:/usr/x86_64-redhat-linux/lib64:/usr/lib64:/usr/local/lib64:/lib64:/usr/x86_64-redhat-linux/lib:/usr/local/lib:/lib:/usr/lib:/home/desimonie/.bbxb/moode-next/rpi/toolchain/lib

@@ -773,7 +773,6 @@ function build () (
 		then
 			COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}"
 		fi
-		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ ${MAKEVERBOSE:-0} -eq 1 ]
 		then
 			local VERBOSE="-v"
@@ -795,27 +794,9 @@ function build () (
 			export PYTHONPATH
 		done
 		cross-python -m site
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS}"
-		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
-		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
-		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
-		CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-		CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
-		CPPFLAGS="${COMMON_CPPFLAGS} ${PKG_CFLAGS}" \
-		FC=${HARCH}-gfortran \
-		FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
-		F90=${HARCH}-gfortran \
-		F90FLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
-		LD="${HARCH}-ld.gold ${PKG_LDFLAGS}" \
-		LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-		AR=${HARCH}-gcc-ar \
-		AS=${HARCH}-as \
-		NM=${HARCH}-gcc-nm \
-		RANLIB=${HARCH}-gcc-ranlib \
-		STRIP=${HARCH}-strip \
-		OBJDUMP=${HARCH}-objdump \
-		PKG_CONFIG=${HARCH}-pkg-config \
-			eval '${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}'
+		create_environment_source
+		source environment.source
+		eval '${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}'
 		eval '${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} \
 			${INSTALL_TARGET}'
 		cd ${BB_HOME}
@@ -850,7 +831,6 @@ function build () (
 		then
 			COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}"
 		fi
-		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ ${MAKEVERBOSE:-0} -eq 1 ]
 		then
 			local VERBOSE="-v"
@@ -877,28 +857,10 @@ function build () (
 		then
 			local PYTHONBUILD="--no-binary :all:"
 		fi
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS}"
+		create_environment_source
+		source environment.source
 		#build-python -m pip ${VERBOSE} install --upgrade ${PKG_NAME}
-		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
-		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
-		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
-		CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-		CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
-		CPPFLAGS="${COMMON_CPPFLAGS} ${PKG_CFLAGS}" \
-		FC=${HARCH}-gfortran \
-		FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
-		F90=${HARCH}-gfortran \
-		F90FLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
-		LD="${HARCH}-ld.gold ${PKG_LDFLAGS}" \
-		LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-		AR=${HARCH}-gcc-ar \
-		AS=${HARCH}-as \
-		NM=${HARCH}-gcc-nm \
-		RANLIB=${HARCH}-gcc-ranlib \
-		STRIP=${HARCH}-strip \
-		OBJDUMP=${HARCH}-objdump \
-		PKG_CONFIG=${HARCH}-pkg-config \
-			cross-python -m pip ${VERBOSE} install ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX} ${PKG_NAME}
+		cross-python -m pip ${VERBOSE} install ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX} ${PKG_NAME}
 		if [ ${PYTHON_PKGDIR} == dist-packages ]
 		then
 			mv ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages

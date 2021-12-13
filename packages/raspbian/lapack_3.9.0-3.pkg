@@ -2,7 +2,6 @@
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/l/lapack/lapack_3.9.0.orig.tar.gz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/l/lapack/lapack_3.9.0-3.debian.tar.xz"
 PKG_FFLAGS=-frecursive
-#LTOENABLE=0
 PKG_MAKEVARS="PICOPTS=-fPIC"
 PKG_MAKETARGETS="blaslib cblaslib lapacklib tmglib lapackelib"
 #BUILD_PROCESS=mesonninja

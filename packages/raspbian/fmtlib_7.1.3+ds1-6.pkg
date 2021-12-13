@@ -9,7 +9,6 @@ VAR_INSTALL_LIBDIR="CMAKE_INSTALL_LIBDIR"
 #PKG_CXXFLAGS=""
 #PKG_LDFLAGS=""
 INST_CMD=install/strip
-LTOENABLE=0
 
 PKG_PREBUILD="sed -i 's|/usr/src/googletest|${BIN_PATH}/usr/src/googletest|g' test/CMakeLists.txt"
 

@@ -1,2 +1,3 @@
 # jsonschema
 BUILD_PROCESS=pythonpip
+TOOLCHAIN=gnu
