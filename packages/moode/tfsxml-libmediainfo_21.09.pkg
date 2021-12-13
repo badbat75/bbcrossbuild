@@ -12,11 +12,11 @@ PKG_PREBUILD="cat > Source/ThirdParty/tfsxml/Makefile <<EOF
 # is elusive due to race conditions on testing the directory and creating it.
 # Anemic toolchain users can sidestep the problem using MKDIR="mkdir".
 
-AR ?= ar
+AR ?= \${TOOLCHAIN_AR}
 ARFLAGS = cr
 RM = rm -f
-RANLIB ?= ranlib
-STRIP ?= strip
+RANLIB ?= \${TOOLCHAIN_RANLIB}
+STRIP ?= \${TOOLCHAIN_STRIP}
 MKDIR = mkdir -p
 CFLAGS += -fPIC
 
@@ -50,7 +50,7 @@ libtfsxml.a: tfsxml.o
 	\\\$(RANLIB) \\\$@
 
 libtfsxml.so: tfsxml.o
-	\\\$(CC) \\\$(CFLAGS) -shared -o \\\$@ \\\$^
+	\\\$(CC) \\\$(CFLAGS) \\\$(LDFLAGS) -shared -o \\\$@ \\\$^
 
 tfsxml.o: tfsxml.c tfsxml.h
 

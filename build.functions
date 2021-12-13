@@ -926,24 +926,25 @@ function build () (
 			windows) local HMBINFMT=pe;;
 			macosx|ios) local HMBINFMT=mach-o;;
 		esac
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_GNULTOFLAGS}"
-
-		local PLATFORM_CFLAGS=$(echo ${PLATFORM_CFLAGS} | sed 's/-mtls-dialect=gnu2//g')
-		local CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS} ${PKG_CXXFLAGS}"
-		local CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}"
-		local LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}"
+		case ${TOOLCHAIN} in
+			llvm) local BBTC=clang;;
+			gnu) local BBTC=gcc;;
+		esac
+		create_environment_source
+		source environment.source
+		
 		./bootstrap.sh \
 			--prefix=${PKG_PKGPATH}${BUILD_PREFIX} \
 			--exec-prefix=${PKG_PKGPATH}${BUILD_EXECPREFIX} \
 			--libdir=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
 			--includedir=${PKG_PKGPATH}${BUILD_INCLUDEDIR} \
-			--with-python-version=${PYTHONBIN_VER} 
-			--with-toolset=gcc &&
+			--with-python-version=${PYTHONBIN_VER} \
+			--with-toolset=${BBTC} &&
 		sed -i "s|using gcc ;|using gcc : : ${CXX} ;|" project-config.jam &&
-		PKG_CONFIG=${HARCH}-pkg-config \
 		./b2 -j${NPROCS} -q ${B2_FLAGS} \
-			architecture=${HM} address-model=${HMADDRMOD} binary-format=${HMBINFMT} abi=${HMABI} target-os=${HOS} \
-			toolset=gcc threading=multi cxxflags="-fPIC ${CXXFLAGS}" linkflags="${LDFLAGS}" install
+			architecture=${HM} binary-format=${HMBINFMT} abi=${HMABI} target-os=${HOS} \
+			variant=release address-model=${HMADDRMOD} threading=multi \
+			toolset=${BBTC} cflags="${CFLAGS}" cxxflags="-fPIC ${CXXFLAGS}" linkflags="${LDFLAGS}" install
 		cd ${BB_HOME}
 		set +x
 		trap - ERR

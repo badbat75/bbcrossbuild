@@ -55,6 +55,6 @@ then
 fi
 [ ${BUILD_LIBSHARED} -eq 1 ] && CONF_FLAGS+=" --enable-shared" || CONF_FLAGS+=" --disable-shared"
 [ ${BUILD_LIBSTATIC} -eq 1 ] && CONF_FLAGS+=" --enable-static" || CONF_FLAGS+=" --disable-static"
-[ ${LTOENABLE:-0} -eq 1 ] && CONF_FLAGS+=" --enable-lto" || true
+[ ! "${LTOENABLE:-0}" == "0" ] && CONF_FLAGS+=" --enable-lto" || true
 INST_CMD=install
 LTOENABLE=0
