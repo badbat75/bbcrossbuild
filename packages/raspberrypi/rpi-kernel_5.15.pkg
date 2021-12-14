@@ -29,3 +29,9 @@ case ${WITH_RT:-0} in
 		CONF_FLAGS+=" -d CONFIG_PREEMPT_NONE -d CONFIG_PREEMPT_VOLUNTARY -e CONFIG_PREEMPT"
 		;;
 esac
+if [ "${TOOLCHAIN}" == "llvm" ]
+then
+	PKG_CFLAGS="-mllvm -polly -mllvm -polly-vectorizer=stripmine"
+	#PKG_CFLAGS+=" -mllvm -polly-parallel -fopenmp -mllvm -polly-omp-backend=LLVM -mllvm -polly-num-threads=1 -mllvm -polly-scheduling=dynamic -mllvm -polly-scheduling-chunksize=1"
+fi
+

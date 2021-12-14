@@ -81,9 +81,9 @@ function setbuildenv () {
 function settcenv () {
 	case ${TOOLCHAIN} in
 		llvm)
-			TOOLCHAIN_CC="clang ${LLVM_EXTRACLANGFLAGS}"
-			TOOLCHAIN_CXX="clang++ ${LLVM_EXTRACLANGFLAGS}"
-			TOOLCHAIN_CPP="clang ${LLVM_EXTRACLANGFLAGS} -E"
+			TOOLCHAIN_CC=clang
+			TOOLCHAIN_CXX=clang++
+			TOOLCHAIN_CPP="clang -E"
 			TOOLCHAIN_FC=flang
 			TOOLCHAIN_F90=flang
 			TOOLCHAIN_AR=llvm-ar
@@ -95,7 +95,7 @@ function settcenv () {
 			TOOLCHAIN_OBJDUMP=llvm-objdump
 			TOOLCHAIN_READELF=llvm-readelf
 			TOOLCHAIN_LD=ld.lld
-			TOOLCHAIN_COMPFLAGS="--target=${HARCH} ${LLVM_EXTRACOMPFLAGS}"
+			TOOLCHAIN_COMPFLAGS="--target=${HARCH} ${LLVM_EXTRACLANGFLAGS}"
 			TOOLCHAIN_LDFLAGS="--target=${HARCH} -fuse-ld=lld -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS}"
 			case ${LTOENABLE:-0} in
 				1|fat)
@@ -118,9 +118,9 @@ function settcenv () {
 			fi
 			;;
 		*|gnu)
-			TOOLCHAIN_CC="${HARCH}-gcc ${GNU_EXTRACOMPFLAGS}"
-			TOOLCHAIN_CXX="${HARCH}-g++ ${GNU_EXTRACOMPFLAGS}"
-			TOOLCHAIN_CPP="${HARCH}-cpp ${GNU_EXTRACOMPFLAGS}"
+			TOOLCHAIN_CC=${HARCH}-gcc
+			TOOLCHAIN_CXX=${HARCH}-g++
+			TOOLCHAIN_CPP=${HARCH}-cpp
 			TOOLCHAIN_FC=${HARCH}-gfortran
 			TOOLCHAIN_F90=${HARCH}-gfortran
 			TOOLCHAIN_AR=${HARCH}-gcc-ar
@@ -132,7 +132,7 @@ function settcenv () {
 			TOOLCHAIN_OBJDUMP=${HARCH}-objdump
 			TOOLCHAIN_READELF=${HARCH}-readelf
 			TOOLCHAIN_LD=${HARCH}-ld.gold
-			TOOLCHAIN_COMPFLAGS=""
+			TOOLCHAIN_COMPFLAGS="${GNU_EXTRAGCCFLAGS}"
 			TOOLCHAIN_LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS} ${GNU_EXTRALDFLAGS}"
 			case ${LTOENABLE:-0} in
 				1|fat)

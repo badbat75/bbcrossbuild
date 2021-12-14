@@ -33,5 +33,12 @@ case x${WITH_SSL} in
 	;;
 esac
 
+if [ "${TOOLCHAIN}" == "llvm" ]
+then
+	PKG_CFLAGS="-mllvm -polly -mllvm -polly-parallel -mllvm -polly-vectorizer=stripmine -mllvm -polly-parallel -fopenmp -mllvm -polly-omp-backend=LLVM -mllvm -polly-num-threads=1 -mllvm -polly-scheduling=dynamic -mllvm -polly-scheduling-chunksize=1"
+	PKG_CXXFLAGS="-mllvm -polly -mllvm -polly-parallel -mllvm -polly-vectorizer=stripmine -mllvm -polly-parallel -fopenmp -mllvm -polly-omp-backend=LLVM -mllvm -polly-num-threads=1 -mllvm -polly-scheduling=dynamic -mllvm -polly-scheduling-chunksize=1"
+	PKG_LDFLAGS="-lgomp"
+fi
+
 # Dependencies:
 # libpopt-dev avahi-daemon libavahi-client-dev glib2.0

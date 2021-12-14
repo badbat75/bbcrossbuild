@@ -60,7 +60,7 @@ generate_ssh_keys --install binaries
 #clean_project
 
 ##### RaspberryPi Packages
-KEEP_BUILDDIR=1 build raspberrypi/rpi-kernel_5.15
+KEEP_BUILDDIR=1 WITH_EXTOPTS=1 build raspberrypi/rpi-kernel_5.15
 #####
 build raspberrypi/raspi-config
 build raspberrypi/raspberrypi-sys-mods_20211005
