@@ -32,6 +32,12 @@ PKI_SUBJECT="/C=IT/ST=Bologna/L=Bologna/O=BadBat75 LTD/CN=badbat75/emailAddress=
 #
 # TOOLCHAIN=gnu
 
+### Extra flags for GNU or LLVM compilers
+# LLVM_EXTRACOMPFLAGS="-mllvm -polly"
+# LLVM_EXTRALDFLAGS=
+# GNU_EXTRACOMPFLAGS=
+# GNU_EXTRALDFLAGS=
+
 ### Specify boot C compiler (default: gcc)
 # TOOLCHAIN_CC="cc"
 

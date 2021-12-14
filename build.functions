@@ -81,9 +81,9 @@ function setbuildenv () {
 function settcenv () {
 	case ${TOOLCHAIN} in
 		llvm)
-			TOOLCHAIN_CC=clang
-			TOOLCHAIN_CXX=clang++
-			TOOLCHAIN_CPP="clang -E"
+			TOOLCHAIN_CC="clang ${LLVM_EXTRACLANGFLAGS}"
+			TOOLCHAIN_CXX="clang++ ${LLVM_EXTRACLANGFLAGS}"
+			TOOLCHAIN_CPP="clang ${LLVM_EXTRACLANGFLAGS} -E"
 			TOOLCHAIN_FC=flang
 			TOOLCHAIN_F90=flang
 			TOOLCHAIN_AR=llvm-ar
@@ -95,16 +95,16 @@ function settcenv () {
 			TOOLCHAIN_OBJDUMP=llvm-objdump
 			TOOLCHAIN_READELF=llvm-readelf
 			TOOLCHAIN_LD=ld.lld
-			TOOLCHAIN_COMPFLAGS="--target=${HARCH}"
-			TOOLCHAIN_LDFLAGS="--target=${HARCH} -fuse-ld=lld -Wl,--threads=${NPROCS}"
+			TOOLCHAIN_COMPFLAGS="--target=${HARCH} ${LLVM_EXTRACOMPFLAGS}"
+			TOOLCHAIN_LDFLAGS="--target=${HARCH} -fuse-ld=lld -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS}"
 			case ${LTOENABLE:-0} in
 				1|fat)
-					OPTCOMP_FLAGS+=" -flto=fat"
-					OPTLINK_FLAGS+=" -fuse-linker-plugin -Wl,--thinlto-jobs=${NPROCS}"
+					OPTCOMP_FLAGS+=" -flto"
+					OPTLINK_FLAGS+=" -Wl,--thinlto-jobs=${NPROCS}"
 					;;
 				2|thin)
 					OPTCOMP_FLAGS+=" -flto=thin"
-					OPTLINK_FLAGS+=" -fuse-linker-plugin -Wl,--thinlto-jobs=${NPROCS}"
+					OPTLINK_FLAGS+=" -Wl,--thinlto-jobs=${NPROCS}"
 					;;
 			esac
 			if [ -d ${DISTOS_PATH}${BUILD_LIBDIR} ]
@@ -118,9 +118,9 @@ function settcenv () {
 			fi
 			;;
 		*|gnu)
-			TOOLCHAIN_CC=${HARCH}-gcc
-			TOOLCHAIN_CXX=${HARCH}-g++
-			TOOLCHAIN_CPP="${HARCH}-cpp"
+			TOOLCHAIN_CC="${HARCH}-gcc ${GNU_EXTRACOMPFLAGS}"
+			TOOLCHAIN_CXX="${HARCH}-g++ ${GNU_EXTRACOMPFLAGS}"
+			TOOLCHAIN_CPP="${HARCH}-cpp ${GNU_EXTRACOMPFLAGS}"
 			TOOLCHAIN_FC=${HARCH}-gfortran
 			TOOLCHAIN_F90=${HARCH}-gfortran
 			TOOLCHAIN_AR=${HARCH}-gcc-ar
@@ -133,7 +133,7 @@ function settcenv () {
 			TOOLCHAIN_READELF=${HARCH}-readelf
 			TOOLCHAIN_LD=${HARCH}-ld.gold
 			TOOLCHAIN_COMPFLAGS=""
-			TOOLCHAIN_LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}"
+			TOOLCHAIN_LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS} ${GNU_EXTRALDFLAGS}"
 			case ${LTOENABLE:-0} in
 				1|fat)
 					OPTCOMP_FLAGS+=" -flto=${NPROCS}"
@@ -153,9 +153,11 @@ function create_environment_source () {
 	settcenv
 	cat <<-EOF > environment.source
 		#################################################################################
+		###### ${PKG_NAME}
 		### Source file with all the environment specified
 		### Tool chain: ${TOOLCHAIN}
 		### C Wrapper: ${CCWRAPPER}
+		### Build type: ${BUILD_PROCESS}
 		###### Other environment variables:
 		### DISTOS_PATH=${DISTOS_PATH}
 		### BIN_PATH=${BIN_PATH}
@@ -188,7 +190,7 @@ function create_environment_source () {
 		export PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR}
 		export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR}
 		export PKG_CONFIG_ALLOW_CROSS=${PKG_CONFIG_ALLOW_CROSS}
-		export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}
+		export LD_LIBRARY_PATH+=:${LD_LIBRARY_PATH}
 	EOF
 }
 
@@ -409,10 +411,10 @@ function build () (
 			for target in ${PKG_MAKETARGETS:-all}
 			do
 				echo "Making ${target}..."
-				make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}
+				eval "make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}"
 			done
 		fi
-		make ${PKG_MAKEVARS} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}
+		eval "make ${PKG_MAKEVARS} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}"
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -535,8 +537,7 @@ function build () (
 		create_environment_source
 		source environment.source
 		createmesoncross
-		CMAKE=cmake \
-		meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release --strip -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} \
+		meson ${PKG_SRCPATH} ${PKG_BLDPATH} -Dbuildtype=release -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} \
 			--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
 			--includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} \
 			${CONF_FLAGS}
@@ -860,7 +861,7 @@ function build () (
 		create_environment_source
 		source environment.source
 		#build-python -m pip ${VERBOSE} install --upgrade ${PKG_NAME}
-		cross-python -m pip ${VERBOSE} install ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX} ${PKG_NAME}
+		cross-python -m pip ${VERBOSE} install -I ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX} ${PKG_NAME}
 		if [ ${PYTHON_PKGDIR} == dist-packages ]
 		then
 			mv ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages
@@ -878,7 +879,6 @@ function build () (
 		set -x
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
-		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
 		then
 			COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
@@ -967,8 +967,6 @@ function build () (
 			*) local DEBARCH=${HM}
 			;;
 		esac
-		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${TOOLCHAIN_LTOFLAGS}"
 		create_environment_source
 		source environment.source
 		DPKG_ROOT=${DISTOS_PATH} \

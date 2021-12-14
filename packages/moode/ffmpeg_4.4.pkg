@@ -37,7 +37,7 @@ PKG_DEPS="moode/alsa-lib_1.2.5.1 \
     moode/libvorbis_1.3.7 \
     moode/lame_3.100 \
     moode/fdk-aac_2.0.1 \
-    moode/libtheora_1.1.1 \
+    moode/libtheora_1.2.0 \
     moode/Speex_1.2.0 \
     raspbian/libsoxr_0.1.3-1 \
     moode/lame_3.100 \

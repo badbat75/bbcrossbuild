@@ -1,10 +1,9 @@
-# libtheora_1.1.1
-#PKG_URL="https://github.com/xiph/Icecast-libshout/archive/refs/tags/v2.4.3.tar.gz"
+# libtheora_1.2.0
 GIT_URL="https://github.com/xiph/theora"
-GIT_COMMIT="7288b539"
+#GIT_COMMIT="7288b539"
+GIT_COMMIT="7180717"
 BUILD_PROCESS=configmake
 PKG_DEPS="moode/libogg_1.3.5 moode/libvorbis_1.3.7"
 #PKG_DEPS+=" moode/SDL_1.2.15"
-CONF_FLAGS=""
+[ "${PLATFORM_NAME}" == "rpi" -a "${TOOLCHAIN}" == "llvm" ] && CONF_FLAGS="--disable-asm"
 INST_CMD=install-strip
-TOOLCHAIN=gnu

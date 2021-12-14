@@ -1,9 +1,11 @@
 # ashuffle_3.12
 GIT_URL=https://github.com/joshkunz/ashuffle
-GIT_COMMIT=v3.12.5
+#GIT_COMMIT=v3.12.5
+GIT_COMMIT=8e9807bf0afabb4a1455806df398237a688ab5c6
 #PATCHES=
 BUILD_PROCESS=mesonninja
-INST_CMD=install-strip
+CONF_FLAGS="--strip"
+INST_CMD=install
 PKG_DEPS=
 PKG_POSTBUILD="install -d ${PKG_PKGPATH}/usr/local/bin &&
 ln -fs /usr/bin/ashuffle ${PKG_PKGPATH}/usr/local/bin/ashuffle"

@@ -1,8 +1,8 @@
 # RPi.GPIO
 BUILD_PROCESS=pythonpip
-TOOLCHAIN=gnu
+ TOOLCHAIN=gnu
 [ ${TOOLCHAIN}=llvm ] && PKG_CFLAGS="-Wno-implicit-function-declaration -Wno-deprecated-declarations"
 
 ### GCC 10 Workaround ####
-test_version ${GCC_VER} -ge 10 && PKG_CFLAGS+=" -fcommon" || true
+[ ${TOOLCHAIN}=gnu ] && test_version ${GCC_VER} -ge 10 && PKG_CFLAGS+=" -fcommon" || true
 ##########################

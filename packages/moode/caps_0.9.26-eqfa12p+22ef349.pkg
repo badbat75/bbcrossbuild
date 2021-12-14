@@ -4,8 +4,8 @@ BUILD_PROCESS=simplemake
 # CONF_FLAGS=""
 PKG_LDFLAGS="-lm -lstdc++"
 PKG_PREBUILD="sed -i '/^CC =/ s/=/?=/' Makefile
-sed -i '/^STRIP =/ s/=/?=/' Makefile
-"
+sed -i '/^STRIP =/ s/=/?=/' Makefile"
+TOOLCHAIN=gnu
 
 #PKG_SRCDIR=moode_${MOODEREL}
 #PKG_DEPS="moode/moode-dynamic-ver_1.2"
