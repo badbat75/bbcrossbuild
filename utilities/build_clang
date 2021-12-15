@@ -1,9 +1,10 @@
 #!/bin/bash
 pushd llvm-project-13.0.0.src
 CFLAGS="-march=native"
+#CFLAGS="--target=arm-linux-gnueabihf -march=armv6kz -mfpu=vfpv2 -mtune=arm1176jzf-s -marm"
 LDFLAGS="-fuse-ld=lld -Wl,--threads=6 -Wl,--thinlto-jobs=6"
 NINJA_FLAGS="-v"
-#EXTRA_PROJS="libcxx;libcxxabi;libunwind"
+#EXTRA_PROJS="compiler-rt;libcxx;libcxxabi;libunwind"
 set -x
 cmake -S llvm -B build -G Ninja \
 	-DLLVM_PARALLEL_COMPILE_JOBS=6 \
@@ -21,7 +22,7 @@ cmake -S llvm -B build -G Ninja \
 	\
 	-DCMAKE_INSTALL_PREFIX=/opt/llvm-13 \
 	-DCMAKE_BUILD_TYPE=Release \
-	-DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lldb;compiler-rt;lld;polly${EXTRA_PROJS:+;${EXTRA_PROJS}}" \
+	-DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lldb;lld;polly${EXTRA_PROJS:+;${EXTRA_PROJS}}" \
         -DLLVM_LIBDIR_SUFFIX=64 \
 	\
 	-DBUILD_SHARED_LIBS:BOOL=OFF \
@@ -39,7 +40,7 @@ cmake -S llvm -B build -G Ninja \
         -DLLVM_BUILD_LLVM_DYLIB:BOOL=ON \
 	-DLLVM_BINUTILS_INCDIR=/usr/include \
         -DLLVM_LINK_LLVM_DYLIB:BOOL=ON \
-        -DLLVM_BUILD_EXTERNAL_COMPILER_RT:BOOL=ON \
+        -DLLVM_BUILD_EXTERNAL_COMPILER_RT:BOOL=OFF \
         -DLLVM_INSTALL_TOOLCHAIN_ONLY:BOOL=OFF \
         \
         -DCLANG_PLUGIN_SUPPORT:BOOL=ON \
@@ -49,8 +50,34 @@ cmake -S llvm -B build -G Ninja \
         -DCLANG_LINK_CLANG_DYLIB=ON \
         -DCLANG_DEFAULT_UNWINDLIB=libgcc
         
-pushd build
-ninja ${NINJA_FLAGS}
+ninja ${NINJA_FLAGS} -C build
+popd
 set +x
-popd
-popd
+
+function build_arm {
+        CFLAGS="--target=arm-linux-gnueabihf -march=armv7a -fuse-ld=lld"
+        cmake -S compiler-rt -B build_arm-linux-gnueabihf -G Ninja \
+	\
+	-DCMAKE_C_COMPILER=clang \
+	-DCMAKE_CXX_COMPILER=clang++ \
+	\
+	-DCMAKE_C_FLAGS="${CFLAGS}" \
+	-DCMAKE_CXX_FLAGS="${CFLAGS}" \
+        -DCMAKE_ASM_FLAGS="${CFLAGS}" \
+	-DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}" \
+	\
+	-DCMAKE_INSTALL_PREFIX=/opt/llvm-13 \
+	-DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_SYSROOT=/home/emiliano/.bbxb/moode-next/rpi/distos \
+        -DLLVM_CONFIG_PATH=/opt/llvm-13/bin/llvm-config \
+        -DLLVM_LIBDIR_SUFFIX=/arm-linux-gnueabihf \
+        \
+        -DCOMPILER_RT_INCLUDE_TESTS:BOOL=OFF \
+       	-DBUILD_SHARED_LIBS:BOOL=OFF \
+	-DCMAKE_SKIP_RPATH:BOOL=ON \
+        -DCMAKE_C_COMPILER_TARGET="arm-linux-gnueabihf" \
+        -DCMAKE_ASM_COMPILER_TARGET="arm-linux-gnueabihf" \
+        -DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON
+
+        ninja ${NINJA_FLAGS} -C build_arm-linux-gnueabihf
+}
