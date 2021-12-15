@@ -12,6 +12,7 @@ PKG_POSTBUILD="mkdir -p ${PKG_PKGPATH}/usr/src/googletest
     pushd \${PKG_SRCPATH}
     cp -rpv googlemock googletest ${PKG_PKGPATH}/usr/src/googletest/
     popd"
+LLVM_EXTRAPOLLYFLAGS=
 
 # Note:
 # Dependencies: 

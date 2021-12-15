@@ -33,7 +33,8 @@ PKI_SUBJECT="/C=IT/ST=Bologna/L=Bologna/O=BadBat75 LTD/CN=badbat75/emailAddress=
 # TOOLCHAIN=gnu
 
 ### Extra flags for GNU or LLVM compilers
-# LLVM_EXTRACOMPFLAGS="-mllvm -polly"
+# LLVM_EXTRACLANGFLAGS=""
+# LLVM_EXTRAPOLLYFLAGS="-mllvm -polly -mllvm -polly-vectorizer=stripmine -mllvm -polly-parallel -lgomp -mllvm -polly-omp-backend=LLVM -mllvm -polly-num-threads=1 -mllvm -polly-scheduling=dynamic -mllvm -polly-scheduling-chunksize=1"
 # LLVM_EXTRALDFLAGS=
 # GNU_EXTRACOMPFLAGS=
 # GNU_EXTRALDFLAGS=
