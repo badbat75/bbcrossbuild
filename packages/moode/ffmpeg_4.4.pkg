@@ -58,3 +58,4 @@ fi
 [ ! "${LTOENABLE:-0}" == "0" ] && CONF_FLAGS+=" --enable-lto" || true
 INST_CMD=install
 LTOENABLE=0
+LLVM_EXTRAPOLLYFLAGS=

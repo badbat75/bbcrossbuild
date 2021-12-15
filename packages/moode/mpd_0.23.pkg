@@ -9,13 +9,6 @@ export BOOST_ROOT=${BIN_PATH}
 export BOOST_INCLUDEDIR=${BIN_PATH}${BUILD_INCLUDEDIR}
 export BOOST_LIBRARYDIR=${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 
-if [ "${TOOLCHAIN}" == "llvm" ]
-then
-	PKG_CFLAGS="-mllvm -polly -mllvm -polly-parallel -mllvm -polly-vectorizer=stripmine -mllvm -polly-parallel -fopenmp -mllvm -polly-omp-backend=LLVM -mllvm -polly-num-threads=1 -mllvm -polly-scheduling=dynamic -mllvm -polly-scheduling-chunksize=1"
-	PKG_CXXFLAGS="-mllvm -polly -mllvm -polly-parallel -mllvm -polly-vectorizer=stripmine -mllvm -polly-parallel -fopenmp -mllvm -polly-omp-backend=LLVM -mllvm -polly-num-threads=1 -mllvm -polly-scheduling=dynamic -mllvm -polly-scheduling-chunksize=1"
-	PKG_LDFLAGS="-lgomp"
-fi
-
 CONF_FLAGS="-Dalsa=enabled -Dbzip2=enabled -Dcurl=enabled -Ddatabase=true -Ddsd=true -Dffmpeg=enabled \
 	-Dfaad=enabled -Dflac=enabled -Dhttpd=true -Did3tag=enabled -Dlame=enabled -Dlibmpdclient=enabled \
 	-Dmad=enabled -Dmpg123=enabled -Dpipe=true -Drecorder=true -Dshout=enabled -Dsoxr=enabled -Dvorbis=enabled \

@@ -96,7 +96,7 @@ function settcenv () {
 			TOOLCHAIN_READELF=llvm-readelf
 			TOOLCHAIN_LD=ld.lld
 			TOOLCHAIN_COMPFLAGS="--target=${HARCH} ${LLVM_EXTRACLANGFLAGS}"
-			TOOLCHAIN_CPPFLAGS="--target=${HARCH}"
+			TOOLCHAIN_EXTRA_C_CMD="${LLVM_EXTRAPOLLYFLAGS}"
 			TOOLCHAIN_LDFLAGS="--target=${HARCH} -fuse-ld=lld -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS}"
 			case ${LTOENABLE:-0} in
 				1|fat)
@@ -134,7 +134,7 @@ function settcenv () {
 			TOOLCHAIN_READELF=${HARCH}-readelf
 			TOOLCHAIN_LD=${HARCH}-ld.gold
 			TOOLCHAIN_COMPFLAGS="${GNU_EXTRAGCCFLAGS}"
-			TOOLCHAIN_CPPFLAGS=""
+			TOOLCHAIN_EXTRA_C_CMD=
 			TOOLCHAIN_LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS} ${GNU_EXTRALDFLAGS}"
 			case ${LTOENABLE:-0} in
 				1|fat)
@@ -168,11 +168,11 @@ function create_environment_source () {
 		### PATH=${PATH}
 		#################################################################################
 
-		export CC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC} ${TOOLCHAIN_COMPFLAGS}'
-		export CXX='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX} ${TOOLCHAIN_COMPFLAGS}'
-		export CPP='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CPP} ${TOOLCHAIN_COMPFLAGS}'
-		export FC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_FC} ${TOOLCHAIN_COMPFLAGS}'
-		export F90='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_F90} ${TOOLCHAIN_COMPFLAGS}'
+		export CC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+		export CXX='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+		export CPP='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CPP}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+		export FC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_FC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+		export F90='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_F90}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 		export AR='${TOOLCHAIN_AR}'
 		export AS='${TOOLCHAIN_AS}'
 		export NM='${TOOLCHAIN_NM}'
@@ -182,12 +182,12 @@ function create_environment_source () {
 		export OBJDUMP='${TOOLCHAIN_OBJDUMP}'
 		export READELF='${TOOLCHAIN_READELF}'
 		export LD='${TOOLCHAIN_LD}'
-		export CFLAGS='${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}'
-		export CXXFLAGS='${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}'
-		export CPPFLAGS='${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS} ${PKG_CPPFLAGS}'
-		export FFLAGS='${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
-		export F90FLAGS='${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
-		export LDFLAGS='${SYSROOT_CFLAGS} ${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}'
+		export CFLAGS='${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_CFLAGS}'
+		export CXXFLAGS='${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_CXXFLAGS}'
+		export CPPFLAGS='${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_CPPFLAGS}'
+		export FFLAGS='${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_FCFLAGS}'
+		export F90FLAGS='${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${TOOLCHAIN_COMPFLAGS} ${PKG_FCFLAGS}'
+		export LDFLAGS='${SYSROOT_CFLAGS} ${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${TOOLCHAIN_LDFLAGS} ${PKG_LDFLAGS}'
 		export PKG_CONFIG=${HARCH}-pkg-config
 		export PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR}
 		export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR}
@@ -492,19 +492,22 @@ function build () (
 					CONF_FLAGS+=" --default-library=shared"
 				fi
 			fi
+			local C=$(buildmesonargs "${CC}")
 			local C_ARGS=$(buildmesonargs "${CFLAGS}")
+			local CPP=$(buildmesonargs "${CXX}")
 			local CPP_ARGS=$(buildmesonargs "${CXXFLAGS}")
+			local FORTRAN=$(buildmesonargs "${FC}")
 			local FORTRAN_ARGS=$(buildmesonargs "${FFLAGS}")
 			local C_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
 			local CPP_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
 			local FORTRAN_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
 			cat > cross-${PLATFORM_NAME} <<-EOF
 				[binaries]
-				c = [${CCWRAPPER:+'${CCWRAPPER}', }'${TOOLCHAIN_CC}']
+				c = [${C}]
 				c_ld = '$(echo ${LD} | sed "s/ld.//;s/${HARCH}-//" )'
-				cpp = [${CCWRAPPER:+'${CCWRAPPER}', }'${TOOLCHAIN_CXX}']
+				cpp = [${CPP}]
 				cpp_ld = '$(echo ${LD} | sed "s/ld.//;s/${HARCH}-//" )'
-				fortran = [${CCWRAPPER:+'${CCWRAPPER}', }'${TOOLCHAIN_FC}']
+				fortran = [${FORTRAN}]
 				ar = '${AR}'
 				strip = '${STRIP}'
 				nm = '${NM}'
