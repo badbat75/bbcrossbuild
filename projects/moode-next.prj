@@ -58,7 +58,7 @@ setup_python 3.9.8
 generate_ssh_keys --install binaries
 
 #clean_project
-
+#pause
 ##### RaspberryPi Packages
 KEEP_BUILDDIR=1 WITH_EXTOPTS=1 build raspberrypi/rpi-kernel_5.15
 #####
@@ -147,7 +147,7 @@ then
 	run_on_root_dir temp root "apt-get update --allow-releaseinfo-change"
 	run_on_root_dir temp root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
 	run_on_root_dir temp root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
-		triggerhappy \
+		libgomp1 triggerhappy \
 		php-fpm nginx sqlite3 php-sqlite3 php7.4-gd php-yaml \
 		\
 		telnet sysstat squashfs-tools shellinabox \
