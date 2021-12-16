@@ -64,9 +64,11 @@ function build_native {
 		xinstall|xinstall/strip)
 			sudo ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build ${1}
 			cat >llvm.sh <<-EOF
+				#!/bin/bash
 				export PATH+=:${INSTALL_PATH}/bin
+				export LD_LIBRARY_PATH+=${INSTALL_PATH}/lib64\${LD_LIBRARY_PATH:+:\${LD_LIBRARY_PATH}}
 			EOF
-			sudo cp -fv llvm.conf /etc/profile.d/llvm.sh
+			sudo cp -fv llvm.sh /etc/profile.d/llvm.sh
 			rm llvm.sh
 			;;
 		*)

@@ -1,5 +1,5 @@
 BB_HOME=$(dirname $(realpath ${BASH_SOURCE}))
-NPROCS=$(echo $(nproc)/2+1 | bc)
+NPROCS=$(nproc --ignore=1)
 
 umask 0022
 
