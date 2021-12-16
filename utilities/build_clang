@@ -1,118 +1,134 @@
 #!/bin/bash
 
 function build_native {
-        CFLAGS="-march=native"
-        LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}"
-        cmake -S llvm-project-${CLANG_VERSION}.src/llvm -B llvm-project-${CLANG_VERSION}.build -G Ninja \
-                -DLLVM_PARALLEL_COMPILE_JOBS=${NPROCS} \
-                -DLLVM_PARALLEL_LINK_JOBS=1 \
-                \
-                -DLLVM_CCACHE_BUILD=true \
-                -DCMAKE_C_COMPILER=gcc \
-                -DCMAKE_CXX_COMPILER=g++ \
-                -DCMAKE_CROSSCOMPILING=True \
-                -DLLVM_USE_LINKER=gold \
-                \
-                -DCMAKE_C_FLAGS="${CFLAGS}" \
-                -DCMAKE_CXX_FLAGS="${CFLAGS}" \
-                -DCMAKE_ASM_FLAGS="${CFLAGS}" \
-                -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}" \
-                -DCMAKE_SKIP_RPATH:BOOL=ON \
-                \
-                -DCMAKE_INSTALL_PREFIX=/opt/llvm-13 \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DLLVM_TARGETS_TO_BUILD="X86;AArch64;ARM;WebAssembly" \
-                -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lldb;lld;polly${EXTRA_PROJS:+;${EXTRA_PROJS}}" \
-                -DLLVM_BINUTILS_INCDIR=/usr/include \
-                -DLLVM_LIBDIR_SUFFIX=64 \
-                \
-                -DBUILD_SHARED_LIBS:BOOL=OFF \
-                -DLLVM_ENABLE_LTO:BOOL=${LTO} \
-                -DLLVM_ENABLE_LIBCXX:BOOL=OFF \
-                -DLLVM_ENABLE_ZLIB:BOOL=ON \
-                -DLLVM_ENABLE_FFI:BOOL=ON \
-                -DLLVM_ENABLE_RTTI:BOOL=ON \
-                -DLLVM_ENABLE_EH=ON \
-                -DLLVM_ENABLE_NEW_PASS_MANAGER=ON \
-                -DLLVM_USE_PERF:BOOL=ON \
-                -DLLVM_POLLY_LINK_INTO_TOOLS:BOOL=ON \
-                -DLLVM_LIT_EXTRA_ARGS=-v \
-                -DLLVM_INCLUDE_EXAMPLES:BOOL=ON \
-                -DLLVM_INCLUDE_UTILS:BOOL=ON \
-                -DLLVM_BUILD_LLVM_DYLIB:BOOL=ON \
-                -DLLVM_BUILD_EXTERNAL_COMPILER_RT:BOOL=OFF \
-                -DLLVM_BUILD_EXAMPLES:BOOL=OFF \
-                -DLLVM_BUILD_TESTS:BOOL=OFF \
-                -DLLVM_LINK_LLVM_DYLIB:BOOL=ON \
-                -DLLVM_INSTALL_UTILS:BOOL=ON \
-                \
-                -DCLANG_PLUGIN_SUPPORT:BOOL=ON \
-                -DENABLE_LINKER_BUILD_ID:BOOL=ON \
-                -DCLANG_LINK_CLANG_DYLIB=ON \
-                -DCLANG_DEFAULT_RTLIB=libgcc \
-                -DCLANG_DEFAULT_UNWINDLIB=libgcc \
-                \
-                -DCOMPILER_RT_BUILD_BUILTINS:BOOL=OFF
+	set -e
+	CFLAGS="-march=native"
+	LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}"
+	sed -i "s/-flto\"/-flto=auto\"/g" llvm-project-${CLANG_VERSION}.src/llvm/cmake/modules/AddLLVM.cmake
+	sed -i "s/-flto\"/-flto=auto\"/g" llvm-project-${CLANG_VERSION}.src/llvm/cmake/modules/HandleLLVMOptions.cmake
+		cmake -S llvm-project-${CLANG_VERSION}.src/llvm -B llvm-project-${CLANG_VERSION}.build -G Ninja \
+		-DLLVM_PARALLEL_COMPILE_JOBS=${NPROCS} \
+		-DLLVM_PARALLEL_LINK_JOBS=1 \
+		\
+		-DLLVM_CCACHE_BUILD=true \
+		-DCMAKE_C_COMPILER=gcc \
+		-DCMAKE_CXX_COMPILER=g++ \
+		-DCMAKE_CROSSCOMPILING=True \
+		-DLLVM_USE_LINKER=gold \
+		\
+		-DCMAKE_C_FLAGS="${CFLAGS}" \
+		-DCMAKE_CXX_FLAGS="${CFLAGS}" \
+		-DCMAKE_ASM_FLAGS="${CFLAGS}" \
+		-DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}" \
+		-DCMAKE_SKIP_RPATH:BOOL=ON \
+		\
+		-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH} \
+		-DCMAKE_BUILD_TYPE=Release \
+		-DLLVM_TARGETS_TO_BUILD="X86;AArch64;ARM;WebAssembly" \
+		-DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lldb;lld;polly${EXTRA_PROJS:+;${EXTRA_PROJS}}" \
+		-DLLVM_BINUTILS_INCDIR=/usr/include \
+		-DLLVM_LIBDIR_SUFFIX=64 \
+		\
+		-DBUILD_SHARED_LIBS:BOOL=OFF \
+		-DLLVM_ENABLE_LTO:BOOL=${LTO} \
+		-DLLVM_ENABLE_LIBCXX:BOOL=OFF \
+		-DLLVM_ENABLE_ZLIB:BOOL=ON \
+		-DLLVM_ENABLE_FFI:BOOL=ON \
+		-DLLVM_ENABLE_RTTI:BOOL=ON \
+		-DLLVM_ENABLE_EH=ON \
+		-DLLVM_ENABLE_NEW_PASS_MANAGER=ON \
+		-DLLVM_USE_PERF:BOOL=ON \
+		-DLLVM_POLLY_LINK_INTO_TOOLS:BOOL=ON \
+		-DLLVM_LIT_EXTRA_ARGS=-v \
+		-DLLVM_INCLUDE_EXAMPLES:BOOL=ON \
+		-DLLVM_INCLUDE_UTILS:BOOL=ON \
+		-DLLVM_BUILD_LLVM_DYLIB:BOOL=ON \
+		-DLLVM_BUILD_EXTERNAL_COMPILER_RT:BOOL=OFF \
+		-DLLVM_BUILD_EXAMPLES:BOOL=OFF \
+		-DLLVM_BUILD_TESTS:BOOL=OFF \
+		-DLLVM_LINK_LLVM_DYLIB:BOOL=ON \
+		-DLLVM_INSTALL_UTILS:BOOL=ON \
+		\
+		-DCLANG_PLUGIN_SUPPORT:BOOL=ON \
+		-DENABLE_LINKER_BUILD_ID:BOOL=ON \
+		-DCLANG_LINK_CLANG_DYLIB=ON \
+		-DCLANG_DEFAULT_RTLIB=libgcc \
+		-DCLANG_DEFAULT_UNWINDLIB=libgcc \
+		\
+		-DCOMPILER_RT_BUILD_BUILTINS:BOOL=OFF
 
-        case x${1} in
-                xinstall|xinstall/strip)
-                        sudo ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build ${1}
-                        ;;
-                *)
-                        ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build ${1}
-                        ;;
-        esac
+	# trick to accelerate lto buildings
+	#sed -i "s/-flto /-flto=${NPROCS} /g" llvm-project-${CLANG_VERSION}.build/build.ninja
+
+	case x${1} in
+		xinstall|xinstall/strip)
+			sudo ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build ${1}
+			cat >llvm.sh <<-EOF
+				export PATH+=:${INSTALL_PATH}/bin
+			EOF
+			sudo cp -fv llvm.conf /etc/profile.d/llvm.sh
+			rm llvm.sh
+			;;
+		*)
+			ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build ${1}
+			;;
+	esac
+	set +e
 }
 
 function build_arm {
-        CFLAGS="--target=arm-linux-gnueabihf -march=armv7a -mtune=generic -mfloat-abi=hard -marm"
-        LDFLAGS="-fuse-ld=lld"
-        cmake -S llvm-project-${CLANG_VERSION}.src/compiler-rt -B llvm-project-${CLANG_VERSION}.build/arm-linux-gnueabihf -G Ninja \
+	set -e
+	CFLAGS="--target=arm-linux-gnueabihf -march=armv7a -mtune=generic -mfloat-abi=hard -marm"
+	LDFLAGS="-fuse-ld=lld"
+	cmake -S llvm-project-${CLANG_VERSION}.src/compiler-rt -B llvm-project-${CLANG_VERSION}.build/arm-linux-gnueabihf -G Ninja \
 	\
-	-DCMAKE_C_COMPILER=/opt/llvm-13/bin/clang \
-	-DCMAKE_CXX_COMPILER=/opt/llvm-13/bin/clang++ \
-        -DCMAKE_NM=/opt/llvm-13/bin/llvm-nm \
-        -DCMAKE_RANLIB=/opt/llvm-13/bin/llvm-ranlib \
+	-DCMAKE_C_COMPILER=${INSTALL_PATH}/bin/clang \
+	-DCMAKE_CXX_COMPILER=${INSTALL_PATH}/bin/clang++ \
+	-DCMAKE_NM=${INSTALL_PATH}/bin/llvm-nm \
+	-DCMAKE_RANLIB=${INSTALL_PATH}/bin/llvm-ranlib \
 	\
 	-DCMAKE_C_FLAGS="${CFLAGS}" \
 	-DCMAKE_CXX_FLAGS="${CFLAGS}" \
-        -DCMAKE_ASM_FLAGS="${CFLAGS}" \
+	-DCMAKE_ASM_FLAGS="${CFLAGS}" \
 	-DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}" \
-        -DCMAKE_C_COMPILER_TARGET="arm-linux-gnueabihf" \
-        -DCMAKE_ASM_COMPILER_TARGET="arm-linux-gnueabihf" \
+	-DCMAKE_C_COMPILER_TARGET="arm-linux-gnueabihf" \
+	-DCMAKE_ASM_COMPILER_TARGET="arm-linux-gnueabihf" \
 	-DCMAKE_SKIP_RPATH:BOOL=ON \
 	\
-	-DCMAKE_INSTALL_PREFIX=/opt/llvm-13 \
+	-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH} \
 	-DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_SYSROOT=/home/emiliano/.bbxb/moode-next/rpi/distos \
-        \
-        -DLLVM_CONFIG_PATH=/opt/llvm-13/bin/llvm-config \
-        \
-        -DCOMPILER_RT_INCLUDE_TESTS:BOOL=OFF \
-        -DCOMPILER_RT_BUILD_BUILTINS:BOOL=ON \
-        -DCOMPILER_RT_BUILD_LIBFUZZER:BOOL=OFF \
-        -DCOMPILER_RT_BUILD_MEMPROF:BOOL=OFF \
-        -DCOMPILER_RT_BUILD_PROFILE:BOOL=OFF \
-        -DCOMPILER_RT_BUILD_SANITIZERS:BOOL=OFF \
-        -DCOMPILER_RT_BUILD_XRAY:BOOL=OFF \
-        -DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON \
+	-DCMAKE_SYSROOT=/home/emiliano/.bbxb/moode-next/rpi/distos \
+	\
+	-DLLVM_CONFIG_PATH=${INSTALL_PATH}/bin/llvm-config \
+	\
+	-DCOMPILER_RT_INCLUDE_TESTS:BOOL=OFF \
+	-DCOMPILER_RT_BUILD_BUILTINS:BOOL=ON \
+	-DCOMPILER_RT_BUILD_LIBFUZZER:BOOL=OFF \
+	-DCOMPILER_RT_BUILD_MEMPROF:BOOL=OFF \
+	-DCOMPILER_RT_BUILD_PROFILE:BOOL=OFF \
+	-DCOMPILER_RT_BUILD_SANITIZERS:BOOL=OFF \
+	-DCOMPILER_RT_BUILD_XRAY:BOOL=OFF \
+	-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON \
       	-DBUILD_SHARED_LIBS:BOOL:BOOL=OFF
 
-        case x${1} in
-                xinstall|xinstall/strip)
-                        sudo ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build/arm-linux-gnueabihf ${1}
-                        ;;
-                *)
-                        ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build/arm-linux-gnueabihf ${1}
-                        ;;
-        esac
+	case x${1} in
+		xinstall|xinstall/strip)
+			sudo ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build/arm-linux-gnueabihf ${1}
+			;;
+		*)
+			ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build/arm-linux-gnueabihf ${1}
+			;;
+	esac
+	set +e
 }
 
-CLANG_VERSION=13.0.1rc1
+CLANG_VERSION=${CLANG_VERSION:-13.0.1rc1}
+INSTALL_PATH=/opt/llvm-${CLANG_VERSION%.*}
 NPROCS=7
-LTO=OFF
-NINJA_FLAGS="-v"
+LTO=${LTO:-OFF}
+#NINJA_FLAGS="-v"
 #EXTRA_PROJS="compiler-rt;libcxx;libcxxabi;libunwind;openmp"
+
 set -x
 eval "${1:-build_native} ${2}"
 set +x

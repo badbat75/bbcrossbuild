@@ -107,7 +107,7 @@ build moode/ashuffle_3.12
 
 # COMPONENT 4A - Shairport-sync
 #WITH_ALAC=1 build moode/shairport-sync_4.1
-WITH_ALAC=1 build moode/shairport-sync_3.3.8
+WITH_ALAC=1 build moode/shairport-sync_3.3.9
 
 # COMPONENT 4B - Librespot
 build moode/librespot_0.3.1

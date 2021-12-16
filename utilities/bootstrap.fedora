@@ -1,10 +1,13 @@
 #!/bin/bash
 sudo dnf install -y bc parted e2fsprogs bzip2 rsync vim-common \
-    gcc g++ binutils libzstd libzstd-devel \
+    gcc g++ binutils binutils-devel libzstd libzstd-devel \
     ccache \
     tree curl gawk bison flex cmake ninja-build npm \
 	autoconf autoconf-archive automake gettext-devel libtool \
     git xmltoman docbook-utils swig doxygen texinfo python3-docutils
+
+# CLang build
+sudo dnf install -y binutils-devel python3-devel libedit-devel lua-devel ocaml-findlib ocaml-ctypes ocaml-ocamldoc
 
 # Libtool updates
 if [ ! -f /usr/share/libtool/build-aux/ltmain.sh.orig ]
