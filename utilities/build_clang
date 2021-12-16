@@ -1,7 +1,9 @@
 #!/bin/bash
 
-function build_native {
+function native {
 	set -e
+	export PATH=${echo ${PATH} | sed "s|:${INSTALL_PATH}/bin||"}
+	export LD_LIBRARY_PATH=$(echo ${LD_LIBRARY_PATH} | sed "-s|${INSTALL_PATH}/lib64||")
 	CFLAGS="-march=native"
 	LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}"
 	sed -i "s/-flto\"/-flto=auto\"/g" llvm-project-${CLANG_VERSION}.src/llvm/cmake/modules/AddLLVM.cmake
@@ -57,28 +59,25 @@ function build_native {
 		\
 		-DCOMPILER_RT_BUILD_BUILTINS:BOOL=OFF
 
-	# trick to accelerate lto buildings
-	#sed -i "s/-flto /-flto=${NPROCS} /g" llvm-project-${CLANG_VERSION}.build/build.ninja
-
-	case x${1} in
+	COMMAND=${1}
+	shift
+	ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build ${@}
+	case x${COMMAND} in
 		xinstall|xinstall/strip)
-			sudo ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build ${1}
+			sudo ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build ${COMMAND} ${@}
 			cat >llvm.sh <<-EOF
 				#!/bin/bash
 				export PATH+=:${INSTALL_PATH}/bin
-				export LD_LIBRARY_PATH+=${INSTALL_PATH}/lib64\${LD_LIBRARY_PATH:+:\${LD_LIBRARY_PATH}}
+				export LD_LIBRARY_PATH=${INSTALL_PATH}/lib64\${LD_LIBRARY_PATH:+:\${LD_LIBRARY_PATH}}
 			EOF
 			sudo cp -fv llvm.sh /etc/profile.d/llvm.sh
 			rm llvm.sh
-			;;
-		*)
-			ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build ${1}
 			;;
 	esac
 	set +e
 }
 
-function build_arm {
+function arm {
 	set -e
 	CFLAGS="--target=arm-linux-gnueabihf -march=armv7a -mtune=generic -mfloat-abi=hard -marm"
 	LDFLAGS="-fuse-ld=lld"
@@ -113,12 +112,13 @@ function build_arm {
 	-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON \
       	-DBUILD_SHARED_LIBS:BOOL:BOOL=OFF
 
-	case x${1} in
+	COMMAND=${1}
+	shift
+	ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build/arm-linux-gnueabihf ${@}
+	case x${COMMAND} in
 		xinstall|xinstall/strip)
-			sudo ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build/arm-linux-gnueabihf ${1}
-			;;
-		*)
-			ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build/arm-linux-gnueabihf ${1}
+			[ -d ]
+			sudo ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build/arm-linux-gnueabihf ${COMMAND} ${@}
 			;;
 	esac
 	set +e
@@ -131,6 +131,16 @@ LTO=${LTO:-OFF}
 #NINJA_FLAGS="-v"
 #EXTRA_PROJS="compiler-rt;libcxx;libcxxabi;libunwind;openmp"
 
+case x${1} in
+	xnative|arm)
+		WHAT=${1}
+		shift
+		;;
+	x*)
+		WHAT=native
+		;;
+esac
+PARAMETERS="${@}"
 set -x
-eval "${1:-build_native} ${2}"
+eval "${WHAT} ${PARAMETERS}"
 set +x
