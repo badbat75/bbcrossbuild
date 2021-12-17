@@ -60,6 +60,6 @@ INST_CMD=install
 LTOENABLE=0
 if [ -n "${LLVM_EXTRAPOLLYFLAGS}" ]
 then
-    LLVM_EXTRAPOLLYFLAGS="-mllvm -polly -mllvm -polly-vectorizer=stripmine --rtlib=compiler-rt"
-    LLVM_EXTRAPOLLYFLAGSLIBS="-lgcc_s"
+    LLVM_EXTRAPOLLYFLAGS="-mllvm -polly -mllvm -polly-vectorizer=stripmine"
+    LLVM_EXTRAPOLLYFLAGSLIBS="--rtlib=compiler-rt -lgcc_s"
 fi

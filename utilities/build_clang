@@ -96,7 +96,7 @@ function arm {
 	-DCMAKE_ASM_COMPILER_TARGET="arm-linux-gnueabihf" \
 	-DCMAKE_SKIP_RPATH:BOOL=ON \
 	\
-	-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH} \
+	-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}/lib64/clang/${CLANG_VERSION} \
 	-DCMAKE_BUILD_TYPE=Release \
 	-DCMAKE_SYSROOT=${SYSROOT} \
 	\
@@ -124,11 +124,13 @@ function arm {
 	set +e
 }
 
+set -x
 CLANG_VERSION=${CLANG_VERSION:-13.0.1rc1}
-INSTALL_PATH=/opt/llvm-${CLANG_VERSION%.*}
+INSTALL_PATH=/opt/llvm-$(echo ${CLANG_VERSION} | cut -d. -f1)
 NPROCS=7
 LTO=${LTO:-OFF}
 SYSROOT=${SYSROOT:-${HOME}/.bbxb/moode-next/rpi/distos}
+export QEMU_LD_PREFIX=${SYSROOT}
 #NINJA_FLAGS="-v"
 #EXTRA_PROJS="compiler-rt;libcxx;libcxxabi;libunwind;openmp"
 
@@ -142,6 +144,5 @@ case x${1} in
 		;;
 esac
 PARAMETERS="${@}"
-set -x
 eval "${WHAT} ${PARAMETERS}"
 set +x
