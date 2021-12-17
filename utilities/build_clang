@@ -3,7 +3,7 @@
 function native {
 	set -e
 	export PATH="$(echo ${PATH} | sed 's|:${INSTALL_PATH}/bin||')"
-	export LD_LIBRARY_PATH="$(echo ${LD_LIBRARY_PATH} | sed '-s|${INSTALL_PATH}/lib64||')"
+	export LD_LIBRARY_PATH="$(echo ${LD_LIBRARY_PATH} | sed 's|${INSTALL_PATH}/lib64||')"
 	CFLAGS="-march=native"
 	LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}"
 	sed -i "s/-flto\"/-flto=auto\"/g" llvm-project-${CLANG_VERSION}.src/llvm/cmake/modules/AddLLVM.cmake
