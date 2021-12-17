@@ -2,8 +2,8 @@
 
 function native {
 	set -e
-	export PATH=${echo ${PATH} | sed "s|:${INSTALL_PATH}/bin||"}
-	export LD_LIBRARY_PATH=$(echo ${LD_LIBRARY_PATH} | sed "-s|${INSTALL_PATH}/lib64||")
+	export PATH="$(echo ${PATH} | sed 's|:${INSTALL_PATH}/bin||')"
+	export LD_LIBRARY_PATH="$(echo ${LD_LIBRARY_PATH} | sed '-s|${INSTALL_PATH}/lib64||')"
 	CFLAGS="-march=native"
 	LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}"
 	sed -i "s/-flto\"/-flto=auto\"/g" llvm-project-${CLANG_VERSION}.src/llvm/cmake/modules/AddLLVM.cmake
@@ -60,18 +60,19 @@ function native {
 		-DCOMPILER_RT_BUILD_BUILTINS:BOOL=OFF
 
 	COMMAND=${1}
-	shift
+	[ -n ${COMMAND} ] && shift || true
 	ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build ${@}
 	case x${COMMAND} in
 		xinstall|xinstall/strip)
+			mkdir -p llvm-project-${CLANG_VERSION}.build/docs/ocamldoc/html
 			sudo ninja ${NINJA_FLAGS} -C llvm-project-${CLANG_VERSION}.build ${COMMAND} ${@}
 			cat >llvm.sh <<-EOF
 				#!/bin/bash
 				export PATH+=:${INSTALL_PATH}/bin
 				export LD_LIBRARY_PATH=${INSTALL_PATH}/lib64\${LD_LIBRARY_PATH:+:\${LD_LIBRARY_PATH}}
 			EOF
-			sudo cp -fv llvm.sh /etc/profile.d/llvm.sh
-			rm llvm.sh
+			#sudo cp -fv llvm.sh /etc/profile.d/llvm.sh
+			#rm llvm.sh
 			;;
 	esac
 	set +e
@@ -79,8 +80,10 @@ function native {
 
 function arm {
 	set -e
+
 	CFLAGS="--target=arm-linux-gnueabihf -march=armv7a -mtune=generic -mfloat-abi=hard -marm"
 	LDFLAGS="-fuse-ld=lld"
+	CLANG_INSTALL_PATH=$(find ${INSTALL_PATH}/lib64/clang -type d -mindepth 1 -maxdepth 1)
 	cmake -S llvm-project-${CLANG_VERSION}.src/compiler-rt -B llvm-project-${CLANG_VERSION}.build/arm-linux-gnueabihf -G Ninja \
 	\
 	-DCMAKE_C_COMPILER=${INSTALL_PATH}/bin/clang \
@@ -96,7 +99,7 @@ function arm {
 	-DCMAKE_ASM_COMPILER_TARGET="arm-linux-gnueabihf" \
 	-DCMAKE_SKIP_RPATH:BOOL=ON \
 	\
-	-DCMAKE_INSTALL_PREFIX=${INSTALL_PATH}/lib64/clang/${CLANG_VERSION} \
+	-DCMAKE_INSTALL_PREFIX=${CLANG_INSTALL_PATH} \
 	-DCMAKE_BUILD_TYPE=Release \
 	-DCMAKE_SYSROOT=${SYSROOT} \
 	\
@@ -130,6 +133,8 @@ INSTALL_PATH=/opt/llvm-$(echo ${CLANG_VERSION} | cut -d. -f1)
 NPROCS=7
 LTO=${LTO:-OFF}
 SYSROOT=${SYSROOT:-${HOME}/.bbxb/moode-next/rpi/distos}
+MYPATH=$(realpath $(dirname $(realpath ${0}))/..)
+
 export QEMU_LD_PREFIX=${SYSROOT}
 #NINJA_FLAGS="-v"
 #EXTRA_PROJS="compiler-rt;libcxx;libcxxabi;libunwind;openmp"
