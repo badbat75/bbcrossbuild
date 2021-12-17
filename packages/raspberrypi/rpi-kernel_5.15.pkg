@@ -31,7 +31,6 @@ case ${WITH_RT:-0} in
 esac
 #if [ "${TOOLCHAIN}" == "llvm" ]
 #then
-#   PKG_CFLAGS="-mllvm -polly"
-#	PKG_CFLAGS+=" -mllvm -polly-vectorizer=stripmine -mllvm -polly-parallel -lgomp -mllvm -polly-omp-backend=LLVM -mllvm -polly-num-threads=1 -mllvm -polly-scheduling=dynamic -mllvm -polly-scheduling-chunksize=1"
-#   PKG_LDFLAGS=""
+#   PKG_CFLAGS="-mllvm -polly -mllvm -polly-vectorizer=stripmine"
+#   PKG_LDFLAGS="--start-group /opt/llvm-13/lib64/clang/13.0.0/lib/linux/libclang_rt.builtins-armhf.a --end-group"
 #fi
