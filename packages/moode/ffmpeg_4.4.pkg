@@ -58,4 +58,8 @@ fi
 [ ! "${LTOENABLE:-0}" == "0" ] && CONF_FLAGS+=" --enable-lto" || true
 INST_CMD=install
 LTOENABLE=0
-LLVM_EXTRAPOLLYFLAGS=
+if [ -n "${LLVM_EXTRAPOLLYFLAGS}" ]
+then
+    LLVM_EXTRAPOLLYFLAGS="-mllvm -polly -mllvm -polly-vectorizer=stripmine"
+    LLVM_EXTRAPOLLYFLAGSLIBS=""
+fi

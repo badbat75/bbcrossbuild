@@ -97,7 +97,7 @@ function settcenv () {
 			TOOLCHAIN_LD=ld.lld
 			TOOLCHAIN_COMPFLAGS="--target=${HARCH} ${LLVM_EXTRACLANGFLAGS}"
 			TOOLCHAIN_EXTRA_C_CMD="${LLVM_EXTRAPOLLYFLAGS}"
-			TOOLCHAIN_LDFLAGS="--target=${HARCH} -fuse-ld=lld -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS}"
+			TOOLCHAIN_LDFLAGS="--target=${HARCH} -fuse-ld=lld -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
 			case ${LTOENABLE:-0} in
 				1|fat)
 					OPTCOMP_FLAGS+=" -flto=full"
