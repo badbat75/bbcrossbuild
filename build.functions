@@ -95,9 +95,9 @@ function settcenv () {
 			TOOLCHAIN_OBJDUMP=llvm-objdump
 			TOOLCHAIN_READELF=llvm-readelf
 			TOOLCHAIN_LD=ld.lld
-			TOOLCHAIN_COMPFLAGS="--target=${HARCH} ${LLVM_EXTRACLANGFLAGS}"
-			TOOLCHAIN_EXTRA_C_CMD="${LLVM_EXTRAPOLLYFLAGS}"
-			TOOLCHAIN_LDFLAGS="--target=${HARCH} -fuse-ld=lld -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
+			TOOLCHAIN_COMPFLAGS="${LLVM_EXTRACLANGFLAGS}"
+			TOOLCHAIN_EXTRA_C_CMD="--target=${HARCH} ${SYSROOT_CFLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
+			TOOLCHAIN_LDFLAGS="-fuse-ld=lld -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
 			case ${LTOENABLE:-0} in
 				1|fat)
 					OPTCOMP_FLAGS+=" -flto=full"
@@ -108,15 +108,15 @@ function settcenv () {
 					OPTLINK_FLAGS+=" -Wl,--thinlto-jobs=${NPROCS}"
 					;;
 			esac
-			if [ -d ${DISTOS_PATH}${BUILD_LIBDIR} ]
-			then
-				while read path
-				do
-					COMMON_LDFLAGS+=" -B${path}"
-				done < <(find ${DISTOS_PATH}${BUILD_LIBDIR} \
-					\( -name "crt1.o" -o -name "crti.o" -o -name "crtn.o" -o -name "crtbeginS.o" -o -name "crtendS.o" \) \
-					-exec dirname {} \; | sort -u)
-			fi
+#			if [ -d ${DISTOS_PATH}${BUILD_LIBDIR} ]
+#			then
+#				while read path
+#				do
+#					COMMON_LDFLAGS+=" -B${path}"
+#				done < <(find ${DISTOS_PATH}${BUILD_LIBDIR} \
+#					\( -name "crt1.o" -o -name "crti.o" -o -name "crtn.o" -o -name "crtbeginS.o" -o -name "crtendS.o" \) \
+#					-exec dirname {} \; | sort -u)
+#			fi
 			;;
 		*|gnu)
 			TOOLCHAIN_CC=${HARCH}-gcc
@@ -134,7 +134,7 @@ function settcenv () {
 			TOOLCHAIN_READELF=${HARCH}-readelf
 			TOOLCHAIN_LD=${HARCH}-ld.gold
 			TOOLCHAIN_COMPFLAGS="${GNU_EXTRAGCCFLAGS}"
-			TOOLCHAIN_EXTRA_C_CMD=
+			TOOLCHAIN_EXTRA_C_CMD="${SYSROOT_CFLAGS}"
 			TOOLCHAIN_LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS} ${GNU_EXTRALDFLAGS}"
 			case ${LTOENABLE:-0} in
 				1|fat)
@@ -182,12 +182,12 @@ function create_environment_source () {
 		export OBJDUMP='${TOOLCHAIN_OBJDUMP}'
 		export READELF='${TOOLCHAIN_READELF}'
 		export LD='${TOOLCHAIN_LD}'
-		export CFLAGS='${TOOLCHAIN_COMPFLAGS} ${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}'
-		export CXXFLAGS='${TOOLCHAIN_COMPFLAGS} ${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}'
-		export CPPFLAGS='${TOOLCHAIN_COMPFLAGS} ${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS} ${PKG_CPPFLAGS}'
-		export FFLAGS='${TOOLCHAIN_COMPFLAGS} ${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
-		export F90FLAGS='${TOOLCHAIN_COMPFLAGS} ${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
-		export LDFLAGS='${TOOLCHAIN_LDFLAGS} ${SYSROOT_CFLAGS} ${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}'
+		export CFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}'
+		export CXXFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}'
+		export CPPFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CPPFLAGS} ${PKG_CPPFLAGS}'
+		export FFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
+		export F90FLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
+		export LDFLAGS='${TOOLCHAIN_LDFLAGS} ${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}'
 		export PKG_CONFIG=${HARCH}-pkg-config
 		export PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR}
 		export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR}
