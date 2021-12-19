@@ -4,5 +4,4 @@ PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/o/ortp/ortp_1.0.2-1.deb
 PKG_DEPS="raspbian/bctoolbox_4.4.13-2"
 BUILD_PROCESS=configmake
 [ ${TOOLCHAIN} = llvm ] && PKG_CFLAGS="-Wno-error=implicit-const-int-float-conversion"
-PKG_LDFLAGS="-Wl,--no-undefined"
 INST_CMD=install-strip

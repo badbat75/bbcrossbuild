@@ -16,3 +16,4 @@ case ${HM} in
         CONF_FLAGS+=" --enable-fpm=64bit"
         ;;
 esac
+PKG_FAULTYCFLAGS=1

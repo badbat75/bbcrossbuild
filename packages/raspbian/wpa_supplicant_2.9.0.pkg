@@ -1,6 +1,7 @@
 # wpa_supplicant_2.9.0
 PKG_SRCDIR=wpa_2.9.0
-PKG_CFLAGS="-MMD -Wno-stringop-overflow -fPIC -I${BIN_PATH}${BUILD_INCLUDEDIR}/libnl3 -I${BIN_PATH}${BUILD_INCLUDEDIR}/PCSC"
+PKG_CFLAGS="-MMD -fPIC -I${BIN_PATH}${BUILD_INCLUDEDIR}/libnl3 -I${BIN_PATH}${BUILD_INCLUDEDIR}/PCSC"
+[ ${TOOLCHAIN} == gnu ] && PKG_CFLAGS+=" -Wno-stringop-overflow"
 BUILD_PROCESS=simplemake
 INST_CMD=all
 PKG_DEPS="raspbian/${PKG_SRCDIR} raspbian/libnl3_3.4.0-1 raspbian/pcsc-lite_1.9.1-1"
