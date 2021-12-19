@@ -609,8 +609,8 @@ function setup_python () {
 
 		set -x
 		local PYTHONURL="https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PYTHON_VER}.tar.xz"
-		download_uncompress ${PYTHONURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER} &&
-		curl -LsR -o ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py https://bootstrap.pypa.io/get-pip.py
+		download_uncompress ${PYTHONURL} ${TOOLCHAIN_SRCPATH}/python-${PYTHON_VER} &&
+		curl -LsR -o ${TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py https://bootstrap.pypa.io/get-pip.py
 		set +x
 		trap ERR
 	}
@@ -622,46 +622,59 @@ function setup_python () {
 			return ${STATUS}' ERR
 
 		set -x
-		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER} ]
+		if [ -d ${TOOLCHAIN_BLDPATH}/python-${PYTHON_VER} ]
 		then
-			rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
+			rm -rf ${TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
 		fi
-		mkdir -p ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
-		#local LTO_PLUGIN_PATH="$(${BARCH}-gcc --print-prog-name=liblto_plugin.so)"
-		cd ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER} &&
-		if which ${BARCH}-gcc-ar > /dev/null 2>&1
-		then
-			local HOST_AR="${BARCH}-gcc-ar"
-		else
-			local HOST_AR="gcc-ar"
-		fi
-		if which ${BARCH}-gcc-nm > /dev/null 2>&1
-		then
-			local HOST_NM="${BARCH}-gcc-nm"
-		else
-			local HOST_NM="gcc-nm"
-		fi
-		if which ${BARCH}-gcc-ranlib > /dev/null 2>&1
-		then
-			local HOST_RANLIB="${BARCH}-gcc-ranlib"
-		else
-			local HOST_RANLIB="gcc-ranlib"
-		fi
-		CC="${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc" \
-		CFLAGS="-march=native" \
-		AR="${HOST_AR}" \
-		NM="${HOST_NM}" \
-		RANLIB="${HOST_RANLIB}" \
-		LDFLAGS="${OPTLINK_FLAGS}" \
-		${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER} --enable-shared --with-lto \
+		mkdir -p ${TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
+		cd ${TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
+		case ${TOOLCHAIN} in
+			gnu)
+				if which ${BARCH}-gcc-ar > /dev/null 2>&1
+				then
+					local HOST_AR="${BARCH}-gcc-ar"
+				else
+					local HOST_AR="gcc-ar"
+				fi
+				if which ${BARCH}-gcc-nm > /dev/null 2>&1
+				then
+					local HOST_NM="${BARCH}-gcc-nm"
+				else
+					local HOST_NM="gcc-nm"
+				fi
+				if which ${BARCH}-gcc-ranlib > /dev/null 2>&1
+				then
+					local HOST_RANLIB="${BARCH}-gcc-ranlib"
+				else
+					local HOST_RANLIB="gcc-ranlib"
+				fi
+				export CC="${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc"
+				export CXX="${CCWRAPPER:+${CCWRAPPER} }${BARCH}-g++"
+				export CFLAGS="-march=native"
+				export CXXFLAG="-march=native"
+				export AR="${HOST_AR}"
+				export NM="${HOST_NM}"
+				export RANLIB="${HOST_RANLIB}"
+				export LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS} ${GNU_EXTRALDFLAGS} ${OPTLINK_FLAGS}"
+				;;
+			llvm)
+				export CC="${CCWRAPPER:+${CCWRAPPER} }clang"
+				export CFLAGS="-march=native"
+				export AR="llvm-ar"
+				export NM="llvm-nm"
+				export RANLIB="llvm-ranlib"
+				export LDFLAGS="-fuse-ld=lld -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS} ${OPTLINK_FLAGS}"
+				;;
+		esac
+		${TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configure --prefix=${TOOLCHAIN_PATH} --enable-shared --with-lto \
 			--with-system-ffi ax_cv_c_float_words_bigendian=no
 		#--with-address-sanitizer --with-undefined-behavior-sanitizer
 		make
 		make install
-		${BUILD_PYTHON} ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py
-		pip${PYTHONBIN_VER} install meson ninja
+		${BUILD_PYTHON} ${TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py
+		#pip${PYTHONBIN_VER} install meson ninja
 		cd ${START_PWD}
-		rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
+		rm -rf ${TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
 		set +x
 		trap ERR
 	}
@@ -674,29 +687,15 @@ function setup_python () {
 			return ${STATUS}' ERR
 
 		set -x
-		setbuildenv
-		#local LTO_PLUGIN_PATH="$(${BARCH}-gcc --print-prog-name=liblto_plugin.so)"
+		create_environment_source
+		source environment.source
 		${BUILD_PYTHONPIP} install crossenv
 		${BUILD_PYTHON} -m crossenv ${HOST_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH}
 		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate
+		create_environment_source
+		source environment.source
 		build-python -m pip install --upgrade cython setuptools wheel
-		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
-		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
-		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
-		CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-		CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
-		CPPFLAGS="${COMMON_CPPFLAGS} ${PKG_CFLAGS}" \
-		FC=${HARCH}-gfortran \
-		FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
-		LD="${HARCH}-ld.gold ${PKG_LDFLAGS}" \
-		LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-		AR=${HARCH}-gcc-ar \
-		AS=${HARCH}-as \
-		NM=${HARCH}-gcc-nm \
-		RANLIB=${HARCH}-gcc-ranlib \
-		STRIP=${HARCH}-strip \
-		OBJDUMP=${HARCH}-objdump \
-			cross-pip -v install --upgrade cython
+		cross-pip -v install --upgrade cython
 		set +x
 		trap ERR
 	}
@@ -738,12 +737,12 @@ function setup_python () {
 		echo -n "-${PYTHON_VER}... "
 	fi
 	PYTHONBIN_VER=$( echo ${PYTHON_VER} | cut -d'.' -f1,2)
-	BUILD_PYTHON=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/python${PYTHONBIN_VER}
-	BUILD_PYTHONPIP=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip${PYTHONBIN_VER}
+	BUILD_PYTHON=${TOOLCHAIN_PATH}/bin/python${PYTHONBIN_VER}
+	BUILD_PYTHONPIP=${TOOLCHAIN_PATH}/bin/pip${PYTHONBIN_VER}
 	HOST_PYTHON=${PYTHON_SEARCHPATH}/usr/bin/python${PYTHONBIN_VER}
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
-	export PATH=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin:${PATH}
-	export LD_LIBRARY_PATH=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+	export PATH=${TOOLCHAIN_PATH}/bin:${PATH}
+	export LD_LIBRARY_PATH=${TOOLCHAIN_PATH}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
 	if [ ! -x ${BUILD_PYTHON} ] || [ ! -x ${BUILD_PYTHONPIP} ]
 	then
 		echo -n "downloading... "
@@ -751,7 +750,7 @@ function setup_python () {
 		echo -n "building... "
 		build_python >> ${GLOBAL_LOG_PATH}/python-${PYTHONBIN_VER}.log 2>&1
 		echo "done."
-		rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}
+		rm -rf ${TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}
 	else
 		echo "already there."
 	fi

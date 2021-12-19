@@ -56,12 +56,10 @@ function setbuildenv () {
 		COMMON_LDFLAGS+=" ${STD_LDFLAGS}"
 		COMMON_PKG_CONFIG_LIBDIR+=":${DISTOS_PATH}/usr/lib${BUILD_LIBSUFFIX}/pkgconfig:${DISTOS_PATH}/usr/share/pkgconfig"
 		COMMON_PKG_CONFIG_SYSROOT="${DISTOS_PATH}"
-		SYSROOT_CFLAGS="${DISTOS_PATH:+--sysroot=${DISTOS_PATH}}"
-		SYSROOT_LDFLAGS="${DISTOS_PATH:+-Wl,--sysroot=${DISTOS_PATH}}"
+		SYSROOT_FLAGS="${DISTOS_PATH:+--sysroot=${DISTOS_PATH}}"
 		export QEMU_LD_PREFIX="${DISTOS_PATH}"
 	else
-		SYSROOT_CFLAGS="${BIN_PATH:+--sysroot=${BIN_PATH}}"
-		SYSROOT_LDFLAGS="${BIN_PATH:+-Wl,--sysroot=${BIN_PATH}}"
+		SYSROOT_FLAGS="${BIN_PATH:+--sysroot=${BIN_PATH}}"
 	fi
 	# Build LDFLAGS search paths
 	if [ -d ${DISTOS_PATH}/etc/ld.so.conf.d ]
@@ -98,12 +96,12 @@ function settcenv () {
 			if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
 			then
 				TOOLCHAIN_COMPFLAGS="${LLVM_EXTRACLANGFLAGS}"
-				TOOLCHAIN_EXTRA_C_CMD="--target=${HARCH} ${SYSROOT_CFLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
+				TOOLCHAIN_EXTRA_C_CMD="--target=${HARCH} ${SYSROOT_FLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
 			else
-				TOOLCHAIN_COMPFLAGS="${SYSROOT_CFLAGS} ${LLVM_EXTRACLANGFLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
+				TOOLCHAIN_COMPFLAGS="${SYSROOT_FLAGS} ${LLVM_EXTRACLANGFLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
 				TOOLCHAIN_EXTRA_C_CMD="--target=${HARCH}"
 			fi
-			TOOLCHAIN_LDFLAGS="${SYSROOT_CFLAGS} -fuse-ld=lld -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
+			TOOLCHAIN_LDFLAGS="${SYSROOT_FLAGS} -fuse-ld=lld -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
 			case ${LTOENABLE:-0} in
 				1|fat)
 					OPTCOMP_FLAGS+=" -flto=full"
@@ -133,13 +131,13 @@ function settcenv () {
 			if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
 			then
 				TOOLCHAIN_COMPFLAGS="${GNU_EXTRAGCCFLAGS}"
-				TOOLCHAIN_EXTRA_C_CMD="${SYSROOT_CFLAGS}"
+				TOOLCHAIN_EXTRA_C_CMD="${SYSROOT_FLAGS}"
 		
 			else
-				TOOLCHAIN_COMPFLAGS="${SYSROOT_CFLAGS} ${GNU_EXTRAGCCFLAGS}"
+				TOOLCHAIN_COMPFLAGS="${SYSROOT_FLAGS} ${GNU_EXTRAGCCFLAGS}"
 				TOOLCHAIN_EXTRA_C_CMD=""
 			fi
-			TOOLCHAIN_LDFLAGS="${SYSROOT_CFLAGS} -fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS} ${GNU_EXTRALDFLAGS}"
+			TOOLCHAIN_LDFLAGS="${SYSROOT_FLAGS} -fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS} ${GNU_EXTRALDFLAGS}"
 			case ${LTOENABLE:-0} in
 				1|fat)
 					OPTCOMP_FLAGS+=" -flto=${NPROCS}"
@@ -191,7 +189,7 @@ function create_environment_source () {
 		export CPPFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CPPFLAGS} ${PKG_CPPFLAGS}'
 		export FFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
 		export F90FLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
-		export LDFLAGS='${TOOLCHAIN_LDFLAGS} ${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}'
+		export LDFLAGS='${TOOLCHAIN_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}'
 		export PKG_CONFIG=${HARCH}-pkg-config
 		export PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR}
 		export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR}
@@ -578,7 +576,7 @@ function build () (
 			2|thin)	export CARGO_PROFILE_RELEASE_LTO=thin
 				;;
 		esac
-		for param in $(echo ${STRIP_FLAG} ${SYSROOT_CFLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS} ${TOOLCHAIN_LDFLAGS} ${PKG_LDFLAGS})
+		for param in $(echo ${TOOLCHAIN_EXTRA_C_CMD} ${SYSROOT_FLAGS} ${STRIP_FLAG} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS} ${TOOLCHAIN_LDFLAGS} ${PKG_LDFLAGS})
 		do
 			export RUSTFLAGS+=" -C link-arg=${param}"
 		done
@@ -803,9 +801,9 @@ function build () (
 			fi
 			export PYTHONPATH
 		done
-		cross-python -m site
 		create_environment_source
 		source environment.source
+		cross-python -m site
 		eval '${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}'
 		eval '${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} \
 			${INSTALL_TARGET}'
@@ -1030,6 +1028,7 @@ function build () (
 		PKG_SRCDIR \
 		PKG_DEPS \
 		PKG_COPYSRC \
+		PKG_FAULTYCFLAGS \
 		PKG_CFLAGS \
 		PKG_CXXFLAGS \
 		PKG_FCFLAGS \
