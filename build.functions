@@ -862,6 +862,8 @@ function build () (
 		return ${STATUS};' ERR
 
 		set -x
+		mkdir -pv ${PKG_BLDPATH}
+		cd ${PKG_BLDPATH}
 		local PYTHONBIN_VER=$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)
 		local PYTHONBIN_MAJVER=$(echo ${PYTHONBIN_VER} | cut -d'.' -f1,1)
 		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
@@ -916,6 +918,7 @@ function build () (
 		then
 			mv ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages
 		fi
+		cd ${BB_HOME}
 		set +x
 		trap - ERR
 	}

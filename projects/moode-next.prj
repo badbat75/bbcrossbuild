@@ -139,15 +139,15 @@ unmount_tag distos
 
 if [ -z ${DISABLE_FINAL_IMG} ]
 then
-	mount_tag temp --url ${RASPBIAN_URL}${RASPBIAN_IMAGE}.zip --imgfile ${RASPBIAN_IMAGE}.img --mountlist "2:/ 1:/boot" --resize 2:3G
+	mount_tag final --url ${RASPBIAN_URL}${RASPBIAN_IMAGE}.zip --imgfile ${RASPBIAN_IMAGE}.img --mountlist "2:/ 1:/boot" --resize 2:3G
 
-	run_on_root_dir temp root "apt-get -y purge --autoremove raspberrypi-kernel libraspberrypi-dev \
+	run_on_root_dir final root "apt-get -y purge --autoremove raspberrypi-kernel libraspberrypi-dev \
 		gcc-10 build-essential libc6-dev dpkg-dev manpages-dev initramfs-tools-core RPi.GPIO bluez \
 		wpasupplicant iw htop libnl-3-200 libcamera-apps-lite libsource-highlight4v5 \
 		libasound2 raspberrypi-sys-mods raspberrypi-net-mods"
-	run_on_root_dir temp root "apt-get update --allow-releaseinfo-change"
-	run_on_root_dir temp root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
-	run_on_root_dir temp root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
+	run_on_root_dir final root "apt-get update --allow-releaseinfo-change"
+	run_on_root_dir final root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
+	run_on_root_dir final root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
 		libgomp1 triggerhappy \
 		php-fpm nginx sqlite3 php-sqlite3 php7.4-gd php-yaml \
 		\
@@ -165,15 +165,19 @@ then
 		python3-dbus python3-matplotlib python3-aiohttp python3-yaml"
 	if [ ${ENABLE_DISPLAY:-0} -eq 1 ]
 	then
-		run_on_root_dir temp root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
+		run_on_root_dir final root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
 			xinit xorg xserver-xorg-legacy chromium-browser libgtk-3-0 libgles2"
 	fi
-	run_on_root_dir temp root "apt-get -y purge --autoremove libcephfs2"
-	run_on_root_dir temp root "apt-get clean"
+	run_on_root_dir final root "apt-get -y purge --autoremove libcephfs2"
+	run_on_root_dir final root "apt-get clean"
+	unmount_tag final
 
+	cp -v ${DISKIMAGES_PATH}/final.img ${DISKIMAGES_PATH}/temp.img
+	
+	mount_tag temp --mountlist "2:/ 1:/boot"
 	#create_sfx_archive remove_devfiles
 	inject_into_mount_tag temp binaries --remove_devfiles
-	inject_into_mount_tag temp gcclibs
+	#inject_into_mount_tag temp gcclibs
 
 	# Run /root/firstboot at first boot, enable verbose boot and set physical boot device
 	run_on_root_dir temp root "sed -i \"s|elevator=[^ ]*||;s|root=[^ ]*|root=/dev/mmcblk0p2|;s|init=/usr/lib/raspi-config/init_resize.sh|init=/root/firstboot|;s| quiet||\" /boot/cmdline.txt"
