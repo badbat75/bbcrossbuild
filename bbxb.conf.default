@@ -110,5 +110,9 @@ GCC_OPTLINK_FLAGS="-Wl,-z,relro -Wl,-z,now"
 # GCC_LTOENABLE=1
 ######
 
+###### Versions for LLVM and its dependencies
+#LLVM_VER=13.0.0
+######
+
 ###### To be moved somewhere outside this
 #CARGO_PATH=${HOME}/.cargo

@@ -3,18 +3,20 @@
 RASPBIAN_IMAGE=2021-10-30-raspios-bullseye-armhf-lite
 RASPBIAN_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-11-08/
 
+TOOLCHAIN=llvm
+
 ## Enable shared libraries (default) but disable static ones
 BUILD_LIBSHARED=1
 BUILD_LIBSTATIC=0
 
 ## Enable LTO both for kernel and applications
-LTOENABLE=1
-KERN_LTOENABLE=0
+LTOENABLE=thin
+KERN_LTOENABLE=thin
 
 ## Set default sysroot pkg-config library path
 #PKG_CONFIG_SYSROOT_DIR=${BIN_PATH}
 
-mount_tag distos --url "${RASPBIAN_URL}${RASPBIAN_IMAGE}.zip" --imgfile "${RASPBIAN_IMAGE}.img" --mountlist "2:/ 1:/boot" --resize 2:3G
+mount_tag distos --url "${RASPBIAN_URL}${RASPBIAN_IMAGE}.zip" --imgfile "${RASPBIAN_IMAGE}.img" --mountlist "2:/ 1:/boot" --resize 2:4G
 if [ -z ${SKIP_DISTOS_APTS} ]
 then
 	run_on_root_dir distos root "sed -i 's/#deb-src/deb-src/g' /etc/apt/sources.list"
@@ -26,6 +28,7 @@ prepare_sysroot
 
 #create_sysroot http://<url>/<rootfs.tar.gz>
 setup_gcc
+setup_llvm
 #setup_rust
 #setup_python 3.9.8
 
@@ -34,9 +37,9 @@ setup_gcc
 
 #clean_project
 
-inject_into_mount_tag distos gcclibs
+#inject_into_mount_tag distos gcclibs
 
-build raspios/ffmpeg
-TOOLCHAIN=llvm build raspios/chromium
+TOOLCHAIN=gnu build raspios/ffmpeg
+build raspios/chromium
 
 unmount_tag distos

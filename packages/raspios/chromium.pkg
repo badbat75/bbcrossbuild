@@ -58,6 +58,7 @@ EOF
     echo '31d731fb82ea62a6dae24d2bdfe6f0aa6164b949' > third_party/node/node_modules.tar.gz.sha1
     mkdir -pv third_party/node/linux
     echo 'ab9544e24e752d3d17f335fb7b2055062e582d11' > third_party/node/linux/node-linux-x64.tar.gz.sha1
+    run_on_root_dir distos root \"DEBIAN_FRONTEND=noninteractive apt-get -y build-dep libcups2-dev libpipewire-0.3-dev\"
     "
 
 # On DISTOS:         

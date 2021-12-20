@@ -1010,7 +1010,8 @@ function build () (
 		return ${STATUS};' ERR
 
 		cd $(find ${PKG_BLDPATH} -mindepth 1 -maxdepth 1 -type d)
-		run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt -y build-dep ${PKG_NAME}"
+		run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get update"
+		run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y build-dep ${PKG_NAME}"
 		set -x
 		case ${HM} in
 			arm) [ "${HMFLOATABI}" == "hard" ] && local DEBARCH=armhf || local DEBARCH=arm
@@ -1024,8 +1025,8 @@ function build () (
 		source environment.source
 		DPKG_ROOT=${DISTOS_PATH} \
 		CONFIG_SITE=${DISTOS_PATH}/etc/dpkg \
-		LD_LIBRARY_PATH=${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-		DEB_BUILD_OPTIONS="nocheck" \
+		LD_LIBRARY_PATH+=:${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+		DEB_BUILD_OPTIONS="nocheck noddebs" \
 		DH_OPTIONS="-v --dpkg-shlibdeps-params=--ignore-missing-info" \
 		dpkg-buildpackage \
 			--host-arch=${DEBARCH} \
@@ -1116,7 +1117,7 @@ function build () (
 
 	if [ ${TOOLCHAIN} == llvm ]
 	then
-		if [ -z ${PKG_LLVMPOLLYFEATURES} ]
+		if [ -z "${PKG_LLVMPOLLYFEATURES}" ]
 		then
 			llvm_set_polly_env ${LLVM_POLLY_FEATURES:-disabled}
 		else
@@ -1227,6 +1228,8 @@ function build () (
 		cd ${PKG_SRCPATH}
 		echo -n "Downloading ${PKG_NAME}..."
 		(
+		run_on_root_dir distos root "for file in $( find /etc/apt/sources.list.d -type f ) /etc/apt/sources.list; do \
+			sed -i 's/^#deb-src/deb-src/g' \${file}; done"
 		apt-get \
 			-o Dir::Etc="${DISTOS_PATH}/etc/apt" \
 			-o Dir::Cache="${CACHE_PATH}/apt" \
@@ -1261,8 +1264,6 @@ function build () (
 		cp -R ${PKG_SRCPATH} ${PKG_BLDPATH} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 		echo -n "Building ${PKG_NAME}..."
 		${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-		echo "Return: ${?}"
-		pause
 		;;
 	x*)
 		if [ ! -z ${PKG_URL} ] || [ ! -z ${GIT_URL} ]
