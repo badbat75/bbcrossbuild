@@ -651,8 +651,8 @@ function setup_llvm () {
 	if ! clang -v > /dev/null 2>&1 || ! lld -v > /dev/null 2>&1
 	then
 		> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
-		case ${HM} in
-			arm)
+		case x${HM} in
+			xarm)
 				if [ "${HMFLOATABI}" == "hard" ]
 				then
 					local LLVM_ARCH=armhf
@@ -660,8 +660,8 @@ function setup_llvm () {
 					local LLVM_ARCH=armhf
 				fi
 				;;
-			aarch64)
-				local LLVM_ARCH=aarch
+			*)
+				local LLVM_ARCH=${HM}
 				;;
 		esac
 		if [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER} ]
