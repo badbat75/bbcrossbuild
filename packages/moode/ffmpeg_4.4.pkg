@@ -58,8 +58,7 @@ fi
 [ ! "${LTOENABLE:-0}" == "0" ] && CONF_FLAGS+=" --enable-lto" || true
 INST_CMD=install
 LTOENABLE=0
-if [ -n "${LLVM_EXTRAPOLLYFLAGS}" ]
+if [ "$(echo ${LLVM_POLLY_FEATURES} | grep -o parallel)" == "parallel" ]
 then
-    LLVM_EXTRAPOLLYFLAGS="-mllvm -polly -mllvm -polly-vectorizer=stripmine"
-    LLVM_EXTRAPOLLYFLAGSLIBS="--rtlib=compiler-rt -lgcc_s"
+    PKG_LLVMPOLLYFEATURES="polly vectorizer"
 fi

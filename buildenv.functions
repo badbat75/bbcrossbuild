@@ -223,7 +223,7 @@ function bootstrap_sysroot () {
 	trap ERR
 }
 
-function check_target_gcc () {
+function check_gnu_c () {
 	${HARCH}-gcc -v > /dev/null 2>&1
 	if [ ! ${?} -eq 0 ]
 	then
@@ -233,6 +233,18 @@ function check_target_gcc () {
 		exit 1
 	fi
 }
+
+function check_llvm_c () {
+	clang --target=${HARCH} -v > /dev/null 2>&1
+	if [ ! ${?} -eq 0 ]
+	then
+		echo "The toolchain for cross-compile does not exist."
+		echo "To build one, add build_gcc command to your project before start building anything else."
+		echo
+		exit 1
+	fi
+}
+
 
 function setup_gcc () {
 
@@ -445,7 +457,7 @@ function setup_gcc () {
 		set +x; \
 		echo "fail."; \
 		echo; \
-		if [ -f ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log ];
+		if [ -f ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log ]; \
 		then \
 			echo "Log ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log:"; \
 			echo; \
@@ -538,6 +550,142 @@ function setup_gcc () {
 	trap ERR
 }
 
+function setup_llvm () {
+	function download_llvm () {
+		trap 'STATUS=${?}; \
+			set +x; \
+			trap ERR; \
+			return ${STATUS};' ERR
+
+		set -x
+		local GCCURL=https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VER}/llvm-project-${LLVM_VER}.src.tar.xz
+		download_uncompress ${GCCURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}
+		set +x
+		trap ERR
+	}
+
+	function build_llvm_builtins () {
+		trap 'STATUS=${?}; \
+			set +x; \
+			trap ERR; \
+			return ${STATUS};' ERR
+		set -x
+		local LLVM_TARGET=${1}
+		# To be changed with: ${TOOLCHAIN_PATH}
+		local LLVM_INSTALL_PATH=$(llvm-config --prefix)
+
+		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} ]
+		then
+			rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}
+		fi
+		if [ -d ${DISTOS_PATH} ]
+		then
+			if [ $(find ${DISTOS_PATH}/usr/lib ${DISTOS_PATH}/lib -type f -name crti.o -mindepth 1 2>/dev/null | wc -l) -ge 1 ]
+			then
+				local SYSROOT=${DISTOS_PATH}
+			fi
+		else
+			local SYSROOT=${BIN_PATH}
+		fi
+
+		local CFLAGS="--target=${LLVM_TARGET} -mfloat-abi=${HMFLOATABI} ${HMGCCPARAMS}"
+		local LDFLAGS="-fuse-ld=lld"
+
+		case ${LLVM_ARCH} in
+			armhf)
+				local CFLAGS+=" -march=armv7a -mtune=generic"
+				;;
+		esac
+		cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/compiler-rt -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} -G Ninja \
+			\
+			-DLLVM_CCACHE_BUILD=$( [ "${CCWRAPPER}" == "ccache" ] && echo true || echo false ) \
+			\
+			-DCMAKE_C_COMPILER=${LLVM_INSTALL_PATH}/bin/clang \
+			-DCMAKE_CXX_COMPILER=${LLVM_INSTALL_PATH}/bin/clang++ \
+			-DCMAKE_NM=${LLVM_INSTALL_PATH}/bin/llvm-nm \
+			-DCMAKE_RANLIB=${LLVM_INSTALL_PATH}/bin/llvm-ranlib \
+			-DCMAKE_C_FLAGS="${CFLAGS}" \
+			-DCMAKE_CXX_FLAGS="${CFLAGS}" \
+			-DCMAKE_ASM_FLAGS="${CFLAGS}" \
+			-DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}" \
+			-DCMAKE_C_COMPILER_TARGET="${LLVM_TARGET}" \
+			-DCMAKE_ASM_COMPILER_TARGET="${LLVM_TARGET}" \
+			\
+			-DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER} \
+			-DCMAKE_BUILD_TYPE=Release \
+			-DCMAKE_SYSROOT=${SYSROOT} \
+			\
+			-DLLVM_CONFIG_PATH=${LLVM_INSTALL_PATH}/bin/llvm-config \
+			\
+			-DCOMPILER_RT_INCLUDE_TESTS:BOOL=OFF \
+			-DCOMPILER_RT_BUILD_BUILTINS:BOOL=ON \
+			-DCOMPILER_RT_BUILD_LIBFUZZER:BOOL=ON \
+			-DCOMPILER_RT_BUILD_MEMPROF:BOOL=ON \
+			-DCOMPILER_RT_BUILD_PROFILE:BOOL=ON \
+			-DCOMPILER_RT_BUILD_SANITIZERS:BOOL=ON \
+			-DCOMPILER_RT_BUILD_XRAY:BOOL=ON \
+			-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON \
+			-DBUILD_SHARED_LIBS:BOOL:BOOL=OFF
+
+		ninja -j${NPROCS} -C ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} install/strip
+
+		set +x
+		trap ERR
+	}
+
+	trap 'STATUS=${?}; \
+		set +x; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log ]; \
+		then \
+			echo "Log ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log:"; \
+			echo; \
+			tail -n24 ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log; \
+		fi;
+		trap ERR; \
+		exit ${STATUS}' ERR
+	
+	echo -n "Setting up clang-${LLVM_VER}..."
+
+	if ! clang -v > /dev/null 2>&1 || ! lld -v > /dev/null 2>&1
+	then
+		> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
+		case ${HM} in
+			arm)
+				if [ "${HMFLOATABI}" == "hard" ]
+				then
+					local LLVM_ARCH=armhf
+				else
+					local LLVM_ARCH=armhf
+				fi
+				;;
+			aarch64)
+				local LLVM_ARCH=aarch
+				;;
+		esac
+		if [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER} ]
+		then
+			echo -n "downloading... "
+			download_llvm >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
+		fi
+		#echo -n "building native... "
+		#build_llvm ${BARCH}>> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
+		if [ ! -f ${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/clang_rt.crtbegin-${LLVM_ARCH}.o ]
+		then
+			echo -n "builtins for ${HARCH}... "
+			build_llvm_builtins ${HARCH} >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
+		fi
+		echo "done."
+		#echo "Removing sources."
+		#rm -rf llvm-project-${LLVM_VER}
+	else
+		echo "already there."
+	fi
+
+	trap ERR
+}
+
 function install_gcclibs () {
 	setbuildenv
 	set -e
@@ -562,7 +710,7 @@ function install_gcclibs () {
 }
 
 function setup_rust () {
-	check_target_gcc
+	check_${TOOLCHAIN}_c
 
 	trap 'STATUS=${?}; \
 		echo "fail."; \
@@ -700,7 +848,7 @@ function setup_python () {
 		trap ERR
 	}
 
-	check_target_gcc
+	check_${TOOLCHAIN}_c
 
 	trap 'STATUS=${?}; \
 		echo "fail."; \
@@ -841,6 +989,8 @@ GMP_VER=${GMP_VER:-6.2.1}
 MPFR_VER=${MPFR_VER:-4.1.0}
 MPC_VER=${MPC_VER:-1.2.1}
 ISL_VER=${ISL_VER:-0.24}
+
+LLVM_VER=${LLVM_VER:-13.0.0}
 
 # Check the toolchains
 gcc -v > /dev/null 2>&1

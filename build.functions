@@ -79,6 +79,9 @@ function setbuildenv () {
 function settcenv () {
 	case ${TOOLCHAIN} in
 		llvm)
+			echo "LLVM_EXTRALDFLAGS: ${LLVM_EXTRALDFLAGS}"
+			echo "LLVM_EXTRAPOLLYFLAGSLIBS: ${LLVM_EXTRAPOLLYFLAGSLIBS}"
+			echo
 			TOOLCHAIN_CC=clang
 			TOOLCHAIN_CXX=clang++
 			TOOLCHAIN_CPP="clang -E"
@@ -230,6 +233,46 @@ function crossapt () {
 		${@}
 	echo "Done"
 	echo
+}
+
+function llvm_set_polly_env () {
+	unset LLVM_EXTRAPOLLYFLAGS
+	unset LLVM_EXTRAPOLLYFLAGSLIBS
+	case x${HM} in
+		xarm)
+			if [ "${HMFLOATABI}" == "hard" ]
+			then
+				local LLVM_ARCH=armhf
+			else
+				local LLVM_ARCH=arm
+			fi
+			;;
+		*) local LLVM_ARCH=${HM}
+		;;
+	esac
+
+	for param in ${@}
+	do
+		case ${param} in
+		all)
+			LLVM_EXTRAPOLLYFLAGS="-mllvm -polly -mllvm -polly-vectorizer=stripmine -mllvm -polly-parallel"
+			LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a -lgomp"
+			;;
+		polly|enabled|1)
+			LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly"
+			;;
+		vectorizer)
+			LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-vectorizer=stripmine"
+			LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
+			;;
+		parallel)
+			LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-parallel"
+			LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a -lgomp"
+			;;
+		disabled|0)
+			;;
+		esac
+	done
 }
 
 function build () (
@@ -1034,6 +1077,7 @@ function build () (
 		PKG_FCFLAGS \
 		PKG_LDFLAGS \
 		PKG_RUSTFLAGS \
+		PKG_LLVMPOLLYFEATURES \
 		PKG_MAKETARGETS \
 		PKG_MAKEVARS \
 		PKG_PREBUILD \
@@ -1059,8 +1103,6 @@ function build () (
 		echo
 		return 1
 	fi
-
-	setbuildenv
 	
 	local PKG_NAME=$(basename ${1})\${PKG_SUFFIX}
 	local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_NAME}}
@@ -1068,6 +1110,19 @@ function build () (
 	local PKG_PKGPATH=${PACKAGES_PATH}/${PKG_NAME}
 
 	source ${PKG_PATH}/${1}.pkg
+
+	if [ ${TOOLCHAIN} == llvm ]
+	then
+		if [ -z ${PKG_LLVMPOLLYFEATURES} ]
+		then
+			llvm_set_polly_env ${LLVM_POLLY_FEATURES:-disabled}
+		else
+			echo "Override LLVM Polly features: ${PKG_LLVMPOLLYFEATURES}"
+			llvm_set_polly_env ${PKG_LLVMPOLLYFEATURES}
+		fi
+	fi
+
+	setbuildenv
 
 	eval local PKG_NAME=${PKG_NAME}
 	eval local PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
@@ -1114,7 +1169,7 @@ function build () (
 
 	if [ ${OVERRIDE_TARGET_GCC_CHECK:-0} -eq 0 ] && [ "${BUILD_PROCESS}" != "none" ] && [ "${BUILD_PROCESS}" != "downloadonly" ]
 	then
-		check_target_gcc
+		check_${TOOLCHAIN}_c
 	fi
 	echo -n "${SPACES}"
 	# Build defaults
