@@ -104,7 +104,7 @@ build moode/camillagui-backend_0.8.0
 build moode/minidlna_1.3.0
 
 # COMPONENT 2 - Auto-shuffle
-build moode/ashuffle_3.13
+build moode/ashuffle_3.12
 
 # COMPONENT 4A - Shairport-sync
 #WITH_ALAC=1 build moode/shairport-sync_4.1

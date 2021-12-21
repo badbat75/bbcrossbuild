@@ -1,0 +1,15 @@
+# ashuffle_3.12
+GIT_URL=https://github.com/joshkunz/ashuffle
+GIT_COMMIT=v3.12.8
+#GIT_COMMIT=8e9807bf0afabb4a1455806df398237a688ab5c6
+#PATCHES=
+BUILD_PROCESS=mesonninja
+CONF_FLAGS="--strip"
+INST_CMD=install
+PKG_DEPS=
+PKG_POSTBUILD="install -d ${PKG_PKGPATH}/usr/local/bin &&
+ln -fs /usr/bin/ashuffle ${PKG_PKGPATH}/usr/local/bin/ashuffle"
+
+### GCC 10 Workaround ####
+test_version ${GCC_VER} -ge 10 && PKG_CFLAGS+=" -fcommon" || true
+##########################
