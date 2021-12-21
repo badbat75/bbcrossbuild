@@ -66,7 +66,7 @@ KEEP_BUILDDIR=1 WITH_EXTOPTS=1 build raspberrypi/rpi-kernel_5.15
 build raspberrypi/raspi-config
 build raspberrypi/raspberrypi-sys-mods_20211005
 build raspberrypi/raspberrypi-net-mods_20211104
-build moode/alsa-utils_1.2.6.1
+build moode/alsa-utils_1.2.6
 
 # Download and install moode-sources and pre-build environment
 build moode/moode-dynamic-ver_1.2

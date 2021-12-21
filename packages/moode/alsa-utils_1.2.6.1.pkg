@@ -1,7 +1,0 @@
-# alsa-utils_1.2.6.1
-GIT_URL="https://github.com/alsa-project/alsa-utils"
-GIT_COMMIT="tags/v1.2.6.1"
-BUILD_PROCESS=configmake
-PKG_DEPS="moode/alsa-lib_1.2.6.1 moode/alsa-topology-conf_1.2.6.1"
-CONF_FLAGS=""
-INST_CMD=install-strip

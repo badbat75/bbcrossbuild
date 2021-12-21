@@ -903,15 +903,15 @@ function build () (
 			fi
 		done
 		#PYTHONUSERBASE="${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
-		export PYTHONPATH
 		#export PYTHONUSERBASE
+		export PYTHONPATH
+		create_environment_source
+		source environment.source
 		cross-python -m site
 		if [ ${PKG_PYTHONBUILD:-1} -eq 1 ]
 		then
 			local PYTHONBUILD="--no-binary :all:"
 		fi
-		create_environment_source
-		source environment.source
 		#build-python -m pip ${VERBOSE} install --upgrade ${PKG_NAME}
 		cross-python -m pip ${VERBOSE} install -I ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX} ${PKG_NAME}
 		if [ ${PYTHON_PKGDIR} == dist-packages ]

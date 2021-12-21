@@ -842,8 +842,6 @@ function setup_python () {
 		${BUILD_PYTHONPIP} install crossenv
 		${BUILD_PYTHON} -m crossenv ${HOST_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH}
 		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate
-		create_environment_source
-		source environment.source
 		build-python -m pip install --upgrade cython setuptools wheel
 		cross-pip -v install --upgrade cython
 		set +x

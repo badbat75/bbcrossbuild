@@ -1,6 +1,6 @@
-# alsa-topology-conf_1.2.6.1
+# alsa-topology-conf_1.2.5.1
 GIT_URL="https://github.com/alsa-project/alsa-topology-conf"
-GIT_COMMIT="tags/v1.2.6.1"
+GIT_COMMIT="tags/v1.2.5.1"
 BUILD_PROCESS=downloadonly
 PKG_DEPS=""
 CONF_FLAGS=""
