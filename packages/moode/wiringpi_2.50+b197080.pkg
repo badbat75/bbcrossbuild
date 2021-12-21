@@ -1,5 +1,5 @@
-# wiringpi_2.50+7f8fe26
-PKG_URL="https://github.com/WiringPi/WiringPi/archive/7f8fe26e4f775abfced43c07657a353f03ddb2d0.tar.gz"
+# wiringpi_2.50+b197080
+PKG_URL="https://github.com/WiringPi/WiringPi/archive/b1970802babed47d9efb17443c10b975e1144891.tar.gz"
 PATCHES="wiringpi-makefiles.patch"
 BUILD_PROCESS=simplemake
 INST_CMD=install

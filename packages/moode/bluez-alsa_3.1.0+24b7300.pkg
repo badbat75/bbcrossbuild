@@ -5,7 +5,7 @@ CONF_FLAGS="--with-alsaplugindir=\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX}/alsa-lib --
 CONF_FLAGS+=" --disable-payloadcheck"
 PKG_CFLAGS="-I${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/dbus-1.0/include -I${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/glib-2.0/include"
 INST_CMD=install-strip
-PKG_DEPS="moode/alsa-lib_1.2.5.1 moode/bluez_5 raspbian/sbc-1.4 moode/fdk-aac_2.0.1 moode/libldac_2.0.2.3+af2dd23 moode/mpg123_1.29.2"
+PKG_DEPS="moode/alsa-lib_1.2.6.1 moode/bluez_5 raspbian/sbc-1.4 moode/fdk-aac_2.0.1 moode/libldac_2.0.2.3+af2dd23 moode/mpg123_1.29.2"
 PATCHES=
 
 PKG_POSTBUILD="install -d ${PKG_PKGPATH}/run/bluealsa"

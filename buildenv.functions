@@ -602,6 +602,7 @@ function setup_llvm () {
 			\
 			-DCMAKE_C_COMPILER=${LLVM_INSTALL_PATH}/bin/clang \
 			-DCMAKE_CXX_COMPILER=${LLVM_INSTALL_PATH}/bin/clang++ \
+			-DCMAKE_AR=${LLVM_INSTALL_PATH}/bin/llvm-ar \
 			-DCMAKE_NM=${LLVM_INSTALL_PATH}/bin/llvm-nm \
 			-DCMAKE_RANLIB=${LLVM_INSTALL_PATH}/bin/llvm-ranlib \
 			-DCMAKE_C_FLAGS="${CFLAGS}" \
@@ -627,7 +628,8 @@ function setup_llvm () {
 			-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON \
 			-DBUILD_SHARED_LIBS:BOOL:BOOL=OFF
 
-		ninja -j${NPROCS} -C ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} install/strip
+		ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} \
+			-C ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} install/strip
 
 		set +x
 		trap ERR

@@ -2,8 +2,8 @@
 PKG_URL="https://github.com/ralph-irving/squeezelite/archive/cfab656ad404305ae4ee36a724fb08fa756eddc0.tar.gz"
 BUILD_PROCESS=simplemake
 INST_CMD=all
-PKG_DEPS="moode/alsa-lib_1.2.5.1 \
-    moode/wiringpi_2.50+7f8fe26 \
+PKG_DEPS="moode/alsa-lib_1.2.6.1 \
+    moode/wiringpi_2.50+b197080 \
     moode/ffmpeg_4.4 \
     moode/libogg_1.3.5 \
     moode/libvorbis_1.3.7 \

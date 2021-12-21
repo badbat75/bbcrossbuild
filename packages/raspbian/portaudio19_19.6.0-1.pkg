@@ -8,7 +8,7 @@ CONF_FLAGS="--enable-cxx -with-pic=yes"
 PKG_CFLAGS="${COMMON_LDFLAGS} -s"
 PKG_MAKEVARS="-j1"
 INST_CMD=install
-PKG_DEPS="moode/alsa-lib_1.2.5.1"
+PKG_DEPS="moode/alsa-lib_1.2.6.1"
 PKG_PREBUILD="sed -i 's/-O\*|-flto\*|-fwhopr\*|-fuse-linker-plugin/-O\*|-flto\*|-fwhopr\*|-fuse-linker-plugin|-fsanitize=\*|-fuse-ld=\*|-Wa,\*|--target=\*|-B\*/' ltmain.sh"
 
 # Note:

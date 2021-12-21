@@ -1,8 +1,8 @@
-# alsa-lib_1.2.5.1
+# alsa-lib_1.2.6.1
 GIT_URL="https://github.com/alsa-project/alsa-lib"
-GIT_COMMIT="tags/v1.2.5.1"
+GIT_COMMIT="tags/v1.2.6.1"
 BUILD_PROCESS=configmake
-PKG_DEPS="moode/alsa-ucmconf_1.2.5.1"
+PKG_DEPS="moode/alsa-ucmconf_1.2.6.1"
 CONF_FLAGS=""
 INST_CMD=install-strip
 [ "${LTOENABLE:-0}" != "0" ] && LTOENABLE=fat || true
