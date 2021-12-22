@@ -577,6 +577,7 @@ function setup_llvm () {
 		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} ]
 		then
 			rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}
+			mkdir -p ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}
 		fi
 		if [ -d ${DISTOS_PATH} ]
 		then
@@ -587,28 +588,24 @@ function setup_llvm () {
 		else
 			local SYSROOT=${BIN_PATH}
 		fi
+		cd ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}
+		setbuildenv
+		TOOLCHAIN=llvm create_environment_source
+		source environment.source
 
-		local CFLAGS="--target=${LLVM_TARGET} -mfloat-abi=${HMFLOATABI} ${HMGCCPARAMS}"
-		local LDFLAGS="-fuse-ld=lld"
-
-		case ${LLVM_ARCH} in
-			armhf)
-				local CFLAGS+=" -march=armv7a -mtune=generic"
-				;;
-		esac
 		cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/compiler-rt -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} -G Ninja \
 			\
 			-DLLVM_CCACHE_BUILD=$( [ "${CCWRAPPER}" == "ccache" ] && echo true || echo false ) \
 			\
-			-DCMAKE_C_COMPILER=${LLVM_INSTALL_PATH}/bin/clang \
-			-DCMAKE_CXX_COMPILER=${LLVM_INSTALL_PATH}/bin/clang++ \
+			-DCMAKE_C_COMPILER="${LLVM_INSTALL_PATH}/bin/clang" \
+			-DCMAKE_CXX_COMPILER="${LLVM_INSTALL_PATH}/bin/clang++" \
 			-DCMAKE_AR=${LLVM_INSTALL_PATH}/bin/llvm-ar \
 			-DCMAKE_NM=${LLVM_INSTALL_PATH}/bin/llvm-nm \
 			-DCMAKE_RANLIB=${LLVM_INSTALL_PATH}/bin/llvm-ranlib \
-			-DCMAKE_C_FLAGS="${CFLAGS}" \
-			-DCMAKE_CXX_FLAGS="${CFLAGS}" \
-			-DCMAKE_ASM_FLAGS="${CFLAGS}" \
-			-DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}" \
+			-DCMAKE_C_FLAGS="--target=${LLVM_TARGET} ${CFLAGS}" \
+			-DCMAKE_CXX_FLAGS="--target=${LLVM_TARGET} ${CFLAGS}" \
+			-DCMAKE_ASM_FLAGS="--target=${LLVM_TARGET} ${CFLAGS}" \
+			-DCMAKE_EXE_LINKER_FLAGS="--target=${LLVM_TARGET} ${LDFLAGS}" \
 			-DCMAKE_C_COMPILER_TARGET="${LLVM_TARGET}" \
 			-DCMAKE_ASM_COMPILER_TARGET="${LLVM_TARGET}" \
 			\
