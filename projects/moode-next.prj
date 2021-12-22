@@ -5,15 +5,21 @@ MOODEREL=r761
 RASPBIAN_IMAGE=2021-10-30-raspios-bullseye-armhf-lite
 RASPBIAN_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-11-08/
 
+## Set Clang as default compiler set
 TOOLCHAIN=llvm
+
+## Enable LTO both for kernel and applications
+LTOENABLE=thin
+KERN_LTOENABLE=thin
 
 ## Enable shared libraries (default) but disable static ones
 BUILD_LIBSHARED=1
 BUILD_LIBSTATIC=0
 
-## Enable LTO both for kernel and applications
-LTOENABLE=thin
-KERN_LTOENABLE=thin
+## Enable Polly plugin for LLVM for RaspberryPi 2 and 3
+case x${PLATFORM_NAME} in
+	xrpi2|xrpi3|xrpi3_aarch64) LLVM_POLLY_FEATURES=all;;
+esac
 
 ## Set default sysroot pkg-config library path
 PKG_CONFIG_SYSROOT_DIR=${BIN_PATH}

@@ -584,28 +584,25 @@ function setup_llvm () {
 			if [ $(find ${DISTOS_PATH}/usr/lib ${DISTOS_PATH}/lib -type f -name crti.o -mindepth 1 2>/dev/null | wc -l) -ge 1 ]
 			then
 				local SYSROOT=${DISTOS_PATH}
+				export QEMU_LD_PREFIX="${DISTOS_PATH}"
 			fi
 		else
 			local SYSROOT=${BIN_PATH}
+			export QEMU_LD_PREFIX="${BIN_PATH}"
 		fi
 		cd ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}
-		setbuildenv
-		TOOLCHAIN=llvm create_environment_source
-		source environment.source
-
+		local PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
 		cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/compiler-rt -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} -G Ninja \
 			\
-			-DLLVM_CCACHE_BUILD=$( [ "${CCWRAPPER}" == "ccache" ] && echo true || echo false ) \
-			\
-			-DCMAKE_C_COMPILER="${LLVM_INSTALL_PATH}/bin/clang" \
-			-DCMAKE_CXX_COMPILER="${LLVM_INSTALL_PATH}/bin/clang++" \
+			-DCMAKE_C_COMPILER=${LLVM_INSTALL_PATH}/bin/clang \
+			-DCMAKE_CXX_COMPILER=${LLVM_INSTALL_PATH}/bin/clang++ \
 			-DCMAKE_AR=${LLVM_INSTALL_PATH}/bin/llvm-ar \
 			-DCMAKE_NM=${LLVM_INSTALL_PATH}/bin/llvm-nm \
 			-DCMAKE_RANLIB=${LLVM_INSTALL_PATH}/bin/llvm-ranlib \
-			-DCMAKE_C_FLAGS="--target=${LLVM_TARGET} ${CFLAGS}" \
-			-DCMAKE_CXX_FLAGS="--target=${LLVM_TARGET} ${CFLAGS}" \
-			-DCMAKE_ASM_FLAGS="--target=${LLVM_TARGET} ${CFLAGS}" \
-			-DCMAKE_EXE_LINKER_FLAGS="--target=${LLVM_TARGET} ${LDFLAGS}" \
+			-DCMAKE_C_FLAGS="--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS}" \
+			-DCMAKE_CXX_FLAGS="--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS}" \
+			-DCMAKE_ASM_FLAGS="--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS}" \
+			-DCMAKE_EXE_LINKER_FLAGS="--target=${LLVM_TARGET} -fuse-ld=lld" \
 			-DCMAKE_C_COMPILER_TARGET="${LLVM_TARGET}" \
 			-DCMAKE_ASM_COMPILER_TARGET="${LLVM_TARGET}" \
 			\
