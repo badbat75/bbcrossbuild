@@ -95,7 +95,7 @@ function settcenv () {
 			TOOLCHAIN_OBJCOPY=llvm-objcopy
 			TOOLCHAIN_OBJDUMP=llvm-objdump
 			TOOLCHAIN_READELF=llvm-readelf
-			TOOLCHAIN_LD=ld.lld
+			TOOLCHAIN_LD=${TOOLCHAIN_LD:-ld.lld}
 			if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
 			then
 				TOOLCHAIN_COMPFLAGS="${LLVM_EXTRACLANGFLAGS}"
@@ -104,7 +104,7 @@ function settcenv () {
 				TOOLCHAIN_COMPFLAGS="${SYSROOT_FLAGS} ${LLVM_EXTRACLANGFLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
 				TOOLCHAIN_EXTRA_C_CMD="--target=${HARCH}"
 			fi
-			TOOLCHAIN_LDFLAGS="${SYSROOT_FLAGS} -fuse-ld=lld -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
+			TOOLCHAIN_LDFLAGS="${SYSROOT_FLAGS} -fuse-ld=$(echo ${TOOLCHAIN_LD} | cut -d. -f2) -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
 			case ${LTOENABLE:-0} in
 				1|fat)
 					OPTCOMP_FLAGS+=" -flto=full"
@@ -130,7 +130,7 @@ function settcenv () {
 			TOOLCHAIN_OBJCOPY=${HARCH}-objcopy
 			TOOLCHAIN_OBJDUMP=${HARCH}-objdump
 			TOOLCHAIN_READELF=${HARCH}-readelf
-			TOOLCHAIN_LD=${HARCH}-ld.gold
+			TOOLCHAIN_LD=${HARCH}-${TOOLCHAIN_LD:-ld.gold}
 			if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
 			then
 				TOOLCHAIN_COMPFLAGS="${GNU_EXTRAGCCFLAGS}"
@@ -140,7 +140,8 @@ function settcenv () {
 				TOOLCHAIN_COMPFLAGS="${SYSROOT_FLAGS} ${GNU_EXTRAGCCFLAGS}"
 				TOOLCHAIN_EXTRA_C_CMD=""
 			fi
-			TOOLCHAIN_LDFLAGS="${SYSROOT_FLAGS} -fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS} ${GNU_EXTRALDFLAGS}"
+			TOOLCHAIN_LDFLAGS="${SYSROOT_FLAGS} -fuse-ld=$(echo ${TOOLCHAIN_LD} | cut -d. -f2) ${GNU_EXTRALDFLAGS}"
+			[ ${TOOLCHAIN_LD} == ld.gold ] && TOOLCHAIN_LDFLAGS+=" -Wl,--threads -Wl,--thread-count,${NPROCS}" || true
 			case ${LTOENABLE:-0} in
 				1|fat)
 					OPTCOMP_FLAGS+=" -flto=${NPROCS}"
@@ -170,7 +171,6 @@ function create_environment_source () {
 		### BIN_PATH=${BIN_PATH}
 		### PKG_SRCDIR=${PKG_SRCDIR}
 		### PKG_BLDDIR=${PKG_BLDDIR}
-		### PATH=${PATH}
 		#################################################################################
 
 		export CC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
@@ -198,6 +198,7 @@ function create_environment_source () {
 		export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR}
 		export PKG_CONFIG_ALLOW_CROSS=${PKG_CONFIG_ALLOW_CROSS}
 		export LD_LIBRARY_PATH+=:${LD_LIBRARY_PATH}
+		export PATH='${PATH}'
 	EOF
 }
 
@@ -702,7 +703,21 @@ function build () (
 		set -x
 		unset PKG_CONFIG_LIBDIR
 		unset PKG_CONFIG_SYSROOT_DIR
-		settcenv
+		if [ ${KERN_HDRS_ONLY:-1} -eq 1 ]
+		then
+			TOOLCHAIN_CC=gcc
+			TOOLCHAIN_AR=ar
+			TOOLCHAIN_AS=as
+			TOOLCHAIN_NM=nm
+			TOOLCHAIN_RANLIB=ranlib
+			TOOLCHAIN_STRIP=strip
+			TOOLCHAIN_OBJCOPY=objcopy
+			TOOLCHAIN_OBJDUMP=objdump
+			TOOLCHAIN_READELF=readelf
+			TOOLCHAIN_LD=ld.bfd
+		else
+			settcenv
+		fi
 
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
@@ -756,7 +771,8 @@ function build () (
 		if [ ${KERN_HDRS_ONLY:-0} -eq 1 ]
 		then
 			set +x
-			return ${STATUS}
+			trap - ERR
+			return
 		fi
 
 		# Build and install kernel

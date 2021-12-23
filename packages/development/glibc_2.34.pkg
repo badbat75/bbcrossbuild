@@ -1,0 +1,31 @@
+# glibc_2.34
+PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-2.34.tar.xz"
+BUILD_PROCESS=configmake
+AUTOCONF=0
+LTOENABLE=0
+#PKG_COPYSRC=1
+CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}\${BUILD_INCLUDEDIR} --enable-kernel=4.4 --disable-werror \
+	--disable-sanity-checks --enable-hacker-mode --enable-stackguard-randomization \
+	--enable-stack-protector=strong --enable-obsolete-rpc --enable-obsolete-nsl --enable-pt_chown"
+if [ ${BOOTSTRAP:-0} -eq 1 ]
+then
+	CONF_FLAGS+=" --without-selinux"
+fi
+if [ ${WITH_LIBXCRYPT:-0} -eq 1 ]
+then
+	CONF_FLAGS+=" --disable-crypt"
+fi
+#CONF_FLAGS+=" libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes"
+#PKG_CFLAGS="-Wno-stringop-overflow"
+INST_CMD="${OVERRIDE_INST_CMD:-install}"
+#PATCHDEB=""
+#PKG_DEPS=
+PKG_POSTBUILD="if [ ! -f ${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h ];
+	then touch ${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h; \
+	fi" \
+PKG_TWOSTEPSBUILD=${OVERRIDE_PKG_TWOSTEPSBUILD:-1}
+#PKG_MAKEVARS="ARCH=${KERN_ARCH} cross-compiling=yes"
+
+TOOLCHAIN_LD=ld.bfd
+
+# Note:
