@@ -202,6 +202,7 @@ function bootstrap_sysroot () {
 	# Build gcc final
 	echo -n "${SPACES}"
 	setup_gcc stage3
+	install_gccheaders
 	install_gcclibs
 
 	echo -n "   Copying libraries and headers... "
@@ -684,24 +685,63 @@ function setup_llvm () {
 	trap ERR
 }
 
+function install_gccheaders () {
+	setbuildenv
+	set -e
+	local GCC_MAJVER=$(echo ${GCC_VER} | cut -d'.' -f1,1 )
+	local INSTALL_PATH="${BIN_PATH}${BUILD_INCLUDEDIR}/c++/${GCC_MAJVER}"
+	echo -n "Installing GCC headers... "
+	echo "INSTALL_PATH: ${INSTALL_PATH}" >> ${LOG_PATH}/gccheaders.log
+	if [ ! -d ${INSTALL_PATH} ]
+	then
+		mkdir -p ${INSTALL_PATH} >> ${LOG_PATH}/gccheaders.log 2>&1
+	fi
+	cp -prv ${TOOLCHAIN_PATH}/${HARCH}/include/c++/${GCC_VER}/* ${INSTALL_PATH}/ >> ${LOG_PATH}/gccheaders.log 2>&1
+	echo -e "done" >> ${LOG_PATH}/gccheaders.log 2>&1
+	echo >> ${LOG_PATH}/gccheaders.log 2>&1
+	echo "done."
+	echo
+	set +e
+}
+
 function install_gcclibs () {
 	setbuildenv
 	set -e
-	local GCCLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 \( -name 'libgcc_s.so*' -o -name 'libssp.so*' -o -name 'crt*.o' -o -name 'libgcc*.a' \) 2>/dev/null | xargs )
-	local GCCLIBNAME="$( ( for name in ${GCCLIB}; do echo $(basename ${name}); done ) | sort | uniq | xargs )"
-	local GCCCXXLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 \( -name 'libstdc++*.a' -o -name 'libstdc++.so.*' ! -name 'libstdc++.so.*-*.py' \) 2>/dev/null | xargs )
-	local GCCCXXLIBNAME="$( ( for name in ${GCCCXXLIB}; do echo $(basename ${name}); done ) | sort | uniq | xargs )"
+	local GCC_MAJVER=$(echo ${GCC_VER} | cut -d'.' -f1,1 )
+	local INSTALL_PATH="${BIN_PATH}${BUILD_LIBDIR}/gcc${BUILD_LIBSUFFIX}/${GCC_MAJVER}"
 	echo -n "Installing GCC libraries... "
-	echo "GCCSEARCHLIBS: ${GCCSEARCHLIBS}" >> ${LOG_PATH}/gcclibs.log
-	echo "GCCLIB: ${GCCLIB}" >> ${LOG_PATH}/gcclibs.log
-	echo "GCCLIBNAME: ${GCCLIBNAME}" >> ${LOG_PATH}/gcclibs.log
-	echo "GCCCXXLIB: ${GCCCXXLIB}" >> ${LOG_PATH}/gcclibs.log
-	echo "GCCCXXLIBNAME: ${GCCCXXLIBNAME}" >> ${LOG_PATH}/gcclibs.log
-	if [ ! -d ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} ]
+	echo "INSTALL_PATH: ${INSTALL_PATH}" >> ${LOG_PATH}/gcclibs.log
+	if [ ! -d ${INSTALL_PATH} ]
 	then
-		mkdir -p ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
+		mkdir -p ${INSTALL_PATH} >> ${LOG_PATH}/gcclibs.log 2>&1
 	fi
-	cp -P -fv ${GCCLIB} ${GCCCXXLIB} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} >> ${LOG_PATH}/gcclibs.log 2>&1
+	for file in $( find ${TOOLCHAIN_PATH}/${HARCH}/{lib,lib64} -maxdepth 1 \( -name "libgcc_s.so*" -o -name "libstdc++.so*" -a ! -name 'libstdc++.so.*-*.py' -o -name "libgfortran.so*" \) -printf '%P ')
+	do
+		if [ -f ${TOOLCHAIN_PATH}/${HARCH}/lib64/${file} ]
+		then
+			local LIB=lib64
+		else
+			local LIB=lib
+		fi
+		echo -n "Copying -n ${file} into ${INSTALL_PATH}... " >> ${LOG_PATH}/gcclibs.log 2>&1
+		cp -Pf ${TOOLCHAIN_PATH}/${HARCH}/${LIB}/${file} ${INSTALL_PATH}/${file} >> ${LOG_PATH}/gcclibs.log 2>&1
+		echo -n "linking into ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}..." >> ${LOG_PATH}/gcclibs.log 2>&1
+		ln -sf ../gcc${BUILD_LIBSUFFIX}/${GCC_MAJVER}/${file} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/${file} >> ${LOG_PATH}/gcclibs.log 2>&1
+		echo "done." >> ${LOG_PATH}/gcclibs.log 2>&1
+	done
+	for file in $( find ${TOOLCHAIN_PATH}/${HARCH}/{lib,lib64} -maxdepth 1 \( -name 'lib*san.so*' -o -name 'crt*.o' -o -name 'libgcc*.a' \) -printf '%P ')
+	do
+		if [ -f ${TOOLCHAIN_PATH}/${HARCH}/lib64/${file} ]
+		then
+			local LIB=lib64
+		else
+			local LIB=lib
+		fi
+		echo -n "Copying -n ${file} into ${INSTALL_PATH}... " >> ${LOG_PATH}/gcclibs.log 2>&1
+		cp -Pf ${TOOLCHAIN_PATH}/${HARCH}/${LIB}/${file} ${INSTALL_PATH}/${file} >> ${LOG_PATH}/gcclibs.log 2>&1
+		echo -e "done" >> ${LOG_PATH}/gcclibs.log 2>&1
+	done
+	echo >> ${LOG_PATH}/gcclibs.log 2>&1
 	echo "done."
 	echo
 	set +e
