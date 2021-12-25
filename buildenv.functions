@@ -182,19 +182,19 @@ function bootstrap_sysroot () {
 	else
 		local WITH_LIBXCRYPT=0
 	fi
-	if [ ! -f ${BIN_PATH}/lib${BUILD_LIBSUFFIX}/libc.so.6 ] && [ ! -f ${BIN_PATH}/lib64${BUILD_LIBSUFFIX}/libc.so.6 ]
+	if [ ! -f ${BIN_PATH}/lib/libc.so.6 ] && [ ! -f ${BIN_PATH}/lib64/libc.so.6 ]
 	then
-		TOOLCHAIN=gnu NUMSPACES=1 OVERRIDE_TARGET_GCC_CHECK=1 WITH_LIBXCRYPT=${WITH_LIBXCRYPT} build ${GLIBC_PACKAGE}
+		TOOLCHAIN=gnu NUMSPACES=1 OVERRIDE_TARGET_GCC_CHECK=1 FORCE_REBUILD=1 WITH_LIBXCRYPT=${WITH_LIBXCRYPT} build ${GLIBC_PACKAGE}
 	else
 		echo "${GLIBC_PACKAGE} libraries already installed."
 	fi
 	# Build libxcrypt
 	if [ ${WITH_LIBXCRYPT} -eq 1 ]
 	then
+		echo -n "${SPACES}"
 		if [ ! -f ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libcrypt.so ]
 		then
-			echo -n "${SPACES}"
-			TOOLCHAIN=gnu NUMSPACES=1 OVERRIDE_TARGET_GCC_CHECK=1 INSTALL_ONLYHEADERS=1 build ${LIBXCRYPT_PACKAGE}
+			TOOLCHAIN=gnu NUMSPACES=1 OVERRIDE_TARGET_GCC_CHECK=1 FORCE_REBUILD=1 INSTALL_ONLYHEADERS=1 build ${LIBXCRYPT_PACKAGE}
 		else
 			echo "${LIBXCRYPT_PACKAGE} libraries already installed."
 		fi
@@ -202,19 +202,12 @@ function bootstrap_sysroot () {
 	# Build gcc final
 	echo -n "${SPACES}"
 	setup_gcc stage3
-	install_gccheaders
-	install_gcclibs
 
 	echo -n "   Copying libraries and headers... "
 	if [ ! -d ${TOOLCHAIN_PATH}/${HARCH}/include/c++ ]
 	then
-		if [ -d ${TOOLCHAIN_PATH}/${HARCH}/lib64 ]
-		then
-			cp -r ${TOOLCHAIN_PATH}/${HARCH}/lib64/* ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
-		else
-			cp -r ${TOOLCHAIN_PATH}/${HARCH}/lib/* ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
-		fi	
-		cp -r ${TOOLCHAIN_PATH}/${HARCH}/include/* ${BIN_PATH}${BUILD_INCLUDEDIR}
+		install_gccheaders
+		install_gcclibs
 		echo "Done."
 	else
 		echo "already installed."

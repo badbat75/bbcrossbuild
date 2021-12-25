@@ -1176,7 +1176,7 @@ function build () (
 	done
 
 
-	if [ -f ${STATUS_PATH}/${PKG_NAME} ]
+	if [ -f ${STATUS_PATH}/${PKG_NAME} ] && [ ${FORCE_REBUILD:-0} -eq 0 ]
 	then
 		if [ "$(md5sum ${PKG_PATH}/${1}.pkg)" == "$(cat ${STATUS_PATH}/${PKG_NAME})" ]
 		then
