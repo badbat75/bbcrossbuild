@@ -704,7 +704,7 @@ function build () (
 		unset PKG_CONFIG_LIBDIR
 		unset PKG_CONFIG_SYSROOT_DIR
 		echo "Kernel headers only: ${KERN_HDRS_ONLY:-1}"
-		if [ ${KERN_HDRS_ONLY:-1} -eq 1 ]
+		if [ ${KERN_HDRS_ONLY:-0} -eq 1 ]
 		then
 			TOOLCHAIN_CC=gcc
 			TOOLCHAIN_AR=ar
@@ -771,7 +771,6 @@ function build () (
 		# Break if only headers installation required
 		if [ ${KERN_HDRS_ONLY:-0} -eq 1 ]
 		then
-			KERN_HDRS_ONLY=0
 			set +x
 			trap - ERR
 			return
