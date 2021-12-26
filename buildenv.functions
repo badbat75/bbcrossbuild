@@ -203,14 +203,16 @@ function bootstrap_sysroot () {
 	echo -n "${SPACES}"
 	setup_gcc stage3
 
-	echo -n "   Copying libraries and headers... "
-	if [ ! -d ${TOOLCHAIN_PATH}/${HARCH}/include/c++ ]
+	local GCC_MAJVER=$(echo ${GCC_VER} | cut -d'.' -f1,1 )
+	if [ ! -d ${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${GCC_MAJVER} ]
 	then
-		install_gccheaders
+		echo -n "   "
 		install_gcclibs
-		echo "Done."
-	else
-		echo "already installed."
+	fi
+	if [ ! -d ${BIN_PATH}${BUILD_INCLUDEDIR}/c++ ]
+	then
+		echo -n "   "
+		install_gccheaders
 	fi
 
 	echo "Done."
@@ -240,7 +242,6 @@ function check_llvm_c () {
 		exit 1
 	fi
 }
-
 
 function setup_gcc () {
 
@@ -681,62 +682,53 @@ function setup_llvm () {
 function install_gccheaders () {
 	setbuildenv
 	set -e
-	local GCC_MAJVER=$(echo ${GCC_VER} | cut -d'.' -f1,1 )
-	local INSTALL_PATH="${BIN_PATH}${BUILD_INCLUDEDIR}/c++/${GCC_MAJVER}"
 	echo -n "Installing GCC headers... "
-	echo "INSTALL_PATH: ${INSTALL_PATH}" >> ${LOG_PATH}/gccheaders.log
-	if [ ! -d ${INSTALL_PATH} ]
+	echo "INSTALL_PATH: ${BIN_PATH}${BUILD_INCLUDEDIR}/c++/${GCC_MAJVER}" >> ${LOG_PATH}/gccheaders.log
+	if [ ! -d ${BIN_PATH}${BUILD_INCLUDEDIR}/c++/${GCC_MAJVER} ]
 	then
-		mkdir -p ${INSTALL_PATH} >> ${LOG_PATH}/gccheaders.log 2>&1
+		mkdir -p ${BIN_PATH}${BUILD_INCLUDEDIR}/c++/${GCC_MAJVER} >> ${LOG_PATH}/gccheaders.log 2>&1
 	fi
-	cp -prv ${TOOLCHAIN_PATH}/${HARCH}/include/c++/${GCC_VER}/* ${INSTALL_PATH}/ >> ${LOG_PATH}/gccheaders.log 2>&1
+	cp -prv ${TOOLCHAIN_PATH}/${HARCH}/include/c++/${GCC_VER}/* ${BIN_PATH}${BUILD_INCLUDEDIR}/c++/${GCC_MAJVER}/ >> ${LOG_PATH}/gccheaders.log 2>&1
 	echo -e "done" >> ${LOG_PATH}/gccheaders.log 2>&1
 	echo >> ${LOG_PATH}/gccheaders.log 2>&1
 	echo "done."
-	echo
 	set +e
 }
 
 function install_gcclibs () {
 	setbuildenv
 	set -e
-	local GCC_MAJVER=$(echo ${GCC_VER} | cut -d'.' -f1,1 )
-	local INSTALL_PATH="${BIN_PATH}${BUILD_LIBDIR}/gcc${BUILD_LIBSUFFIX}/${GCC_MAJVER}"
 	echo -n "Installing GCC libraries... "
-	echo "INSTALL_PATH: ${INSTALL_PATH}" >> ${LOG_PATH}/gcclibs.log
-	if [ ! -d ${INSTALL_PATH} ]
+	echo "INSTALL_PATH: ${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${GCC_MAJVER}" >> ${LOG_PATH}/gcclibs.log
+	if [ ! -d ${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${GCC_MAJVER} ]
 	then
-		mkdir -p ${INSTALL_PATH} >> ${LOG_PATH}/gcclibs.log 2>&1
+		mkdir -p ${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${GCC_MAJVER} >> ${LOG_PATH}/gcclibs.log 2>&1
 	fi
-	for file in $( find ${TOOLCHAIN_PATH}/${HARCH}/{lib,lib64} -maxdepth 1 \( -name "libgcc_s.so*" -o -name "libstdc++.so*" -a ! -name 'libstdc++.so.*-*.py' -o -name "libgfortran.so*" \) -printf '%P ')
-	do
-		if [ -f ${TOOLCHAIN_PATH}/${HARCH}/lib64/${file} ]
+	if [ -d ${TOOLCHAIN_PATH}/${HARCH}/lib64 ]
 		then
-			local LIB=lib64
+			local SYSLIB=lib64
 		else
-			local LIB=lib
+			local SYSLIB=lib
 		fi
-		echo -n "Copying -n ${file} into ${INSTALL_PATH}... " >> ${LOG_PATH}/gcclibs.log 2>&1
-		cp -Pf ${TOOLCHAIN_PATH}/${HARCH}/${LIB}/${file} ${INSTALL_PATH}/${file} >> ${LOG_PATH}/gcclibs.log 2>&1
-		echo -n "linking into ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}..." >> ${LOG_PATH}/gcclibs.log 2>&1
-		ln -sf ../gcc${BUILD_LIBSUFFIX}/${GCC_MAJVER}/${file} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/${file} >> ${LOG_PATH}/gcclibs.log 2>&1
-		echo "done." >> ${LOG_PATH}/gcclibs.log 2>&1
+	for file in $( find ${TOOLCHAIN_PATH}/${HARCH}/${SYSLIB} -maxdepth 1 \( -name '*.so*' -a ! -name 'libstdc++.so.*-*.py' -o -name '*.a' \) -printf '%P ')
+	do
+		echo -n "Copying ${file} into ${BUILD_LIBDIR}/gcc/${HARCH}/${GCC_MAJVER}... " >> ${LOG_PATH}/gcclibs.log 2>&1
+		cp -Pf ${TOOLCHAIN_PATH}/${HARCH}/${SYSLIB}/${file} ${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${GCC_MAJVER}/${file} >> ${LOG_PATH}/gcclibs.log 2>&1
+		if [[ ${file} =~ ^(libgcc_s.so|libstdc++.so|libgfortran.so).* ]]
+		then
+			echo -n "linking into ${BUILD_LIBDIR}${BUILD_LIBSUFFIX}..." >> ${LOG_PATH}/gcclibs.log 2>&1
+			ln -sf ../gcc/${HARCH}/${GCC_MAJVER}/${file} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/${file} >> ${LOG_PATH}/gcclibs.log 2>&1
+		fi
+		echo -e "done" >> ${LOG_PATH}/gcclibs.log
 	done
-	for file in $( find ${TOOLCHAIN_PATH}/${HARCH}/{lib,lib64} -maxdepth 1 \( -name 'lib*san.so*' -o -name 'crt*.o' -o -name 'libgcc*.a' \) -printf '%P ')
+	for file in $( find ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_VER} -maxdepth 1 \( -name "crt*.o" -o -name "*.a" \) -printf '%P ')
 	do
-		if [ -f ${TOOLCHAIN_PATH}/${HARCH}/lib64/${file} ]
-		then
-			local LIB=lib64
-		else
-			local LIB=lib
-		fi
-		echo -n "Copying -n ${file} into ${INSTALL_PATH}... " >> ${LOG_PATH}/gcclibs.log 2>&1
-		cp -Pf ${TOOLCHAIN_PATH}/${HARCH}/${LIB}/${file} ${INSTALL_PATH}/${file} >> ${LOG_PATH}/gcclibs.log 2>&1
-		echo -e "done" >> ${LOG_PATH}/gcclibs.log 2>&1
+		echo -n "Copying ${file} into ${BUILD_LIBDIR}/gcc/${HARCH}/${GCC_MAJVER}... " >> ${LOG_PATH}/gcclibs.log 2>&1
+		cp -Pf ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_VER}/${file} ${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${GCC_MAJVER}/${file} >> ${LOG_PATH}/gcclibs.log 2>&1
+		echo -e "done" >> ${LOG_PATH}/gcclibs.log
 	done
 	echo >> ${LOG_PATH}/gcclibs.log 2>&1
 	echo "done."
-	echo
 	set +e
 }
 
