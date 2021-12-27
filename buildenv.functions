@@ -149,7 +149,7 @@ function bootstrap_sysroot () {
 	echo -n "${SPACES}"
 	if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1
 	then
-		GCC_LTOENABLE=0 setup_gcc stage1
+		GCC_LTOENABLE=0 setup_crossgcc stage1
 	else
 		echo "GCC stage1 (gcc) already installed."
 	fi
@@ -169,7 +169,7 @@ function bootstrap_sysroot () {
 	echo -n "${SPACES}"
 	if [ ! -f ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_VER}/libgcc.a ]
 	then
-		GCC_LTOENABLE=0 setup_gcc stage2
+		GCC_LTOENABLE=0 setup_crossgcc stage2
 		install_gcclibs
 	else
 		echo "GCC stage2 (libgcc) already installed."
@@ -201,7 +201,7 @@ function bootstrap_sysroot () {
 	fi
 	# Build gcc final
 	echo -n "${SPACES}"
-	setup_gcc stage3
+	setup_crossgcc stage3
 
 	local GCC_MAJVER=$(echo ${GCC_VER} | cut -d'.' -f1,1 )
 	if [ ! -d ${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${GCC_MAJVER} ]
@@ -243,59 +243,59 @@ function check_llvm_c () {
 	fi
 }
 
-function setup_gcc () {
+function download_gcc () {
+	trap 'STATUS=${?}; \
+		set +x; \
+		trap ERR; \
+		return ${STATUS};' ERR
 
-	function download_gcc () {
-		trap 'STATUS=${?}; \
-			set +x; \
-			trap ERR; \
-			return ${STATUS};' ERR
+	set -x
+	local GMPURL=https://gmplib.org/download/gmp/gmp-${GMP_VER}.tar.xz
+	local MPFRURL=https://www.mpfr.org/mpfr-${MPFR_VER}/mpfr-${MPFR_VER}.tar.xz
+	local MPCURL=https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VER}.tar.gz
+	#local ISLURL=http://isl.gforge.inria.fr/isl-${ISL_VER}.tar.xz
+	local ISLURL=https://mirror.sobukus.de/files/src/isl/isl-${ISL_VER}.tar.xz
+	local BINUTILSURL=https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz
+	#local GCCURL=https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.xz
+	local GCCURL=https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz
 
-		set -x
-		local GMPURL=https://gmplib.org/download/gmp/gmp-${GMP_VER}.tar.xz
-		local MPFRURL=https://www.mpfr.org/mpfr-${MPFR_VER}/mpfr-${MPFR_VER}.tar.xz
-		local MPCURL=https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VER}.tar.gz
-		#local ISLURL=http://isl.gforge.inria.fr/isl-${ISL_VER}.tar.xz
-		local ISLURL=https://mirror.sobukus.de/files/src/isl/isl-${ISL_VER}.tar.xz
-		local BINUTILSURL=https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz
-		#local GCCURL=https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.xz
-		local GCCURL=https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz
+	download_uncompress ${BINUTILSURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}
+	download_uncompress ${GCCURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
+	download_uncompress ${GMPURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/gmp
+	download_uncompress ${MPFRURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpfr
+	download_uncompress ${MPCURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpc
+	download_uncompress ${ISLURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/isl
+	cd ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
+	find ../binutils-${BINUTILS_VER} -maxdepth 1 -type d -exec ln -fs {} . \;
+	if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 9 && test_version ${BINUTILS_VER} -ge 2.33
+	then
+		echo "GCC version older than 10 and BINUTILS 2.33 or earlier... "
+		cp -f ../binutils-${BINUTILS_VER}/configure.ac .
+		cp -f ../binutils-${BINUTILS_VER}/Makefile.* .
+	fi
+	if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 9 && test_version ${BINUTILS_VER} -ge 2.34
+	then
+		echo "GCC version older than 10 and BINUTILS 2.34 or earlier... "
+		ln -fs ../binutils-${BINUTILS_VER}/config/debuginfod.m4 config/debuginfod.m4
+	fi
+	if test_version ${GCC_VER} -eq 11.2.0 && test_version ${BINUTILS_VER} -ge 2.37
+	then
+		echo "GCC version is 11.2.0 and BINUTILS 2.37 or earlier... "
+		mv libiberty libiberty.gcc
+		ln -fs ../binutils-${BINUTILS_VER}/libiberty .
+	fi
+	if [ ../binutils-${BINUTILS_VER}/libiberty/cp-demangle.c -nt libiberty/cp-demangle.c ]
+	then
+		echo "binutils-${BINUTILS_VER}/libiberty newer than gcc-${GCC_VER}/libiberty... "
+		mv libiberty libiberty.gcc
+		ln -fs ../binutils-${BINUTILS_VER}/libiberty .
+	fi
+	autoreconf${AUTOCONF_VER} -fiv
+	set +x
+	trap ERR
+}
 
-		download_uncompress ${BINUTILSURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}
-		download_uncompress ${GCCURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
-		download_uncompress ${GMPURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/gmp
-		download_uncompress ${MPFRURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpfr
-		download_uncompress ${MPCURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpc
-		download_uncompress ${ISLURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/isl
-		cd ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
-		find ../binutils-${BINUTILS_VER} -maxdepth 1 -type d -exec ln -fs {} . \;
-		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 9 && test_version ${BINUTILS_VER} -ge 2.33
-		then
-			echo "GCC version older than 10 and BINUTILS 2.33 or earlier... "
-			cp -f ../binutils-${BINUTILS_VER}/configure.ac .
-			cp -f ../binutils-${BINUTILS_VER}/Makefile.* .
-		fi
-		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 9 && test_version ${BINUTILS_VER} -ge 2.34
-		then
-			echo "GCC version older than 10 and BINUTILS 2.34 or earlier... "
-			ln -fs ../binutils-${BINUTILS_VER}/config/debuginfod.m4 config/debuginfod.m4
-		fi
-		if test_version ${GCC_VER} -eq 11.2.0 && test_version ${BINUTILS_VER} -ge 2.37
-		then
-			echo "GCC version is 11.2.0 and BINUTILS 2.37 or earlier... "
-			mv libiberty libiberty.gcc
-			ln -fs ../binutils-${BINUTILS_VER}/libiberty .
-		fi
-		if [ ../binutils-${BINUTILS_VER}/libiberty/cp-demangle.c -nt libiberty/cp-demangle.c ]
-		then
-			echo "binutils-${BINUTILS_VER}/libiberty newer than gcc-${GCC_VER}/libiberty... "
-			mv libiberty libiberty.gcc
-			ln -fs ../binutils-${BINUTILS_VER}/libiberty .
-		fi
-		autoreconf${AUTOCONF_VER} -fiv
-		set +x
-		trap ERR
-	}
+function setup_crossgcc () {
 
 	function build_gcc () {
 		trap 'STATUS=${?}; \
@@ -515,7 +515,7 @@ function setup_gcc () {
 			build_gcc ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 		fi
 		echo "done."
-		if [[ ! "${GCC_STAGE}" =~ ^stage[123] ]]
+		if [[ ! "${GCC_STAGE}" =~ ^stage[12] ]]
 		then
 			echo "Removing sources."
 			rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}
@@ -547,6 +547,69 @@ function setup_gcc () {
 	LD_GCCLIBS=$( echo ${GCCSEARCHLIBS} | sed 's/ /:/g' ) >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 	echo "GCCSEARCHLIBS: ${GCCSEARCHLIBS}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
 	echo "LD_GCCLIBS: ${LD_GCCLIBS}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+	trap ERR
+}
+
+function setup_targetgcc () {
+
+	function build_targetgcc {
+		trap 'STATUS=${?}; \
+			set +x; \
+			trap ERR; \
+			return ${STATUS}' ERR
+
+		set -x
+
+		set +x
+		trap ERR
+	}
+
+	trap 'STATUS=${?}; \
+		set +x; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log ]; \
+		then \
+			echo "Log ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log:"; \
+			echo; \
+			tail -n24 ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log; \
+		fi; \
+		trap ERR; \
+		exit ${STATUS}' ERR
+
+	echo -n "Setting up target gcc"
+
+	local GCC_LTOENABLE=${GCC_LTOENABLE:-0}
+	export PATH=${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin:${PATH}
+	local CURRENT_AUTOCONF_VER=$(autoconf -V | head -n1 | awk '{print $NF}')
+
+	# Determine autoconf version to use and set the right autoreconf suffix command
+	if $(test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -lt 9)
+	then
+		AUTOCONF_VER=2.64
+	fi
+
+	if $(test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -ge 9)
+	then
+		AUTOCONF_VER=2.69
+	fi
+
+	if [ ${CURRENT_AUTOCONF_VER} = ${AUTOCONF_VER} ]
+	then
+		unset AUTOCONF_VER
+	fi
+
+	echo -n "-${GCC_VER}... "
+
+	if [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER} ] || [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
+	then
+		echo -n "downloading... "
+		download_gcc >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+	fi
+	echo -n "building"
+	build_targetgcc ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+	echo "done."
+
 	trap ERR
 }
 
