@@ -8,7 +8,7 @@ TOOLCHAIN=llvm
 LTOENABLE=thin
 KERN_LTOENABLE=thin
 
-bootstrap_sysroot raspberrypi/rpi-kernel_5.15 development/glibc_2.34 development/libxcrypt_4.4.26
+bootstrap_sysroot raspberrypi/rpi-kernel_5.15 bootstrap/glibc_2.34 bootstrap/libxcrypt_4.4.26
 
 setup_llvm
 build raspberrypi/rpi-kernel_5.15

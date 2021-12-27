@@ -182,7 +182,7 @@ function bootstrap_sysroot () {
 	else
 		local WITH_LIBXCRYPT=0
 	fi
-	if [ ! -f ${BIN_PATH}/lib/libc.so.6 ] && [ ! -f ${BIN_PATH}/lib64/libc.so.6 ]
+	if [ ! -f ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libc.so ]
 	then
 		TOOLCHAIN=gnu NUMSPACES=1 OVERRIDE_TARGET_GCC_CHECK=1 FORCE_REBUILD=1 WITH_LIBXCRYPT=${WITH_LIBXCRYPT} build ${GLIBC_PACKAGE}
 	else

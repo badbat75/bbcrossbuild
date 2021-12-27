@@ -1,8 +1,13 @@
 # glibc_2.34
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-2.34.tar.xz"
+PATCHES="https://www.linuxfromscratch.org/patches/downloads/glibc/glibc-2.34-fhs-1.patch"
 BUILD_PROCESS=configmake
 AUTOCONF=0
 LTOENABLE=0
+CONF_CONFIGPARMS="
+slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
+rootsbindir=${BUILD_PREFIX}/sbin
+"
 CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}\${BUILD_INCLUDEDIR} --enable-kernel=4.4 --disable-werror \
 	--disable-sanity-checks --enable-hacker-mode --enable-stackguard-randomization \
 	--enable-stack-protector=strong --enable-obsolete-rpc --enable-obsolete-nsl --enable-pt_chown"

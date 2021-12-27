@@ -409,6 +409,7 @@ function build () (
 		fi
 		mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 		cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
+		echo -e "${CONF_CONFIGPARMS}" > configparms
 		if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 		then
 			CONF_FLAGS="--prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --libexecdir=${BUILD_LIBDIR} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} \
@@ -1081,6 +1082,7 @@ function build () (
 		CONF_CMD \
 		CONF_FLAGS \
 		CONF_PATH \
+		CONF_CONFIGPARMS \
 		INST_CMD \
 		MAKEDIR \
 		AUTOCONF \
