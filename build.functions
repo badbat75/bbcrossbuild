@@ -1071,6 +1071,7 @@ function build () (
 			echo; \
 			tail -n24 ${LOG_PATH}/${PKG_NAME}.log; \
 		fi; \
+		set +x; \
 		trap - ERR; \
 		return ${STATUS}' ERR
 
@@ -1115,24 +1116,27 @@ function build () (
 		CARGO_BINLIST \
 		CARGO_LIBLIST
 
+	OPTS="--force --no_gcc_check --no_save_status" OPTS_WITH_VALUE="" param2value "${@}"
+	[ ${_param_v:-0} -eq 1 ] && set -x || true
+
 	if [ -z "${NUMSPACES}" ]
 	then
 		local NUMSPACES=0
 	fi
 	
-	if [ ! -f ${PKG_PATH}/${1}.pkg ]
+	if [ ! -f ${PKG_PATH}/${_param_1}.pkg ]
 	then
-		echo "Package ${1} does not exists."
+		echo "Package ${_param_1} does not exists."
 		echo
 		return 1
 	fi
 	
-	local PKG_NAME=$(basename ${1})\${PKG_SUFFIX}
+	local PKG_NAME=$(basename ${_param_1})\${PKG_SUFFIX}
 	local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_NAME}}
 	local PKG_BLDPATH=${BLD_PATH}/${PKG_NAME}
 	local PKG_PKGPATH=${PACKAGES_PATH}/${PKG_NAME}
 
-	source ${PKG_PATH}/${1}.pkg
+	source ${PKG_PATH}/${_param_1}.pkg
 
 	if [ ${TOOLCHAIN} == llvm ]
 	then
@@ -1171,16 +1175,16 @@ function build () (
 		local NUMSPACES=$((NUMSPACES+1))
 		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
 		echo -n "${SPACES}Requires "
-		#echo "Called from ${1}"
+		#echo "Called from ${_param_1}"
 		build ${deps}
 		local NUMSPACES=$((NUMSPACES-1))
 		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
 	done
 
 
-	if [ -f ${STATUS_PATH}/${PKG_NAME} ] && [ ${FORCE_REBUILD:-0} -eq 0 ]
+	if [ -f ${STATUS_PATH}/${PKG_NAME} ] && [ ${_param_force:-0} -eq 0 ]
 	then
-		if [ "$(md5sum ${PKG_PATH}/${1}.pkg)" == "$(cat ${STATUS_PATH}/${PKG_NAME})" ]
+		if [ "$(md5sum ${PKG_PATH}/${_param_1}.pkg)" == "$(cat ${STATUS_PATH}/${PKG_NAME})" ]
 		then
 			echo "${SPACES}Package ${PKG_NAME} already built."
 			echo
@@ -1190,7 +1194,7 @@ function build () (
 		fi
 	fi
 
-	if [ ${OVERRIDE_TARGET_GCC_CHECK:-0} -eq 0 ] && [ "${BUILD_PROCESS}" != "none" ] && [ "${BUILD_PROCESS}" != "downloadonly" ]
+	if [ ${_param_no_gcc_check:-0} -eq 0 ] && [ "${BUILD_PROCESS}" != "none" ] && [ "${BUILD_PROCESS}" != "downloadonly" ]
 	then
 		check_${TOOLCHAIN}_c
 	fi
@@ -1336,7 +1340,7 @@ function build () (
 			(
 				set -ex
 				pwd
-				if [ ${PKG_SAVE_STATUS:-1} -eq 1 ]
+				if [ ${_param_no_save_status:-0} -eq 0 ]
 				then
 					tar cJfp ${PKG_PKGPATH}.tar.xz --owner=0 --group=0 -C ${PKG_PKGPATH} .
 				fi
@@ -1352,7 +1356,7 @@ function build () (
 			(
 				set -ex
 				pwd
-				if [ ${PKG_SAVE_STATUS:-1} -eq 1 ]
+				if [ ${_param_no_save_status:-0} -eq 0 ]
 				then
 					tar cJfp ${PKG_PKGPATH}.tar.xz --owner=0 --group=0 -C ${PKG_PKGPATH} .
 				fi
@@ -1366,10 +1370,11 @@ function build () (
 			fi
 		;;
 	esac
-	if [ ${PKG_SAVE_STATUS:-1} -eq 1 ]
+	if [ ${_param_no_save_status:-0} -eq 0 ]
 	then
-		md5sum ${PKG_PATH}/${1}.pkg > ${STATUS_PATH}/${PKG_NAME}
+		md5sum ${PKG_PATH}/${_param_1}.pkg > ${STATUS_PATH}/${PKG_NAME}
 	fi
+	set +x
 	echo "Done."
 	echo
 	trap - ERR

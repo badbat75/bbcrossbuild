@@ -27,7 +27,7 @@ fi
 prepare_sysroot
 
 #create_sysroot http://<url>/<rootfs.tar.gz>
-setup_crossgcc
+setup_gcc
 setup_llvm
 #setup_rust
 #setup_python 3.9.8

@@ -141,7 +141,7 @@ function bootstrap_sysroot () {
 	echo -n "${SPACES}"
 	if [ ! -f ${BIN_PATH}${BUILD_INCLUDEDIR}/linux/kernel.h ]
 	then
-		OVERRIDE_TARGET_GCC_CHECK=1 PKG_SAVE_STATUS=0 KERN_HDRS_ONLY=1 build ${KERN_PACKAGE}
+		KERN_HDRS_ONLY=1 build --no_gcc_check --no_save_status ${KERN_PACKAGE}
 	else
 		echo "${KERN_PACKAGE} headers already installed."
 	fi
@@ -149,7 +149,7 @@ function bootstrap_sysroot () {
 	echo -n "${SPACES}"
 	if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1
 	then
-		GCC_LTOENABLE=0 setup_crossgcc stage1
+		GCC_LTOENABLE=0 setup_gcc stage1
 	else
 		echo "GCC stage1 (gcc) already installed."
 	fi
@@ -157,7 +157,7 @@ function bootstrap_sysroot () {
 	echo -n "${SPACES}"
 	if [ ! -f ${BIN_PATH}${BUILD_INCLUDEDIR}/gnu/libc-version.h ]
 	then
-		TOOLCHAIN=gnu OVERRIDE_TARGET_GCC_CHECK=1 BOOTSTRAP=1 PKG_SAVE_STATUS=0 OVERRIDE_PKG_TWOSTEPSBUILD=0 OVERRIDE_INST_CMD="install-bootstrap-headers=yes install-headers" build ${GLIBC_PACKAGE}
+		TOOLCHAIN=gnu OVERRIDE_INST_CMD="install-bootstrap-headers=yes install-headers" build --no_gcc_check --no_save_status ${GLIBC_PACKAGE}
 		if [ ! -f ${BIN_PATH}${BUILD_INCLUDEDIR}/gnu/stubs.h ]
 		then
 			touch ${BIN_PATH}${BUILD_INCLUDEDIR}/gnu/stubs.h
@@ -169,7 +169,7 @@ function bootstrap_sysroot () {
 	echo -n "${SPACES}"
 	if [ ! -f ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_VER}/libgcc.a ]
 	then
-		GCC_LTOENABLE=0 setup_crossgcc stage2
+		GCC_LTOENABLE=0 setup_gcc stage2
 		install_gcclibs
 	else
 		echo "GCC stage2 (libgcc) already installed."
@@ -184,7 +184,7 @@ function bootstrap_sysroot () {
 	fi
 	if [ ! -f ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libc.so ]
 	then
-		TOOLCHAIN=gnu NUMSPACES=1 OVERRIDE_TARGET_GCC_CHECK=1 FORCE_REBUILD=1 WITH_LIBXCRYPT=${WITH_LIBXCRYPT} build ${GLIBC_PACKAGE}
+		TOOLCHAIN=gnu NUMSPACES=1 WITH_LIBXCRYPT=${WITH_LIBXCRYPT} build --no_gcc_check --no_save_status ${GLIBC_PACKAGE}
 	else
 		echo "${GLIBC_PACKAGE} libraries already installed."
 	fi
@@ -194,14 +194,14 @@ function bootstrap_sysroot () {
 		echo -n "${SPACES}"
 		if [ ! -f ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libcrypt.so ]
 		then
-			TOOLCHAIN=gnu NUMSPACES=1 OVERRIDE_TARGET_GCC_CHECK=1 FORCE_REBUILD=1 INSTALL_ONLYHEADERS=1 build ${LIBXCRYPT_PACKAGE}
+			TOOLCHAIN=gnu NUMSPACES=1 INSTALL_ONLYHEADERS=1 build --no_gcc_check --no_save_status ${LIBXCRYPT_PACKAGE}
 		else
 			echo "${LIBXCRYPT_PACKAGE} libraries already installed."
 		fi
 	fi
 	# Build gcc final
 	echo -n "${SPACES}"
-	setup_crossgcc stage3
+	setup_gcc stage3
 
 	local GCC_MAJVER=$(echo ${GCC_VER} | cut -d'.' -f1,1 )
 	if [ ! -d ${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${GCC_MAJVER} ]
@@ -295,7 +295,7 @@ function download_gcc () {
 	trap ERR
 }
 
-function setup_crossgcc () {
+function setup_gcc () {
 
 	function build_gcc () {
 		trap 'STATUS=${?}; \
