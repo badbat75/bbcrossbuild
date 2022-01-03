@@ -7,3 +7,8 @@ VAR_INSTALL_LIBDIR=CMAKE_INSTALL_LIBDIR
 VAR_INSTALL_INCDIR=CMAKE_INSTALL_INCLUDEDIR
 INST_CMD=install/strip
 PKG_DEPS="moode/libogg_1.3.5"
+
+if [ "$(echo ${LLVM_POLLY_FEATURES} | grep -o parallel)" == "parallel" ] || [ "$(echo ${LLVM_POLLY_FEATURES} | grep -o all)" == "all" ]
+then
+    PKG_LLVMPOLLYFEATURES="polly vectorizer"
+fi

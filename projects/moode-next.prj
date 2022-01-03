@@ -16,10 +16,7 @@ KERN_LTOENABLE=thin
 BUILD_LIBSHARED=1
 BUILD_LIBSTATIC=0
 
-## Enable Polly plugin for LLVM for RaspberryPi 2 and 3
-case x${PLATFORM_NAME} in
-	xrpi2|xrpi3|xrpi3_aarch64) LLVM_POLLY_FEATURES=all;;
-esac
+LLVM_POLLY_FEATURES=all
 
 ## Set default sysroot pkg-config library path
 PKG_CONFIG_SYSROOT_DIR=${BIN_PATH}

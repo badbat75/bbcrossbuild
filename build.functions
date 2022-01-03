@@ -79,6 +79,7 @@ function setbuildenv () {
 function settcenv () {
 	case ${TOOLCHAIN} in
 		llvm)
+			echo "LLVM_EXTRAPOLLYFLAGS: ${LLVM_EXTRAPOLLYFLAGS}"
 			echo "LLVM_EXTRALDFLAGS: ${LLVM_EXTRALDFLAGS}"
 			echo "LLVM_EXTRAPOLLYFLAGSLIBS: ${LLVM_EXTRAPOLLYFLAGSLIBS}"
 			echo
@@ -239,6 +240,7 @@ function crossapt () {
 function llvm_set_polly_env () {
 	unset LLVM_EXTRAPOLLYFLAGS
 	unset LLVM_EXTRAPOLLYFLAGSLIBS
+
 	case x${HM} in
 		xarm)
 			if [ "${HMFLOATABI}" == "hard" ]
@@ -251,29 +253,38 @@ function llvm_set_polly_env () {
 		*) local LLVM_ARCH=${HM}
 		;;
 	esac
+	local LIBCLANG_RTBUILTINS="${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
+	local OPTIONS="${@}"
 
-	for param in ${@}
-	do
-		case ${param} in
-		all)
-			LLVM_EXTRAPOLLYFLAGS="-mllvm -polly -mllvm -polly-vectorizer=stripmine -mllvm -polly-parallel"
-			LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a -lgomp"
-			;;
-		polly|enabled|1)
-			LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly"
-			;;
-		vectorizer)
-			LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-vectorizer=stripmine"
-			LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
-			;;
-		parallel)
-			LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-parallel"
-			LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a -lgomp"
-			;;
-		disabled|0)
-			;;
-		esac
-	done
+	if [ ! -z "${OPTIONS}" ] && [ -f ${LIBCLANG_RTBUILTINS} ]
+	then
+		LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly"
+		LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${LIBCLANG_RTBUILTINS}"
+
+		if [ "$( echo ${OPTIONS} | grep -o "all" )" == "all" ]
+		then
+			local OPTIONS="polly vectorizer parallel"
+		fi 
+		
+		for option in ${OPTIONS}
+		do
+			case ${option} in
+				polly)
+					;;
+				vectorizer)
+					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-vectorizer=stripmine"
+					;;
+				parallel)
+					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-parallel"
+					LLVM_EXTRAPOLLYFLAGSLIBS+=" -lgomp"
+					;;
+				*)
+					echo "Error: ${option} not recognized"
+					return 1
+					;;
+			esac
+		done
+	fi
 }
 
 function build () (
@@ -1138,13 +1149,15 @@ function build () (
 
 	source ${PKG_PATH}/${_param_1}.pkg
 
+	> ${LOG_PATH}/${PKG_NAME}.log
+	
 	if [ ${TOOLCHAIN} == llvm ]
 	then
 		if [ -z "${PKG_LLVMPOLLYFEATURES}" ]
 		then
 			llvm_set_polly_env ${LLVM_POLLY_FEATURES:-disabled}
 		else
-			echo "Override LLVM Polly features: ${PKG_LLVMPOLLYFEATURES}"
+			echo "Override LLVM Polly features: ${PKG_LLVMPOLLYFEATURES}" >> ${LOG_PATH}/${PKG_NAME}.log
 			llvm_set_polly_env ${PKG_LLVMPOLLYFEATURES}
 		fi
 	fi
@@ -1213,7 +1226,6 @@ function build () (
 	then
 		mkdir -p ${BIN_PATH}
 	fi
-	> ${LOG_PATH}/${PKG_NAME}.log
 	case x${BUILD_PROCESS} in
 	xpythonpip)
 		if [ ! -z "${PKG_PREBUILD}" ]

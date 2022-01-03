@@ -655,6 +655,20 @@ function setup_llvm () {
 		fi
 		cd ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}
 		local PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
+		### Can we build the RT builtins?
+		case x${HMARCH} in
+			xarmv*)
+					if [[ "${HMARCH}" < "armv7" ]]
+					then
+						echo -n "${HMARCH} is less than armv7, RT Builtins disabled... "
+						local COMPILER_RT_BUILD_BUILTINS=OFF
+					else
+						local COMPILER_RT_BUILD_BUILTINS=ON
+					fi
+				;;
+			*) local COMPILER_RT_BUILD_BUILTINS=ON
+				;;
+		esac
 		cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/compiler-rt -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} -G Ninja \
 			\
 			-DCMAKE_C_COMPILER=${LLVM_INSTALL_PATH}/bin/clang \
@@ -676,14 +690,14 @@ function setup_llvm () {
 			-DLLVM_CONFIG_PATH=${LLVM_INSTALL_PATH}/bin/llvm-config \
 			\
 			-DCOMPILER_RT_INCLUDE_TESTS:BOOL=OFF \
-			-DCOMPILER_RT_BUILD_BUILTINS:BOOL=ON \
+			-DCOMPILER_RT_BUILD_BUILTINS:BOOL=${COMPILER_RT_BUILD_BUILTINS} \
 			-DCOMPILER_RT_BUILD_LIBFUZZER:BOOL=ON \
 			-DCOMPILER_RT_BUILD_MEMPROF:BOOL=ON \
 			-DCOMPILER_RT_BUILD_PROFILE:BOOL=ON \
 			-DCOMPILER_RT_BUILD_SANITIZERS:BOOL=ON \
 			-DCOMPILER_RT_BUILD_XRAY:BOOL=ON \
 			-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON \
-			-DBUILD_SHARED_LIBS:BOOL:BOOL=OFF
+			-DBUILD_SHARED_LIBS:BOOL:BOOL=ON
 
 		ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} \
 			-C ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} install/strip
@@ -705,7 +719,7 @@ function setup_llvm () {
 		trap ERR; \
 		exit ${STATUS}' ERR
 	
-	echo -n "Setting up clang-${LLVM_VER}..."
+	echo -n "Setting up clang-${LLVM_VER}... "
 
 	if ! clang -v > /dev/null 2>&1 || ! lld -v > /dev/null 2>&1
 	then
