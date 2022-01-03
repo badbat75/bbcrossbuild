@@ -203,6 +203,67 @@ function create_environment_source () {
 	EOF
 }
 
+function llvm_set_polly_env () {
+	unset LLVM_EXTRAPOLLYFLAGS
+	unset LLVM_EXTRAPOLLYFLAGSLIBS
+
+	local OPTIONS="${@}"
+
+	#case x${HM} in
+	#	xarm)
+	#		if [ "${HMFLOATABI}" == "hard" ]
+	#		then
+	#			local LLVM_ARCH=armhf
+	#		else
+	#			local LLVM_ARCH=arm
+	#		fi
+	#		;;
+	#	*) local LLVM_ARCH=${HM}
+	#	;;
+	#esac
+	#local LIBCLANG_RTBUILTINS="${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
+	#if [ ! -z "${OPTIONS}" ] && [ -f ${LIBCLANG_RTBUILTINS} ]
+
+	case x${HMARCH} in
+		xarmv*)
+				if [[ "${HMARCH}" < "armv7" && "${HMARCH}" != "armv6m" ]]
+				then
+					unset OPTIONS
+				fi
+			;;
+	esac
+
+	if [ ! -z "${OPTIONS}" ]
+	then
+		LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly"
+		#LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${LIBCLANG_RTBUILTINS}"
+
+		if [ "$( echo ${OPTIONS} | grep -o "all" )" == "all" ]
+		then
+			local OPTIONS="polly vectorizer parallel"
+		fi 
+		
+		for option in ${OPTIONS}
+		do
+			case ${option} in
+				polly)
+					;;
+				vectorizer)
+					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-vectorizer=stripmine"
+					;;
+				parallel)
+					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-parallel"
+					LLVM_EXTRAPOLLYFLAGSLIBS+=" -lgomp"
+					;;
+				*)
+					echo "Error: ${option} not recognized"
+					return 1
+					;;
+			esac
+		done
+	fi
+}
+
 function crossapt () {
 	if [ ! -d ${CACHE_PATH}/apt/state ]
 	then
@@ -235,56 +296,6 @@ function crossapt () {
 		${@}
 	echo "Done"
 	echo
-}
-
-function llvm_set_polly_env () {
-	unset LLVM_EXTRAPOLLYFLAGS
-	unset LLVM_EXTRAPOLLYFLAGSLIBS
-
-	case x${HM} in
-		xarm)
-			if [ "${HMFLOATABI}" == "hard" ]
-			then
-				local LLVM_ARCH=armhf
-			else
-				local LLVM_ARCH=arm
-			fi
-			;;
-		*) local LLVM_ARCH=${HM}
-		;;
-	esac
-	local LIBCLANG_RTBUILTINS="${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
-	local OPTIONS="${@}"
-
-	if [ ! -z "${OPTIONS}" ] && [ -f ${LIBCLANG_RTBUILTINS} ]
-	then
-		LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly"
-		LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${LIBCLANG_RTBUILTINS}"
-
-		if [ "$( echo ${OPTIONS} | grep -o "all" )" == "all" ]
-		then
-			local OPTIONS="polly vectorizer parallel"
-		fi 
-		
-		for option in ${OPTIONS}
-		do
-			case ${option} in
-				polly)
-					;;
-				vectorizer)
-					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-vectorizer=stripmine"
-					;;
-				parallel)
-					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-parallel"
-					LLVM_EXTRAPOLLYFLAGSLIBS+=" -lgomp"
-					;;
-				*)
-					echo "Error: ${option} not recognized"
-					return 1
-					;;
-			esac
-		done
-	fi
 }
 
 function build () (
@@ -679,7 +690,17 @@ function build () (
 					local HOSTLD=ld.lld
 					;;
 			esac
-
+			if [ "${TOOLCHAIN}" == "llvm" ]
+			then
+				if [ "$( echo ${LLVM_EXTRAPOLLYFLAGS} | grep -o "\-mllvm -polly-parallel" )" == "-mllvm -polly-parallel" ]
+				then
+					local KERN_POLLYFLAGS="$(echo ${LLVM_EXTRAPOLLYFLAGS} | sed 's/-mllvm -polly-parallel//' )"
+				else
+					local KERN_POLLYFLAGS="${LLVM_EXTRAPOLLYFLAGS}"
+				fi
+			else
+				unset KERN_POLLYFLAGS
+			fi
 			KBUILD_BUILD_TIMESTAMP='' make V=${MAKEVERBOSE:-0} \
 			CC="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}" \
 			LD="$([ ${TOOLCHAIN_LD} == ${HARCH}-ld.gold ] && echo ${HARCH}-ld.bfd || echo ${TOOLCHAIN_LD})" \
@@ -690,9 +711,8 @@ function build () (
 			OBJDUMP="${TOOLCHAIN_OBJDUMP}" \
 			READELF="${TOOLCHAIN_READELF}" \
 			STRIP="${TOOLCHAIN_STRIP}" \
-			KCFLAGS="${PKG_CFLAGS}" \
-			KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-			LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
+			KCFLAGS="${KERN_POLLYFLAGS}${PKG_CFLAGS:+ ${PKG_CFLAGS}}" \
+			KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS}${PKG_LDFLAGS:+ ${PKG_LDFLAGS}}" \
 			ARCH=${KERN_ARCH} \
 			CROSS_COMPILE=${HARCH}- \
 			HOSTCC="${CCWRAPPER:+${CCWRAPPER} }${HOSTCC}" \
@@ -1149,15 +1169,15 @@ function build () (
 
 	source ${PKG_PATH}/${_param_1}.pkg
 
-	> ${LOG_PATH}/${PKG_NAME}.log
+	eval "> ${LOG_PATH}/${PKG_NAME}.log"
 	
 	if [ ${TOOLCHAIN} == llvm ]
 	then
 		if [ -z "${PKG_LLVMPOLLYFEATURES}" ]
 		then
-			llvm_set_polly_env ${LLVM_POLLY_FEATURES:-disabled}
+			llvm_set_polly_env ${LLVM_POLLY_FEATURES}
 		else
-			echo "Override LLVM Polly features: ${PKG_LLVMPOLLYFEATURES}" >> ${LOG_PATH}/${PKG_NAME}.log
+			eval "echo 'Override LLVM Polly features: ${PKG_LLVMPOLLYFEATURES}' >> ${LOG_PATH}/${PKG_NAME}.log"
 			llvm_set_polly_env ${PKG_LLVMPOLLYFEATURES}
 		fi
 	fi

@@ -658,9 +658,9 @@ function setup_llvm () {
 		### Can we build the RT builtins?
 		case x${HMARCH} in
 			xarmv*)
-					if [[ "${HMARCH}" < "armv7" ]]
+					if [[ "${HMARCH}" < "armv7" && "${HMARCH}" != "armv6m" ]]
 					then
-						echo -n "${HMARCH} is less than armv7, RT Builtins disabled... "
+						echo -n "${HMARCH} is not supported, RT Builtins disabled... "
 						local COMPILER_RT_BUILD_BUILTINS=OFF
 					else
 						local COMPILER_RT_BUILD_BUILTINS=ON
@@ -789,12 +789,12 @@ function install_gcclibs () {
 			local SYSLIB=lib64
 		else
 			local SYSLIB=lib
-		fi
+	fi
 	for file in $( find ${TOOLCHAIN_PATH}/${HARCH}/${SYSLIB} -maxdepth 1 \( -name '*.so*' -a ! -name 'libstdc++.so.*-*.py' -o -name '*.a' \) -printf '%P ')
 	do
 		echo -n "Copying ${file} into ${BUILD_LIBDIR}/gcc/${HARCH}/${GCC_MAJVER}... " >> ${LOG_PATH}/gcclibs.log 2>&1
 		cp -Pf ${TOOLCHAIN_PATH}/${HARCH}/${SYSLIB}/${file} ${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${GCC_MAJVER}/${file} >> ${LOG_PATH}/gcclibs.log 2>&1
-		if [[ ${file} =~ ^(libgcc_s.so|libstdc++.so|libgfortran.so).* ]]
+		if [[ ${file} =~ ^(libgcc_s.so|libstdc++.so|libgfortran.so|libgomp.so).* ]]
 		then
 			echo -n "linking into ${BUILD_LIBDIR}${BUILD_LIBSUFFIX}..." >> ${LOG_PATH}/gcclibs.log 2>&1
 			ln -sf ../gcc/${HARCH}/${GCC_MAJVER}/${file} ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/${file} >> ${LOG_PATH}/gcclibs.log 2>&1

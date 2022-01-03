@@ -29,8 +29,3 @@ case ${WITH_RT:-0} in
 		CONF_FLAGS+=" -d CONFIG_PREEMPT_NONE -d CONFIG_PREEMPT_VOLUNTARY -e CONFIG_PREEMPT"
 		;;
 esac
-#if [ "${TOOLCHAIN}" == "llvm" ]
-#then
-#   PKG_CFLAGS="-mllvm -polly -mllvm -polly-vectorizer=stripmine"
-#   PKG_LDFLAGS="--start-group /opt/llvm-13/lib64/clang/13.0.0/lib/linux/libclang_rt.builtins-armhf.a --end-group"
-#fi

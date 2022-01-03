@@ -58,7 +58,7 @@ fi
 [ ! "${LTOENABLE:-0}" == "0" ] && CONF_FLAGS+=" --enable-lto" || true
 INST_CMD=install
 LTOENABLE=0
-if [ "$(echo ${LLVM_POLLY_FEATURES} | grep -o parallel)" == "parallel" ] || [ "$(echo ${LLVM_POLLY_FEATURES} | grep -o all)" == "all" ]
-then
-    PKG_LLVMPOLLYFEATURES="polly vectorizer"
-fi
+#if [ "$(echo ${LLVM_POLLY_FEATURES} | grep -o parallel)" == "parallel" ] || [ "$(echo ${LLVM_POLLY_FEATURES} | grep -o all)" == "all" ]
+#then
+#    PKG_LLVMPOLLYFEATURES="polly vectorizer"
+#fi

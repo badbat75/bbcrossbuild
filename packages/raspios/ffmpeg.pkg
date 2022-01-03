@@ -12,7 +12,7 @@ PKG_PREBUILD="sed -i 's/-flto/-flto=$((${NPROCS}+1))/g' configure
     sed -i 's/=\$(CC)/=\"\$(CC)\"/' debian/rules
     sed -i 's/=\$(CXX)/=\"\$(CXX)\"/' debian/rules"
 LTOENABLE=0
-if [ "$(echo ${LLVM_POLLY_FEATURES} | grep -o parallel)" == "parallel" ]
-then
-    PKG_LLVMPOLLYFEATURES="polly vectorizer"
-fi
+#if [ "$(echo ${LLVM_POLLY_FEATURES} | grep -o parallel)" == "parallel" ]
+#then
+#    PKG_LLVMPOLLYFEATURES="polly vectorizer"
+#fi
