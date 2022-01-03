@@ -236,6 +236,7 @@ function llvm_set_polly_env () {
 	if [ ! -z "${OPTIONS}" ]
 	then
 		LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly"
+		LLVM_KERNELPOLLYFLAGS+=" -mllvm -polly"
 		#LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${LIBCLANG_RTBUILTINS}"
 
 		if [ "$( echo ${OPTIONS} | grep -o "all" )" == "all" ]
@@ -250,6 +251,7 @@ function llvm_set_polly_env () {
 					;;
 				vectorizer)
 					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-vectorizer=stripmine"
+					LLVM_KERNELPOLLYFLAGS+=" -mllvm -polly-vectorizer=stripmine"
 					;;
 				parallel)
 					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-parallel"
@@ -690,17 +692,6 @@ function build () (
 					local HOSTLD=ld.lld
 					;;
 			esac
-			if [ "${TOOLCHAIN}" == "llvm" ]
-			then
-				if [ "$( echo ${LLVM_EXTRAPOLLYFLAGS} | grep -o "\-mllvm -polly-parallel" )" == "-mllvm -polly-parallel" ]
-				then
-					local KERN_POLLYFLAGS="$(echo ${LLVM_EXTRAPOLLYFLAGS} | sed 's/-mllvm -polly-parallel//' )"
-				else
-					local KERN_POLLYFLAGS="${LLVM_EXTRAPOLLYFLAGS}"
-				fi
-			else
-				unset KERN_POLLYFLAGS
-			fi
 			KBUILD_BUILD_TIMESTAMP='' make V=${MAKEVERBOSE:-0} \
 			CC="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}" \
 			LD="$([ ${TOOLCHAIN_LD} == ${HARCH}-ld.gold ] && echo ${HARCH}-ld.bfd || echo ${TOOLCHAIN_LD})" \
@@ -711,7 +702,7 @@ function build () (
 			OBJDUMP="${TOOLCHAIN_OBJDUMP}" \
 			READELF="${TOOLCHAIN_READELF}" \
 			STRIP="${TOOLCHAIN_STRIP}" \
-			KCFLAGS="${KERN_POLLYFLAGS}${PKG_CFLAGS:+ ${PKG_CFLAGS}}" \
+			KCFLAGS="${LLVM_KERNELPOLLYFLAGS}${PKG_CFLAGS:+ ${PKG_CFLAGS}}" \
 			KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS}${PKG_LDFLAGS:+ ${PKG_LDFLAGS}}" \
 			ARCH=${KERN_ARCH} \
 			CROSS_COMPILE=${HARCH}- \
