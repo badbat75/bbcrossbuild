@@ -79,10 +79,6 @@ function setbuildenv () {
 function settcenv () {
 	case ${TOOLCHAIN} in
 		llvm)
-			echo "LLVM_EXTRAPOLLYFLAGS: ${LLVM_EXTRAPOLLYFLAGS}"
-			echo "LLVM_EXTRALDFLAGS: ${LLVM_EXTRALDFLAGS}"
-			echo "LLVM_EXTRAPOLLYFLAGSLIBS: ${LLVM_EXTRAPOLLYFLAGSLIBS}"
-			echo
 			TOOLCHAIN_CC=clang
 			TOOLCHAIN_CXX=clang++
 			TOOLCHAIN_CPP="clang -E"
@@ -109,7 +105,7 @@ function settcenv () {
 			case ${LTOENABLE:-0} in
 				1|fat)
 					OPTCOMP_FLAGS+=" -flto=full"
-					OPTLINK_FLAGS+=" -Wl,--thinlto-jobs=${NPROCS}"
+					OPTLINK_FLAGS+=""
 					;;
 				2|thin)
 					OPTCOMP_FLAGS+=" -flto=thin"
@@ -255,7 +251,9 @@ function llvm_set_polly_env () {
 					;;
 				parallel)
 					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-parallel"
-					LLVM_EXTRAPOLLYFLAGSLIBS+=" -lgomp"
+					#LLVM_KERNELPOLLYFLAGS+=" -mllvm -polly-parallel"
+					#LLVM_EXTRAPOLLYFLAGSLIBS+=" -lgomp"
+					#LLVM_KERNELPOLLYFLAGSLIBS="-Bstatic -lgomp -lpthread -Bdynamic"
 					;;
 				*)
 					echo "Error: ${option} not recognized"
