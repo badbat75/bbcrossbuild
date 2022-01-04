@@ -33,15 +33,14 @@ PKI_SUBJECT="/C=IT/ST=Bologna/L=Bologna/O=BadBat75 LTD/CN=badbat75/emailAddress=
 # TOOLCHAIN=gnu
 
 ### Extra flags for GNU or LLVM compilers
-# LLVM_EXTRACLANGFLAGS=""
+# LLVM_EXTRACLANGFLAGS=
 # LLVM_EXTRALDFLAGS=
 ## Enable LLVM Polly Features:
-## disabled|0:       Disable polly (default)
-## enabled|1|polly:  Enable polly
-## vectoralizer:     Enable polly vectoralization
+## polly:            Enable polly
+## vectorizer:     Enable polly vectoralization
 ## parallel:         Enable polly parallel
 ## all:              Enable all features
-# LLVM_POLLY_FEATURES=disabled
+# LLVM_POLLY_FEATURES=
 # GNU_EXTRACOMPFLAGS=
 # GNU_EXTRALDFLAGS=
 
