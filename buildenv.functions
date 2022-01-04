@@ -725,6 +725,7 @@ function setup_llvm () {
 		sed -i "s/-flto\"/-flto=auto\"/g" ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/HandleLLVMOptions.cmake
 
 		cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER} -G Ninja \
+			-W no-dev \
 			-DLLVM_PARALLEL_COMPILE_JOBS=${NPROCS} \
 			-DLLVM_PARALLEL_LINK_JOBS=1 \
 			\
@@ -744,10 +745,11 @@ function setup_llvm () {
 			\
 			-DCMAKE_INSTALL_PREFIX=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER} \
 			-DCMAKE_BUILD_TYPE=Release \
-			-DLLVM_TARGETS_TO_BUILD="X86;AArch64;ARM" \
-			-DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lldb;lld;polly;compiler-rt" \
+			-DLLVM_TARGETS_TO_BUILD="all" \
+			-DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lldb;lld;polly" \
+			-DLLVM_ENABLE_RUNTIMES="compiler-rt" \
 			-DLLVM_BINUTILS_INCDIR=/usr/include \
-			-DLLVM_LIBDIR_SUFFIX= \
+			-DLLVM_LIBDIR_SUFFIX=64 \
 			\
 			-DBUILD_SHARED_LIBS:BOOL=OFF \
 			-DLLVM_ENABLE_LTO:BOOL=OFF \
@@ -760,9 +762,10 @@ function setup_llvm () {
 			-DLLVM_ENABLE_BINDINGS:BOOL=OFF \
 			-DLLVM_USE_PERF:BOOL=ON \
 			-DLLVM_POLLY_LINK_INTO_TOOLS:BOOL=ON \
-			-DLLVM_LIT_EXTRA_ARGS=-v \
+			-DLLVM_LIT_ARGS=-v \
 			-DLLVM_INCLUDE_EXAMPLES:BOOL=ON \
 			-DLLVM_INCLUDE_UTILS:BOOL=ON \
+			-DLLVM_INCLUDE_TESTS:BOOL=OFF \
 			-DLLVM_BUILD_EXTERNAL_COMPILER_RT:BOOL=OFF \
 			-DLLVM_BUILD_EXAMPLES:BOOL=OFF \
 			-DLLVM_BUILD_TESTS:BOOL=OFF \
@@ -775,6 +778,9 @@ function setup_llvm () {
 			-DENABLE_LINKER_BUILD_ID:BOOL=ON \
 			-DCLANG_DEFAULT_RTLIB=libgcc \
 			-DCLANG_DEFAULT_UNWINDLIB=libgcc \
+			\
+			-DCOMPILER_RT_INCLUDE_TESTS:BOOL=OFF \
+			-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON
 
 		ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} \
 			-C ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER} install/strip
@@ -801,18 +807,19 @@ function setup_llvm () {
 	if ( ! clang -v > /dev/null 2>&1 || ! ld.lld -v > /dev/null 2>&1 ) && ( ! ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/ld.lld -v > /dev/null 2>&1 )
 	then
 		> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
-		if [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER} ]
+		if [ -d ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER} ]
 		then
-			echo -n "downloading... "
-			download_llvm >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
+			rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}
 		fi
+		echo -n "downloading... "
+		download_llvm >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
 		echo -n "building native... "
 		build_llvm >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
 	fi
-	if [ -d ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin ] && [ -d ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib ]
+	if [ -d ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin ] && [ -d ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib64 ]
 	then
 		echo -n "setting up search paths... "
-		export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib}:${LD_LIBRARY_PATH}"
+		export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:+${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib64}:${LD_LIBRARY_PATH}"
 		export PATH="${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin:${PATH}"
 	fi
 	case x${HM} in
