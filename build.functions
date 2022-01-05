@@ -684,10 +684,18 @@ function build () (
 					local HOSTLD=ld.bfd
 					;;
 				llvm)
-					local HOSTCC=clang
-					local HOSTCXX=clang++
-					local HOSTAR=llvm-ar
-					local HOSTLD=ld.lld
+					if clang -v 2>&1 > /dev/null && ld.lld -v 2>&1
+					then
+						local HOSTCC=clang
+						local HOSTCXX=clang++
+						local HOSTAR=llvm-ar
+						local HOSTLD=ld.lld
+					else
+						local HOSTCC=gcc
+						local HOSTCXX=g++
+						local HOSTAR=gcc-ar
+						local HOSTLD=ld.bfd
+					fi
 					;;
 			esac
 			KBUILD_BUILD_TIMESTAMP='' make V=${MAKEVERBOSE:-0} \

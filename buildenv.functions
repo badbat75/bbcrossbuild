@@ -157,7 +157,7 @@ function bootstrap_sysroot () {
 	echo -n "${SPACES}"
 	if [ ! -f ${BIN_PATH}${BUILD_INCLUDEDIR}/gnu/libc-version.h ]
 	then
-		TOOLCHAIN=gnu OVERRIDE_INST_CMD="install-bootstrap-headers=yes install-headers" build --no_gcc_check --no_save_status ${GLIBC_PACKAGE}
+		TOOLCHAIN=gnu BOOTSTRAP=1 build --no_gcc_check --no_save_status ${GLIBC_PACKAGE}
 		if [ ! -f ${BIN_PATH}${BUILD_INCLUDEDIR}/gnu/stubs.h ]
 		then
 			touch ${BIN_PATH}${BUILD_INCLUDEDIR}/gnu/stubs.h
@@ -170,7 +170,6 @@ function bootstrap_sysroot () {
 	if [ ! -f ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_VER}/libgcc.a ]
 	then
 		GCC_LTOENABLE=0 setup_gcc stage2
-		install_gcclibs
 	else
 		echo "GCC stage2 (libgcc) already installed."
 	fi
@@ -200,6 +199,10 @@ function bootstrap_sysroot () {
 		fi
 	fi
 	# Build gcc final
+	echo -n "${SPACES}"
+	echo -n "Cleaning up ${TOOLCHAIN_PATH}... "
+	rm -rf ${TOOLCHAIN_PATH}
+	echo "done."
 	echo -n "${SPACES}"
 	setup_gcc stage3
 
@@ -320,24 +323,25 @@ function setup_gcc () {
 		case ${GCC_STAGE} in
 			stage1 | stage2 )
 				local GCC_LANGUAGES=c,lto
-				local GCC_COMMON_CONFIG="${SILENTCONFIG} --enable-languages=${GCC_LANGUAGES} --disable-shared --enable-linker-build-id --disable-nls --enable-gnu-unique-object --disable-plugin --enable-checking=release --disable-libmudflap --disable-libgomp --disable-libssp --enable-lto --disable-threads --enable-initfini-array --enable-multiarch \
-					--disable-option-checking --disable-libitm --disable-libmpx --without-headers --without-ppl"
-				local GCC_COMMON_CONFIG+=" --with-system-zlib"
+				local GCC_COMMON_CONFIG+=" --disable-shared -disable-nls --disable-plugin --disable-libmudflap --disable-libgomp --disable-libssp --disable-threads \
+					--without-headers --without-ppl"
 			;;
 			* )
 				local GCC_LANGUAGES=${GCC_LANGUAGES:-c,c++,fortran,lto}
-				local GCC_COMMON_CONFIG="${SILENTCONFIG} --with-build-config=\"${BOOTSTRAP_FLAGS}\" \
-					--enable-languages=${GCC_LANGUAGES} --enable-shared --enable-linker-build-id --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-gnu-unique-object --enable-plugin --enable-checking=release --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-libquadmath --enable-libquadmath-support --enable-lto --enable-threads=posix --enable-initfini-array --enable-gnu-indirect-function --enable-multiarch \
+				local GCC_COMMON_CONFIG+="--enable-shared --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-plugin --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-libquadmath --enable-libquadmath-support --enable-threads=posix --enable-gnu-indirect-function \
 					--enable-install-libiberty \
-					--with-default-libstdcxx-abi=new \
-					--disable-option-checking --disable-libitm --disable-libmpx"
-				local GCC_COMMON_CONFIG+=" --with-system-zlib"
+					--with-default-libstdcxx-abi=new"
 			;;
 		esac
+		local GCC_COMMON_CONFIG="${SILENTCONFIG} --with-build-config=\"${BOOTSTRAP_FLAGS}\" \
+			--enable-languages=${GCC_LANGUAGES} --enable-linker-build-id --enable-checking=release --enable-multiarch --enable-gnu-unique-object --enable-lto --enable-threads=posix --enable-initfini-array \
+			--with-system-zlib \
+			--disable-option-checking --disable-libitm --disable-libmpx \
+			${GCC_COMMON_CONFIG}"
 		local GCC_BUILD_CONFIG="--disable-multilib --disable-bootstrap"
 		local GCC_HOST_CONFIG="--with-multilib=default --with-arch-directory=${HM}${HMARCH:+ --with-arch=${HMARCH}}${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
 		# from binutils 2.34 enable-instal-libbfd
-		local BINUTILS_COMMON_CONFIG="--enable-gold --enable-install-libbfd --enable-64-bit-bfd --enable-threads"
+		local BINUTILS_COMMON_CONFIG="--enable-gold --enable-install-libbfd --enable-64-bit-bfd"
 		local BINUTILS_BUILD_CONFIG=""
 		local BINUTILS_HOST_CONFIG=""
 		local GCC_OPTCOMP_FLAGS="${GCC_OPTCOMP_FLAGS}${GCC_OPTLEVEL:+ -O${GCC_OPTLEVEL}}"
@@ -390,7 +394,7 @@ function setup_gcc () {
 				local GCC_SYSROOT_PATH=${BIN_PATH}
 			fi
 			local CONFIG_ARCH_PARAMS="--build=${BARCH} --host=${BARCH} --target=${HARCH} --with-sysroot=${GCC_SYSROOT_PATH}"
-			local TARGET_CFLAGS="-fPIC ${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS}${HMARCH:+ -march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
+			local TARGET_CFLAGS="${COMMON_CFLAGS} ${GCC_OPTCOMP_FLAGS}${HMARCH:+ -march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
 			local TARGET_CXXFLAGS="${TARGET_CFLAGS}"
 			local TARGET_LDFLAGS="${COMMON_LDFLAGS} ${GCC_OPTLINK_FLAGS}"
 		fi
@@ -407,7 +411,7 @@ function setup_gcc () {
 
 		echo "GCC_BUILD_PATH: ${GCC_BUILD_PATH}"
 		### Build GCC
-		if [ -d ${GCC_BUILD_PATH} ] && [[ ! "${GCC_STAGE}" =~ ^stage[24] ]]
+		if [ -d ${GCC_BUILD_PATH} ] && [[ ! "${GCC_STAGE}" =~ ^stage[2] ]]
 		then
 			echo "Removing build directory."
 			rm -rf ${GCC_BUILD_PATH}
@@ -444,7 +448,7 @@ function setup_gcc () {
 			;;
 		esac
 		cd ${START_PWD}
-		if [ -d ${GCC_BUILD_PATH} ] && [[ ! "${GCC_STAGE}" =~ ^stage[1234] ]]
+		if [ -d ${GCC_BUILD_PATH} ] && [[ ! "${GCC_STAGE}" =~ ^stage[1] ]]
 		then
 			echo "Removing build directory."
 			rm -rf ${GCC_BUILD_PATH}
@@ -517,7 +521,7 @@ function setup_gcc () {
 		echo "done."
 		if [[ ! "${GCC_STAGE}" =~ ^stage[12] ]]
 		then
-			echo "Removing sources."
+			echo "   Removing sources."
 			rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}
 			rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
 		fi
@@ -525,28 +529,31 @@ function setup_gcc () {
 		echo "already there."
 	fi
 
-	if [ ! -f ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz ]
+	if [[ ! "${GCC_STAGE}" =~ ^stage[12] ]]
 	then
-		echo -n "   Removing .la libraries... "
-		local LA_LIBS="$(find ${TOOLCHAIN_PATH} -name "*.la" -printf "%P\n")"
-		tar cvJf ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz -C ${TOOLCHAIN_PATH} ${LA_LIBS} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
-		(cd ${TOOLCHAIN_PATH}; rm -f ${LA_LIBS})
-		echo "Done."
-	fi
+		if [ ! -f ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz ]
+		then
+			echo -n "   Removing .la libraries... "
+			local LA_LIBS="$(find ${TOOLCHAIN_PATH} -name "*.la" -printf "%P\n")"
+			tar cvJf ${TOOLCHAIN_PATH}/gcc_la_libraries.tar.xz -C ${TOOLCHAIN_PATH} ${LA_LIBS} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+			(cd ${TOOLCHAIN_PATH}; rm -f ${LA_LIBS})
+			echo "Done."
+		fi
 
-	if [ -d ${GLOBAL_TOOLCHAIN_PATH}/lib ]
-	then
-		export LD_LIBRARY_PATH=${GLOBAL_TOOLCHAIN_PATH}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-	fi
-	if [ -d ${TOOLCHAIN_PATH}/lib ]
-	then
-		export LD_LIBRARY_PATH=${TOOLCHAIN_PATH}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-	fi
+		if [ -d ${GLOBAL_TOOLCHAIN_PATH}/lib ]
+		then
+			export LD_LIBRARY_PATH=${GLOBAL_TOOLCHAIN_PATH}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+		fi
+		if [ -d ${TOOLCHAIN_PATH}/lib ]
+		then
+			export LD_LIBRARY_PATH=${TOOLCHAIN_PATH}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+		fi
 
-	GCCSEARCHLIBS="$( ( for lib in $(${HARCH:+${HARCH}-}gcc -print-search-dirs | grep 'libraries:' | sed 's/^libraries: =//;s/\:/ /g' ); do realpath "${lib}" 2>/dev/null; done ) | grep -v "${BIN_PATH}" | grep -v "${DISTOS_PATH}" | sort | uniq | xargs )" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
-	LD_GCCLIBS=$( echo ${GCCSEARCHLIBS} | sed 's/ /:/g' ) >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
-	echo "GCCSEARCHLIBS: ${GCCSEARCHLIBS}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
-	echo "LD_GCCLIBS: ${LD_GCCLIBS}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+		GCCSEARCHLIBS="$( ( for lib in $(${HARCH:+${HARCH}-}gcc -print-search-dirs | grep 'libraries:' | sed 's/^libraries: =//;s/\:/ /g' ); do realpath "${lib}" 2>/dev/null; done ) | grep -v "${BIN_PATH}" | grep -v "${DISTOS_PATH}" | sort | uniq | xargs )" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+		LD_GCCLIBS=$( echo ${GCCSEARCHLIBS} | sed 's/ /:/g' ) >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+		echo "GCCSEARCHLIBS: ${GCCSEARCHLIBS}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+		echo "LD_GCCLIBS: ${LD_GCCLIBS}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
+	fi
 	trap ERR
 }
 

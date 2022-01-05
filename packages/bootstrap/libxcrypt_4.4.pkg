@@ -1,5 +1,6 @@
-# libxcrypt_4.4.26
-PKG_URL="https://github.com/besser82/libxcrypt/archive/v4.4.26.tar.gz"
+# libxcrypt_4.4
+PKG_SUFFIX=.27
+PKG_URL="https://github.com/besser82/libxcrypt/archive/v4.4${PKG_SUFFIX}.tar.gz"
 BUILD_PROCESS=configmake
 LTOENABLE=0
 CONF_FLAGS="--disable-failure-tokens --disable-valgrind \

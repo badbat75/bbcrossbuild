@@ -3,7 +3,7 @@ TOOLCHAIN=llvm
 
 ## Enable LTO both for kernel and applications
 LTOENABLE=thin
-KERN_LTOENABLE=thin
+KERN_LTOENABLE=0
 
 ## Enable shared libraries (default) but disable static ones
 BUILD_LIBSHARED=1
@@ -11,11 +11,13 @@ BUILD_LIBSTATIC=0
 
 LLVM_POLLY_FEATURES=all
 
-bootstrap_sysroot raspberrypi/rpi-kernel_5.15 bootstrap/glibc_2.34 bootstrap/libxcrypt_4.4.26
+GCC_LANGUAGES=c,c++,lto
+
+bootstrap_sysroot raspberrypi/rpi-kernel_5.10 bootstrap/glibc_2.34 bootstrap/libxcrypt_4.4
 
 setup_llvm
-build raspberrypi/rpi-kernel_5.15
+build raspberrypi/rpi-kernel_5.10
 
 #install_gcclibs
 #create_sfx_archive remove_devfiles
-zip_project remove_devfiles
+#zip_project remove_devfiles
