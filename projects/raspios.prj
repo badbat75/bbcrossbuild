@@ -13,6 +13,8 @@ BUILD_LIBSTATIC=0
 LTOENABLE=thin
 KERN_LTOENABLE=thin
 
+LLVM_POLLY_FEATURES="polly vectorizer"
+
 ## Set default sysroot pkg-config library path
 #PKG_CONFIG_SYSROOT_DIR=${BIN_PATH}
 
@@ -39,7 +41,6 @@ setup_llvm
 
 #inject_into_mount_tag distos gcclibs
 
-TOOLCHAIN=gnu build raspios/ffmpeg
-build raspios/chromium
+build raspberrypi/ffmpeg-rpi_4.4
 
 unmount_tag distos

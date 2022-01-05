@@ -201,23 +201,13 @@ function create_environment_source () {
 
 function llvm_set_polly_env () {
 	unset LLVM_EXTRAPOLLYFLAGS
+	unset LLVM_KERNELPOLLYFLAGS
 	unset LLVM_EXTRAPOLLYFLAGSLIBS
+	unset LLVM_KERNELPOLLYFLAGSLIBS
 
 	local OPTIONS="${@}"
 
-	#case x${HM} in
-	#	xarm)
-	#		if [ "${HMFLOATABI}" == "hard" ]
-	#		then
-	#			local LLVM_ARCH=armhf
-	#		else
-	#			local LLVM_ARCH=arm
-	#		fi
-	#		;;
-	#	*) local LLVM_ARCH=${HM}
-	#	;;
-	#esac
-	#local LIBCLANG_RTBUILTINS="${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
+	local LIBCLANG_RTBUILTINS="${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
 	#if [ ! -z "${OPTIONS}" ] && [ -f ${LIBCLANG_RTBUILTINS} ]
 
 	case x${HMARCH} in
@@ -229,15 +219,39 @@ function llvm_set_polly_env () {
 			;;
 	esac
 
+	case x${HM} in
+		xarm)
+			if [ "${HMFLOATABI}" == "hard" ]
+			then
+				local LLVM_ARCH=armhf
+			else
+				local LLVM_ARCH=arm
+			fi
+			;;
+		*) local LLVM_ARCH=${HM}
+			;;
+	esac
+
 	if [ ! -z "${OPTIONS}" ]
 	then
-		LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly"
-		LLVM_KERNELPOLLYFLAGS+=" -mllvm -polly"
-		#LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${LIBCLANG_RTBUILTINS}"
+		LLVM_EXTRAPOLLYFLAGS="-mllvm -polly"
+		#### Missing _mulodi4 symbol, skip polly build for kernel 
+		case ${HM} in
+			arm)
+				# Need to add static rtbuiltins libraries to arm link to avoid missing _mulodi4 symbol
+				# but this is not supported in kernel building so we can't set polly for kernel build
+				LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
+				LLVM_KERNELPOLLYFLAGS=
+				;;
+			*)
+				# Normal behaviour
+				LLVM_KERNELPOLLYFLAGS="-mllvm -polly"
+				;;
+		esac
 
 		if [ "$( echo ${OPTIONS} | grep -o "all" )" == "all" ]
 		then
-			local OPTIONS="polly vectorizer parallel"
+			local OPTIONS="polly vectorizer"
 		fi 
 		
 		for option in ${OPTIONS}
@@ -247,13 +261,14 @@ function llvm_set_polly_env () {
 					;;
 				vectorizer)
 					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-vectorizer=stripmine"
-					LLVM_KERNELPOLLYFLAGS+=" -mllvm -polly-vectorizer=stripmine"
+					if [ "${HM}" != "arm" ]
+					then
+						LLVM_KERNELPOLLYFLAGS+=" -mllvm -polly-vectorizer=stripmine"
+					fi
 					;;
 				parallel)
+					# polly-parallel not supported in kernel build because libgomp cannot be statically linked to kernel
 					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-parallel"
-					#LLVM_KERNELPOLLYFLAGS+=" -mllvm -polly-parallel"
-					#LLVM_EXTRAPOLLYFLAGSLIBS+=" -lgomp"
-					#LLVM_KERNELPOLLYFLAGSLIBS="-Bstatic -lgomp -lpthread -Bdynamic"
 					;;
 				*)
 					echo "Error: ${option} not recognized"
