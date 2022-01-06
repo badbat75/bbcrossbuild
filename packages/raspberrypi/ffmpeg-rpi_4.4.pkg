@@ -108,4 +108,4 @@ fi
 [ ${BUILD_LIBSTATIC} -eq 1 ] && CONF_FLAGS+=" --enable-static" || CONF_FLAGS+=" --disable-static"
 [ ! "${LTOENABLE:-0}" == "0" ] && CONF_FLAGS+=" --enable-lto" || true
 INST_CMD=install
-LTOENABLE=0
+PKG_OVERRIDELTO=0

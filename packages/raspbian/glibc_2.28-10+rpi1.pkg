@@ -2,7 +2,7 @@
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/g/glibc/glibc_2.28.orig.tar.xz"
 BUILD_PROCESS=configmake
 AUTOCONF=0
-LTOENABLE=0
+PKG_OVERRIDELTO=0
 #PKG_COPYSRC=1
 CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}\${BUILD_INCLUDEDIR} --disable-werror \
 	--disable-sanity-checks --enable-hacker-mode --without-selinux --enable-stackguard-randomization \

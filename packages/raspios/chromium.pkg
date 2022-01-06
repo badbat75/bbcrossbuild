@@ -1,6 +1,6 @@
 # chromium
 BUILD_PROCESS=builddebpkg
-LTOENABLE=0
+PKG_OVERRIDELTO=0
 TOOLCHAIN=llvm
 PLATFORM_CFLAGS="$(echo ${PLATFORM_CFLAGS} | sed 's/-mtls-dialect=gnu2//')"
 #PKG_CFLAGS="-mllvm -polly -Wno-deprecated-copy -Wno-deprecated-copy-with-user-provided-copy"

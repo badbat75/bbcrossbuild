@@ -102,7 +102,7 @@ function settcenv () {
 				TOOLCHAIN_EXTRA_C_CMD="--target=${HARCH}"
 			fi
 			TOOLCHAIN_LDFLAGS="${SYSROOT_FLAGS} -fuse-ld=$(echo ${TOOLCHAIN_LD} | cut -d. -f2) -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
-			case ${LTOENABLE:-0} in
+			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 				1|fat)
 					OPTCOMP_FLAGS+=" -flto=full"
 					OPTLINK_FLAGS+=""
@@ -139,7 +139,7 @@ function settcenv () {
 			fi
 			TOOLCHAIN_LDFLAGS="${SYSROOT_FLAGS} -fuse-ld=$(echo ${TOOLCHAIN_LD} | cut -d. -f2) ${GNU_EXTRALDFLAGS}"
 			[ ${TOOLCHAIN_LD} == ld.gold ] && TOOLCHAIN_LDFLAGS+=" -Wl,--threads -Wl,--thread-count,${NPROCS}" || true
-			case ${LTOENABLE:-0} in
+			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 				1|fat)
 					OPTCOMP_FLAGS+=" -flto=${NPROCS}"
 					OPTLINK_FLAGS+=" -fuse-linker-plugin"
@@ -652,7 +652,7 @@ function build () (
 		local CARGO_LIB=${CARGO_LIB:-${BUILD_LIBDIR}${BUILD_LIBSUFFIX}}
 		local CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
 		export CARGO_PROFILE_RELEASE_OPT_LEVEL=${OPTLEVEL}
-		case ${LTOENABLE:-0} in
+		case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 			1|fat) export CARGO_PROFILE_RELEASE_LTO=fat
 				;;
 			2|thin)	export CARGO_PROFILE_RELEASE_LTO=thin
@@ -1147,6 +1147,7 @@ function build () (
 		PKG_LLVMPOLLYFEATURES \
 		PKG_MAKETARGETS \
 		PKG_MAKEVARS \
+		PKG_OVERRIDELTO \
 		PKG_PREBUILD \
 		PKG_POSTBUILD \
 		PKG_TWOSTEPSBUILD \

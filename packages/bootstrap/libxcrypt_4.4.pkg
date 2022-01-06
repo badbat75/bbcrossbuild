@@ -2,7 +2,7 @@
 PKG_SUFFIX=.27
 PKG_URL="https://github.com/besser82/libxcrypt/archive/v4.4${PKG_SUFFIX}.tar.gz"
 BUILD_PROCESS=configmake
-LTOENABLE=0
+PKG_OVERRIDELTO=0
 CONF_FLAGS="--disable-failure-tokens --disable-valgrind \
 	--enable-hashes=all --enable-obsolete-api=glibc --enable-obsolete-api-enosys=no"
 INST_CMD=install-strip

@@ -2,7 +2,7 @@
 PKG_URL="https://www.kernel.org/pub/linux/utils/usb/usbutils/usbutils-013.tar.xz"
 PKG_DEPS="lfs/libusb_1.0.24"
 AUTOCONF=0
-#LTOENABLE=0
+#PKG_OVERRIDELTO=0
 PKG_COPYSRC=1
 BUILD_PROCESS=configmake
 CONF_CMD="autogen.sh"

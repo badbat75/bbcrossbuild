@@ -11,4 +11,4 @@ PKG_PREBUILD="sed -i 's/-flto/-flto=$((${NPROCS}+1))/g' configure
     endif' debian/rules
     sed -i 's/=\$(CC)/=\"\$(CC)\"/' debian/rules
     sed -i 's/=\$(CXX)/=\"\$(CXX)\"/' debian/rules"
-LTOENABLE=0
+PKG_OVERRIDELTO=0
