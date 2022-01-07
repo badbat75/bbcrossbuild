@@ -76,6 +76,86 @@ function setbuildenv () {
 	### Search of crtbeginS.o and crtendS.o under /usr/lib/gcc...
 }
 
+function setllvmpollyenv () {
+	unset LLVM_EXTRAPOLLYFLAGS
+	unset LLVM_KERNELPOLLYFLAGS
+	unset LLVM_EXTRAPOLLYFLAGSLIBS
+	unset LLVM_KERNELPOLLYFLAGSLIBS
+
+	local OPTIONS="${@}"
+
+	local LIBCLANG_RTBUILTINS="${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
+	#if [ ! -z "${OPTIONS}" ] && [ -f ${LIBCLANG_RTBUILTINS} ]
+
+	case x${HMARCH} in
+		xarmv*)
+				if [[ "${HMARCH}" < "armv7" && "${HMARCH}" != "armv6m" ]]
+				then
+					unset OPTIONS
+				fi
+			;;
+	esac
+
+	case x${HM} in
+		xarm)
+			if [ "${HMFLOATABI}" == "hard" ]
+			then
+				local LLVM_ARCH=armhf
+			else
+				local LLVM_ARCH=arm
+			fi
+			;;
+		*) local LLVM_ARCH=${HM}
+			;;
+	esac
+
+	if [ ! -z "${OPTIONS}" ]
+	then
+		LLVM_EXTRAPOLLYFLAGS="-mllvm -polly"
+		#### Missing _mulodi4 symbol, skip polly build for kernel 
+		case ${HM} in
+			arm)
+				# Need to add static rtbuiltins libraries to arm link to avoid missing _mulodi4 symbol
+				# but this is not supported in kernel building so we can't set polly for kernel build
+				LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
+				LLVM_KERNELPOLLYFLAGS=
+				;;
+			*)
+				# Normal behaviour
+				LLVM_KERNELPOLLYFLAGS="-mllvm -polly"
+				;;
+		esac
+
+		if [ "$( echo ${OPTIONS} | grep -o "all" )" == "all" ]
+		then
+			local OPTIONS="polly vectorizer parallel"
+		fi 
+		
+		for option in ${OPTIONS}
+		do
+			case ${option} in
+				polly)
+					;;
+				vectorizer)
+					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-vectorizer=stripmine"
+					if [ "${HM}" != "arm" ]
+					then
+						LLVM_KERNELPOLLYFLAGS+=" -mllvm -polly-vectorizer=stripmine"
+					fi
+					;;
+				parallel)
+					# polly-parallel not supported in kernel build because libgomp cannot be statically linked to kernel
+					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-parallel"
+					;;
+				*)
+					echo "Error: ${option} not recognized"
+					return 1
+					;;
+			esac
+		done
+	fi
+}
+
 function settcenv () {
 	case ${TOOLCHAIN} in
 		llvm)
@@ -197,86 +277,6 @@ function create_environment_source () {
 		export LD_LIBRARY_PATH+=:${LD_LIBRARY_PATH}
 		export PATH='${PATH}'
 	EOF
-}
-
-function llvm_set_polly_env () {
-	unset LLVM_EXTRAPOLLYFLAGS
-	unset LLVM_KERNELPOLLYFLAGS
-	unset LLVM_EXTRAPOLLYFLAGSLIBS
-	unset LLVM_KERNELPOLLYFLAGSLIBS
-
-	local OPTIONS="${@}"
-
-	local LIBCLANG_RTBUILTINS="${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
-	#if [ ! -z "${OPTIONS}" ] && [ -f ${LIBCLANG_RTBUILTINS} ]
-
-	case x${HMARCH} in
-		xarmv*)
-				if [[ "${HMARCH}" < "armv7" && "${HMARCH}" != "armv6m" ]]
-				then
-					unset OPTIONS
-				fi
-			;;
-	esac
-
-	case x${HM} in
-		xarm)
-			if [ "${HMFLOATABI}" == "hard" ]
-			then
-				local LLVM_ARCH=armhf
-			else
-				local LLVM_ARCH=arm
-			fi
-			;;
-		*) local LLVM_ARCH=${HM}
-			;;
-	esac
-
-	if [ ! -z "${OPTIONS}" ]
-	then
-		LLVM_EXTRAPOLLYFLAGS="-mllvm -polly"
-		#### Missing _mulodi4 symbol, skip polly build for kernel 
-		case ${HM} in
-			arm)
-				# Need to add static rtbuiltins libraries to arm link to avoid missing _mulodi4 symbol
-				# but this is not supported in kernel building so we can't set polly for kernel build
-				LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
-				LLVM_KERNELPOLLYFLAGS=
-				;;
-			*)
-				# Normal behaviour
-				LLVM_KERNELPOLLYFLAGS="-mllvm -polly"
-				;;
-		esac
-
-		if [ "$( echo ${OPTIONS} | grep -o "all" )" == "all" ]
-		then
-			local OPTIONS="polly vectorizer"
-		fi 
-		
-		for option in ${OPTIONS}
-		do
-			case ${option} in
-				polly)
-					;;
-				vectorizer)
-					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-vectorizer=stripmine"
-					if [ "${HM}" != "arm" ]
-					then
-						LLVM_KERNELPOLLYFLAGS+=" -mllvm -polly-vectorizer=stripmine"
-					fi
-					;;
-				parallel)
-					# polly-parallel not supported in kernel build because libgomp cannot be statically linked to kernel
-					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-parallel"
-					;;
-				*)
-					echo "Error: ${option} not recognized"
-					return 1
-					;;
-			esac
-		done
-	fi
 }
 
 function crossapt () {
@@ -1238,10 +1238,10 @@ function build () (
 	then
 		if [ -z "${PKG_LLVMPOLLYFEATURES}" ]
 		then
-			llvm_set_polly_env ${LLVM_POLLY_FEATURES}
+			setllvmpollyenv ${LLVM_POLLY_FEATURES}
 		else
 			eval "echo 'Override LLVM Polly features: ${PKG_LLVMPOLLYFEATURES}' >> ${LOG_PATH}/${PKG_NAME}.log"
-			llvm_set_polly_env ${PKG_LLVMPOLLYFEATURES}
+			setllvmpollyenv ${PKG_LLVMPOLLYFEATURES}
 		fi
 	fi
 

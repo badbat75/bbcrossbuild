@@ -801,11 +801,11 @@ function setup_llvm () {
 		set +x; \
 		echo "fail."; \
 		echo; \
-		if [ -f ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log ]; \
+		if [ -f ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log ]; \
 		then \
-			echo "Log ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log:"; \
+			echo "Log ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log:"; \
 			echo; \
-			tail -n24 ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log; \
+			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log; \
 		fi; \
 		trap ERR; \
 		exit ${STATUS}' ERR
@@ -813,15 +813,15 @@ function setup_llvm () {
 	echo -n "Setting up clang-${LLVM_VER}... "
 	if ( ! clang -v > /dev/null 2>&1 || ! ld.lld -v > /dev/null 2>&1 ) && ( ! ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/ld.lld -v > /dev/null 2>&1 )
 	then
-		> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
+		> ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 		if [ -d ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER} ]
 		then
 			rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}
 		fi
 		echo -n "downloading... "
-		download_llvm >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
+		download_llvm >> ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
 		echo -n "building native... "
-		build_llvm >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
+		build_llvm >> ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
 	fi
 	if [ -d ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin ] && [ -d ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib64 ]
 	then
@@ -847,10 +847,10 @@ function setup_llvm () {
 		if [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER} ]
 		then
 			echo -n "downloading... "
-			download_llvm >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
+			download_llvm >> ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
 		fi
 		echo -n "building builtins for ${HARCH}... "
-		build_llvm_builtins ${HARCH} >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
+		build_llvm_builtins ${HARCH} >> ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
 	fi
 	if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER} ]
 	then
@@ -1060,11 +1060,11 @@ function setup_python () {
 	trap 'STATUS=${?}; \
 		echo "fail."; \
 		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/python-${PYTHONBIN_VER}.log ];
+		if [ -f ${LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log ];
 		then \
-			echo "Log ${GLOBAL_LOG_PATH}/python-${PYTHONBIN_VER}.log:"; \
+			echo "Log ${LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log:"; \
 			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/python-${PYTHONBIN_VER}.log; \
+			tail -n24 ${LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log; \
 		fi;
 		trap ERR; \
 		return ${STATUS}' ERR
@@ -1101,9 +1101,9 @@ function setup_python () {
 	if [ ! -x ${BUILD_PYTHON} ] || [ ! -x ${BUILD_PYTHONPIP} ]
 	then
 		echo -n "downloading... "
-		download_pyton > ${GLOBAL_LOG_PATH}/python-${PYTHONBIN_VER}.log 2>&1
+		download_pyton > ${LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log 2>&1
 		echo -n "building... "
-		build_python >> ${GLOBAL_LOG_PATH}/python-${PYTHONBIN_VER}.log 2>&1
+		build_python >> ${LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log 2>&1
 		echo "done."
 		rm -rf ${TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}
 	else
