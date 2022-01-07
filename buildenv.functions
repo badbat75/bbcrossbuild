@@ -4,7 +4,7 @@ check_core_functions
 check_build_functions
 
 function prepare_sysroot () {
-	trap 'STATUS=${?}; \
+	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
 		if [ -f ${LOG_PATH}/sysroot.log ];
@@ -57,7 +57,7 @@ function prepare_sysroot () {
 }
 
 function create_sysroot () {
-	trap 'STATUS=${?}; \
+	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
 		if [ -f ${LOG_PATH}/sysroot.log ];
@@ -92,7 +92,7 @@ function create_sysroot () {
 }
 
 function bootstrap_sysroot () {
-	trap 'STATUS=${?}; \
+	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
 		if [ -f ${LOG_PATH}/sysroot.log ];
@@ -247,7 +247,7 @@ function check_llvm_c () {
 }
 
 function download_gcc () {
-	trap 'STATUS=${?}; \
+	trap 'local STATUS=${?}; \
 		set +x; \
 		trap ERR; \
 		return ${STATUS};' ERR
@@ -457,8 +457,7 @@ function setup_gcc () {
 		trap ERR;
 	}
 
-	trap 'STATUS=${?}; \
-		set +x; \
+	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
 		if [ -f ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log ]; \
@@ -467,8 +466,9 @@ function setup_gcc () {
 			echo; \
 			tail -n24 ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log; \
 		fi; \
-		trap ERR; \
-		exit ${STATUS}' ERR
+		set +x; \
+		trap - ERR; \
+		return ${STATUS}' ERR
 
 	local GCC_STAGE=${1}
 
@@ -571,8 +571,7 @@ function setup_targetgcc () {
 		trap ERR
 	}
 
-	trap 'STATUS=${?}; \
-		set +x; \
+	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
 		if [ -f ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log ]; \
@@ -581,8 +580,9 @@ function setup_targetgcc () {
 			echo; \
 			tail -n24 ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log; \
 		fi; \
-		trap ERR; \
-		exit ${STATUS}' ERR
+		set +x; \
+		trap - ERR; \
+		return ${STATUS}' ERR
 
 	echo -n "Setting up target gcc"
 
@@ -797,8 +797,7 @@ function setup_llvm () {
 	}
 
 
-	trap 'STATUS=${?}; \
-		set +x; \
+	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
 		if [ -f ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log ]; \
@@ -807,8 +806,9 @@ function setup_llvm () {
 			echo; \
 			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log; \
 		fi; \
-		trap ERR; \
-		exit ${STATUS}' ERR
+		set +x; \
+		trap - ERR; \
+		return ${STATUS}' ERR
 	
 	echo -n "Setting up clang-${LLVM_VER}... "
 	if ( ! clang -v > /dev/null 2>&1 || ! ld.lld -v > /dev/null 2>&1 ) && ( ! ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/ld.lld -v > /dev/null 2>&1 )
@@ -921,7 +921,7 @@ function install_gcclibs () {
 function setup_rust () {
 	check_${TOOLCHAIN}_c
 
-	trap 'STATUS=${?}; \
+	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
 		if [ -f ${GLOBAL_LOG_PATH}/rust.log ];
@@ -930,8 +930,9 @@ function setup_rust () {
 			echo; \
 			tail -n24 ${GLOBAL_LOG_PATH}/rust.log; \
 		fi;
-		trap ERR; \
-		exit ${STATUS}' ERR
+		set +x; \
+		trap - ERR; \
+		return ${STATUS}' ERR
 
 	echo -n "Setting up RUST... "
 	export CARGO_HOME=${GLOBAL_TOOLCHAIN_PATH}
@@ -1057,7 +1058,7 @@ function setup_python () {
 
 	check_${TOOLCHAIN}_c
 
-	trap 'STATUS=${?}; \
+	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
 		if [ -f ${LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log ];
@@ -1066,7 +1067,8 @@ function setup_python () {
 			echo; \
 			tail -n24 ${LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log; \
 		fi;
-		trap ERR; \
+		set +x; \
+		trap - ERR; \
 		return ${STATUS}' ERR
 
 	echo -n "Setting up Python"
