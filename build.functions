@@ -1182,19 +1182,6 @@ function build () (
 
 	source ${PKG_PATH}/${_param_1}.pkg
 
-	eval "> ${LOG_PATH}/${PKG_NAME}.log"
-	
-	if [ ${TOOLCHAIN} == llvm ]
-	then
-		if [ -z "${PKG_LLVMPOLLYFEATURES}" ]
-		then
-			llvm_set_polly_env ${LLVM_POLLY_FEATURES}
-		else
-			eval "echo 'Override LLVM Polly features: ${PKG_LLVMPOLLYFEATURES}' >> ${LOG_PATH}/${PKG_NAME}.log"
-			llvm_set_polly_env ${PKG_LLVMPOLLYFEATURES}
-		fi
-	fi
-
 	setbuildenv
 
 	eval local PKG_NAME=${PKG_NAME}
@@ -1240,10 +1227,24 @@ function build () (
 		fi
 	fi
 
+	eval "> ${LOG_PATH}/${PKG_NAME}.log"
+	
 	if [ ${_param_no_gcc_check:-0} -eq 0 ] && [ "${BUILD_PROCESS}" != "none" ] && [ "${BUILD_PROCESS}" != "downloadonly" ]
 	then
 		check_${TOOLCHAIN}_c
 	fi
+
+	if [ ${TOOLCHAIN} == llvm ]
+	then
+		if [ -z "${PKG_LLVMPOLLYFEATURES}" ]
+		then
+			llvm_set_polly_env ${LLVM_POLLY_FEATURES}
+		else
+			eval "echo 'Override LLVM Polly features: ${PKG_LLVMPOLLYFEATURES}' >> ${LOG_PATH}/${PKG_NAME}.log"
+			llvm_set_polly_env ${PKG_LLVMPOLLYFEATURES}
+		fi
+	fi
+
 	echo -n "${SPACES}"
 	# Build defaults
 	### To manage source path removal at beginning or at the end...
