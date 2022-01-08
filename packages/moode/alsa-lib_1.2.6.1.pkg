@@ -6,6 +6,8 @@ PKG_DEPS="moode/alsa-ucmconf_1.2.6.1"
 CONF_FLAGS=""
 INST_CMD=install-strip
 [ "${LTOENABLE:-0}" != "0" ] && PKG_OVERRIDELTO=fat || true
+PKG_PREBUILD="sed -i 's/ln -s/ln -fs/g' include/Makefile.am"
+
 case ${TOOLCHAIN} in
     gnu) PKG_CFLAGS="-flto-partition=none";;
     llvm) ;;
