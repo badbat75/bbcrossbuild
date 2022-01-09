@@ -117,7 +117,7 @@ function setllvmpollyenv () {
 			arm)
 				# Need to add static rtbuiltins libraries to arm link to avoid missing _mulodi4 symbol
 				# but this is not supported in kernel building so we can't set polly for kernel build
-				#LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
+				LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
 				LLVM_KERNELPOLLYFLAGS=
 				;;
 			*)
