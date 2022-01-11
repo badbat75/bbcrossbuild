@@ -199,12 +199,19 @@ function bootstrap_sysroot () {
 		fi
 	fi
 	# Build gcc final
-	echo -n "${SPACES}"
-	echo -n "Cleaning up ${TOOLCHAIN_PATH}... "
-	rm -rf ${TOOLCHAIN_PATH}
-	echo "done."
-	echo -n "${SPACES}"
-	setup_gcc stage3
+	
+	if ! ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -v > /dev/null 2>&1 || ! ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ -v > /dev/null 2>&1 || \
+		[ ! "$(find ${TOOLCHAIN_PATH}/${HARCH} -name libstdc++.so -printf '%f\n')" == "libstdc++.so" ]
+	then	
+		echo -n "${SPACES}"
+		echo -n "Cleaning up ${TOOLCHAIN_PATH}... "
+		rm -rf ${TOOLCHAIN_PATH}
+		echo "done."
+		echo -n "${SPACES}"
+		setup_gcc stage3
+	else
+		echo "GCC stage3 already installed."
+	fi
 
 	local GCC_MAJVER=$(echo ${GCC_VER} | cut -d'.' -f1,1 )
 	if [ ! -d ${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${GCC_MAJVER} ]

@@ -157,6 +157,7 @@ function setllvmpollyenv () {
 }
 
 function settcenv () {
+	local TOOLCHAIN=${PKG_TOOLCHAIN:-${TOOLCHAIN}}
 	case ${TOOLCHAIN} in
 		llvm)
 			TOOLCHAIN_CC=clang
@@ -1150,6 +1151,7 @@ function build () (
 		PKG_OVERRIDELTO \
 		PKG_PREBUILD \
 		PKG_POSTBUILD \
+		PKG_TOOLCHAIN \
 		PKG_TWOSTEPSBUILD \
 		VAR_INSTALL_LIBDIR \
 		VAR_INSTALL_LIBSUFFIX \

@@ -13,10 +13,10 @@ LLVM_POLLY_FEATURES=all
 
 GCC_LANGUAGES=c,c++,lto
 
-bootstrap_sysroot raspberrypi/rpi-kernel_5.10 bootstrap/glibc_2.34 bootstrap/libxcrypt_4.4
+bootstrap_sysroot raspberrypi/rpi-kernel_5.15 bootstrap/glibc_2.34 bootstrap/libxcrypt_4.4
 
 setup_llvm
-build raspberrypi/rpi-kernel_5.10
+build raspberrypi/rpi-kernel_5.15
 
 #install_gcclibs
 #create_sfx_archive remove_devfiles
