@@ -69,8 +69,8 @@ PKG_POSTBUILD="cat > gen_build.sh <<-EOF
 
 	git clone https://gn.googlesource.com/gn
 	cd gn
-	CC= CXX=\"${CCWRAPPER:+${CCWRAPPER} }clang++\" CFLAGS= CXXFLAGS=\"-O3 -flto=thin -march=native\" LDFLAGS=\"-fuse-ld=lld\" \
-		python3 build/gen.py
+	CC= CXX=\"${CCWRAPPER:+${CCWRAPPER} }clang++\" CFLAGS= CXXFLAGS=\"-O3 -march=native\" LDFLAGS=\"-fuse-ld=lld\" \
+		python3 build/gen.py --use-lto --no-static-libstdc++
 	ninja -v -C out
 	cd ..
 	./gen_build.sh
