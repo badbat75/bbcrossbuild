@@ -1,0 +1,80 @@
+PKG_SUFFIX=.0.4692.77
+PKG_DEPS="raspios/ffmpeg_4.4"
+PKG_URL="http://commondatastorage.googleapis.com/chromium-browser-official/chromium-97${PKG_SUFFIX}-lite.tar.xz"
+BUILD_PROCESS=downloadonly
+PKG_COPYSRC=1
+
+PKG_CXXFLAGS="-Wno-conversion \
+				 -Wno-unused-function \
+				 -Wno-unused-variable \
+				 -Wno-unused-private-field \
+				 -Wno-deprecated-declarations \
+				 -Wno-unknown-pragmas"
+
+
+PKG_POSTBUILD="cat > gen_build.sh <<-EOF
+	#!/bin/bash
+	set -ex
+
+	defines=\"clang_use_chrome_plugins=false\"
+	defines+=\" host_toolchain=\\\"//build/toolchain/linux/unbundle:default\\\"\"
+	defines+=\" custom_toolchain=\\\"//build/toolchain/linux/unbundle:default\\\"\"
+	defines+=\" host_cpu=\\\"${HM}\\\" symbol_level=0\"
+	defines+=\" use_sysroot=true sysroot=\\\"${DISTOS_PATH}\\\"\"
+
+	defines+=\" is_debug=false\"
+	defines+=\" use_goma=false\"
+	defines+=\" use_ozone=false\"
+	defines+=\" use_vaapi=false\"
+	defines+=\" use_allocator=\\\"none\\\"\"
+	defines+=\" use_libjpeg_turbo=true\"
+	defines+=\" use_custom_libcxx=false\"
+	defines+=\" use_gnome_keyring=false\"
+	defines+=\" use_unofficial_version_number=false\"
+	defines+=\" enable_vr=false\"
+	defines+=\" enable_nacl=false\"
+	defines+=\" enable_nacl_nonsfi=false\"
+	defines+=\" enable_swiftshader=false\"
+	defines+=\" enable_reading_list=false\"
+	defines+=\" enable_one_click_signin=false\"
+	defines+=\" enable_iterator_debugging=false\"
+	defines+=\" enable_hangout_services_extension=false\"
+	defines+=\" optimize_webui=false\"
+	defines+=\" enable_js_type_check=false\"
+	defines+=\" blink_symbol_level=0\"
+	defines+=\" treat_warnings_as_errors=false\"
+
+	defines+=\" use_gio=true\"
+	defines+=\" use_pulseaudio=true\"
+	defines+=\" link_pulseaudio=true\"
+	defines+=\" enable_widevine=true\"
+	defines+=\" v8_enable_backtrace=true\"
+	defines+=\" use_system_zlib=true\"
+	defines+=\" use_system_lcms2=true\"
+	defines+=\" use_system_libpng=true\"
+	defines+=\" use_system_libjpeg=true\"
+	defines+=\" use_system_freetype=true\"
+	defines+=\" use_system_harfbuzz=true\"
+	defines+=\" use_system_libopenjpeg2=true\"
+	defines+=\" concurrent_links=1\"
+	defines+=\" proprietary_codecs=true\"
+	defines+=\" ffmpeg_branding=\\\"Chrome\\\"\"
+	defines+=\" fieldtrial_testing_like_official_build=true\"
+	defines+=\" use_static_angle=true\"
+
+	${PKG_BLDPATH}/gn/out/gn gen out/Release --args=\"\\\${defines}\"
+	set +ex
+	EOF
+	chmod +x gen_build.sh
+
+	git clone https://gn.googlesource.com/gn
+	cd gn
+	CC= CXX=\"${CCWRAPPER:+${CCWRAPPER} }clang++\" CFLAGS= CXXFLAGS=\"-O3 -flto=thin -march=native\" LDFLAGS=\"-fuse-ld=lld\" \
+		python3 build/gen.py
+	ninja -v -C out
+	cd ..
+	./gen_build.sh
+	pause"
+
+	#### python3 /home/desimonie/.bbxb/raspios/rpi3/builds/chromium_97.0.4692.77/build/config/linux/pkg-config.py -s /home/desimonie/.bbxb/raspios/rpi3/distos -a arm libdrm --system_libdir=lib/arm-linux-gnueabihf
+	#### missing --system_libdir during pkg-config

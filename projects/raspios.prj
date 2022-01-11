@@ -22,9 +22,9 @@ mount_tag distos --url "${RASPBIAN_URL}${RASPBIAN_IMAGE}.zip" --imgfile "${RASPB
 if [ -z ${SKIP_DISTOS_APTS} ]
 then
 	run_on_root_dir distos root "sed -i 's/#deb-src/deb-src/g' /etc/apt/sources.list"
-	run_on_root_dir distos root "apt-get update --allow-releaseinfo-change"
-	run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
-	run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y install libc6-dev libcups2-dev libpipewire-0.3-dev"
+	#run_on_root_dir distos root "apt-get update --allow-releaseinfo-change"
+	#run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
+	#run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y install libc6-dev libcups2-dev libpipewire-0.3-dev"
 fi
 prepare_sysroot
 
@@ -41,6 +41,7 @@ setup_llvm
 
 #inject_into_mount_tag distos gcclibs
 
-build raspberrypi/ffmpeg-rpi_4.4
+build raspios/ffmpeg_4.4
+build raspios/chromium_97
 
 unmount_tag distos

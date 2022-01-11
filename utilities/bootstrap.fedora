@@ -9,6 +9,8 @@ sudo dnf install -y bc parted e2fsprogs bzip2 rsync vim-common \
 # CLang build
 sudo dnf install -y binutils-devel python3-devel libedit-devel lua-devel ocaml-findlib ocaml-ctypes ocaml-ocamldoc
 
+sudo alternatives --install /usr/bin/python python /usr/bin/python3.10 1
+
 # Libtool updates
 if [ ! -f /usr/share/libtool/build-aux/ltmain.sh.orig ]
 then

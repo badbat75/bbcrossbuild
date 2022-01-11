@@ -419,7 +419,14 @@ function build () (
 	}
 
 	function downloadonly () {
-		return 0
+		set -x
+		if [ -d ${PKG_BLDPATH} ]
+		then
+			cd ${PKG_BLDPATH}
+			create_environment_source
+			source environment.source
+		fi
+		set +x
 	}
 
 	function configmake () {
@@ -1356,11 +1363,11 @@ function build () (
 		if [ ! -z "${PKG_PREBUILD}" ]
 		then
 			cd ${PKG_SRCPATH}
-			(eval "trap 'exit 1' ERR; set -x && ${PKG_PREBUILD} 2>&1 && set +x") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			(eval "trap 'return 1' ERR; set -x && ${PKG_PREBUILD} 2>&1 && set +x; trap - ERR") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 		fi
 		if [ ${PKG_COPYSRC:-0} -eq 1 ] 
 		then
-			cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+			(trap 'return 1' ERR; set -x && cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH} 2>&1 && set +x; trap - ERR) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 		fi
 		if [ ! ${BUILD_PROCESS:-none} == none ]
 		then

@@ -1,5 +1,6 @@
 # ffmpeg-rpi_4.4
-PKG_URL="https://ffmpeg.org/releases/ffmpeg-4.4.tar.xz"
+PKG_SUFFIX=.1
+PKG_URL="https://ffmpeg.org/releases/ffmpeg-4.4${PKG_SUFFIX}.tar.xz"
 #PATCHES="https://raw.githubusercontent.com/LibreELEC/LibreELEC.tv/efccd337ea2e51a714500b903c783a89ec733efb/packages/multimedia/ffmpeg/patches/rpi/ffmpeg-001-rpi.patch"
 AUTOCONF=0
 BUILD_PROCESS=configmake
@@ -17,7 +18,13 @@ CONF_FLAGS="--prefix=${BUILD_PREFIX} --incdir=${BUILD_INCLUDEDIR} --libdir=${BUI
             --enable-nonfree     \
             --disable-debug      \
             --enable-pic         \
-            --enable-avresample  \
+            --enable-librabbitmq \
+            --enable-libssh      \
+            --enable-libxml2     \
+            --docdir=${BUILD_PREFIX}/share/doc/ffmpeg-4.4"
+
+# Audio codecs
+CONF_FLAGS+=" --enable-avresample  \
             --enable-libfdk-aac  \
             --enable-libmp3lame  \
             --enable-libopus     \
@@ -34,11 +41,8 @@ CONF_FLAGS="--prefix=${BUILD_PREFIX} --incdir=${BUILD_INCLUDEDIR} --libdir=${BUI
             --enable-gnutls      \
             --enable-libgsm      \
             --enable-libjack     \
-            --enable-libpulse    \
-            --enable-librabbitmq \
-            --enable-libssh      \
-            --enable-libxml2     \
-            --docdir=${BUILD_PREFIX}/share/doc/ffmpeg-4.4"
+            --enable-libpulse"
+
 PKG_DEPS="
     moode/fdk-aac_2.0.1 \
 "
@@ -106,12 +110,12 @@ then
         --enable-frei0r"
     #PKG_DEPS+=""
 fi
+
+
 [ ${BUILD_LIBSHARED} -eq 1 ] && CONF_FLAGS+=" --enable-shared" || CONF_FLAGS+=" --disable-shared"
 [ ${BUILD_LIBSTATIC} -eq 1 ] && CONF_FLAGS+=" --enable-static" || CONF_FLAGS+=" --disable-static"
 [ ! "${LTOENABLE:-0}" == "0" ] && CONF_FLAGS+=" --enable-lto" || true
 INST_CMD=install
-echo ${MAKEVERBOSE}
-PKG_MAKEVARS="$(test ${MAKEVERBOSE:-0} -eq 0 && echo '-s' || true)"
 PKG_OVERRIDELTO=0
 #PKG_TOOLCHAIN=gnu
 
