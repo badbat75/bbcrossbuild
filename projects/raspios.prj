@@ -41,7 +41,7 @@ setup_llvm
 
 #inject_into_mount_tag distos gcclibs
 
-build raspios/ffmpeg_4.4
-build raspios/chromium_97
-
+#build raspios/ffmpeg_4.4
+#build raspios/chromium_97
+pause
 unmount_tag distos
