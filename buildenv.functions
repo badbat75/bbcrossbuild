@@ -1206,7 +1206,7 @@ MPFR_VER=${MPFR_VER:-4.1.0}
 MPC_VER=${MPC_VER:-1.2.1}
 ISL_VER=${ISL_VER:-0.24}
 
-LLVM_VER=${LLVM_VER:-13.0.0}
+LLVM_VER=${LLVM_VER:-13.0.1}
 
 # Check the toolchains
 gcc -v > /dev/null 2>&1

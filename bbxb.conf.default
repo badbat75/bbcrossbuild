@@ -110,7 +110,7 @@ GCC_OPTLINK_FLAGS="-Wl,-z,relro -Wl,-z,now"
 ######
 
 ###### Versions for LLVM and its dependencies
-#LLVM_VER=13.0.0
+#LLVM_VER=13.0.1
 ######
 
 ###### To be moved somewhere outside this
