@@ -18,7 +18,7 @@ then
 else
     sudo cp -fv /usr/share/libtool/build-aux/ltmain.sh.orig /usr/share/libtool/build-aux/ltmain.sh
 fi
-sudo sed -i 's/-specs=\*)/-specs=\*|-fsanitize=\*|-fuse-ld=\*|-Wa,\*|--target=\*|-B\*)/' /usr/share/libtool/build-aux/ltmain.sh
+sudo sed -i 's/-specs=\*.*)/-specs=\*|-fsanitize=\*|-fuse-ld=\*|-Wa,\*|--target=\*|-B\*)/' /usr/share/libtool/build-aux/ltmain.sh
 
 # Debian Packages
 sudo dnf install -y dpkg-dev devscripts apt debhelper \

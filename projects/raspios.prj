@@ -3,7 +3,7 @@
 RASPBIAN_IMAGE=2021-10-30-raspios-bullseye-armhf-lite
 RASPBIAN_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2021-11-08/
 
-TOOLCHAIN=llvm
+#TOOLCHAIN=llvm
 
 ## Enable shared libraries (default) but disable static ones
 BUILD_LIBSHARED=1
@@ -29,7 +29,7 @@ fi
 prepare_sysroot
 
 #create_sysroot http://<url>/<rootfs.tar.gz>
-setup_gcc
+setup_gcc_v2
 setup_llvm
 #setup_rust
 #setup_python 3.9.8
@@ -41,7 +41,5 @@ setup_llvm
 
 #inject_into_mount_tag distos gcclibs
 
-#build raspios/ffmpeg_4.4
-#build raspios/chromium_97
 pause
 unmount_tag distos
