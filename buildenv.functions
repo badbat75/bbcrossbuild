@@ -699,8 +699,8 @@ function setup_gcc_v2 () {
 		local GCC_MAJORVER=$(echo ${GCC_VER} | cut -d'.' -f1)
 		local CONFIG_ARCH_PARAMS="--build=${BARCH} --host=${BARCH} --target=${HARCH} --with-build-sysroot=${SYSROOT}"
 		local PLATFORM_ARCHFLAGS="--with-arch-directory=${HM} ${HMARCH:+ --with-arch=${HMARCH}}${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
-		local GCC_CONFIG="--with-toolexeclibdir=${PACKAGES_PATH}/gcc-libs-${GCC_VER}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX} \
-			--with-gxx-include-dir=${PACKAGES_PATH}/gcc-libs-${GCC_VER}${BUILD_PREFIX}/include/c++/${GCC_MAJORVER}"
+		local GCC_CONFIG="--with-toolexeclibdir=${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX} \
+			--with-gxx-include-dir=${BUILD_PREFIX}/include/c++/${GCC_MAJORVER}"
 
 		echo "GCC_BUILD_PATH: ${GLOBAL_TOOLCHAIN_PATH}/gcc-${GCC_VER}"
 		mkdir -p ${GLOBAL_TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
@@ -725,15 +725,15 @@ function setup_gcc_v2 () {
 		CXXFLAGS_FOR_TARGET="${COMPFLAGS} ${OPTCOMP_FLAGS}" \
 		LDFLAGS_FOR_TARGET="${LINKERFLAGS} ${OPTLINK_FLAGS}" \
 		${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure -v \
-			--prefix="${PACKAGES_PATH}/gcc-libs-${GCC_VER}${BUILD_PREFIX}" \
-			--mandir="${PACKAGES_PATH}/gcc-libs-${GCC_VER}${BUILD_PREFIX}/share/man" \
-			--infodir="${PACKAGES_PATH}/gcc-libs-${GCC_VER}${BUILD_PREFIX}/share/info" \
+			--prefix="${BUILD_PREFIX}" \
+			--mandir="${BUILD_PREFIX}/share/man" \
+			--infodir="${BUILD_PREFIX}/share/info" \
 			${CONFIG_ARCH_PARAMS} ${PLATFORM_ARCHFLAGS} --with-build-config="${BOOTSTRAP_FLAGS}" \
 			${BINUTILS_COMMON_CONFIG} ${BINUTILS_CONFIG} ${GCC_COMMON_CONFIG} ${GCC_CONFIG}	--with-sysroot=${DISTOS} \
 			host_configargs=${host_configargs} target_configargs=${target_configargs}
 		make STAGE_CC_WRAPPER="${CCWRAPPER}" all-target
 		[ -d ${PACKAGES_PATH}/gcc-libs-${GCC_VER} ] && rm -rf ${PACKAGES_PATH}/gcc-libs-${GCC_VER} || true
-		make STAGE_CC_WRAPPER="${CCWRAPPER}" install-strip-target
+		make STAGE_CC_WRAPPER="${CCWRAPPER}" DESTDIR="${PACKAGES_PATH}/gcc-libs-${GCC_VER}" install-strip-target
 		cd -
 		tar cfp - --owner=0 --group=0 -C ${PACKAGES_PATH}/gcc-libs-${GCC_VER} . | xz -T${NPROCS} - > ${PACKAGES_PATH}/gcc-libs-${GCC_VER}.tar.xz
 		rm -rf ${PACKAGES_PATH}/gcc-libs-${GCC_VER}
