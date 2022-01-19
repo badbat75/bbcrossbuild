@@ -30,7 +30,7 @@ function setbuildenv () {
 	export QEMU_LD_PREFIX="${BIN_PATH}"
 	if [ ${MULTI_ARCH} -eq 1 ]
 	then
-		export BUILD_LIBSUFFIX="/${HARCH}"
+		BUILD_LIBSUFFIX="/${HARCH}"
 	fi
 	BUILD_LIBSHARED=${BUILD_LIBSHARED:-1}
 	BUILD_LIBSTATIC=${BUILD_LIBSTATIC:-1}
