@@ -748,7 +748,7 @@ function setup_gcc_v2 () {
 	trap 'local STATUS=${?}; \
 		trap - ERR; \
 		echo "fail."; \
-		echo "Remove ${TOOLCHAIN_PATH} folder and start over again."; \
+		echo "Remove ${TOOLCHAIN_PATH} folder before start over again."; \
 		echo; \
 		return ${STATUS}' ERR
 
