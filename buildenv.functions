@@ -778,20 +778,47 @@ function setup_gcc_v2 () {
 			gcc_make_target_libs_v2 > ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log 2>&1
 		else
 			### Bootstrapping sysroot
-			> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log
+			echo "done."
+			echo "Bootstrapping sysroot in ${BIN_PATH}... "
+			local SPACES="   "
+			echo -n "${SPACES}"
 			echo -n "building bootstrap libgcc... "
+			> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log
 			_param_targets=libgcc _param_install=0 gcc_make_target_libs_v2 >> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log 2>&1
-			### Install kernel_headers
-			### Install glibc
+			echo "done."
+			# Build Kernel Headers
+			echo -n "${SPACES}"
+			if [ ! -f ${BIN_PATH}${BUILD_INCLUDEDIR}/linux/kernel.h ]
+			then
+				KERN_HDRS_ONLY=1 build --no_gcc_check --no_save_status bootstrap/bs_kernel
+			else
+				echo "Kernel headers already installed."
+			fi
+			### Build glibc
+			echo -n "${SPACES}"
+			if [ ! -f ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libc.so ]
+			then
+				TOOLCHAIN=gnu NUMSPACES=1 WITH_LIBXCRYPT=1 build --no_save_status bootstrap/bs_glibc
+			else
+				echo "Glibc already installed."
+			fi
 			### Install libxcrypt
-			#rm -rf ${TOOLCHAIN_PATH}
-			#gcc_buildenv
-			#echo -n "configuration... "
-			#gcc_configuration >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
-			#echo -n "building for host... "
-			#gcc_make_host_v2 ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
-			#echo -n "building target libraries... "
-			#gcc_make_target_libs_v2 >> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log 2>&1
+			echo -n "${SPACES}"
+			if [ ! -f ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libcrypt.so ]
+			then
+				TOOLCHAIN=gnu NUMSPACES=1 build --no_save_status bootstrap/bs_libxcrypt
+			else
+				echo "libxcrypt libraries already installed."
+			fi
+			rm -rf ${TOOLCHAIN_PATH}
+			echo -n "Rebuild final gcc... "
+			gcc_buildenv
+			echo -n "configuration... "
+			gcc_configuration >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
+			echo -n "building for host... "
+			gcc_make_host_v2 ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
+			echo -n "building target libraries... "
+			gcc_make_target_libs_v2 >> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log 2>&1
 		fi
 	fi
 
