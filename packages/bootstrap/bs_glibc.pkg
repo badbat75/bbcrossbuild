@@ -1,6 +1,6 @@
-# glibc_2.34
-PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-2.34.tar.xz"
-PATCHES="https://www.linuxfromscratch.org/patches/downloads/glibc/glibc-2.34-fhs-1.patch"
+# bs_glibc
+PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${BS_GLIBC_VER:-2.34}.tar.xz"
+PATCHES="https://www.linuxfromscratch.org/patches/downloads/glibc/glibc-${BS_GLIBC_VER:-2.34}-fhs-1.patch"
 BUILD_PROCESS=configmake
 AUTOCONF=0
 PKG_OVERRIDELTO=0
@@ -11,18 +11,12 @@ rootsbindir=${BUILD_PREFIX}/sbin
 "
 CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}\${BUILD_INCLUDEDIR} --enable-kernel=4.4 --disable-werror \
 	--disable-sanity-checks --enable-hacker-mode --enable-stackguard-randomization \
-	--enable-stack-protector=strong --enable-obsolete-rpc --enable-obsolete-nsl --enable-pt_chown"
+	--enable-stack-protector=strong --enable-pt_chown"
 if [ ${WITH_LIBXCRYPT:-0} -eq 1 ]
 then
 	CONF_FLAGS+=" --disable-crypt"
 fi
-if [ ${BOOTSTRAP:-0} -eq 1 ]
-then
-	CONF_FLAGS+=" --without-selinux"
-	INST_CMD="install-bootstrap-headers=yes install-headers"
-else
-	INST_CMD="install"
-fi
+INST_CMD="install"
 PKG_POSTBUILD="if [ ! -f ${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h ];
 	then touch ${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h; \
 	fi" \

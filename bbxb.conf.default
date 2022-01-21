@@ -32,34 +32,19 @@ PKI_SUBJECT="/C=IT/ST=Bologna/L=Bologna/O=BadBat75 LTD/CN=badbat75/emailAddress=
 #
 # TOOLCHAIN=gnu
 
-### Extra flags for GNU or LLVM compilers
-# LLVM_EXTRACLANGFLAGS=
-# LLVM_EXTRALDFLAGS=
-## Enable LLVM Polly Features:
-## polly:            Enable polly
-## vectorizer:     Enable polly vectoralization
-## parallel:         Enable polly parallel
-## all:              Enable all features
-# LLVM_POLLY_FEATURES=
-# GNU_EXTRACOMPFLAGS=
-# GNU_EXTRALDFLAGS=
-
 ### Specify boot C compiler (default: gcc)
 # TOOLCHAIN_CC="cc"
 
 ### Enable and set if you are using a gcc wrapper like ccache or distcc
 CCWRAPPER="ccache"
 ### Set make verbosity (0 disabled, 1 enabled)
-MAKEVERBOSE=0
-
-### Enable build of native GCC (host compiler) (0 disabled [default], 1 enabled)
-# BUILD_GCCNATIVE=0
+MAKEVERBOSE=${MAKEVERBOSE:-0}
 
 ###### Application toolchain flags and parameters
 ### Application optimization level (s, 0, 1, 2, 3). Set -O options to compiler
 OPTLEVEL=3
 ### Optional C/C++ compiler flags
-OPTCOMP_FLAGS="-pipe"
+# OPTCOMP_FLAGS="-pipe"
 ### Optional C/C++ compiler flags to enable profiling
 # OPTCOMP_FLAGS="${OPTCOMP_FLAGS} -fprofile-generate=/tmp/pgo --coverage"
 # OPTCOMP_FLAGS="${OPTCOMP_FLAGS} -fprofile-use=/tmp/pgo -fprofile-correction -Wno-error=coverage-mismatch -Wno-error=missing-profile"
@@ -99,19 +84,29 @@ KERN_OPTLINK_FLAGS=
 #ISL_VER=0.24
 ### Kernel optimization level (s, 0, 1, 2, 3). Set -O options to compiler
 GCC_OPTLEVEL=3
-### Optional gcc compiler flags
-GCC_OPTCOMP_FLAGS=
-### Optional ld linker flags
-GCC_OPTLINK_FLAGS="-Wl,-z,relro -Wl,-z,now"
-### Those could break symbol dependencies. Tested on gawk versus ncurses
-#OPTLINK_FLAGS+=" -Wl,--as-needed"
 ### Enable LTO building for GCC and its libraries (can be set up in the project definition)
 # GCC_LTOENABLE=1
+### Bootstrap packages
+# BS_KERNEL_VER=5.16
+# BS_GLIBC_VER=2.34
+# BS_LIBXCRYPT_VER=4.4.27
 ######
 
 ###### Versions for LLVM and its dependencies
 #LLVM_VER=13.0.1
 ######
+
+### Extra flags for GNU or LLVM compilers
+# LLVM_EXTRACLANGFLAGS=
+# LLVM_EXTRALDFLAGS=
+## Enable LLVM Polly Features:
+## polly:            Enable polly
+## vectorizer:     Enable polly vectoralization
+## parallel:         Enable polly parallel
+## all:              Enable all features
+# LLVM_POLLY_FEATURES=
+# GNU_EXTRACOMPFLAGS=
+# GNU_EXTRALDFLAGS=
 
 ###### To be moved somewhere outside this
 #CARGO_PATH=${HOME}/.cargo

@@ -577,6 +577,7 @@ function setup_gcc_v2 () {
 		if [ ${MAKEVERBOSE:-0} -eq 0 ]
 		then
 			local SILENTCONFIG="--enable-silent-rules"
+			build_configargs="${SILENTCONFIG}"
 			host_configargs="${SILENTCONFIG}"
 			target_configargs="${SILENTCONFIG}"
 		fi
@@ -599,19 +600,19 @@ function setup_gcc_v2 () {
 			fi
 		fi
 
-		GCC_CONFIG="${SILENTCONFIG} --enable-version-specific-runtime-libs --with-gcc-major-version-only --with-glibc-version=2.11 --enable-linker-build-id --enable-multiarch --enable-checking=release --enable-gnu-unique-object --enable-initfini-array --with-system-zlib --disable-option-checking --disable-libsanitizer --disable-libitm --disable-libmpx"
+		GCC_CONFIG="--enable-checking=release --enable-multiarch --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --with-system-zlib --enable-version-specific-runtime-libs --with-glibc-version=2.11 --with-gcc-major-version-only --enable-linker-build-id --disable-option-checking ${SILENTCONFIG}"
 
 		if [ -n "${SYSROOT}" ]
 		then
-			GCC_CONFIG+=" --enable-shared --enable-plugin --enable-lto --enable-nls --enable-clocale=gnu --enable-libstdcxx-time=yes --enable-__cxa_atexit --enable-libmudflap --enable-libgomp --enable-libssp --enable-threads=posix --enable-gnu-indirect-function --enable-install-libiberty --with-default-libstdcxx-abi=new --enable-languages=${GCC_LANGUAGES:-c,c++} --with-multilib=default"
+			GCC_CONFIG+=" --enable-lto --enable-threads=posix --enable-languages=${GCC_LANGUAGES:-c,c++} --enable-shared --enable-__cxa_atexit --enable-plugin --enable-clocale=gnu --enable-nls --enable-multilib --with-default-libstdcxx-abi=new --enable-libmudflap --enable-libgomp --enable-libssp --enable-install-libiberty --disable-libsanitizer --disable-libitm --disable-libmpx"
 			if [ "$(echo ${GCC_LANGUAGES} | grep -o fortran)" == "fortran" ]
 			then
 				GCC_CONFIG+=" --enable-libquadmath --enable-libquadmath-support"
 			fi
-			BINUTILS_CONFIG="--enable-install-libbfd --enable-64-bit-bfd --enable-gold "	
+			BINUTILS_CONFIG=" --enable-gold --enable-ld=default --enable-plugins --enable-64-bit-bfd --enable-install-libbfd"	
 		else
-			GCC_CONFIG+=" --with-newlib --enable-languages=c --without-headers --disable-nls --disable-shared --disable-plugin --disable-lto --disable-multilib --disable-decimal-float --disable-threads --disable-gcov --disable-libatomic --disable-libgomp --disable-libssp --disable-libvtv --disable-libstdcxx"
-			BINUTILS_CONFIG=
+			GCC_CONFIG+=" --disable-lto --disable-threads --enable-languages=c --with-newlib --disable-shared --disable-decimal-float --disable-plugin --disable-multilib --disable-nls --disable-gcov --without-headers --disable-libatomic --disable-libgomp --disable-libssp --disable-libvtv --disable-libstdcxx --disable-libsanitizer --disable-libitm --disable-libmpx"
+			BINUTILS_CONFIG=" --disable-plugins --enable-64-bit-bfd"
 		fi
 		COMPFLAGS="${GNU_EXTRACOMPFLAGS}"
 		LINKERFLAGS="${GNU_EXTRALDFLAGS}"
@@ -664,8 +665,8 @@ function setup_gcc_v2 () {
 		AR="$(which ${BARCH}-gcc-ar)" \
 		NM="$(which ${BARCH}-gcc-nm)" \
 		RANLIB="$(which ${BARCH}-gcc-ranlib)" \
-		CFLAGS="${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}" \
-		CXXFLAGS="${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}" \
+		CFLAGS="${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}" \
+		CXXFLAGS="${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_LINKERFLAGS}" \
 		LDFLAGS="${LINKERFLAGS}" \
 		CFLAGS_FOR_TARGET="${COMPFLAGS} ${OPTCOMP_FLAGS}" \
 		CXXFLAGS_FOR_TARGET="${COMPFLAGS} ${OPTCOMP_FLAGS}" \
@@ -674,10 +675,9 @@ function setup_gcc_v2 () {
 			${CONFIG_ARCH_PARAMS} ${GCC_SYSROOT_FLAGS} ${PLATFORM_ARCHFLAGS} \
 			${BINUTILS_CONFIG} ${GCC_CONFIG} \
 			--prefix="${TOOLCHAIN_PATH}"
-
-		#	build_configargs="--prefix=${TOOLCHAIN_PATH} --mandir=${TOOLCHAIN_PATH}/share/man --infodir=${TOOLCHAIN_PATH}/share/info" \
-		#	host_configargs="--prefix=${TOOLCHAIN_PATH} --mandir=${TOOLCHAIN_PATH}/share/man --infodir=${TOOLCHAIN_PATH}/share/info"
-		#	target_configargs="prefix=${BUILD_PREFIX} --mandir=${BUILD_PREFIX}/share/man --infodir=${BUILD_PREFIX}/share/info"
+			build_configargs="${build_configargs}" \
+			host_configargs="${host_configargs}" \
+			target_configargs="${target_configargs}"
 
 		cd -
 		set +x
@@ -769,21 +769,31 @@ function setup_gcc_v2 () {
 		fi
 		echo -n "${ECHO_BOOTSTRAP}configuration... "
 		gcc_configuration >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
-		echo -n "building for host... "
+		echo -n "building ${ECHO_BOOTSTRAP}for host... "
 		gcc_make_host_v2 ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
+		### Check if bootstrap sysroot before building target libraries
 		if [ -n "${SYSROOT}" ]
 		then
 			echo -n "building target libraries... "
 			gcc_make_target_libs_v2 > ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log 2>&1
 		else
+			### Bootstrapping sysroot
 			> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log
 			echo -n "building bootstrap libgcc... "
-			_param_targets=libgcc gcc_make_target_libs_v2 >> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log 2>&1
+			_param_targets=libgcc _param_install=0 gcc_make_target_libs_v2 >> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log 2>&1
+			### Install kernel_headers
+			### Install glibc
+			### Install libxcrypt
+			#rm -rf ${TOOLCHAIN_PATH}
+			#gcc_buildenv
+			#echo -n "configuration... "
+			#gcc_configuration >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
+			#echo -n "building for host... "
+			#gcc_make_host_v2 ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
+			#echo -n "building target libraries... "
+			#gcc_make_target_libs_v2 >> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log 2>&1
 		fi
 	fi
-
-	#echo -n "setting up search paths... "
-	#export PATH=${TOOLCHAIN_PATH}/gcc-${GCC_VER}/bin:${PATH}
 
 	if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ]
 	then
