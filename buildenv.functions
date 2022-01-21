@@ -779,7 +779,7 @@ function setup_gcc_v2 () {
 		else
 			### Bootstrapping sysroot
 			echo "done."
-			echo "Bootstrapping sysroot in ${BIN_PATH}... "
+			echo "Bootstrapping foundation libraries in ${BIN_PATH}... "
 			local SPACES="   "
 			echo -n "${SPACES}"
 			echo -n "building bootstrap libgcc... "
