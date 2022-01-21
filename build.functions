@@ -45,6 +45,7 @@ function setbuildenv () {
 	COMMON_PKG_CONFIG_LIBDIR="${BIN_PATH}/lib${BUILD_LIBSUFFIX}/pkgconfig"
 	COMMON_PKG_CONFIG_LIBDIR+=":${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig:${BIN_PATH}${BUILD_PREFIX}/share/pkgconfig"
 	COMMON_PKG_CONFIG_SYSROOT="${BIN_PATH}"
+	local SYSROOT_GCCVER=
 	# Construct build tools flags
 	# Build Include search paths
 	if [ -d ${DISTOS_PATH}/usr/include ]
@@ -55,24 +56,33 @@ function setbuildenv () {
 		COMMON_CPPFLAGS+=" -isystem${DISTOS_PATH}/usr/include ${STD_CPPFLAGS} ${HARCH:+-isystem${DISTOS_PATH}/usr/include${BUILD_LIBSUFFIX}}"
 		COMMON_LDFLAGS+=" -Wl,-rpath-link,${DISTOS_PATH}/lib${BUILD_LIBSUFFIX} -L${DISTOS_PATH}/lib${BUILD_LIBSUFFIX}"
 		COMMON_LDFLAGS+=" -Wl,-rpath-link,${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -L${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
-		case ${TOOLCHAIN} in
-			gnu)
-				local DISTOS_GCCVER="$(find ${DISTOS_PATH}/usr/lib/gcc/${HARCH}/ -mindepth 1 -maxdepth 1 -type d -printf '%P\n' | sort -hr | head -n1)"
-				local GCC_BINS="$(${HARCH}-gcc -print-search-dirs | grep "^programs" | cut -d '=' -f2 | cut -d ':' -f1)"
-				COMMON_CFLAGS+=" -B${GCC_BINS} -B${DISTOS_PATH}/usr/lib${BUILD_LIBSUFFIX} -B${DISTOS_PATH}/usr/lib/gcc/${HARCH}/${DISTOS_GCCVER}"
-				COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include/c++/${DISTOS_GCCVER} -I${DISTOS_PATH}/usr/include/${HARCH}/c++/${DISTOS_GCCVER} \
-					-B${GCC_BINS} -B${DISTOS_PATH}/usr/lib${BUILD_LIBSUFFIX} -B${DISTOS_PATH}/usr/lib/gcc/${HARCH}/${DISTOS_GCCVER}"
-				COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/c++/${DISTOS_GCCVER} -I${DISTOS_PATH}/usr/include/${HARCH}/c++/${DISTOS_GCCVER}"
-				COMMON_LDFLAGS+=" -B${GCC_BINS} -B${DISTOS_PATH}/usr/lib${BUILD_LIBSUFFIX} -B${DISTOS_PATH}/usr/lib/gcc/${HARCH}/${DISTOS_GCCVER}"
-				;;
-		esac
 		COMMON_PKG_CONFIG_LIBDIR+=":${DISTOS_PATH}/usr/lib${BUILD_LIBSUFFIX}/pkgconfig:${DISTOS_PATH}/usr/share/pkgconfig"
 		COMMON_PKG_CONFIG_SYSROOT="${DISTOS_PATH}"
+		# Try to find if gcc libraries are installed and not yet defined in binary dir, if so set search path on that path
+		if [ -d ${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH} ] && [ -z "${SYSROOT_GCCVER}" ]
+		then
+			local SYSROOT_GCCVER="$(find ${DISTOS_PATH}/usr/lib/gcc/${HARCH}/ -mindepth 1 -maxdepth 1 -type d -printf '%P\n' | sort -hr | head -n1)"
+			if [ -n "${SYSROOT_GCCVER}" ]
+			then
+				COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include/c++/${SYSROOT_GCCVER} -I${DISTOS_PATH}/usr/include/${HARCH}/c++/${SYSROOT_GCCVER}"
+				COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/c++/${SYSROOT_GCCVER} -I${DISTOS_PATH}/usr/include/${HARCH}/c++/${SYSROOT_GCCVER}"
+				COMMON_LDFLAGS+=" -Wl,-rpath-link,${DISTOS_PATH}/usr/lib/gcc/${HARCH}/${SYSROOT_GCCVER} -L${DISTOS_PATH}/usr/lib/gcc/${HARCH}/${SYSROOT_GCCVER}"
+				case ${TOOLCHAIN} in
+					gnu)
+						local GCC_BINS="$(${HARCH}-gcc -print-search-dirs | grep "^programs" | cut -d '=' -f2 | cut -d ':' -f1)"
+						COMMON_CFLAGS+=" -B${GCC_BINS} -B${DISTOS_PATH}/usr/lib${BUILD_LIBSUFFIX} -B${DISTOS_PATH}/usr/lib/gcc/${HARCH}/${SYSROOT_GCCVER}"
+						COMMON_CXXFLAGS+=" -B${GCC_BINS} -B${DISTOS_PATH}/usr/lib${BUILD_LIBSUFFIX} -B${DISTOS_PATH}/usr/lib/gcc/${HARCH}/${SYSROOT_GCCVER}"
+						COMMON_LDFLAGS+=" -B${GCC_BINS} -B${DISTOS_PATH}/usr/lib${BUILD_LIBSUFFIX} -B${DISTOS_PATH}/usr/lib/gcc/${HARCH}/${SYSROOT_GCCVER}"
+						;;
+				esac			
+			fi
+		fi
 		SYSROOT_FLAGS="${DISTOS_PATH:+--sysroot=${DISTOS_PATH}}"
 		export QEMU_LD_PREFIX="${DISTOS_PATH}"
 	else
 		SYSROOT_FLAGS="${BIN_PATH:+--sysroot=${BIN_PATH}}"
 	fi
+
 	# Build LDFLAGS search paths
 	if [ -d ${DISTOS_PATH}/etc/ld.so.conf.d ]
 	then
