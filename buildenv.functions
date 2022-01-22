@@ -609,15 +609,15 @@ function setup_gcc_v2 () {
 			then
 				GCC_CONFIG+=" --enable-libquadmath --enable-libquadmath-support"
 			fi
-			BINUTILS_CONFIG=" --enable-gold --enable-ld=default --enable-plugins --enable-64-bit-bfd --enable-install-libbfd"	
+			BINUTILS_CONFIG=" --enable-gold --enable-plugins --enable-64-bit-bfd --enable-install-libbfd"	
 		else
 			GCC_CONFIG+=" --disable-lto --disable-threads --enable-languages=c --with-newlib --disable-shared --disable-decimal-float --disable-plugin --disable-multilib --disable-nls --disable-gcov --without-headers --disable-libatomic --disable-libgomp --disable-libssp --disable-libvtv --disable-libstdcxx --disable-libsanitizer --disable-libitm --disable-libmpx"
-			BINUTILS_CONFIG=" --disable-plugins --enable-64-bit-bfd"
+			BINUTILS_CONFIG=" --enable-ld=default --disable-plugins --enable-64-bit-bfd"
 		fi
 		COMPFLAGS="${GNU_EXTRACOMPFLAGS}"
 		LINKERFLAGS="${GNU_EXTRALDFLAGS}"
 		#GCC_CONFIG+=" --with-toolexeclibdir=${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX} --with-gxx-include-dir=${BUILD_PREFIX}/include/c++/${GCC_MAJORVER}"
-		if [ ${GCC_LTOENABLE:-0} -eq 1 ] && [ -n ${SYSROOT} ]
+		if [ ${GCC_LTOENABLE:-0} -eq 1 ] && [ -n "${SYSROOT}" ]
 		then
 			LTO_COMPFLAGS=" -flto=${NPROCS}"
 			LTO_LINKERFLAGS=" -fuse-linker-plugin"
@@ -789,7 +789,7 @@ function setup_gcc_v2 () {
 			echo "done."
 			### Build & install kernel headers
 			echo -n "${SPACES}"
-			KERN_HDRS_ONLY=1 build --no_gcc_check --no_save_status bootstrap/bs_kernel
+			KERN_HDRS_ONLY=1 build --no_gcc_check --no_save_status ${BS_KERNEL:-bootstrap/bs_kernel}
 			### Build & install glibc
 			echo -n "${SPACES}"
 			TOOLCHAIN=gnu NUMSPACES=1 WITH_LIBXCRYPT=1 build --no_save_status bootstrap/bs_glibc

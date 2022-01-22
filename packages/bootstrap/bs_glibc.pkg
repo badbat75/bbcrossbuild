@@ -21,4 +21,4 @@ PKG_POSTBUILD="if [ ! -f ${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h ];
 	then touch ${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h; \
 	fi" \
 
-# Note:
+TOOLCHAIN_LD=ld.bfd
