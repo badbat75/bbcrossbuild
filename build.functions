@@ -777,26 +777,24 @@ function build () (
 		set -x
 		unset PKG_CONFIG_LIBDIR
 		unset PKG_CONFIG_SYSROOT_DIR
-		echo "Kernel headers only: ${KERN_HDRS_ONLY:-1}"
-		if [ ${KERN_HDRS_ONLY:-0} -eq 1 ]
-		then
-			TOOLCHAIN_CC=gcc
-			TOOLCHAIN_AR=ar
-			TOOLCHAIN_AS=as
-			TOOLCHAIN_NM=nm
-			TOOLCHAIN_RANLIB=ranlib
-			TOOLCHAIN_STRIP=strip
-			TOOLCHAIN_OBJCOPY=objcopy
-			TOOLCHAIN_OBJDUMP=objdump
-			TOOLCHAIN_READELF=readelf
-			TOOLCHAIN_LD=ld.bfd
-		else
-			settcenv
-		fi
 
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
 		KERN_VER=$(make kernelversion)
+
+		settcenv
+
+		echo "Kernel headers only: ${KERN_HDRS_ONLY:-1}"
+		# Install headers
+		make4kern INSTALL_HDR_PATH=${PKG_PKGPATH}${BUILD_PREFIX} headers_install 
+
+		# Break if only headers installation required
+		if [ ${KERN_HDRS_ONLY:-0} -eq 1 ]
+		then
+			set +x
+			trap - ERR
+			return
+		fi
 
 		# Config kernel build
 		make4kern ${KERN_DEFCONFIG} .config
@@ -837,17 +835,6 @@ function build () (
 		if [ ! -d ${PKG_PKGPATH}/boot ]
 		then
 			mkdir -p ${PKG_PKGPATH}/boot
-		fi
-
-		# Install headers
-		make4kern INSTALL_HDR_PATH=${PKG_PKGPATH}${BUILD_PREFIX} headers_install 
-
-		# Break if only headers installation required
-		if [ ${KERN_HDRS_ONLY:-0} -eq 1 ]
-		then
-			set +x
-			trap - ERR
-			return
 		fi
 
 		# Build and install kernel

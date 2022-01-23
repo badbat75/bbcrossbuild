@@ -616,7 +616,6 @@ function setup_gcc_v2 () {
 		fi
 		COMPFLAGS="${GNU_EXTRACOMPFLAGS}"
 		LINKERFLAGS="${GNU_EXTRALDFLAGS}"
-		#GCC_CONFIG+=" --with-toolexeclibdir=${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX} --with-gxx-include-dir=${BUILD_PREFIX}/include/c++/${GCC_MAJORVER}"
 		if [ ${GCC_LTOENABLE:-0} -eq 1 ] && [ -n "${SYSROOT}" ]
 		then
 			LTO_COMPFLAGS=" -flto=${NPROCS}"
@@ -643,7 +642,6 @@ function setup_gcc_v2 () {
 		fi
 		mkdir -p ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 
-		local GCC_MAJORVER=$(${HARCH}-gcc -dumpversion)
 		local CONFIG_ARCH_PARAMS="--build=${BARCH} --host=${BARCH} --target=${HARCH}"
 		case ${HARCH} in
 			*)	local PLATFORM_ARCHFLAGS="--with-arch-directory=${HM} ${HMARCH:+ --with-arch=${HMARCH}}${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
