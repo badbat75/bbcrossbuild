@@ -430,7 +430,7 @@ function setup_gcc () {
 		cd ${GCC_BUILD_PATH}
 		case ${GCC_STAGE} in
 			stage1 )
-				(eval "trap 'exit ${?}' ERR; ${BUILD_ENV_SHELL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure -v \
+				(eval "trap 'exit ${?}' ERR; ${BUILD_ENV_SHELL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure -v \
 					--prefix=${GCC_INSTALL_PATH} --mandir=${GCC_INSTALL_PATH}/share/man --infodir=${GCC_INSTALL_PATH}/share/info \
 					${CONFIG_ARCH_PARAMS} ${BINUTILS_COMMON_CONFIG} ${BINUTILS_CONFIG} ${GCC_COMMON_CONFIG} ${GCC_CONFIG} ${TARGET_CONFIG_ARGS}")
 				make STAGE_CC_WRAPPER="${CCWRAPPER}" V=${MAKEVERBOSE:-0} all-gcc
@@ -439,11 +439,11 @@ function setup_gcc () {
 			stage2 )
 				make STAGE_CC_WRAPPER="${CCWRAPPER}" V=${MAKEVERBOSE:-0} all-target-libgcc
 				make V=${MAKEVERBOSE:-0} install-strip-target-libgcc
-				cat ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/gcc/{limitx.h,glimits.h,limity.h} > \
+				cat ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/gcc/{limitx.h,glimits.h,limity.h} > \
 					$(dirname $(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -print-libgcc-file-name))/install-tools/include/limits.h
 			;;
 			* )
-				(eval "trap 'exit ${?}' ERR; ${BUILD_ENV_SHELL} ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure -v \
+				(eval "trap 'exit ${?}' ERR; ${BUILD_ENV_SHELL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure -v \
 					--prefix=${GCC_INSTALL_PATH} --mandir=${GCC_INSTALL_PATH}/share/man --infodir=${GCC_INSTALL_PATH}/share/info \
 					${CONFIG_ARCH_PARAMS} ${BINUTILS_COMMON_CONFIG} ${BINUTILS_CONFIG} ${GCC_COMMON_CONFIG} ${GCC_CONFIG} ${TARGET_CONFIG_ARGS}")				
 				make STAGE_CC_WRAPPER="${CCWRAPPER}" V=${MAKEVERBOSE:-0}
@@ -508,7 +508,7 @@ function setup_gcc () {
 		&& [ ${BUILD_GCCNATIVE:-0} -eq 1 ] )
 	then
 		> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log
-		if [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER} ] || [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
+		if [ ! -d ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER} ] || [ ! -d ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
 		then
 			echo -n "downloading... "
 			download_gcc >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}${GCC_STAGE:+-${GCC_STAGE}}.log 2>&1
@@ -529,8 +529,8 @@ function setup_gcc () {
 		if [[ ! "${GCC_STAGE}" =~ ^stage[12] ]]
 		then
 			echo "   Removing sources."
-			rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}
-			rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
+			rm -rf ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}
+			rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
 		fi
 	else
 		echo "already there."
@@ -621,10 +621,11 @@ function setup_gcc_v2 () {
 			LTO_COMPFLAGS=" -flto=${NPROCS}"
 			LTO_LINKERFLAGS=" -fuse-linker-plugin"
 		fi
-		GCC_SYSROOT_FLAGS=" --with-sysroot=${BIN_PATH}"
 		if [ -n "${SYSROOT}" ]
 		then
-			GCC_SYSROOT_FLAGS+=" --with-build-sysroot=${SYSROOT}"
+			GCC_SYSROOT_FLAGS=" --with-sysroot=${SYSROOT}"
+			#"
+			# --with-build-sysroot=${SYSROOT}"
 		fi
 	}
 
@@ -718,7 +719,7 @@ function setup_gcc_v2 () {
 		do
 			local BUILD_OBJECTS+=" all-target-${gcc_make_object}"
 		done
-		make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER="${CCWRAPPER}" prefix="${BUILD_PREFIX}" ${BUILD_OBJECTS}
+		make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} prefix="${BUILD_PREFIX}" ${BUILD_OBJECTS}
 
 		for object in ${OBJECTS}
 		do
@@ -768,7 +769,7 @@ function setup_gcc_v2 () {
 		fi
 		echo -n "${ECHO_BOOTSTRAP}configuration... "
 		gcc_configuration >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
-		echo -n "building ${ECHO_BOOTSTRAP}for host... "
+		echo -n "${ECHO_BOOTSTRAP}building host binaries... "
 		gcc_make_host_v2 ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
 		### Check if bootstrap sysroot before building target libraries
 		if [ -n "${SYSROOT}" ]
