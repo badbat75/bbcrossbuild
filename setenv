@@ -56,8 +56,8 @@ then
 	mkdir -p ${USERDATA_PATH}
 fi
 
-export PATH=${GLOBAL_TOOLCHAIN_PATH}/bin:${TOOLCHAIN_PATH}/bin:${PATH}
-export LD_LIBRARY_PATH+=${LD_LIBRARY_PATH:+:}$(gcc -m64 -Xlinker --verbose  2>/dev/null | grep SEARCH | sed 's/SEARCH_DIR("=\?\([^"]\+\)"); */\1\n/g'  | grep -vE '^$' | tr '\n' ':')${TOOLCHAIN_PATH}/lib
+export PATH=${TOOLCHAIN_PATH}/bin:${PATH}
+#export LD_LIBRARY_PATH=${LD_LIBRARY_PATH:+${LD_LIBRARY_PATH}:}$(gcc -m64 -Xlinker --verbose  2>/dev/null | grep SEARCH | sed 's/SEARCH_DIR("=\?\([^"]\+\)"); */\1\n/g'  | grep -vE '^$' | tr '\n' ':')${TOOLCHAIN_PATH}/lib
 
 PRJ_PATH=${BB_HOME}/${PRJ_DIR:-projects}
 PKG_PATH=${BB_HOME}/${PKG_DIR:-packages}
