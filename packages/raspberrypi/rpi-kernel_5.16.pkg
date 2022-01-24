@@ -1,9 +1,10 @@
-# rpi-kernel_5.15
-PKG_SUFFIX=.89
-PKG_URL="https://github.com/raspberrypi/linux/archive/a0cc201e35c06dbd8d0dd4a025731988d52da87e.tar.gz"
+# rpi-kernel_5.16
+PKG_SUFFIX=.1
+PKG_URL="https://github.com/raspberrypi/linux/archive/aae4f0c2618d7f0b81b7ef14a576162790f5a53a.tar.gz"
 BUILD_PROCESS=kernelbuild
 INST_CMD="INSTALL_MOD_STRIP=1"
 
+PKG_PREBUILD="sed -i '/select TRACE_IRQFLAGS_SUPPORT if/a \        select ARCH_SUPPORTS_LTO_CLANG \n        select ARCH_SUPPORTS_LTO_CLANG_THIN' arch/arm/Kconfig"
 case ${KERN_ARCH:-none} in
 	arm64)
 		PKG_POSTBUILD+="
