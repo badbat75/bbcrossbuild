@@ -604,7 +604,7 @@ function setup_gcc_v2 () {
 
 		if [ -n "${SYSROOT}" ]
 		then
-			GCC_CONFIG+=" --enable-lto --enable-threads=posix --enable-languages=${GCC_LANGUAGES:-c,c++} --enable-shared --enable-__cxa_atexit --enable-plugin --enable-clocale=gnu --enable-nls --enable-multilib --with-default-libstdcxx-abi=new --enable-libmudflap --enable-libgomp --enable-libssp --enable-install-libiberty --disable-libsanitizer --disable-libitm --disable-libmpx"
+			GCC_CONFIG+=" --enable-lto --enable-threads=posix --enable-languages=${GCC_LANGUAGES:-c,c++} --enable-shared --enable-__cxa_atexit --enable-plugin --enable-clocale=gnu --enable-nls --enable-multilib --with-default-libstdcxx-abi=new --enable-libmudflap --enable-libgomp --enable-libssp --enable-libsanitizer --enable-install-libiberty --disable-libitm --disable-libmpx"
 			if [ "$(echo ${GCC_LANGUAGES} | grep -o fortran)" == "fortran" ]
 			then
 				GCC_CONFIG+=" --enable-libquadmath --enable-libquadmath-support"
@@ -707,6 +707,10 @@ function setup_gcc_v2 () {
 
 		set -x
 
+		local GCC_MAJVER=$(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -dumpversion)
+
+		local LIB_LA_SEDTRANS="s&^dependency_libs=' -L${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/./ld&dependency_libs='&; s&^libdir='${TOOLCHAIN_PATH}&libdir='${BUILD_PREFIX}&"
+
 		echo "Targets to build: ${_param_targets:-all}"
 		if [ "${_param_targets:-all}" = "all" ]
 		then
@@ -719,26 +723,36 @@ function setup_gcc_v2 () {
 		do
 			local BUILD_OBJECTS+=" all-target-${gcc_make_object}"
 		done
-		make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} prefix="${BUILD_PREFIX}" ${BUILD_OBJECTS}
+		make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} ${BUILD_OBJECTS}
 
 		for object in ${OBJECTS}
 		do
-			[ -d ${PACKAGES_PATH}/gcc-libs-${GCC_VER} ] && rm -rf ${PACKAGES_PATH}/gcc-${object}-${GCC_VER} || true
+			### Install in the toolchain dir
+			make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} install-strip-target-${object}
 			### Create package if it is not bootstrapping
 			if [ -n "${SYSROOT}" ]
 			then
+				[ -d ${PACKAGES_PATH}/gcc-libs-${GCC_VER} ] && rm -rf ${PACKAGES_PATH}/gcc-${object}-${GCC_VER} || true
 				make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} DESTDIR="${PACKAGES_PATH}/gcc-${object}-${GCC_VER}" prefix=${BUILD_PREFIX} install-strip-target-${object}
+				### Adapt .la libraries to ${BIN_PATH}${BIN_PREFIX}
+				find ${PACKAGES_PATH}/gcc-${object}-${GCC_VER}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER} -mindepth 1 -name "*.la" -type f | xargs -r \
+					sed -i "${LIB_LA_SEDTRANS}"
 				tar cfp - --owner=0 --group=0 -C ${PACKAGES_PATH}/gcc-${object}-${GCC_VER} . | xz -T${NPROCS} - > ${PACKAGES_PATH}/gcc-${object}-${GCC_VER}.tar.xz
 				rm -rf ${PACKAGES_PATH}/gcc-${object}-${GCC_VER}
 			fi
-			### Install in the toolchain dir
-			make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} prefix="${TOOLCHAIN_PATH}" install-strip-target-${object}
 			### Install in BIN_PATH if requested via --install
 			if [ ${_param_install:-0} -eq 1 ]
 			then
-				make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} DESTDIR="${BIN_PATH}" prefix="${BUILD_PREFIX}" install-strip-target-${object}
+				make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} DESTDIR="${BIN_PATH}" prefix=${BUILD_PREFIX} install-strip-target-${object}
 			fi
 		done
+
+		### Adapt .la libraries to ${BIN_PATH}${BIN_PREFIX}
+		find ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER} $( [ ${_param_install:-0} -eq 1 ] && echo "${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" || true ) -mindepth 1 -name "*.la" -type f | xargs -r \
+			sed -i "${LIB_LA_SEDTRANS}" 
+
+		make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} all-target-libsanitizer
+		make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} install-strip-target-libsanitizer
 
 		set +x
 		trap ERR
@@ -807,7 +821,7 @@ function setup_gcc_v2 () {
 		fi
 	fi
 
-	if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ]
+	if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ] && false
 	then
 		echo -n "removing build directory... "
 		rm -rf ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
