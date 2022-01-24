@@ -62,17 +62,17 @@ OPTLINK_FLAGS+=" -Wl,-z,relro -Wl,-z,now"
 
 ###### Kernel toolchain flags and parameters
 ### Kernel optimization level (s, 0, 1, 2, 3). Set -O options to compiler
-KERN_OPTLEVEL=3
+KERNEL_OPTLEVEL=3
 ### Optional gcc compiler flags
-KERN_OPTCOMP_FLAGS=
+KERNEL_OPTCOMP_FLAGS=
 ### Optional ld linker flags
-KERN_OPTLINK_FLAGS=
+KERNEL_OPTLINK_FLAGS=
 ### Enable LTO building for the kernel (can be set up in the project definition)
 # 0:         Disabled
 # 1 or fat:  Fat LTO
 # 2 or thin: Thin LTO
 ###
-# KERN_LTOENABLE=1
+# KERNEL_LTOENABLE=1
 ######
 
 ###### Versions for GCC and its dependencies

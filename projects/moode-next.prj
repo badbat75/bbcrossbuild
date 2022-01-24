@@ -10,7 +10,7 @@ TOOLCHAIN=llvm
 
 ## Enable LTO both for kernel and applications
 LTOENABLE=thin
-KERN_LTOENABLE=thin
+KERNEL_LTOENABLE=thin
 
 ## Enable shared libraries (default) but disable static ones
 BUILD_LIBSHARED=1

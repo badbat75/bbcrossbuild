@@ -11,7 +11,7 @@ BUILD_LIBSTATIC=0
 
 ## Enable LTO both for kernel and applications
 LTOENABLE=thin
-KERN_LTOENABLE=thin
+KERNEL_LTOENABLE=thin
 
 LLVM_POLLY_FEATURES="polly vectorizer"
 

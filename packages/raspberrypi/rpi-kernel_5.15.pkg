@@ -5,7 +5,7 @@ BUILD_PROCESS=kernelbuild
 INST_CMD="INSTALL_MOD_STRIP=1"
 
 PKG_PREBUILD="sed -i '/select TRACE_IRQFLAGS_SUPPORT if/a \        select ARCH_SUPPORTS_LTO_CLANG \n        select ARCH_SUPPORTS_LTO_CLANG_THIN' arch/arm/Kconfig"
-case ${KERN_ARCH:-none} in
+case ${KERNEL_ARCH:-none} in
 	arm64)
 		PKG_POSTBUILD+="
 			for p in broadcom

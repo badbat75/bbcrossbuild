@@ -4,7 +4,7 @@ BUILD_LIBSTATIC=0
 
 ## Enable LTO both for kernel and applications
 LTOENABLE=1
-KERN_LTOENABLE=0
+KERNEL_LTOENABLE=0
 
 build lfs/create-base-fs_1.0
 build lfs/create-base-config_1.0

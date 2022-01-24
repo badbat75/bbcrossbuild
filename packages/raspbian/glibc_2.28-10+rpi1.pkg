@@ -16,6 +16,6 @@ PKG_POSTBUILD="if [ ! -f ${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h ];
 	then touch ${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h; \
 	fi" \
 PKG_TWOSTEPSBUILD=${OVERRIDE_PKG_TWOSTEPSBUILD:-1}
-PKG_MAKEVARS="ARCH=${KERN_ARCH} cross-compiling=yes"
+PKG_MAKEVARS="ARCH=${KERNEL_ARCH} cross-compiling=yes"
 
 # Note:
