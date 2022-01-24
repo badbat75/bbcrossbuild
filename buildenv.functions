@@ -150,7 +150,7 @@ function setup_gcc () {
 			fi
 		fi
 
-		GCC_CONFIG="--enable-checking=release --enable-multiarch --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --with-system-zlib --enable-version-specific-runtime-libs --with-glibc-version=2.11 --with-gcc-major-version-only --enable-linker-build-id --disable-option-checking ${SILENTCONFIG}"
+		GCC_CONFIG="--enable-checking=release --enable-multiarch --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --with-system-zlib --with-glibc-version=2.11 --with-gcc-major-version-only --enable-linker-build-id --disable-option-checking ${SILENTCONFIG}"
 
 		if [ -n "${GCC_SYSROOT}" ]
 		then
@@ -345,13 +345,13 @@ function setup_gcc () {
 			### Create package if it is not bootstrapping
 			if [ -n "${GCC_SYSROOT}" ]
 			then
-				[ -d ${PACKAGES_PATH}/gcc-libs-${GCC_VER} ] && rm -rf ${PACKAGES_PATH}/gcc-${object}-${GCC_VER} || true
-				make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} DESTDIR="${PACKAGES_PATH}/gcc-${object}-${GCC_VER}" prefix=${BUILD_PREFIX} install-strip-target-${object}
+				[ -d ${PACKAGES_PATH}/gcc-libs-${GCC_VER} ] && rm -rf ${PACKAGES_PATH}/gcc-${object}_${GCC_VER} || true
+				make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} DESTDIR="${PACKAGES_PATH}/gcc-${object}_${GCC_VER}" prefix=${BUILD_PREFIX} install-strip-target-${object}
 				echo "Adapt .la libraries to ${BIN_PATH}${BIN_PREFIX}"
-				find ${PACKAGES_PATH}/gcc-${object}-${GCC_VER}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER} -mindepth 1 -name "*.la" -type f | xargs -r \
+				find ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER} -mindepth 1 -name "*.la" -type f | xargs -r \
 					sed -i "${LIB_LA_SEDTRANS}"
-				tar cfp - --owner=0 --group=0 -C ${PACKAGES_PATH}/gcc-${object}-${GCC_VER} . | xz -T${NPROCS} - > ${PACKAGES_PATH}/gcc-${object}-${GCC_VER}.tar.xz
-				rm -rf ${PACKAGES_PATH}/gcc-${object}-${GCC_VER}
+				tar cfp - --owner=0 --group=0 -C ${PACKAGES_PATH}/gcc-${object}_${GCC_VER} . | xz -T${NPROCS} - > ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}.tar.xz
+				rm -rf ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}
 			fi
 			### Install in BIN_PATH if requested via --install
 			if [ ${_param_install:-0} -eq 1 ]
@@ -519,7 +519,7 @@ function setup_llvm () {
 			-DCMAKE_C_COMPILER_TARGET="${LLVM_TARGET}" \
 			-DCMAKE_ASM_COMPILER_TARGET="${LLVM_TARGET}" \
 			\
-			-DCMAKE_INSTALL_PREFIX=${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER} \
+			-DCMAKE_INSTALL_PREFIX=/lib/clang/${LLVM_VER} \
 			-DCMAKE_BUILD_TYPE=Release \
 			-DCMAKE_SYSROOT=${SYSROOT} \
 			\
@@ -535,8 +535,21 @@ function setup_llvm () {
 			-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON \
 			-DBUILD_SHARED_LIBS:BOOL:BOOL=OFF
 
-		ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} \
+		DESTDIR=${TOOLCHAIN_PATH} ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} \
 			-C ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} install/strip
+
+		### Create rt_builtins package
+		[ -d ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} ] && rm -rf ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} || true
+		DESTDIR=${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}${BUILD_PREFIX} \
+			ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} -C ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} install/strip
+		tar cfp - --owner=0 --group=0 -C ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} . | xz -T${NPROCS} - > ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}.tar.xz
+		rm -rf ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}
+
+		if [ ${_param_install:-0} -eq 1 ]
+		then
+			DESTDIR=${BIN_PATH}${BUILD_PREFIX} \
+				ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} -C ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} install/strip
+		fi
 
 		set +x
 		trap ERR
@@ -638,7 +651,10 @@ function setup_llvm () {
 		set +x; \
 		trap - ERR; \
 		return ${STATUS}' ERR
-	
+
+	OPTS="--install" OPTS_WITH_VALUE="--targets" param2value "${@}"
+	[ ${_param_v:-0} -eq 1 ] && set -x || true
+
 	echo -n "Setting up clang-${LLVM_VER}... "
 	if ( ! clang -v > /dev/null 2>&1 || ! ld.lld -v > /dev/null 2>&1 ) && ( ! ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/ld.lld -v > /dev/null 2>&1 )
 	then
@@ -679,7 +695,7 @@ function setup_llvm () {
 			download_llvm >> ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
 		fi
 		echo -n "building builtins for ${HARCH}... "
-		build_llvm_builtins ${HARCH} >> ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
+		build_llvm_builtins ${HARCH} >> ${GLOBAL_LOG_PATH}/toolchain_llvm-builtins-${LLVM_VER}.log 2>&1
 	fi
 	if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER} ]
 	then
