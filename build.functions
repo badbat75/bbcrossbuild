@@ -485,7 +485,7 @@ function build () (
 			trap - ERR; \
 			return ${STATUS};' ERR
 		set -x
-		if [ ${AUTOCONF:-1} -eq 1 ]
+		if [ ${AUTOCONF:-0} -eq 1 ]
 		then
 			echo -n "${SPACES}AutoReconf ${PKG_NAME}..."
 			cd ${PKG_SRCPATH}/${AUTOCONF_PATH}

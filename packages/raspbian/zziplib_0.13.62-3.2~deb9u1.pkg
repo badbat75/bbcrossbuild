@@ -1,12 +1,13 @@
 # zziplib_0.13.62-3.2~deb9u1
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/z/zziplib/zziplib_0.13.62.orig.tar.bz2"
 BUILD_PROCESS=configmake
+AUTOCONF=1
 CONF_FLAGS="PYTHON=$(which python2)"
 INST_CMD="install-strip"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/z/zziplib/zziplib_0.13.62-3.2~deb9u1.debian.tar.xz"
 #PKG_CFLAGS=""
 #PKG_DEPS=""
-#PKG_PREBUILD=""
+PKG_PREBUILD="rm -f ltmain.sh"
 PKG_POSTBUILD="sed -i '/Libs/ s/-fuse[^ ]*//g;s/-Wl[^ ]*//g' ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig/*.pc"
 
 # Note: Build-Depends: debhelper (>= 9), pkg-config, zlib1g-dev, python, zip, dh-exec, dh-autoreconf

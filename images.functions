@@ -151,18 +151,21 @@ function mount_tag () {
 	# Create loopback devices for the image and its partitions
 	echo -n "Creating loop devices... "
 	sudo losetup -f -P ${IMAGEFILE_PATH} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+	sudo losetup -j ${IMAGEFILE_PATH} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	LOOPDEV=$(sudo losetup -j ${IMAGEFILE_PATH} | awk '{print $1}' | sed 's/.$//g') >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+	echo >> ${LOG_PATH}/images_${_param_1}.log
+	echo "Loop device for ${IMAGEFILE_PATH}: ${LOOPDEV}" >> ${LOG_PATH}/images_${_param_1}.log
 	sudo partprobe ${LOOPDEV} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	sudo kpartx ${LOOPDEV} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo "Done."
 
-	# Check the root partition
-	echo -n "Check root filesystems... "
-	sudo e2fsck -fp ${LOOPDEV}"p"${PARTNO} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
-	echo "Done."
 
 	if [ ! -z ${_param_resize} ]
 	then
+		# Check the root partition
+		echo -n "Check root filesystems... "
+		sudo fsck -fp ${LOOPDEV}"p"${PARTNO} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+		echo "Done."
 		# Resize the root partition
 		echo -n "Resize root partition... "
 		sudo resize2fs ${LOOPDEV}"p"${PARTNO} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
@@ -183,12 +186,12 @@ function mount_tag () {
 		fi
 		MOUNTPOINTS[${MOUNT_DIR}]="${MOUNT_DIR}${MPOINT} ${MOUNTPOINTS[${MOUNT_DIR}]}"
 		if [ ! -d ${MOUNT_DIR}${MPOINT} ] ; then mkdir -p ${MOUNT_DIR}${MPOINT} ; fi
+		sudo fsck -fp ${LOOPDEV}"p"${PARTNO} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		sudo mount ${LOOPDEV}"p"${PARTNO} ${MOUNT_DIR}${MPOINT} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	done
 	#set +x
 	if [ "${ROOTREADY}" -eq 1 ]
 	then
-		#sudo mount -t tmpfs -o nosuid,nodev,mode=755 /run ${MOUNT_DIR}/run >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		sudo mount --bind /dev ${MOUNT_DIR}/dev >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		sudo mount --bind /dev/pts ${MOUNT_DIR}/dev/pts >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		sudo mount -t proc /proc ${MOUNT_DIR}/proc >> ${LOG_PATH}/images_${_param_1}.log 2>&1
@@ -197,8 +200,6 @@ function mount_tag () {
 		then
 			mkdir -p ${MOUNT_DIR}/tmp/bbxb
 		fi
-		#sudo mount -o bind $(readlink -m ${MOUNT_DIR}/..) ${MOUNT_DIR}/tmp/bbxb
-		#MOUNTPOINTS[${MOUNT_DIR}]="${MOUNT_DIR}/proc ${MOUNT_DIR}/dev/pts ${MOUNT_DIR}/run ${MOUNT_DIR}/tmp/bbxb ${MOUNTPOINTS[${MOUNT_DIR}]}"
 		MOUNTPOINTS[${MOUNT_DIR}]="${MOUNT_DIR}/proc ${MOUNT_DIR}/dev/pts ${MOUNT_DIR}/dev ${MOUNTPOINTS[${MOUNT_DIR}]}"
 	fi
 	echo "Done."

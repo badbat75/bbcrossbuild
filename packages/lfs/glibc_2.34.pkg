@@ -2,7 +2,7 @@
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-2.34.tar.xz"
 PATCHES="http://www.linuxfromscratch.org/patches/lfs/development/glibc-2.34-fhs-1.patch"
 BUILD_PROCESS=configmake
-AUTOCONF=0
+
 PKG_OVERRIDELTO=0
 PKG_TWOSTEPSBUILD=0
 CONF_CONFIGPARMS="

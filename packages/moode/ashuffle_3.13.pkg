@@ -1,6 +1,6 @@
 # ashuffle_3.13
 GIT_URL=https://github.com/joshkunz/ashuffle
-GIT_COMMIT=v3.13.0
+GIT_COMMIT=v3.13.2
 #GIT_COMMIT=8e9807bf0afabb4a1455806df398237a688ab5c6
 #PATCHES=
 BUILD_PROCESS=mesonninja
@@ -10,6 +10,5 @@ PKG_DEPS=
 PKG_POSTBUILD="install -d ${PKG_PKGPATH}/usr/local/bin &&
 ln -fs /usr/bin/ashuffle ${PKG_PKGPATH}/usr/local/bin/ashuffle"
 
-### GCC 10 Workaround ####
-test_version ${GCC_VER} -ge 10 && PKG_CFLAGS+=" -fcommon" || true
-##########################
+### Issues with googletest and LLVM
+PKG_TOOLCHAIN=gnu

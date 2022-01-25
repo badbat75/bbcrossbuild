@@ -2,6 +2,7 @@
 GIT_URL="https://github.com/xiph/libao"
 GIT_COMMIT="1.2.2"
 BUILD_PROCESS=configmake
+AUTOCONF=1
 PKG_DEPS=""
 CONF_FLAGS=""
 INST_CMD=install-strip

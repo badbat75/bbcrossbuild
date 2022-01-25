@@ -2,7 +2,7 @@
 PKG_URL="https://mediaarea.net/download/source/mediainfo/21.09/mediainfo_21.09.tar.xz"
 PKG_PREBUILD="sed -i 's/ -O2//g' Project/GNU/CLI/configure.ac"
 BUILD_PROCESS=configmake
-AUTOCONF=0
+
 #AUTOCONF_PATH=Project/GNU/CLI
 PKG_COPYSRC=1
 CONF_PATH=Project/GNU/CLI

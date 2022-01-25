@@ -2,7 +2,7 @@
 PKG_SUFFIX=.1
 PKG_URL="https://ffmpeg.org/releases/ffmpeg-4.4${PKG_SUFFIX}.tar.xz"
 #PATCHES="https://raw.githubusercontent.com/LibreELEC/LibreELEC.tv/efccd337ea2e51a714500b903c783a89ec733efb/packages/multimedia/ffmpeg/patches/rpi/ffmpeg-001-rpi.patch"
-AUTOCONF=0
+
 BUILD_PROCESS=configmake
 STD_CONF_FLAGS=0
 CONF_FLAGS="--prefix=${BUILD_PREFIX} --incdir=${BUILD_INCLUDEDIR} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \

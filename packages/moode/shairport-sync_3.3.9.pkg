@@ -1,6 +1,7 @@
 # shairport-sync_3.3.9
 PKG_URL="https://github.com/mikebrady/shairport-sync/archive/refs/tags/3.3.9.tar.gz"
 BUILD_PROCESS=configmake
+AUTOCONF=1
 CONF_FLAGS="--with-dummy --with-stdout --with-pipe --with-soxr --with-metadata --with-avahi \
 		--with-alsa --with-convolution --with-piddir=/run/shairport-sync --without-configfiles \
 		--without-libdaemon --with-mqtt-client --with-systemd --with-dbus-interface"

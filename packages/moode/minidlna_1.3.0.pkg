@@ -2,6 +2,7 @@
 GIT_URL="https://git.code.sf.net/p/minidlna/git"
 GIT_COMMIT="v1_3_0"
 BUILD_PROCESS=configmake
+AUTOCONF=1
 # CONF_FLAGS=""
 INST_CMD=install-strip
 PKG_DEPS="raspbian/libexif-0.6.21-5.1 raspbian/libid3tag_0.15.1b-14"
