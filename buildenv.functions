@@ -199,7 +199,7 @@ function setup_gcc () {
 		download_uncompress ${MPFRURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpfr
 		download_uncompress ${MPCURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpc
 		download_uncompress ${ISLURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/isl
-		cd ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
+		pushd ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
 		find ../binutils-${BINUTILS_VER} -maxdepth 1 -type d -exec ln -fs {} . \;
 		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 9 && test_version ${BINUTILS_VER} -ge 2.33
 		then
@@ -224,6 +224,7 @@ function setup_gcc () {
 			mv libiberty libiberty.gcc
 			ln -fs ../binutils-${BINUTILS_VER}/libiberty .
 		fi
+		popd
 		set +x
 		trap ERR
 	}
@@ -249,7 +250,7 @@ function setup_gcc () {
 		esac
 
 		echo "GCC_BUILD_PATH: ${TOOLCHAIN_PATH}/gcc-${GCC_VER}"
-		cd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
+		pushd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 		CC_FOR_BUILD="${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc)" \
 		CXX_FOR_BUILD="${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-g++)" \
 		AR_FOR_BUILD="$(which ${BARCH}-gcc-ar)" \
@@ -277,7 +278,7 @@ function setup_gcc () {
 			host_configargs="${host_configargs}" \
 			target_configargs="${target_configargs}"
 
-		cd -
+		popd
 		if [ -n "${GCC_SYSROOT}" ]
 		then
 			mkdir -p ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${HARCH}/libgcc
@@ -417,10 +418,10 @@ function setup_gcc () {
 			KERNEL_HDRS_ONLY=1 build --no_gcc_check --no_save_status ${BS_KERNEL:-bootstrap/bs_kernel}
 			### Build & install glibc
 			echo -n "${SPACES}"
-			TOOLCHAIN=gnu NUMSPACES=1 WITH_LIBXCRYPT=1 build --no_save_status bootstrap/bs_glibc
+			PKG_TOOLCHAIN=gnu NUMSPACES=1 WITH_LIBXCRYPT=1 build --no_save_status bootstrap/bs_glibc
 			### Build & install libxcrypt
 			echo -n "${SPACES}"
-			TOOLCHAIN=gnu NUMSPACES=1 build --no_save_status bootstrap/bs_libxcrypt
+			PKG_TOOLCHAIN=gnu NUMSPACES=1 build --no_save_status bootstrap/bs_libxcrypt
 			rm -rf ${TOOLCHAIN_PATH}
 			echo -n "Rebuild final gcc... "
 			gcc_buildenv
@@ -459,98 +460,6 @@ function setup_llvm () {
 		set -x
 		local GCCURL=https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VER}/llvm-project-${LLVM_VER}.src.tar.xz
 		download_uncompress ${GCCURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}
-		set +x
-		trap ERR
-	}
-
-	function build_llvm_builtins () {
-		trap 'STATUS=${?}; \
-			set +x; \
-			trap ERR; \
-			return ${STATUS};' ERR
-		set -x
-		local LLVM_TARGET=${1}
-		# To be changed with: ${TOOLCHAIN_PATH}
-		local LLVM_INSTALL_PATH=$(llvm-config --prefix)
-
-		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} ]
-		then
-			rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}
-		fi
-		mkdir -p ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}
-		if [ -d ${DISTOS_PATH} ]
-		then
-			if [ $(find ${DISTOS_PATH}/usr/lib ${DISTOS_PATH}/lib -type f -name crti.o -mindepth 1 2>/dev/null | wc -l) -ge 1 ]
-			then
-				local SYSROOT=${DISTOS_PATH}
-				export QEMU_LD_PREFIX="${DISTOS_PATH}"
-			fi
-		else
-			local SYSROOT=${BIN_PATH}
-			export QEMU_LD_PREFIX="${BIN_PATH}"
-		fi
-		cd ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}
-		local PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
-		### Can we build the RT builtins?
-		case x${HMARCH} in
-			xarmv*)
-					if [[ "${HMARCH}" < "armv7" && "${HMARCH}" != "armv6m" ]]
-					then
-						echo -n "${HMARCH} is not supported, RT Builtins disabled... "
-						local COMPILER_RT_BUILD_BUILTINS=OFF
-					else
-						local COMPILER_RT_BUILD_BUILTINS=ON
-					fi
-				;;
-			*) local COMPILER_RT_BUILD_BUILTINS=ON
-				;;
-		esac
-		cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/compiler-rt -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} -G Ninja \
-			\
-			-DCMAKE_C_COMPILER=${LLVM_INSTALL_PATH}/bin/clang \
-			-DCMAKE_CXX_COMPILER=${LLVM_INSTALL_PATH}/bin/clang++ \
-			-DCMAKE_AR=${LLVM_INSTALL_PATH}/bin/llvm-ar \
-			-DCMAKE_NM=${LLVM_INSTALL_PATH}/bin/llvm-nm \
-			-DCMAKE_RANLIB=${LLVM_INSTALL_PATH}/bin/llvm-ranlib \
-			-DCMAKE_C_FLAGS="--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS}" \
-			-DCMAKE_CXX_FLAGS="--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS}" \
-			-DCMAKE_ASM_FLAGS="--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS}" \
-			-DCMAKE_EXE_LINKER_FLAGS="--target=${LLVM_TARGET} -fuse-ld=lld" \
-			-DCMAKE_C_COMPILER_TARGET="${LLVM_TARGET}" \
-			-DCMAKE_ASM_COMPILER_TARGET="${LLVM_TARGET}" \
-			\
-			-DCMAKE_INSTALL_PREFIX=/lib/clang/${LLVM_VER} \
-			-DCMAKE_BUILD_TYPE=Release \
-			-DCMAKE_SYSROOT=${SYSROOT} \
-			\
-			-DLLVM_CONFIG_PATH=${LLVM_INSTALL_PATH}/bin/llvm-config \
-			\
-			-DCOMPILER_RT_INCLUDE_TESTS:BOOL=OFF \
-			-DCOMPILER_RT_BUILD_BUILTINS:BOOL=${COMPILER_RT_BUILD_BUILTINS} \
-			-DCOMPILER_RT_BUILD_LIBFUZZER:BOOL=ON \
-			-DCOMPILER_RT_BUILD_MEMPROF:BOOL=ON \
-			-DCOMPILER_RT_BUILD_PROFILE:BOOL=ON \
-			-DCOMPILER_RT_BUILD_SANITIZERS:BOOL=ON \
-			-DCOMPILER_RT_BUILD_XRAY:BOOL=ON \
-			-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON \
-			-DBUILD_SHARED_LIBS:BOOL:BOOL=OFF
-
-		DESTDIR=${TOOLCHAIN_PATH} ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} \
-			-C ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} install/strip
-
-		### Create rt_builtins package
-		[ -d ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} ] && rm -rf ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} || true
-		DESTDIR=${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}${BUILD_PREFIX} \
-			ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} -C ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} install/strip
-		tar cfp - --owner=0 --group=0 -C ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} . | xz -T${NPROCS} - > ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}.tar.xz
-		rm -rf ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}
-
-		if [ ${_param_install:-0} -eq 1 ]
-		then
-			DESTDIR=${BIN_PATH}${BUILD_PREFIX} \
-				ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} -C ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} install/strip
-		fi
-
 		set +x
 		trap ERR
 	}
@@ -638,6 +547,97 @@ function setup_llvm () {
 		trap ERR
 	}
 
+	function build_llvm_builtins () {
+		trap 'STATUS=${?}; \
+			set +x; \
+			trap ERR; \
+			return ${STATUS};' ERR
+		set -x
+		local LLVM_TARGET=${1}
+		# To be changed with: ${TOOLCHAIN_PATH}
+		local LLVM_INSTALL_PATH=$(llvm-config --prefix)
+
+		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} ]
+		then
+			rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}
+		fi
+		mkdir -p ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}
+		if [ -d ${DISTOS_PATH} ]
+		then
+			if [ $(find ${DISTOS_PATH}/usr/lib ${DISTOS_PATH}/lib -type f -name crti.o -mindepth 1 2>/dev/null | wc -l) -ge 1 ]
+			then
+				local SYSROOT=${DISTOS_PATH}
+				export QEMU_LD_PREFIX="${DISTOS_PATH}"
+			fi
+		else
+			local SYSROOT=${BIN_PATH}
+			export QEMU_LD_PREFIX="${BIN_PATH}"
+		fi
+		#cd ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}
+		local PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
+		### Can we build the RT builtins?
+		case x${HMARCH} in
+			xarmv*)
+					if [[ "${HMARCH}" < "armv7" && "${HMARCH}" != "armv6m" ]]
+					then
+						echo -n "${HMARCH} is not supported, RT Builtins disabled... "
+						local COMPILER_RT_BUILD_BUILTINS=OFF
+					else
+						local COMPILER_RT_BUILD_BUILTINS=ON
+					fi
+				;;
+			*) local COMPILER_RT_BUILD_BUILTINS=ON
+				;;
+		esac
+		cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/compiler-rt -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} -G Ninja \
+			\
+			-DCMAKE_C_COMPILER=${LLVM_INSTALL_PATH}/bin/clang \
+			-DCMAKE_CXX_COMPILER=${LLVM_INSTALL_PATH}/bin/clang++ \
+			-DCMAKE_AR=${LLVM_INSTALL_PATH}/bin/llvm-ar \
+			-DCMAKE_NM=${LLVM_INSTALL_PATH}/bin/llvm-nm \
+			-DCMAKE_RANLIB=${LLVM_INSTALL_PATH}/bin/llvm-ranlib \
+			-DCMAKE_C_FLAGS="--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS}" \
+			-DCMAKE_CXX_FLAGS="--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS}" \
+			-DCMAKE_ASM_FLAGS="--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS}" \
+			-DCMAKE_EXE_LINKER_FLAGS="--target=${LLVM_TARGET} -fuse-ld=lld" \
+			-DCMAKE_C_COMPILER_TARGET="${LLVM_TARGET}" \
+			-DCMAKE_ASM_COMPILER_TARGET="${LLVM_TARGET}" \
+			\
+			-DCMAKE_INSTALL_PREFIX=/lib/clang/${LLVM_VER} \
+			-DCMAKE_BUILD_TYPE=Release \
+			-DCMAKE_SYSROOT=${SYSROOT} \
+			\
+			-DLLVM_CONFIG_PATH=${LLVM_INSTALL_PATH}/bin/llvm-config \
+			\
+			-DCOMPILER_RT_INCLUDE_TESTS:BOOL=OFF \
+			-DCOMPILER_RT_BUILD_BUILTINS:BOOL=${COMPILER_RT_BUILD_BUILTINS} \
+			-DCOMPILER_RT_BUILD_LIBFUZZER:BOOL=ON \
+			-DCOMPILER_RT_BUILD_MEMPROF:BOOL=ON \
+			-DCOMPILER_RT_BUILD_PROFILE:BOOL=ON \
+			-DCOMPILER_RT_BUILD_SANITIZERS:BOOL=ON \
+			-DCOMPILER_RT_BUILD_XRAY:BOOL=ON \
+			-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON \
+			-DBUILD_SHARED_LIBS:BOOL:BOOL=OFF
+
+		DESTDIR=${TOOLCHAIN_PATH} ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} \
+			-C ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} install/strip
+
+		### Create rt_builtins package
+		[ -d ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} ] && rm -rf ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} || true
+		DESTDIR=${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}${BUILD_PREFIX} \
+			ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} -C ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} install/strip
+		tar cfp - --owner=0 --group=0 -C ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} . | xz -T${NPROCS} - > ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}.tar.xz
+		rm -rf ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}
+
+		if [ ${_param_install:-0} -eq 1 ]
+		then
+			DESTDIR=${BIN_PATH}${BUILD_PREFIX} \
+				ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} -C ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} install/strip
+		fi
+
+		set +x
+		trap ERR
+	}
 
 	trap 'local STATUS=${?}; \
 		echo "fail."; \
@@ -890,13 +890,17 @@ function setup_python () {
 			return ${STATUS}' ERR
 
 		set -x
-		create_environment_source
-		source environment.source
 		${BUILD_PYTHONPIP} install crossenv
 		${BUILD_PYTHON} -m crossenv ${HOST_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH}
 		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate
-		build-python -m pip install --upgrade cython setuptools wheel
-		cross-pip -v install --upgrade cython
+		build-python -m pip install --upgrade cython setuptools wheel 2>&1
+		mkdir -p ${TOOLCHAIN_BLDPATH}/build_python_crossenv
+		pushd ${TOOLCHAIN_BLDPATH}/build_python_crossenv
+		TOOLCHAIN=gnu create_environment_source
+		source environment.source
+		cross-pip -v install --upgrade cython 2>&1
+		popd
+		rm -rf ${TOOLCHAIN_BLDPATH}/build_python_crossenv
 		set +x
 		trap ERR
 	}

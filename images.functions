@@ -16,8 +16,8 @@ function create_image() {
 	trap 'STATUS=${?}; \
 		set +x; \
 		trap - ERR; \
-		echo "Unmounting ${MOUNT_DIR}/boot ${MOUNT_DIR}" ; \
-		sudo umount ${MOUNT_DIR}/boot ${MOUNT_DIR}; \
+		echo "Unmounting ${MOUNT_DIR}" ; \
+		sudo umount -R ${MOUNT_DIR}; \
 		sudo losetup -D ; \
 		return ${STATUS};' ERR
 
@@ -95,7 +95,8 @@ function mount_tag () {
 	trap 'STATUS=${?}; \
 		set +x; \
 		trap - ERR; \
-		unmount_tag ${MOUNT_DIR}
+		unmount_tag ${MOUNT_DIR}; \
+		sudo losetup -D; \
 		return ${STATUS};' ERR
 
 	OPTS="" OPTS_WITH_VALUE="--url --imgfile --mountlist --resize" param2value "${@}"
@@ -155,12 +156,13 @@ function mount_tag () {
 	sudo kpartx ${LOOPDEV} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo "Done."
 
+	# Check the root partition
+	echo -n "Check root filesystems... "
+	sudo e2fsck -fp ${LOOPDEV}"p"${PARTNO} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+	echo "Done."
+
 	if [ ! -z ${_param_resize} ]
 	then
-		# Check the root partition
-		echo -n "Check root filesystems... "
-		sudo e2fsck -fp ${LOOPDEV}"p"${PARTNO} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
-		echo "Done."
 		# Resize the root partition
 		echo -n "Resize root partition... "
 		sudo resize2fs ${LOOPDEV}"p"${PARTNO} >> ${LOG_PATH}/images_${_param_1}.log 2>&1

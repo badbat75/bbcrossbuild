@@ -1,7 +1,7 @@
 # chromium
 BUILD_PROCESS=builddebpkg
 PKG_OVERRIDELTO=0
-TOOLCHAIN=llvm
+PKG_TOOLCHAIN=llvm
 #PKG_CFLAGS="-mllvm -polly -Wno-deprecated-copy -Wno-deprecated-copy-with-user-provided-copy"
 #PKG_CXXFLAGS="-mllvm -polly -Wno-deprecated-copy -Wno-deprecated-copy-with-user-provided-copy"
 PKG_PREBUILD="

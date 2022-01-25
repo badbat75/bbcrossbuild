@@ -6,4 +6,4 @@ CONF_FLAGS="--disable-failure-tokens --disable-valgrind \
 	--enable-hashes=all --enable-obsolete-api=glibc --enable-obsolete-api-enosys=no"
 INST_CMD=install-strip
 
-TOOLCHAIN_LD=ld.bfd
+GCC_DEFAULT_LD=ld.bfd
