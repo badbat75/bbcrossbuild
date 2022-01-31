@@ -305,7 +305,12 @@ then
 	run_on_root_dir temp root "systemctl enable ssh"
 	run_on_root_dir temp root "chown upmpdcli /var/cache/upmpdcli/ohcreds/credkey.pem"
 
-	[ -f ~/moodecfg.ini ] && inject_into_mount_tag temp ~/moodecfg.ini /boot || true
+	if [ -f ~/moodecfg.ini ]
+	then
+		echo "Uploading custom moodecfg.ini configuration..."
+		inject_into_mount_tag temp ~/moodecfg.ini /boot
+		echo "Done."
+	fi
 
 	# Uncomment it to navigate in the temp filesystem
 	#pause

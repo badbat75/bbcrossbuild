@@ -220,7 +220,7 @@ function settcenv () {
 			TOOLCHAIN_OBJCOPY=${HARCH}-objcopy
 			TOOLCHAIN_OBJDUMP=${HARCH}-objdump
 			TOOLCHAIN_READELF=${HARCH}-readelf
-			TOOLCHAIN_LD=${GCC_DEFAULT_LD:-ld.gold}
+			TOOLCHAIN_LD=${GCC_DEFAULT_LD:-gold}
 			if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
 			then
 				TOOLCHAIN_COMPFLAGS="${GNU_EXTRAGCCFLAGS}"
@@ -230,7 +230,7 @@ function settcenv () {
 				TOOLCHAIN_COMPFLAGS="${SYSROOT_FLAGS} ${GNU_EXTRAGCCFLAGS}"
 				TOOLCHAIN_EXTRA_C_CMD=""
 			fi
-			TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=$(echo ${TOOLCHAIN_LD} | cut -d. -f2) ${GNU_EXTRALDFLAGS}"
+			TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LD} ${GNU_EXTRALDFLAGS}"
 			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 				1|2|fat|thin)
 					OPTCOMP_FLAGS+=" -flto=${NPROCS}"
@@ -252,7 +252,7 @@ function settcenv () {
 			TOOLCHAIN_OBJCOPY=llvm-objcopy
 			TOOLCHAIN_OBJDUMP=llvm-objdump
 			TOOLCHAIN_READELF=llvm-readelf
-			TOOLCHAIN_LD=${LLVM_DEFAULT_LD:-ld.lld}
+			TOOLCHAIN_LD=${LLVM_DEFAULT_LD:-lld}
 			if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
 			then
 				TOOLCHAIN_COMPFLAGS="${LLVM_EXTRACLANGFLAGS}"
@@ -261,7 +261,7 @@ function settcenv () {
 				TOOLCHAIN_COMPFLAGS="${SYSROOT_FLAGS} ${LLVM_EXTRACLANGFLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
 				TOOLCHAIN_EXTRA_C_CMD="--target=${HARCH}"
 			fi
-			TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=$(echo ${TOOLCHAIN_LD} | cut -d. -f2) -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
+			TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LD} -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
 			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 				1|fat)
 					TOOLCHAIN_COMPFLAGS+=" -flto=full"
@@ -273,10 +273,10 @@ function settcenv () {
 			;;
 	esac
 	case ${TOOLCHAIN_LD} in
-		ld.gold)
+		gold)
 			TOOLCHAIN_LINKERFLAGS+=" -fuse-linker-plugin -Wl,--threads -Wl,--thread-count,${NPROCS}"
 			;;
-		ld.lld)
+		lld)
 			TOOLCHAIN_LINKERFLAGS+=" -Wl,--thinlto-jobs=${NPROCS}"
 			;;
 	esac
@@ -773,7 +773,12 @@ function build () (
 			esac
 			KBUILD_BUILD_TIMESTAMP='' make V=${MAKEVERBOSE:-0} \
 			CC="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}" \
-			LD="$([ ${TOOLCHAIN_LD} == ${HARCH}-ld.gold ] && echo ${HARCH}-ld.bfd || echo ${TOOLCHAIN_LD})" \
+			LD="$(
+				case ${TOOLCHAIN_LD} in
+					gold|bfd) echo ${HARCH}-ld.bfd;;
+					lld) echo ld.lld;;
+				esac
+				)" \
 			AS="${TOOLCHAIN_AS}" \
 			NM="${TOOLCHAIN_NM}" \
 			AR="${TOOLCHAIN_AR}" \
