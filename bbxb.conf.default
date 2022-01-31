@@ -34,6 +34,10 @@ PKI_SUBJECT="/C=IT/ST=Bologna/L=Bologna/O=BadBat75 LTD/CN=badbat75/emailAddress=
 
 ### Specify boot C compiler (default: gcc)
 # TOOLCHAIN_CC="cc"
+### Default linker for gcc toolchain
+# CC_DEFAULT_LD=gold
+### Default linker for llvm toolchain
+# LLVM_DEFAULT_LD=lld
 
 ### Enable and set if you are using a gcc wrapper like ccache or distcc
 CCWRAPPER="ccache"
