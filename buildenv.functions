@@ -399,6 +399,7 @@ function setup_gcc () {
 		gcc_configuration >> ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log 2>&1
 		echo -n "${ECHO_BOOTSTRAP}building host binaries... "
 		gcc_make_host ${HARCH} >> ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log 2>&1
+		pathadd PATH "${TOOLCHAIN_PATH}/bin"
 		### Check if bootstrap sysroot before building target libraries
 		if [ -n "${GCC_SYSROOT}" ]
 		then
@@ -433,6 +434,7 @@ function setup_gcc () {
 			gcc_make_target_libs >> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log 2>&1
 		fi
 	fi
+	pathadd PATH "${TOOLCHAIN_PATH}/bin"
 
 	if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ] && false
 	then
@@ -445,7 +447,6 @@ function setup_gcc () {
 		rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
 		rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${BINUTILS_VER}
 	fi
-	pathadd PATH "${TOOLCHAIN_PATH}/bin"
 	echo "done."
 
 	trap - ERR
