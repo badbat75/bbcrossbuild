@@ -36,7 +36,7 @@ Get your package here: `.bbxb/<project>/<platform>/<project>.tar.xz`
 
 #### Directives
 
-**mount_tag**
+**mount_tag: **
 Download and mount system image.   
 `mount_tag <tag_name> --url "<image_url>" --imgfile "<image_filename>" --mountlist "<partition_list>" [--resize <resize_options>]`
 + `tag_name:` tag name of the image. If "distos", it will be used as sysroot for build packages. If "binaries", it will be used as destination for built packages.
@@ -45,39 +45,39 @@ Download and mount system image.
 + `partition_list:` how the build system should interpret the partitions of the images with following format "partno:mountpoint [partno:mountpoint] ..."
 + `resize_options:` resize the last partition using the following format "partno:size"
 
-**unmount_tag**
+**unmount_tag: **
 Unmount image mounted with "tag_name". Always remember to unmount images before closing the project.   
 `unmount_tag <tag_name>`   
 + `tag_name:` tag name of the image
 
-**prepare_sysroot**
+**prepare_sysroot: **
 Relink (soft links) all the libraries with relative paths on DISTOS path.   
 `prepare_sysroot`
 
-**run_on_root_dir**
+**run_on_root_dir: **
 Execute a command like the system is running. A specified command will be executed in a chroot-ed environment inside the tag image.   
 `run_on_root_dir <tag_name> <as_user> "<command>" `
 + `tag_name:` tag name of the image
 + `as_user:` target user that is running the command
 + `command:` command to run
 
-**setup_gcc**
+**setup_gcc: **
 Set up gnu toolchain. If no DISTOS is present it will bootstrap a SYSROOT using bs packages (kernel, glibc and libxcrypt).   
 `setup_gcc`
 
-**setup_llvm**
+**setup_llvm: **
 Set up llvm toolchain.   
 `setup_llvm`
 
-**setup_rust**
+**setup_rust: **
 Set up rust environment.   
 `setup_rust`
 
-**setup_python**
+**setup_python: **
 Set up python environment. If version is not specified, it will be gathered from DISTOS path.  
 `setup_python [version]`
 
-**build**
+**build: **
 build the package.   
 `[optional_env_vars] build <package_name>`   
 
