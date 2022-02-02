@@ -213,6 +213,84 @@ pause () {
 	echo
 }
 
+pathadd () {
+
+	### pathadd <PATH|LD_LIBRARY_PATH> <path-name>
+
+	if [ -z "${1}" ]
+	then
+		echo "Variable not defined."
+		return 1
+	fi
+
+	if [ -z "${2}" ]
+	then
+		echo "Path not defined."
+		return 1
+	fi
+
+	eval "
+	while read sp
+	do
+		if [ \"\${sp}\" == \"\${2}\" ]
+		then
+			echo "\${2} already found in \${1}"
+			return 0
+		fi
+	done < <(tr ':' '\n' <<< \"\${${1}}\")
+
+	if [ -z \"\${${1}}\" ]
+	then
+		export ${1}="\${2}"
+	else
+		export ${1}="\${2}:\${${1}}"
+	fi
+	echo "\${2} added to \${1}"
+	"
+}
+
+pathremove () {
+
+	### pathremove <PATH|LD_LIBRARY_PATH> <path-name>
+
+	if [ -z "${1}" ]
+	then
+		echo "Variable not defined."
+		return 1
+	fi
+
+	if [ -z "${2}" ]
+	then
+		echo "Path not defined."
+		return 1
+	fi
+
+	local i=1
+	local FPATH=
+	local FOUND=0
+
+	eval "
+	while read sp
+	do
+		if [ \"\${sp}\" != \"\${2}\" ]
+		then
+			local FPATH+=\"\$( [ \$i -gt 1 ] && echo \":\" )\${sp}\"
+			let \"i+=1\"
+		else
+			local FOUND=1
+		fi
+	done < <(tr ':' '\n' <<< \"\${${1}}\")
+
+	if [ \${FOUND} -eq 1 ]
+	then
+		export ${1}=\"\${FPATH}\"
+		echo \"\${2} removed from PATH\"
+	else
+		echo \"\${2} not found in PATH\"
+	fi
+	"
+}
+
 is_core_functions () {
 	return 0
 }
