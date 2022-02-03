@@ -1212,7 +1212,7 @@ function build () (
 		CARGO_BINLIST \
 		CARGO_LIBLIST
 
-	OPTS="--force --no_gcc_check --no_save_status" OPTS_WITH_VALUE="" param2value "${@}"
+	OPTS="--force --no_gcc_check --no_save_status --keep_builddir" OPTS_WITH_VALUE="" param2value "${@}"
 	[ ${_param_v:-0} -eq 1 ] && set -x || true
 
 	if [ -z "${NUMSPACES}" ]
@@ -1445,7 +1445,7 @@ function build () (
 				sudo rm -rf ${PKG_PKGPATH}
 				set +ex
 			) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-			if [ ${KEEP_BUILDDIR:-0} -eq 0 ]
+			if [ ${_param_keep_builddir:-0} -eq 0 ]
 			then
 				rm -rf ${PKG_BLDPATH}
 			fi
@@ -1462,7 +1462,7 @@ function build () (
 				sudo rm -rf ${PKG_PKGPATH}
 				set +ex
 			) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-			if [ ${KEEP_BUILDDIR:-0} -eq 0 ]
+			if [ ${_param_keep_builddir:-0} -eq 0 ]
 			then
 				rm -rf ${PKG_BLDPATH}
 			fi

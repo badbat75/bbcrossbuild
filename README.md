@@ -77,12 +77,14 @@ Set up rust environment.
 Set up python environment. If version is not specified, it will be gathered from DISTOS path.  
 `setup_python [version]`
 
-**build:**
+**build**
 build the package.   
-`[optional_env_vars] build <package_name>`   
+`[optional_env_vars] build [--keep_builddir] [--no_save_status] [--no_gcc_check] <package_name>`   
 
-Optional environment variables:   
-+ `KEEP_BUILDDIR=[0|1]` - Set to 1 to don't delete the build directory after build
+Options:   
++ `--keep_builddir:` Specify to not delete the build directory after build
++ `--no_save_status:` Don't save the build status. The package will be built even if it has been built in a previous build
++ `--no_gcc_check:` Don't check if there's a gcc toolchain available (useful during bootstrap)
 
 ### Define your package
 
