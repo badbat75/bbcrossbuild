@@ -36,7 +36,7 @@ Get your package here: `.bbxb/<project>/<platform>/<project>.tar.xz`
 
 #### Directives
 
-**mount_tag: **
+**mount_tag:**
 Download and mount system image.   
 `mount_tag <tag_name> --url "<image_url>" --imgfile "<image_filename>" --mountlist "<partition_list>" [--resize <resize_options>]`
 + `tag_name:` tag name of the image. If "distos", it will be used as sysroot for build packages. If "binaries", it will be used as destination for built packages.
