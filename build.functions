@@ -39,7 +39,7 @@ function setbuildenv () {
 
 	case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
 		gnu) local SYSINCLUDE_OPT="-isystem";;
-		clang|*) local SYSINCLUDE_OPT="-I";;
+		llvm|*) local SYSINCLUDE_OPT="-I";;
 	esac
 
 	COMMON_CFLAGS="${SYSINCLUDE_OPT}${BIN_PATH}${BUILD_INCLUDEDIR}"
@@ -290,7 +290,7 @@ function create_environment_source () {
 		#################################################################################
 		###### ${PKG_NAME}
 		### Source file with all the environment specified
-		### Tool chain: ${TOOLCHAIN}
+		### Tool chain: ${PKG_TOOLCHAIN:-${TOOLCHAIN}}
 		### C Wrapper: ${CCWRAPPER}
 		### Build type: ${BUILD_PROCESS}
 		###### Other environment variables:
@@ -321,8 +321,8 @@ function create_environment_source () {
 		export F90FLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
 		export LDFLAGS='${TOOLCHAIN_LINKERFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}'
 		export PKG_CONFIG=${HARCH}-pkg-config
-		export PKG_CONFIG_LIBDIR=${PKG_CONFIG_LIBDIR}
-		export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR}
+		export PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR}
+		export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}
 		export PKG_CONFIG_ALLOW_CROSS=${PKG_CONFIG_ALLOW_CROSS}
 		export LD_LIBRARY_PATH='${LD_LIBRARY_PATH}'
 		export PATH='${PATH}'
@@ -1212,7 +1212,7 @@ function build () (
 		CARGO_BINLIST \
 		CARGO_LIBLIST
 
-	OPTS="--force --no_gcc_check --no_save_status --keep_builddir" OPTS_WITH_VALUE="" param2value "${@}"
+	OPTS="--force --no_gcc_check --no_save_status --keep_builddir" OPTS_WITH_VALUE="--toolchain" param2value "${@}"
 	[ ${_param_v:-0} -eq 1 ] && set -x || true
 
 	if [ -z "${NUMSPACES}" ]
@@ -1234,16 +1234,15 @@ function build () (
 
 	source ${PKG_PATH}/${_param_1}.pkg
 
+	PKG_TOOLCHAIN=${_param_toolchain}
+
 	setbuildenv
 
 	eval local PKG_NAME=${PKG_NAME}
 	eval local PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
 	eval local PKG_BLDPATH=${PKG_BLDPATH}
 	eval local PKG_PKGPATH=${PKG_PKGPATH}
-
-	export PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR}
-	export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}
-
+	
 	echo "Package ${PKG_NAME}"
 
 	if [ ${DEBUG:-0} -gt 0 ]
@@ -1283,10 +1282,10 @@ function build () (
 	
 	if [ ${_param_no_gcc_check:-0} -eq 0 ] && [ "${BUILD_PROCESS}" != "none" ] && [ "${BUILD_PROCESS}" != "downloadonly" ]
 	then
-		check_${TOOLCHAIN}_c
+		check_${PKG_TOOLCHAIN:-${TOOLCHAIN}}_c
 	fi
 
-	if [ ${TOOLCHAIN} == llvm ]
+	if [ ${PKG_TOOLCHAIN:-${TOOLCHAIN}} == llvm ]
 	then
 		if [ -z "${PKG_LLVMPOLLYFEATURES}" ]
 		then

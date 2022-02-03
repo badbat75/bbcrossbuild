@@ -1,5 +1,5 @@
 # bs_libxcrypt
-PKG_URL="https://github.com/besser82/libxcrypt/archive/v${BS_LIBXCRYPT_VER:-4.4.27}.tar.gz"
+PKG_URL="https://github.com/besser82/libxcrypt/archive/v${BS_LIBXCRYPT_VER}.tar.gz"
 PKG_PREBUILD="./autogen.sh"
 BUILD_PROCESS=configmake
 PKG_OVERRIDELTO=0

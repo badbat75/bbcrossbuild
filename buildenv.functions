@@ -95,10 +95,10 @@ function check_gnu_c () {
 	${HARCH}-gcc -v > /dev/null 2>&1
 	if [ ! ${?} -eq 0 ]
 	then
-		echo "The toolchain for cross-compile does not exist."
-		echo "To build one, add build_gcc command to your project before start building anything else."
+		echo "The GNU toolchain for cross-compile does not exist."
+		echo "To build one, add setup_gcc command to your project before start building anything else."
 		echo
-		exit 1
+		return 1
 	fi
 }
 
@@ -106,10 +106,10 @@ function check_llvm_c () {
 	clang --target=${HARCH} -v > /dev/null 2>&1
 	if [ ! ${?} -eq 0 ]
 	then
-		echo "The toolchain for cross-compile does not exist."
-		echo "To build one, add build_gcc command to your project before start building anything else."
+		echo "The LLVM toolchain for cross-compile does not exist."
+		echo "To build one, add setup_llvm command to your project before start building anything else."
 		echo
-		exit 1
+		return 1
 	fi
 }
 
@@ -399,7 +399,6 @@ function setup_gcc () {
 		gcc_configuration >> ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log 2>&1
 		echo -n "${ECHO_BOOTSTRAP}building host binaries... "
 		gcc_make_host ${HARCH} >> ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log 2>&1
-		pathadd PATH "${TOOLCHAIN_PATH}/bin"
 		### Check if bootstrap sysroot before building target libraries
 		if [ -n "${GCC_SYSROOT}" ]
 		then
@@ -408,6 +407,7 @@ function setup_gcc () {
 		else
 			### Bootstrapping sysroot
 			echo "done."
+			pathadd PATH "${TOOLCHAIN_PATH}/bin"
 			echo "Bootstrapping foundation libraries in ${BIN_PATH}... "
 			local SPACES="   "
 			echo -n "${SPACES}"
@@ -419,10 +419,10 @@ function setup_gcc () {
 			KERNEL_HDRS_ONLY=1 build --no_gcc_check --no_save_status ${BS_KERNEL:-bootstrap/bs_kernel}
 			### Build & install glibc
 			echo -n "${SPACES}"
-			PKG_TOOLCHAIN=gnu NUMSPACES=1 WITH_LIBXCRYPT=1 build --no_save_status bootstrap/bs_glibc
+			NUMSPACES=1 WITH_LIBXCRYPT=1 build --toolchain gnu --no_save_status bootstrap/bs_glibc
 			### Build & install libxcrypt
 			echo -n "${SPACES}"
-			PKG_TOOLCHAIN=gnu NUMSPACES=1 build --no_save_status bootstrap/bs_libxcrypt
+			NUMSPACES=1 build --toolchain gnu --no_save_status bootstrap/bs_libxcrypt
 			rm -rf ${TOOLCHAIN_PATH}
 			echo -n "Rebuild final gcc... "
 			gcc_buildenv
@@ -434,6 +434,7 @@ function setup_gcc () {
 			gcc_make_target_libs >> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log 2>&1
 		fi
 	fi
+	echo -n "adding gcc binaries search path... "
 	pathadd PATH "${TOOLCHAIN_PATH}/bin"
 
 	if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ] && false
@@ -1043,15 +1044,6 @@ if [ ! -d ${GLOBAL_TOOLCHAIN_PATH} ]
 then
 	mkdir -p ${GLOBAL_TOOLCHAIN_PATH}
 fi
-
-BINUTILS_VER=${BINUTILS_VER:-2.37}
-GCC_VER=${GCC_VER:-11.2.0}
-GMP_VER=${GMP_VER:-6.2.1}
-MPFR_VER=${MPFR_VER:-4.1.0}
-MPC_VER=${MPC_VER:-1.2.1}
-ISL_VER=${ISL_VER:-0.24}
-
-LLVM_VER=${LLVM_VER:-13.0.1}
 
 # Check the toolchains
 gcc -v > /dev/null 2>&1
