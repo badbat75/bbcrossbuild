@@ -386,6 +386,7 @@ function setup_gcc () {
 	echo -n "Setting up gcc"
 	echo -n "-${GCC_VER}... "
 
+	pathadd PATH "${TOOLCHAIN_PATH}/bin"
 	if [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc ] && [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ ]
 	then
 		gcc_buildenv
@@ -407,7 +408,6 @@ function setup_gcc () {
 		else
 			### Bootstrapping sysroot
 			echo "done."
-			pathadd PATH "${TOOLCHAIN_PATH}/bin"
 			echo "Bootstrapping foundation libraries in ${BIN_PATH}... "
 			local SPACES="   "
 			echo -n "${SPACES}"
@@ -434,8 +434,6 @@ function setup_gcc () {
 			gcc_make_target_libs >> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log 2>&1
 		fi
 	fi
-	echo -n "adding gcc binaries search path... "
-	pathadd PATH "${TOOLCHAIN_PATH}/bin"
 
 	if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ] && false
 	then
@@ -482,8 +480,30 @@ function setup_llvm () {
 
 		local PLATFORM_CFLAGS="-march=native"
 
-		sed -i "s/-flto\"/-flto=auto\"/g" ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/AddLLVM.cmake
-		sed -i "s/-flto\"/-flto=auto\"/g" ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/HandleLLVMOptions.cmake
+		case $(clang -v > /dev/null 2>&1 ; echo ${?}) in
+			0)
+				local C="$(which clang)"
+				local CXX="$(which clang++)"
+				local AR="$(which llvm-ar)"
+				local NM="$(which llvm-nm)"
+				local RANLIB="$(which llvm-ranlib)"
+				local LINKER=lld
+				local LINKER_FLAGS="-fuse-ld=lld -Wl,--threads=${NPROCS}"
+				local LTO=ON
+			;;
+			*)
+				local C="$(which ${BARCH}-gcc)"
+				local CXX="$(which ${BARCH}-g++)"
+				local AR="$(which gcc-ar)"
+				local NM="$(which gcc-nm)"
+				local RANLIB="$(which gcc-ranlib)"
+				local LINKER=gold
+				local LINKER_FLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}"
+				local LTO=OFF
+				sed -i "s/-flto\"/-flto=auto\"/g" ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/AddLLVM.cmake
+				sed -i "s/-flto\"/-flto=auto\"/g" ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/HandleLLVMOptions.cmake
+			;;
+		esac
 
 		cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER} -G Ninja \
 			-W no-dev \
@@ -491,17 +511,17 @@ function setup_llvm () {
 			-DLLVM_PARALLEL_LINK_JOBS=1 \
 			\
 			-DLLVM_CCACHE_BUILD:BOOL=ON \
-			-DCMAKE_C_COMPILER=$(which ${BARCH}-gcc) \
-			-DCMAKE_CXX_COMPILER=$(which ${BARCH}-g++) \
-			-DCMAKE_AR=$(which gcc-ar) \
-			-DCMAKE_NM=$(which gcc-nm) \
-			-DCMAKE_RANLIB=$(which gcc-ranlib) \
+			-DCMAKE_C_COMPILER="${C}" \
+			-DCMAKE_CXX_COMPILER="${CXX}" \
+			-DCMAKE_AR="${AR}" \
+			-DCMAKE_NM="${NM}" \
+			-DCMAKE_RANLIB="${RANLIB}" \
 			-DCMAKE_CROSSCOMPILING=True \
-			-DLLVM_USE_LINKER=gold \
+			-DLLVM_USE_LINKER=${LINKER} \
 			-DCMAKE_C_FLAGS="${PLATFORM_CFLAGS}" \
 			-DCMAKE_CXX_FLAGS="${PLATFORM_CFLAGS}" \
 			-DCMAKE_ASM_FLAGS="${PLATFORM_CFLAGS}" \
-			-DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}" \
+			-DCMAKE_EXE_LINKER_FLAGS="${LINKER_FLAGS}" \
 			-DCMAKE_SKIP_RPATH:BOOL=ON \
 			\
 			-DCMAKE_INSTALL_PREFIX=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER} \
@@ -513,7 +533,7 @@ function setup_llvm () {
 			-DLLVM_LIBDIR_SUFFIX=64 \
 			\
 			-DBUILD_SHARED_LIBS:BOOL=OFF \
-			-DLLVM_ENABLE_LTO:BOOL=OFF \
+			-DLLVM_ENABLE_LTO:BOOL=${LTO} \
 			-DLLVM_ENABLE_LIBCXX:BOOL=OFF \
 			-DLLVM_ENABLE_ZLIB:BOOL=ON \
 			-DLLVM_ENABLE_FFI:BOOL=ON \
@@ -659,7 +679,7 @@ function setup_llvm () {
 	[ ${_param_v:-0} -eq 1 ] && set -x || true
 
 	echo -n "Setting up clang-${LLVM_VER}... "
-	if ( ! clang -v > /dev/null 2>&1 || ! ld.lld -v > /dev/null 2>&1 ) && ( ! ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/ld.lld -v > /dev/null 2>&1 )
+	if ( ! ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang -v > /dev/null 2>&1 || ! ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/ld.lld -v > /dev/null 2>&1 )
 	then
 		> ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 		if [ -d ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER} ]
