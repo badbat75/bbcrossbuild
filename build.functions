@@ -705,7 +705,8 @@ function build () (
 	
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
-		settcenv
+		create_environment_source
+		source environment.source
 		local CARGO_BIN=${CARGO_BIN:-${BUILD_EXECPREFIX}/bin}
 		local CARGO_LIB=${CARGO_LIB:-${BUILD_LIBDIR}${BUILD_LIBSUFFIX}}
 		local CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
