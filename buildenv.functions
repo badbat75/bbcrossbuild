@@ -479,6 +479,8 @@ function setup_llvm () {
 		mkdir -p ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}
 
 		local PLATFORM_CFLAGS="-march=native"
+		# Determine maximum amount of parallel link given each link takes 10G currently
+		local PARALLEL_LINK_JOB=$(( $( awk '/MemTotal/ {print $2}' /proc/meminfo )/10485760 ))
 
 		case $(clang -v > /dev/null 2>&1 ; echo ${?}) in
 			0)
@@ -488,6 +490,7 @@ function setup_llvm () {
 				local NM="$(which llvm-nm)"
 				local RANLIB="$(which llvm-ranlib)"
 				local LINKER=lld
+				local COMPILER_FLAGS="-I${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/lib64/clang/13.0.1/include"
 				local LINKER_FLAGS="-fuse-ld=lld -Wl,--threads=${NPROCS}"
 				local LTO=ON
 			;;
@@ -508,7 +511,7 @@ function setup_llvm () {
 		cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER} -G Ninja \
 			-W no-dev \
 			-DLLVM_PARALLEL_COMPILE_JOBS=${NPROCS} \
-			-DLLVM_PARALLEL_LINK_JOBS=1 \
+			-DLLVM_PARALLEL_LINK_JOBS=${PARALLEL_LINK_JOB} \
 			\
 			-DLLVM_CCACHE_BUILD:BOOL=ON \
 			-DCMAKE_C_COMPILER="${C}" \
@@ -528,7 +531,6 @@ function setup_llvm () {
 			-DCMAKE_BUILD_TYPE=Release \
 			-DLLVM_TARGETS_TO_BUILD="all" \
 			-DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lldb;lld;polly" \
-			-DLLVM_ENABLE_RUNTIMES="compiler-rt" \
 			-DLLVM_BINUTILS_INCDIR=/usr/include \
 			-DLLVM_LIBDIR_SUFFIX=64 \
 			\
@@ -691,12 +693,8 @@ function setup_llvm () {
 		echo -n "building native... "
 		build_llvm >> ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
 	fi
-	if [ -d ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin ] && [ -d ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib64 ]
-	then
-		echo -n "setting up search paths... "
-		pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib64"
-		pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin"
-	fi
+	pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib64"
+	pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin"
 	case x${HM} in
 		xarm)
 			if [ "${HMFLOATABI}" == "hard" ]
@@ -712,13 +710,14 @@ function setup_llvm () {
 	esac
 	if [ ! -f ${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/clang_rt.crtbegin-${LLVM_ARCH}.o ]
 	then
+		> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 		if [ ! -d ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER} ]
 		then
 			echo -n "downloading... "
-			download_llvm >> ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
+			download_llvm >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
 		fi
 		echo -n "building builtins for ${HARCH}... "
-		build_llvm_builtins ${HARCH} >> ${GLOBAL_LOG_PATH}/toolchain_llvm-builtins-${LLVM_VER}.log 2>&1
+		build_llvm_builtins ${HARCH} >> ${LOG_PATH}/toolchain_llvm-builtins-${LLVM_VER}.log 2>&1
 	fi
 	if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER} ]
 	then
