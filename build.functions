@@ -1234,7 +1234,7 @@ function build () (
 
 	source ${PKG_PATH}/${_param_1}.pkg
 
-	PKG_TOOLCHAIN=${_param_toolchain}
+	PKG_TOOLCHAIN=${_param_toolchain:-${PKG_TOOLCHAIN}}
 
 	setbuildenv
 
