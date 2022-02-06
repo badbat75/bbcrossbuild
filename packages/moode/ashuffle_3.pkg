@@ -1,6 +1,7 @@
-# ashuffle_3.13
+# ashuffle_3
+PKG_SUFFIX=.13.3
 GIT_URL=https://github.com/joshkunz/ashuffle
-GIT_COMMIT=v3.13.2
+GIT_COMMIT=v3${PKG_SUFFIX}
 #GIT_COMMIT=8e9807bf0afabb4a1455806df398237a688ab5c6
 #PATCHES=
 BUILD_PROCESS=mesonninja
