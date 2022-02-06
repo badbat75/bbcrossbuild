@@ -76,8 +76,8 @@ generate_ssh_keys --install binaries
 WITH_EXTOPTS=1 build --keep_builddir raspberrypi/rpi-kernel_5.16
 #####
 build raspberrypi/raspi-config
-build raspberrypi/raspberrypi-sys-mods_20211005
-build raspberrypi/raspberrypi-net-mods_20211104
+build raspberrypi/raspberrypi-sys-mods
+build raspberrypi/raspberrypi-net-mods
 build moode/alsa-utils_1.2.6
 
 # Download and install moode-sources and pre-build environment
@@ -96,7 +96,7 @@ build raspbian/udevil_0.4.4-2
 
 # STEP 4 - Install enhanced networking and bluetooth stack
 build moode/bluez_5
-build raspberrypi/pi-bluetooth_0.1.17
+build raspberrypi/pi-bluetooth
 WITH_APTX=libopenaptx build moode/bluez-alsa_3.1.0+24b7300
 
 # STEP 6 - Compile and install MPD
@@ -126,7 +126,7 @@ WITH_ALAC=1 build moode/shairport-sync_3.3.9
 build moode/librespot_0.3.1
 
 # COMPONENT 5 - Squeezelite
-build moode/squeezelite_master+cfab656
+build moode/squeezelite_master+5a636f8
 
 # COMPONENT 6 - Upmpdcli
 build moode/upmpdcli_1.5

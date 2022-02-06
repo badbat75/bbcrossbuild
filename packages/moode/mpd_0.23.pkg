@@ -21,7 +21,7 @@ CONF_FLAGS="-Dalsa=enabled -Dbzip2=enabled -Dcurl=enabled -Ddatabase=true -Ddsd=
 PKG_DEPS="moode/boost_1.78.0 \
 	moode/libmpdclient-2.20 \
 	moode/alsa-lib_1.2.6.1 \
-	moode/ffmpeg_4.4 \
+	moode/ffmpeg_5 \
 	moode/lame_3.100 \
 	moode/mpg123_1.29.2 \
 	moode/libmad_0.15.1b \
