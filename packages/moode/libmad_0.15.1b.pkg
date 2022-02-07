@@ -8,7 +8,9 @@ INST_CMD=install-strip
 PKG_DEPS=""
 PKG_PREBUILD="sed 's@AM_CONFIG_HEADER@AC_CONFIG_HEADERS@g' -i configure.ac
     touch NEWS AUTHORS ChangeLog
-    rm -f ltmain.sh"
+    rm -f ltmain.sh
+"
+PKG_FAULTYCFLAGS=1
 
 case ${HM} in
     arm)

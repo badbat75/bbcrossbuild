@@ -205,6 +205,16 @@ function settcenv () {
 
 	local TOOLCHAIN=${PKG_TOOLCHAIN:-${TOOLCHAIN}}
 	echo Toolchain: ${TOOLCHAIN}
+	if [ ${TOOLCHAIN} == llvm ]
+	then
+		if [ -z "${PKG_LLVMPOLLYFEATURES}" ]
+		then
+			setllvmpollyenv ${LLVM_POLLY_FEATURES}
+		else
+			eval "echo 'Override LLVM Polly features: ${PKG_LLVMPOLLYFEATURES}' >> ${LOG_PATH}/${PKG_NAME}.log"
+			setllvmpollyenv ${PKG_LLVMPOLLYFEATURES}
+		fi
+	fi
 	case ${TOOLCHAIN} in
 		gnu)
 			TOOLCHAIN_CC=${HARCH}-gcc
@@ -722,9 +732,8 @@ function build () (
 			export RUSTFLAGS+=" -C link-arg=${param}"
 		done
 		export RUSTFLAGS+=" ${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}"
-		echo ${RUSTFLAGS}
-		PKG_CONFIG=${HARCH}-pkg-config \
-			cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}
+		echo "RUSTFLAGS=${RUSTFLAGS}"
+		cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}
 		for file in ${CARGO_BINLIST}
 		do
 			if [ ! -d ${PKG_PKGPATH}${CARGO_BIN} ]
@@ -1067,24 +1076,28 @@ function build () (
 		fi
 		case ${HM} in
 			arm)
+				local HMARCH=arm
 				local HMABI=aapcs
 				local HMADDRMOD=32
 				;;
 			aarch64)
+				local HMARCH=arm
 				local HMABI=aapcs
 				local HMADDRMOD=64
 				;;
-			i386|ppc32)
+			i386)
+				local HMARCH=x86
 				local HMABI=sysv
 				local HMADDRMOD=32
 				;;
-			x86_64|ppc64)
+			x86_64)
+				local HMARCH=x86
 				local HMABI=sysv
 				local HMADDRMOD=64
 				;;
-			mips1)
-				local HMABI=o32
-				local HMADDRMOD=32
+			*)
+				echo "Missing architecture mapping for ${HM}"
+				return 1
 				;;
 		esac
 		case ${HOS} in
@@ -1108,7 +1121,7 @@ function build () (
 			--with-toolset=${BBTC}
 		sed -i "s|using ${BBTC} ;|using ${BBTC} : : ${CXX} ;|" project-config.jam &&
 		./b2 -j${NPROCS} -q ${B2_FLAGS} \
-			architecture=${HM} binary-format=${HMBINFMT} abi=${HMABI} target-os=${HOS} \
+			architecture=${HMARCH} binary-format=${HMBINFMT} abi=${HMABI} target-os=${HOS} \
 			variant=release address-model=${HMADDRMOD} threading=multi \
 			toolset=${BBTC} cflags="${CFLAGS}" cxxflags="-fPIC ${CXXFLAGS}" linkflags="${LDFLAGS}" install
 		cd ${BB_HOME}
@@ -1284,17 +1297,6 @@ function build () (
 	if [ ${_param_no_gcc_check:-0} -eq 0 ] && [ "${BUILD_PROCESS}" != "none" ] && [ "${BUILD_PROCESS}" != "downloadonly" ]
 	then
 		check_${PKG_TOOLCHAIN:-${TOOLCHAIN}}_c
-	fi
-
-	if [ ${PKG_TOOLCHAIN:-${TOOLCHAIN}} == llvm ]
-	then
-		if [ -z "${PKG_LLVMPOLLYFEATURES}" ]
-		then
-			setllvmpollyenv ${LLVM_POLLY_FEATURES}
-		else
-			eval "echo 'Override LLVM Polly features: ${PKG_LLVMPOLLYFEATURES}' >> ${LOG_PATH}/${PKG_NAME}.log"
-			setllvmpollyenv ${PKG_LLVMPOLLYFEATURES}
-		fi
 	fi
 
 	echo -n "${SPACES}"

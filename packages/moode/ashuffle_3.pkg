@@ -4,12 +4,9 @@ GIT_URL=https://github.com/joshkunz/ashuffle
 GIT_COMMIT=v3${PKG_SUFFIX}
 #GIT_COMMIT=8e9807bf0afabb4a1455806df398237a688ab5c6
 #PATCHES=
+PKG_DEPS="moode/yaml-cpp_0.7.0"
 BUILD_PROCESS=mesonninja
-CONF_FLAGS="--strip"
+CONF_FLAGS="-Dtests=disabled -Dunsupported_use_system_yamlcpp=true --strip"
 INST_CMD=install
-PKG_DEPS=
 PKG_POSTBUILD="install -d ${PKG_PKGPATH}/usr/local/bin &&
 ln -fs /usr/bin/ashuffle ${PKG_PKGPATH}/usr/local/bin/ashuffle"
-
-### Issues with googletest and LLVM
-PKG_TOOLCHAIN=gnu

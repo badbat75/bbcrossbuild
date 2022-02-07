@@ -55,6 +55,8 @@ fi
 [ ${BUILD_LIBSHARED} -eq 1 ] && CONF_FLAGS+=" --enable-shared" || CONF_FLAGS+=" --disable-shared"
 [ ${BUILD_LIBSTATIC} -eq 1 ] && CONF_FLAGS+=" --enable-static" || CONF_FLAGS+=" --disable-static"
 [ ! "${LTOENABLE:-0}" == "0" ] && CONF_FLAGS+=" --enable-lto" || true
+
+PKG_CFLAGS="-fPIC"
 INST_CMD=install
 PKG_OVERRIDELTO=0
 if [ "$(echo ${LLVM_POLLY_FEATURES} | grep -o parallel)" == "parallel" ] || [ "$(echo ${LLVM_POLLY_FEATURES} | grep -o all)" == "all" ] && [ "${HM}"="arm" ]

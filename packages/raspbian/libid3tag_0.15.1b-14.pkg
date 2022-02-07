@@ -9,6 +9,7 @@ INST_CMD=install
 PKGDEPS=
 PKG_PREBUILD="touch NEWS AUTHORS ChangeLog
     rm -f ltmain.sh"
+PKG_FAULTYCFLAGS=1
 
 # Note:
 # Depends on: cdbs (>= 0.4.93~), dh-autoreconf, quilt, debhelper (>= 9), gettext, zlib1g-dev, gperf
