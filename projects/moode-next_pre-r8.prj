@@ -1,7 +1,7 @@
 # Build recipe for moode mediacenter
 
-MOODEREL=r800
-MOODEDEVCOMMIT=fda7b75ecc4d071e6af22198dd6cce4ae3f656dc
+MOODEREL=r761
+#MOODEDEVCOMMIT=86003235434f47fcf48fd46dd71d227cfcaa5c78
 
 case ${PLATFORM_NAME} in
 	rpi|rpi2|rpi3)
@@ -175,13 +175,11 @@ then
 		expect \
 		\
 		python3-dbus python3-matplotlib python3-aiohttp python3-yaml"
-
 	if [ ${ENABLE_DISPLAY:-0} -eq 1 ]
 	then
 		run_on_root_dir final root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
 			xinit xorg xserver-xorg-legacy chromium-browser libgtk-3-0 libgles2"
 	fi
-
 	run_on_root_dir final root "apt-get -y purge --autoremove libcephfs2"
 	run_on_root_dir final root "apt-get clean"
 	unmount_tag final
@@ -189,8 +187,9 @@ then
 	cp -v ${DISKIMAGES_PATH}/final.img ${DISKIMAGES_PATH}/temp.img
 	
 	mount_tag temp --mountlist "2:/ 1:/boot"
-
+	#create_sfx_archive remove_devfiles
 	inject_into_mount_tag temp binaries --remove_devfiles
+	#inject_into_mount_tag temp gcclibs
 
 	# Run /root/firstboot at first boot, enable verbose boot and set physical boot device
 	run_on_root_dir temp root "sed -i \"s|elevator=[^ ]*||;s|root=[^ ]*|root=/dev/mmcblk0p2|;s|init=/usr/lib/raspi-config/init_resize.sh|init=/root/firstboot|;s| quiet||\" /boot/cmdline.txt"
@@ -199,10 +198,12 @@ then
 	run_on_root_dir temp root "useradd -r -M -s /usr/bin/nologin -G audio -c \"AirPlay Daemon\" -d /var/lib/shairport-sync shairport-sync || true"
 	run_on_root_dir temp root "useradd -r -M -s /usr/bin/nologin -c \"UPnP Media Renderer Client\" -d /var/lib/upmpdcli upmpdcli || true"
 	run_on_root_dir temp root "useradd -r -M -s /usr/bin/nologin -c \"MiniDLNA server\" -d /var/lib/minidlna minidlna || true"
+	run_on_root_dir temp root "echo "pi:moodeaudio" | chpasswd"
 	# File permissions
 	run_on_root_dir temp root "chown root:plugdev /usr/bin/udevil"
+	#run_on_root_dir temp root "chown root:netdev /etc/dhcpcd.conf"
 	run_on_root_dir temp root "chown -R pi:pi /home/pi"
-	#run_on_root_dir temp root "chown www-data:www-data /var/local/php"
+	run_on_root_dir temp root "chown www-data:www-data /var/local/php"
 	run_on_root_dir temp root "chown -R mpd:audio /var/lib/mpd"
 	run_on_root_dir temp root "chown -R mpd:audio /var/log/mpd"
 	run_on_root_dir temp root "chown mpd:audio /etc/mpd.conf"
@@ -210,10 +211,59 @@ then
 	run_on_root_dir temp root "chown minidlna:minidlna /var/cache/minidlna"
 	run_on_root_dir temp root "chown minidlna:minidlna /var/lib/minidlna"
 	# Start-up configuration
+	#run_on_root_dir temp root "rm -f /etc/modprobe.d/blacklist-rtl8192cu.conf || true"
 	run_on_root_dir temp root "touch /boot/ssh"
+	run_on_root_dir temp root "sed -i \"s| quiet.*||;s|^|net.ifnames=0 |\" /boot/cmdline.txt"
+	run_on_root_dir temp root "sed -i \"s/raspberrypi/moode/\" /etc/hostname"
+	run_on_root_dir temp root "sed -i \"s/raspberrypi/moode/\" /etc/hosts"
+	run_on_root_dir temp root "sed -i \"/hosts:/ s/$/ wins mdns4/\" /etc/nsswitch.conf"
+	if [ ${ENABLE_DISPLAY:-0} -eq 1 ]
+	then
+		run_on_root_dir temp root "sed -i \"s/allowed_users=console/allowed_users=anybody/\" /etc/X11/Xwrapper.config"
+	fi
+	run_on_root_dir temp root "rm /etc/init.d/resize2fs_once || true"
+	run_on_root_dir temp root "cp -p /usr/share/zoneinfo/America/Detroit /etc/localtime"
+	run_on_root_dir temp root "dphys-swapfile swapoff"
+	run_on_root_dir temp root "dphys-swapfile uninstall"
+	run_on_root_dir temp root "systemctl disable dphys-swapfile"
+	run_on_root_dir temp root "[ -d /var/www/html ] && rm -r /var/www/html || true"
+	run_on_root_dir temp root "rm /etc/update-motd.d/10-uname || true"
+	run_on_root_dir temp root "sudo rm /etc/motd || true"
+	#run_on_root_dir temp root "rm /var/lib/dhcpcd5/*"
 	# Start-up services
-	run_on_root_dir temp root "/home/pi/preboot.sh on_install"
-	run_on_root_dir temp root "rm /home/pi/preboot.sh"
+	#run_on_root_dir temp root "systemctl daemon-reload"
+	run_on_root_dir temp root "systemctl set-default multi-user.target"
+	run_on_root_dir temp root "systemctl disable cron.service"
+	run_on_root_dir temp root "systemctl enable rpcbind"
+	run_on_root_dir temp root "systemctl stop apt-daily.timer"
+	run_on_root_dir temp root "systemctl disable apt-daily.timer"
+	run_on_root_dir temp root "systemctl mask apt-daily.timer"
+	run_on_root_dir temp root "systemctl stop apt-daily-upgrade.timer"
+	run_on_root_dir temp root "systemctl disable apt-daily-upgrade.timer"
+	run_on_root_dir temp root "systemctl mask apt-daily-upgrade.timer"
+	#run_on_root_dir temp root "systemctl enable haveged"
+	run_on_root_dir temp root "systemctl disable shellinabox"
+	run_on_root_dir temp root "systemctl disable phpsessionclean.service"
+	run_on_root_dir temp root "systemctl disable phpsessionclean.timer"
+	run_on_root_dir temp root "systemctl disable hostapd"
+	run_on_root_dir temp root "systemctl disable dnsmasq"
+	run_on_root_dir temp root "systemctl disable bluetooth.service"
+	run_on_root_dir temp root "systemctl disable hciuart.service"
+	run_on_root_dir temp root "systemctl disable bluealsa"
+	run_on_root_dir temp root "systemctl disable mpd.service"
+	run_on_root_dir temp root "systemctl disable mpd.socket"
+	run_on_root_dir temp root "systemctl disable rotenc.service"
+	run_on_root_dir temp root "systemctl disable squeezelite"
+	run_on_root_dir temp root "systemctl disable upmpdcli.service"
+	run_on_root_dir temp root "systemctl disable minidlna"
+	run_on_root_dir temp root "systemctl disable upmpdcli"
+	run_on_root_dir temp root "systemctl disable localui"
+	run_on_root_dir temp root "systemctl disable udisks2"
+	run_on_root_dir temp root "systemctl disable triggerhappy"
+	## Customizations
+	# Moode DB customizations
+	#run_on_root_dir temp root "sqlite3 /var/local/www/db/moode-sqlite3.db \"
+	#\""
 
 	# Create firstboot script
 	run_on_root_dir temp root "cat <<-EOF > /root/firstboot
@@ -234,6 +284,12 @@ then
 		amixer -D alsaequal
 		chmod 0755 /usr/local/bin/alsaequal.bin
 		chown mpd:audio /usr/local/bin/alsaequal.bin
+
+		# MPD configuration
+		#su - mpd -c \"/usr/bin/mpd /etc/mpd.conf\"
+		#su - mpd -c \"/usr/bin/mpc enable only 1\"
+		#su - mpd -c \"/usr/bin/mpc update\"
+		#su - mpd -c \"/usr/bin/mpd --kill /etc/mpd.conf\"
 
 		#revert to normal boot
 		sed -i \" s|init=/root/firstboot||\" /boot/cmdline.txt
