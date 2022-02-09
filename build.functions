@@ -1078,24 +1078,24 @@ function build () (
 		fi
 		case ${HM} in
 			arm)
-				local HMARCH=arm
-				local HMABI=aapcs
-				local HMADDRMOD=32
+				local BOOST_ARCH=arm
+				local BOOST_ABI=aapcs
+				local BOOST_ADDRMOD=32
 				;;
 			aarch64)
-				local HMARCH=arm
-				local HMABI=aapcs
-				local HMADDRMOD=64
+				local BOOST_ARCH=arm
+				local BOOST_ABI=aapcs
+				local BOOST_ADDRMOD=64
 				;;
 			i386)
-				local HMARCH=x86
-				local HMABI=sysv
-				local HMADDRMOD=32
+				local BOOST_ARCH=x86
+				local BOOST_ABI=sysv
+				local BOOST_ADDRMOD=32
 				;;
 			x86_64)
-				local HMARCH=x86
-				local HMABI=sysv
-				local HMADDRMOD=64
+				local BOOST_ARCH=x86
+				local BOOST_ABI=sysv
+				local BOOST_ADDRMOD=64
 				;;
 			*)
 				echo "Missing architecture mapping for ${HM}"
@@ -1123,8 +1123,8 @@ function build () (
 			--with-toolset=${BBTC}
 		sed -i "s|using ${BBTC} ;|using ${BBTC} : : ${CXX} ;|" project-config.jam &&
 		./b2 -j${NPROCS} -q ${B2_FLAGS} \
-			architecture=${HMARCH} binary-format=${HMBINFMT} abi=${HMABI} target-os=${HOS} \
-			variant=release address-model=${HMADDRMOD} threading=multi \
+			architecture=${BOOST_ARCH} binary-format=${HMBINFMT} abi=${BOOST_ABI} target-os=${HOS} \
+			variant=release address-model=${BOOST_ADDRMOD} threading=multi \
 			toolset=${BBTC} cflags="${CFLAGS}" cxxflags="-fPIC ${CXXFLAGS}" linkflags="${LDFLAGS}" install
 		cd ${BB_HOME}
 		set +x
