@@ -6,11 +6,3 @@ PKG_LDFLAGS="-lm -lstdc++"
 PKG_PREBUILD="sed -i '/^CC =/ s/=/?=/' Makefile
 sed -i '/^STRIP =/ s/=/?=/' Makefile"
 PKG_TOOLCHAIN=gnu
-
-#PKG_SRCDIR=moode_${MOODEREL}
-#PKG_DEPS="moode/moode-dynamic-ver_1.2"
-#CONF_PATH=other/caps-features-eqfa12p_12_band_parametric_eq
-#PKG_PREBUILD="unzip -o other/bitlab/caps/caps-features-eqfa12p_12_band_parametric_eq.zip -d other
-#sed -i '/^CC =/ s/=/?=/' other/caps-features-eqfa12p_12_band_parametric_eq/Makefile
-#sed -i '/^STRIP =/ s/=/?=/' other/caps-features-eqfa12p_12_band_parametric_eq/Makefile
-#"

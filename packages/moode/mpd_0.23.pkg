@@ -39,7 +39,7 @@ PKG_DEPS="moode/boost_1.78.0 \
 	raspbian/libcdio-paranoia_10.2+2.0.0-1 \
 	moode/libwavpack_5.4.0"
 
-if test_version ${MOODEREL} -ge r750
+if test_version ${MOODEREL} -ge r750 && test_version ${MOODEREL} -lt r800
 then
 	# Patch availability bitmask
 	local SELECTIVE_RESAMPLING=1

@@ -81,7 +81,7 @@ build raspberrypi/raspberrypi-net-mods
 build moode/alsa-utils_1.2.6
 
 # Download and install moode-sources and pre-build environment
-build moode/moode-dynamic-ver_1.2
+build moode/moode-dynamic-ver_2.0
 
 build raspbian/iw_5.9-3
 build firmwares/wireless-regdb_2021.08.28
