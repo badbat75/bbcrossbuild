@@ -254,6 +254,7 @@ then
 	# Moode pre-boot configuration
 	run_on_root_dir temp root "bash -x /root/postinstall.sh configure"
 	run_on_root_dir temp root "rm /root/postinstall.sh"
+	run_on_root_dir temp root "mpd --kill"
 
 	case x${PLATFORM_NAME} in
 		xrpi)
@@ -275,7 +276,7 @@ then
 	fi
 
 	# Uncomment it to navigate in the temp filesystem
-	pause
+	#pause
 
 	unmount_tag --finalize temp
 fi
