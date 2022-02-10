@@ -11,14 +11,12 @@ PKG_DEPS="python/RPi.GPIO python/python-musicpd raspbian/zip_3.0-8"
 if [ ${MOODEINSTALL:-1} -eq 1 ]
 then
 	PKG_PREBUILD="
-		download_uncompress https://raw.githubusercontent.com/moode-player/pkgbuild/main/packages/moode-player/postinstall.sh \${PKG_SRCPATH}/home/temp
-		BEGIN=\$( awk '/# bring it alive ;-)/ {print NR - 1; exit 0; }' \${PKG_SRCPATH}/home/temp/postinstall.sh )
-		END=\$( awk '/  sed -i \"s\/raspberrypi/ {print NR - 1; exit 0; }' \${PKG_SRCPATH}/home/temp/postinstall.sh )
-		tail -n+\${BEGIN} \${PKG_SRCPATH}/home/temp/postinstall.sh | head -n\$(( \${END} - \${BEGIN} )) > \${PKG_SRCPATH}/home/afterboot.sh
-		head -n\${BEGIN} \${PKG_SRCPATH}/home/temp/postinstall.sh > \${PKG_SRCPATH}/home/preboot.sh
-		tail -n+\${END} \${PKG_SRCPATH}/home/temp/postinstall.sh >> \${PKG_SRCPATH}/home/preboot.sh
-		chmod +x \${PKG_SRCPATH}/home/preboot.sh \${PKG_SRCPATH}/home/afterboot.sh
-		rm -rfv \${PKG_SRCPATH}/home/temp
+		local FILE='${SRC_PATH}/moode-pkgbuild/packages/moode-player/postinstall.sh'
+		BEGIN=\$( awk '/# bring it alive ;-)/ {print NR - 1; exit 0; }' \${FILE} )
+		END=\$( awk '/  sed -i \"s\/raspberrypi/ {print NR - 1; exit 0; }' \${FILE} )
+		head -n\${BEGIN} \${FILE} > \${PKG_SRCPATH}/home/preboot.sh
+		tail -n+\${END} \${FILE} >> \${PKG_SRCPATH}/home/preboot.sh
+		tail -n+\${BEGIN} \${FILE} | head -n\$(( \${END} - \${BEGIN} )) > \${PKG_SRCPATH}/home/afterboot.sh
 		mkdir -p \${PKG_BLDPATH}/build/dist/binary
 		cp -v package.json package-lock.json gulpfile.js \${PKG_BLDPATH}
 		cp -rv www \${PKG_BLDPATH}/www

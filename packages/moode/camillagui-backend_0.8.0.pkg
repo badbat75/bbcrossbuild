@@ -1,6 +1,6 @@
 # camillagui-backend_0.8.0
 PKG_URL="https://github.com/HEnquist/camillagui-backend/archive/refs/tags/v0.8.0.tar.gz"
-PKG_DEPS="python/pycamilladsp_0.6.0 python/pycamilladsp-plot_0.6.2 moode/camillagui_0.6.0"
+PKG_DEPS="python/pycamilladsp_0.6.0 python/pycamilladsp-plot_0.6.2 moode/camillagui_0.6.0 moode/moode-pkgbuild"
 if test_version ${MOODEREL} -ge r800
 then
     PKG_DEPS+=" moode/moode-dynamic-ver_2.0"
@@ -8,13 +8,14 @@ else
     PKG_DEPS+=" moode/moode-dynamic-ver_1.2"
 fi
 BUILD_PROCESS=downloadonly
-PKG_PREBUILD="
-    MOODE_CAMILLAGUI_PATH=${SRC_PATH}/moode_${MOODEREL}/other/camilladsp/gui
-    mkdir -p ${PKG_PKGPATH}/opt/camillagui
-    cp -frv * ${PKG_PKGPATH}/opt/camillagui
-    cp -frv \${MOODE_CAMILLAGUI_PATH}/css-variables.css ${PKG_PKGPATH}/opt/camillagui/build/css-variables.css
-    cp -frv \${MOODE_CAMILLAGUI_PATH}/camillagui.yml ${PKG_PKGPATH}/opt/camillagui/config
-    cp -frv \${MOODE_CAMILLAGUI_PATH}/gui-config.yml ${PKG_PKGPATH}/opt/camillagui/config
+
+local MOODE_CAMILLAGUI_PATH=${SRC_PATH}/moode-pkgbuild/packages/camillagui
+PKG_PREBUILD="patch -p1 < ${MOODE_CAMILLAGUI_PATH}/camillagui_backend_hide_files.patch"
+PKG_POSTBUILD="mkdir -p ${PKG_PKGPATH}/opt/camillagui
+    cp -frv \${PKG_SRCPATH}/* ${PKG_PKGPATH}/opt/camillagui
+    cp -frv ${MOODE_CAMILLAGUI_PATH}/css-variables.css ${PKG_PKGPATH}/opt/camillagui/build/css-variables.css
+    cp -frv ${MOODE_CAMILLAGUI_PATH}/camillagui.yml ${PKG_PKGPATH}/opt/camillagui/config
+    cp -frv ${MOODE_CAMILLAGUI_PATH}/gui-config.yml ${PKG_PKGPATH}/opt/camillagui/config
     mkdir -p ${PKG_PKGPATH}/etc/systemd/system
-    cp -frv \${MOODE_CAMILLAGUI_PATH}/camillagui.service ${PKG_PKGPATH}/etc/systemd/system"
+    cp -frv ${MOODE_CAMILLAGUI_PATH}/camillagui.service ${PKG_PKGPATH}/etc/systemd/system"
 # CONF_FLAGS=""

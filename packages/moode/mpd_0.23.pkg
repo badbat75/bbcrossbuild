@@ -37,26 +37,10 @@ PKG_DEPS="moode/boost_1.78.0 \
 	raspbian/libpcre++_0.9.5-6 \
 	raspbian/fmtlib_7.1.3+ds1-6 \
 	raspbian/libcdio-paranoia_10.2+2.0.0-1 \
-	moode/libwavpack_5.4.0"
+	moode/libwavpack_5.4.0 \
+	moode/moode-pkgbuild"
 
-if test_version ${MOODEREL} -ge r750 && test_version ${MOODEREL} -lt r800
-then
-	# Patch availability bitmask
-	local SELECTIVE_RESAMPLING=1
-	local SOX_CUSTOM_RECIPE=2
-	# Patch identifier
-	local PATCH_ID=_p0x$(($SELECTIVE_RESAMPLING + $SOX_CUSTOM_RECIPE))
-	# Patch source archive
-	PKG_DEPS+=" moode/moode-dynamic-ver_1.2"
-	PKG_PREBUILD="
-		if [ ! -f mpd.patched ]
-		then
-			patch -p1 < ${SRC_PATH}/moode_${MOODEREL}/other/mpd/_patches/mpd_0.23.xx_selective_resample_mode.patch
-			sed -i \"/version: '0/s/',/$PATCH_ID',/\" meson.build
-			touch mpd.patched
-		fi
-		"
-fi
+PKG_PREBUILD="patch -p1 < ${SRC_PATH}/moode-pkgbuild/packages/mpd/mpd_0.23.xx_selective_resample_mode.patch"
 
 PKG_CXXFLAGS+=" -Wno-shadow"
 INST_CMD=install
@@ -72,9 +56,4 @@ ln -fs /usr/bin/mpd ${PKG_PKGPATH}/usr/local/bin/mpd
 rm -f ${PKG_PKGPATH}/usr/lib/systemd/system/mpd.service
 rm -f ${PKG_PKGPATH}/usr/lib/systemd/system/mpd.socket
 rm -f ${PKG_PKGPATH}/usr/lib/systemd/user/mpd.service
-if test_version ${MOODEREL} -ge r660 && test_version ${MOODEREL} -lt r760
-then
-	install -D ${PKG_PKGPATH}${BUILD_EXECPREFIX}/bin/mpd ${PKG_PKGPATH}/var/local/www/mpd_versions/mpd-${MPDVER}
-	echo \"${MPDVER};${MPDVER} (Default)\" >> ${PKG_PKGPATH}/var/local/www/mpd_versions.conf
-fi
 "

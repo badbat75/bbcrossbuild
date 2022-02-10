@@ -501,11 +501,17 @@ function build () (
 		then
 			echo -n "${SPACES}AutoReconf ${PKG_NAME}..."
 			cd ${PKG_SRCPATH}/${AUTOCONF_PATH}
-			[ -d m4 ] && local ACINCLUDE="-Im4" || mkdir m4
-			[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" -I${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal"
-			[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" -I${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
-			autoreconf -fi ${ACINCLUDE} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-			local STATUS=${?}
+			if [ -f autogen.sh ]
+			then
+				./autogen.sh
+				local STATUS=${?}
+			else
+				[ -d m4 ] && local ACINCLUDE="-Im4" || mkdir m4
+				[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" -I${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal"
+				[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" -I${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
+				autoreconf -fi ${ACINCLUDE} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+				local STATUS=${?}
+			fi
 			if [ ${STATUS} -ne 0 ]
 			then
 				echo "Fail."
