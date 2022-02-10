@@ -7,7 +7,8 @@ CONF_FLAGS=""
 INST_CMD=install-strip
 PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH}
 
-PKG_POSTBUILD="cat > ${PKG_PKGPATH}/etc/udisks-glue.conf <<EOF
+PKG_POSTBUILD="mkdir -p ${PKG_PKGPATH}/etc
+cat > ${PKG_PKGPATH}/etc/udisks-glue.conf <<EOF
 filter disks {
     optical = false
     partition_table = false
@@ -15,6 +16,7 @@ filter disks {
 }
 
 match disks {
-    post_insertion_command = "udisks --mount %device_file --mount-options sync"
+    post_insertion_command = \"udisks --mount %device_file --mount-options sync\"
 }
+EOF
 "

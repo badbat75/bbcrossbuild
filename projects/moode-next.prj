@@ -176,26 +176,7 @@ cat > ${BIN_PATH}/root/firstboot <<-EOF
 	chmod 0755 /opt/alsaequal/alsaequal.bin
 	chown mpd:audio /opt/alsaequal/alsaequal.bin
 
-	echo "wait until mpd is started ..."
-	#/usr/local/bin/moodeutl -r
-	mpd /etc/mpd.conf
-	timeout 10s bash -c "until mpc status; do sleep 1; done";
-	mpc status
-	if [ \$? -eq 0 ]
-	then
-		mpc load "Default Playlist"
-		echo "** List MPD outputs"
-		mpc outputs
-		echo "** Enable only output 1"
-		mpc enable only 1
-		mpd --kill
-	else
-		echo "hmmm problem mpd isn't started!"
-		echo "(check if after reboot the problem is fixed.)"
-	fi
-
 	echo "** revert to normal boot..."
-
 	sed -i 's#init=/root/firstboot##' /boot/cmdline.txt
 
 	umount /boot
@@ -271,8 +252,8 @@ then
 	run_on_root_dir temp root "chown minidlna:minidlna /var/cache/minidlna"
 	run_on_root_dir temp root "chown minidlna:minidlna /var/lib/minidlna"
 	# Moode pre-boot configuration
-	run_on_root_dir temp root "bash -x /home/pi/preboot.sh configure"
-	run_on_root_dir temp root "rm /home/pi/preboot.sh"
+	run_on_root_dir temp root "bash -x /root/postinstall.sh configure"
+	run_on_root_dir temp root "rm /root/postinstall.sh"
 
 	case x${PLATFORM_NAME} in
 		xrpi)
