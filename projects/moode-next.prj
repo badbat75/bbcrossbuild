@@ -400,8 +400,9 @@ qemu-system-aarch64 \\
 	-device usb-audio,audiodev=default -audiodev alsa,id=default \\
 	-device usb-net,netdev=eth0 -netdev user,id=eth0,hostfwd=tcp::5022-:22,hostfwd=tcp::5080-:80 \\
 	-device usb-serial,chardev=ttyS0 -chardev socket,id=ttyS0,port=5021,host=0.0.0.0,nodelay=on,server=on,wait=off,telnet=on \\
-	-append "console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait fsck.repair=yes init=/root/firstboot" \\
-	-device sd-card,drive=disk0 -drive file=${IMAGE},if=none,format=raw,id=disk0
+	-append "dwc_otg.fiq_fsm_enable=0 console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait fsck.repair=yes init=/root/firstboot" \\
+	-device sd-card,drive=disk0 -drive file=${IMAGE},if=none,format=raw,id=disk0 \\
+	--no-reboot
 EOF
 	chmod +x ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/moode-next.qemu
 	echo "Run ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/moode-next.qemu to test it!!!"
