@@ -6,4 +6,5 @@ CONF_FLAGS="--disable-cddb --disable-vcd-info"
 INST_CMD=install-strip
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libc/libcdio-paranoia/libcdio-paranoia_10.2%2B2.0.0-1.debian.tar.xz"
 PKG_DEPS="raspbian/libcdio_2.0.0-2"
-PKG_PREBUILD="rm -f ltmain.sh"
+PKG_PREBUILD="sed -i 's|./configure|# ./configure|' autogen.sh
+    rm -f ltmain.sh"
