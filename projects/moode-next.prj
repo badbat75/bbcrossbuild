@@ -247,7 +247,6 @@ then
 	#run_on_root_dir temp root "chown www-data:www-data /var/local/php"
 	run_on_root_dir temp root "chown -R mpd:audio /var/lib/mpd"
 	run_on_root_dir temp root "chown -R mpd:audio /var/log/mpd"
-	run_on_root_dir temp root "chown mpd:audio /etc/mpd.conf"
 	run_on_root_dir temp root "chown mpd:audio /run/mpd"
 	run_on_root_dir temp root "chown minidlna:minidlna /var/cache/minidlna"
 	run_on_root_dir temp root "chown minidlna:minidlna /var/lib/minidlna"
