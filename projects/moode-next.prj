@@ -1,8 +1,5 @@
 # Build recipe for moode mediacenter
 
-MOODEREL=r800
-MOODEDEVCOMMIT=fda7b75ecc4d071e6af22198dd6cce4ae3f656dc
-
 case ${PLATFORM_NAME} in
 	rpi|rpi2|rpi3)
 		RASPBIAN_IMAGE=2022-01-28-raspios-bullseye-armhf-lite
