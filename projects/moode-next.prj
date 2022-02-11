@@ -280,3 +280,46 @@ then
 
 	unmount_tag --finalize temp
 fi
+
+if [ ${TEST_IMAGE:-0} -eq 1 ]
+then
+	case ${PLATFORM_NAME} in
+		rpi2)
+			QEMU_MACHINE=raspi2b
+			QEMU_CPU=cortex-a7
+			QEMU_CPU_CORES=4
+			QEMU_MEMORY=1024
+			DTB=${BIN_PATH}/boot/bcm2709-rpi-2-b.dtb
+			;;
+		rpi3|rpi3-aarch64)
+			QEMU_MACHINE=raspi3b
+			QEMU_CPU=cortex-a53
+			QEMU_CPU_CORES=4
+			QEMU_MEMORY=1024
+			DTB=${BIN_PATH}/boot/bcm2710-rpi-3-b.dtb
+			;;
+	esac
+
+	if [ -s "${QEMU_MACHINE}" ]
+	then
+		KERNEL=${BIN_PATH}/boot/${KERNEL_NAME}
+		IMAGE=${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/moode-next.img
+
+		qemu-system-aarch64 \
+			-machine ${QEMU_MACHINE} \
+			-cpu ${QEMU_CPU} \
+			-smp ${QEMU_CPU_CORES} \
+			-m ${QEMU_MEMORY} \
+			-dtb ${DTB} \
+			-kernel ${KERNEL} \
+			-nographic \
+			-monitor telnet:127.0.0.1:5020,server,nowait \
+			-usb -device usb-kbd -device usb-mouse \
+			-device usb-audio,audiodev=default -audiodev alsa,id=default \
+			-device usb-net,netdev=eth0 -netdev user,id=eth0,hostfwd=tcp::5022-:22,hostfwd=tcp::5080-:80 \
+			-device usb-serial,chardev=ttyS0 -chardev socket,id=ttyS0,port=5021,host=0.0.0.0,nodelay=on,server=on,wait=off,telnet=on \
+			-append "elevator=deadline console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait fsck.repair=yes init=/root/firstboot" \
+			-device sd-card,drive=disk0 -drive file=${IMAGE},if=none,format=raw,id=disk0 \
+			--no-reboot
+	fi
+fi
