@@ -500,12 +500,13 @@ function run_postinstall_scripts () {
 	OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
 	[ ${_param_v:-0} -eq 1 ] && set -x || true
 
+	echo -n "Running post install scripts on ${_param_1}... "
 	echo "run_postinstall_scripts ${_param_1}" >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	export PLATFORM_PATH LOG_PATH
 	export -f param2value run_on_root_dir
 	find ${PLATFORM_PATH}/${_param_1}/postinst_scripts -type f -printf '%P\n' | sort -n | xargs -I{} bash -c "run_on_root_dir ${_param_1} root \"set -x; source /postinst_scripts/{}\"" >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	sudo rm -rfv ${PLATFORM_PATH}/${_param_1}/postinst_scripts >> ${LOG_PATH}/images_${_param_1}.log 2>&1
-
+	echo "Done."
 	[ ${_param_v:-0} -eq 1 ] && set +x || true
 	trap - ERR
 }
