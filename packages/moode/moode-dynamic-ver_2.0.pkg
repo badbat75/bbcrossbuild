@@ -10,112 +10,110 @@ fi
 PKG_SRCDIR=moode_${MOODEREL}
 BUILD_PROCESS=downloadonly
 PKG_DEPS="python/RPi.GPIO python/python-musicpd raspbian/zip_3.0-8 moode/moode-pkgbuild"
-if [ ${MOODEINSTALL:-1} -eq 1 ]
-then
-	PKG_PREBUILD="
-		mkdir -p \${PKG_BLDPATH}/build/dist/binary
-		cp -v package.json package-lock.json gulpfile.js \${PKG_BLDPATH}
-		cp -rv www \${PKG_BLDPATH}/www
-	"
-	PKG_POSTBUILD="
-		mkdir -p ${PKG_PKGPATH}/root
-		cp ${SRC_PATH}/moode-pkgbuild/packages/moode-player/postinstall.sh ${PKG_PKGPATH}/root/
-		sed -i 's/systemctl st/# systemctl st/g' ${PKG_PKGPATH}/root/postinstall.sh
-		sed -i 's#/usr/local/bin/moodeutl -r#mpd /etc/mpd.conf#' ${PKG_PKGPATH}/root/postinstall.sh
+PKG_PREBUILD="
+	sed -i 's#/usr/local/bin#/opt/alsaequal#g' etc/alsa/conf.d/alsaequal.conf
+	mkdir -p \${PKG_BLDPATH}/build/dist/binary
+	cp -v package.json package-lock.json gulpfile.js \${PKG_BLDPATH}
+	cp -rv www \${PKG_BLDPATH}/www
+"
+PKG_POSTBUILD="
+	mkdir -p ${PKG_PKGPATH}/root
+	cp ${SRC_PATH}/moode-pkgbuild/packages/moode-player/postinstall.sh ${PKG_PKGPATH}/root/
+	sed -i 's/systemctl st/# systemctl st/g' ${PKG_PKGPATH}/root/postinstall.sh
+	sed -i 's#/usr/local/bin/moodeutl -r#mpd /etc/mpd.conf#' ${PKG_PKGPATH}/root/postinstall.sh
 
-		# Variable mapping
-		# $MOODE_DIR      -> \${PKG_SRCPATH}
-		# $BUILD_ROOT_DIR -> \${PKG_BLDPATH}
-		# $BASE_DIR       -> \${PKG_BLDPATH}/build
-		# $PKG_ROOT_DIR   -> ${PKG_PKGPATH}
-		# $NOT_OWNED_TEMP -> ${PKG_PKGPATH}/usr/share/moode-player
-		# Char mapping
-		# $ -> \$
-		# '' -> \" (can't use double quote)
-		# ' -> \` (can't use quote)
-		# \1 -> \\1
-		# \2 -> \\2
+	# Variable mapping
+	# $MOODE_DIR      -> \${PKG_SRCPATH}
+	# $BUILD_ROOT_DIR -> \${PKG_BLDPATH}
+	# $BASE_DIR       -> \${PKG_BLDPATH}/build
+	# $PKG_ROOT_DIR   -> ${PKG_PKGPATH}
+	# $NOT_OWNED_TEMP -> ${PKG_PKGPATH}/usr/share/moode-player
+	# Char mapping
+	# $ -> \$
+	# '' -> \" (can't use double quote)
+	# ' -> \` (can't use quote)
+	# \1 -> \\1
+	# \2 -> \\2
 
-		npm ci
-		node_modules/.bin/gulp build
-		node_modules/.bin/gulp deploy --test
+	npm ci
+	node_modules/.bin/gulp build
+	node_modules/.bin/gulp deploy --test
 
-		# ----------------------------------------------------------------------------
-		# 3. Collect installable files
-		# ----------------------------------------------------------------------------
+	# ----------------------------------------------------------------------------
+	# 3. Collect installable files
+	# ----------------------------------------------------------------------------
 
-		# generate moode radio stations backup file (used for populating the station from the installer)
-		cat \${PKG_SRCPATH}/var/local/www/db/moode-sqlite3.db.sql | sqlite3 \${PKG_BLDPATH}/moode-sqlite3.db
-		\${PKG_SRCPATH}/www/command/stationmanager.py --db \${PKG_BLDPATH}/moode-sqlite3.db --logopath \${PKG_SRCPATH}/var/local/www/imagesw/radio-logos --scope moode --export \${PKG_BLDPATH}/moode-stations-full_$PKGVERSION.zip
-		rm -f \${PKG_BLDPATH}/moode-sqlite3.db || true
-		# move it to the dist location
-		mv -f \${PKG_BLDPATH}/moode-stations-full_$PKGVERSION.zip  \${PKG_BLDPATH}/build/dist/binary/
+	# generate moode radio stations backup file (used for populating the station from the installer)
+	cat \${PKG_SRCPATH}/var/local/www/db/moode-sqlite3.db.sql | sqlite3 \${PKG_BLDPATH}/moode-sqlite3.db
+	\${PKG_SRCPATH}/www/command/stationmanager.py --db \${PKG_BLDPATH}/moode-sqlite3.db --logopath \${PKG_SRCPATH}/var/local/www/imagesw/radio-logos --scope moode --export \${PKG_BLDPATH}/moode-stations-full_$PKGVERSION.zip
+	rm -f \${PKG_BLDPATH}/moode-sqlite3.db || true
+	# move it to the dist location
+	mv -f \${PKG_BLDPATH}/moode-stations-full_$PKGVERSION.zip  \${PKG_BLDPATH}/build/dist/binary/
 
-		# location for files that should overwrite existing files (not owned by moode-player)
-		NOT_OWNED_TEMP=${PKG_PKGPATH}/usr/share/moode-player
-		mkdir -p ${PKG_PKGPATH}/usr/share/moode-player
+	# location for files that should overwrite existing files (not owned by moode-player)
+	NOT_OWNED_TEMP=${PKG_PKGPATH}/usr/share/moode-player
+	mkdir -p ${PKG_PKGPATH}/usr/share/moode-player
 
-		# /boot
-		rsync -av --prune-empty-dirs --exclude *.sed* --exclude *.overwrite* --exclude *.ignore* \${PKG_SRCPATH}/boot/ ${PKG_PKGPATH}/boot/
-		rsync -av --prune-empty-dirs --include \"*/\" --include \"*.overwrite*\" --exclude=\"*\" \${PKG_SRCPATH}/boot/ ${PKG_PKGPATH}/usr/share/moode-player/boot/
+	# /boot
+	rsync -av --prune-empty-dirs --exclude *.sed* --exclude *.overwrite* --exclude *.ignore* \${PKG_SRCPATH}/boot/ ${PKG_PKGPATH}/boot/
+	rsync -av --prune-empty-dirs --include \"*/\" --include \"*.overwrite*\" --exclude=\"*\" \${PKG_SRCPATH}/boot/ ${PKG_PKGPATH}/usr/share/moode-player/boot/
 
-		# /etc
-		rsync -av --prune-empty-dirs --exclude *.sed* --exclude *.overwrite* \${PKG_SRCPATH}/etc/ ${PKG_PKGPATH}/etc/
-		rsync -av --prune-empty-dirs --include \"*/\" --include \"*.overwrite*\" --exclude=\"*\" \${PKG_SRCPATH}/etc/ ${PKG_PKGPATH}/usr/share/moode-player/etc/
-		#cp \${PKG_BLDPATH}/build/moode-apt-mark.conf  ${PKG_PKGPATH}/etc/
+	# /etc
+	rsync -av --prune-empty-dirs --exclude *.sed* --exclude *.overwrite* \${PKG_SRCPATH}/etc/ ${PKG_PKGPATH}/etc/
+	rsync -av --prune-empty-dirs --include \"*/\" --include \"*.overwrite*\" --exclude=\"*\" \${PKG_SRCPATH}/etc/ ${PKG_PKGPATH}/usr/share/moode-player/etc/
+	#cp \${PKG_BLDPATH}/build/moode-apt-mark.conf  ${PKG_PKGPATH}/etc/
 
-		# /home
-		mkdir -p ${PKG_PKGPATH}/home
-		rsync -av --exclude xinitrc.default --exclude dircolors \${PKG_SRCPATH}/home/ ${PKG_PKGPATH}/home/pi
-		cp \${PKG_SRCPATH}/home/xinitrc.default ${PKG_PKGPATH}/home/pi/.xinitrc
-		cp \${PKG_SRCPATH}/home/dircolors ${PKG_PKGPATH}/home/pi/.dircolors
+	# /home
+	mkdir -p ${PKG_PKGPATH}/home
+	rsync -av --exclude xinitrc.default --exclude dircolors \${PKG_SRCPATH}/home/ ${PKG_PKGPATH}/home/pi
+	cp \${PKG_SRCPATH}/home/xinitrc.default ${PKG_PKGPATH}/home/pi/.xinitrc
+	cp \${PKG_SRCPATH}/home/dircolors ${PKG_PKGPATH}/home/pi/.dircolors
 
-		# /lib
-		rsync -av --prune-empty-dirs --exclude *.sed* --exclude *.overwrite* \${PKG_SRCPATH}/lib/ ${PKG_PKGPATH}/lib/
-		rsync -av --prune-empty-dirs --include \"*/\" --include \"*.overwrite*\" --exclude=\"*\" \${PKG_SRCPATH}/lib/ ${PKG_PKGPATH}/usr/share/moode-player/lib/
+	# /lib
+	rsync -av --prune-empty-dirs --exclude *.sed* --exclude *.overwrite* \${PKG_SRCPATH}/lib/ ${PKG_PKGPATH}/lib/
+	rsync -av --prune-empty-dirs --include \"*/\" --include \"*.overwrite*\" --exclude=\"*\" \${PKG_SRCPATH}/lib/ ${PKG_PKGPATH}/usr/share/moode-player/lib/
 
-		# /mnt (mount points)
-		mkdir -p ${PKG_PKGPATH}/mnt/{NAS,SDCARD,UPNP}
-		cp -r \"\${PKG_SRCPATH}/sdcard/Stereo Test/\" ${PKG_PKGPATH}/mnt/SDCARD
+	# /mnt (mount points)
+	mkdir -p ${PKG_PKGPATH}/mnt/{NAS,SDCARD,UPNP}
+	cp -r \"\${PKG_SRCPATH}/sdcard/Stereo Test/\" ${PKG_PKGPATH}/mnt/SDCARD
 
-		# /usr
-		rsync -av --prune-empty-dirs --exclude='mpd.conf' --exclude='mpdasrc.default' --exclude='install-wifi' --exclude='html/index.html' \${PKG_SRCPATH}/usr/ ${PKG_PKGPATH}/usr
-		rsync -av --prune-empty-dirs --include \"*/\" --include \"*.overwrite*\" --exclude=\"*\" --exclude='mpd.conf' --exclude='mpdasrc.default' --exclude='install-wifi' --exclude='html/index.html' \${PKG_SRCPATH}/usr/ ${PKG_PKGPATH}/usr/share/moode-player/usr/
-		#cp \${PKG_BLDPATH}/build/moode-apt-mark ${PKG_PKGPATH}/usr/local/bin
+	# /usr
+	rsync -av --prune-empty-dirs --exclude='mpd.conf' --exclude='mpdasrc.default' --exclude='install-wifi' --exclude='html/index.html' \${PKG_SRCPATH}/usr/ ${PKG_PKGPATH}/usr
+	rsync -av --prune-empty-dirs --include \"*/\" --include \"*.overwrite*\" --exclude=\"*\" --exclude='mpd.conf' --exclude='mpdasrc.default' --exclude='install-wifi' --exclude='html/index.html' \${PKG_SRCPATH}/usr/ ${PKG_PKGPATH}/usr/share/moode-player/usr/
+	#cp \${PKG_BLDPATH}/build/moode-apt-mark ${PKG_PKGPATH}/usr/local/bin
 
-		# /var
-		# ignore includes of radio stations logos, those will be part of the stations backup
-		rsync -av --exclude='moode-sqlite3.db' --exclude='radio-logos' \${PKG_SRCPATH}/var/ ${PKG_PKGPATH}/var
-		mkdir -p ${PKG_PKGPATH}/var/local/www/imagesw/radio-logos/thumbs
+	# /var
+	# ignore includes of radio stations logos, those will be part of the stations backup
+	rsync -av --exclude='moode-sqlite3.db' --exclude='radio-logos' \${PKG_SRCPATH}/var/ ${PKG_PKGPATH}/var
+	mkdir -p ${PKG_PKGPATH}/var/local/www/imagesw/radio-logos/thumbs
 
-		# /var/lib/mpd
-		mkdir -p ${PKG_PKGPATH}/var/lib/mpd/music/RADIO
+	# /var/lib/mpd
+	mkdir -p ${PKG_PKGPATH}/var/lib/mpd/music/RADIO
 
-		# /var/wwww
-		mkdir -p ${PKG_PKGPATH}/var/www
-		cp -r \${PKG_BLDPATH}/build/dist/var/www/* ${PKG_PKGPATH}/var/www/
+	# /var/wwww
+	mkdir -p ${PKG_PKGPATH}/var/www
+	cp -r \${PKG_BLDPATH}/build/dist/var/www/* ${PKG_PKGPATH}/var/www/
 
 
-		# In ${PKG_PKGPATH}/usr/share/moode-player remove the \".overwrite\" part from the files
-		function rename_files() {
-			set -x
-			org_name=\$1
-			new_name=\`echo \"\$org_name\" | sed -r 's/(.*)[.]overwrite(.*)/\\1\\2/'\`
-			mv \$org_name \$new_name
-			set +x
-		}
-		export -f rename_files;
-		find ${PKG_PKGPATH}/usr/share/moode-player -name \"*.overwrite*\" -exec bash -c 'rename_files \"{}\"' \;
+	# In ${PKG_PKGPATH}/usr/share/moode-player remove the \".overwrite\" part from the files
+	function rename_files() {
+		set -x
+		org_name=\$1
+		new_name=\`echo \"\$org_name\" | sed -r 's/(.*)[.]overwrite(.*)/\\1\\2/'\`
+		mv \$org_name \$new_name
+		set +x
+	}
+	export -f rename_files;
+	find ${PKG_PKGPATH}/usr/share/moode-player -name \"*.overwrite*\" -exec bash -c 'rename_files \"{}\"' \;
 
-		# echo \"** Reset permissions\"
-		chmod -R 0755  ${PKG_PKGPATH}/var/www
-		chmod 0755  ${PKG_PKGPATH}/var/www/command/*
-		chmod -R 0755  ${PKG_PKGPATH}/var/local/www
-		chmod -R 0777  ${PKG_PKGPATH}/var/local/www/commandw/*
-		chmod -R 0766  ${PKG_PKGPATH}/var/local/www/db
-		chmod -R 0755  ${PKG_PKGPATH}/usr/local/bin
+	# echo \"** Reset permissions\"
+	chmod -R 0755  ${PKG_PKGPATH}/var/www
+	chmod 0755  ${PKG_PKGPATH}/var/www/command/*
+	chmod -R 0755  ${PKG_PKGPATH}/var/local/www
+	chmod -R 0777  ${PKG_PKGPATH}/var/local/www/commandw/*
+	chmod -R 0766  ${PKG_PKGPATH}/var/local/www/db
+	chmod -R 0755  ${PKG_PKGPATH}/usr/local/bin
 
-		# # chmod -R ug-s /var/local/www
-		chmod -R 0755  ${PKG_PKGPATH}/usr/local/bin
-	"
-fi
+	# # chmod -R ug-s /var/local/www
+	chmod -R 0755  ${PKG_PKGPATH}/usr/local/bin
+"

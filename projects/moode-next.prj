@@ -167,10 +167,8 @@ cat > ${BIN_PATH}/root/firstboot <<-EOF
 	mount > /root/mount.firstboot
 
 	echo "** Generate alsaequal binary"
-	amixer -D alsaequal > /dev/null
 	mkdir -p /opt/alsaequal/
-	mv /usr/local/bin/alsaequal.bin /opt/alsaequal/
-	chmod 0755 /opt/alsaequal/alsaequal.bin
+	amixer -D alsaequal > /dev/null
 	chown mpd:audio /opt/alsaequal/alsaequal.bin
 
 	echo "** revert to normal boot..."

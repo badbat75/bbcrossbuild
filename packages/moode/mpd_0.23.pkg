@@ -44,8 +44,26 @@ PKG_DEPS="moode/boost_1.78.0 \
 #	raspbian/libmms_0.6.4-3 \
 #	raspbian/libsndfile_1.0.27"
 
-PKG_PREBUILD="patch -p1 < ${SRC_PATH}/moode-pkgbuild/packages/mpd/mpd_0.23.xx_selective_resample_mode.patch"
+PKG_PREBUILD="patch -p1 < ${SRC_PATH}/moode-pkgbuild/packages/mpd/mpd_0.23.xx_selective_resample_mode.patch
+	cat <<-EOF | patch -p1
+Description: source \\\$MPDCONF from /etc/default/mpd
+Author: Florian Schlichting <fsfs@debian.org>
+Forwarded: not-needed
 
+--- a/systemd/system/mpd.service.in
++++ b/systemd/system/mpd.service.in
+@@ -5,7 +5,8 @@
+ 
+ [Service]
+ Type=notify
+-ExecStart=@prefix@/bin/mpd --systemd
++EnvironmentFile=/etc/default/mpd
++ExecStart=@prefix@/bin/mpd --systemd \\\$MPDCONF
+ 
+ # Enable this setting to ask systemd to watch over MPD, see
+ # systemd.service(5).  This is disabled by default because it causes
+EOF
+"
 PKG_CXXFLAGS="-I${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/dbus-1.0/include"
 PKG_CXXFLAGS+=" -Wno-shadow"
 INST_CMD=install
@@ -474,7 +492,7 @@ cat > ${PKG_PKGPATH}/etc/mpd.conf <<-EOF
 	#
 	###############################################################################
 EOF
-cat > ${PKG_PKGPATH}/etc/defaults/mpd <<-EOF
+cat > ${PKG_PKGPATH}/etc/default/mpd <<-EOF
 	## Defaults for the MPD init script, sourced by /etc/init.d/mpd on Debian
 	## systems.  Uncomment (remove the leading '#') and change values as needed.
 
