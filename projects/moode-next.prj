@@ -373,6 +373,12 @@ case ${PLATFORM_NAME} in
 		;;
 esac
 
+cat >${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/moode-next.dd <<EOF
+#!/bin/bash
+sudo dd if=moode-next.img of=/dev/mmcblk0 bs=1M status=progress oflag=direct
+EOF
+chmod +x ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/moode-next.dd
+
 if [ -n "${QEMU_MACHINE}" ]
 then
 	echo "Creating QEMU Script for: ${QEMU_MACHINE}"
