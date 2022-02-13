@@ -1,12 +1,7 @@
 # camillagui-backend_0.8.0
 PKG_URL="https://github.com/HEnquist/camillagui-backend/archive/refs/tags/v0.8.0.tar.gz"
 PKG_DEPS="python/pycamilladsp_0.6.0 python/pycamilladsp-plot_0.6.2 moode/camillagui_0.6.0 moode/moode-pkgbuild"
-if test_version ${MOODEREL} -ge r800
-then
-    PKG_DEPS+=" moode/moode-dynamic-ver_2.0"
-else
-    PKG_DEPS+=" moode/moode-dynamic-ver_1.2"
-fi
+PKG_DEPS+=" moode/moode-pkgbuild"
 BUILD_PROCESS=downloadonly
 
 local MOODE_CAMILLAGUI_PATH=${SRC_PATH}/moode-pkgbuild/packages/camillagui
