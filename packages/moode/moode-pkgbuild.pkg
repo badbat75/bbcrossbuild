@@ -1,3 +1,8 @@
 # moode-pkgbuild
 PKG_URL="https://github.com/moode-player/pkgbuild/archive/refs/heads/main.tar.gz"
 BUILD_PROCESS=downloadonly
+PKG_PREBUILD="mkdir -p ${PKG_PKGPATH}/postinst_scripts
+	cp packages/moode-player/postinstall.sh ${PKG_PKGPATH}/postinst_scripts/99_moode_pkgbuild
+	sed -i 's/systemctl st/# systemctl st/g' ${PKG_PKGPATH}/postinst_scripts/99_moode_pkgbuild
+	sed -i 's#/usr/local/bin/moodeutl -r#mpd /etc/mpd.conf#' ${PKG_PKGPATH}/postinst_scripts/99_moode_pkgbuild
+	echo 'bash -x /postinst_scripts/99_moode_pkgbuild configure; mpd --kill; rm -f /etc/mpd.conf' > ${PKG_PKGPATH}/postinst_scripts/99_moode_pkgbuild.starter"

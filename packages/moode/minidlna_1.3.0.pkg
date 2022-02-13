@@ -9,9 +9,12 @@ PKG_DEPS="raspbian/libexif-0.6.21-5.1 raspbian/libid3tag_0.15.1b-14"
 #PKG_DEPS="raspbian/libjpeg-turbo-1.5.2 raspbian/sqlite3-3.26.0 raspbian/libexif-0.6.21-5.1"
 [ "${TOOLCHAIN}" = "gnu" ] && PKG_CFLAGS="-Wno-format-overflow -Wno-deprecated-declarations"
 PKG_PREBUILD="sed -i '/^.tmpl:/a \\\\tcp -r \$(srcdir)/linux .' Makefile.am"
-#PKG_PREBUILD+="sed -i 's/VERSION \\\"1.2.1\\\"/VERSION \\\"1.2.1+git${GIT_COMMIT}\\\"/' upnpglobalvars.h"
 PKG_POSTBUILD="install -d ${PKG_PKGPATH}/var/lib/minidlna &&
 install -d --mode=750 ${PKG_PKGPATH}/var/cache/minidlna"
+
+PKG_POSTINSTALL="useradd -r -M -s /usr/sbin/nologin -c \"MiniDLNA server\" -d /var/lib/minidlna minidlna
+chown minidlna:minidlna /var/cache/minidlna
+chown minidlna:minidlna /var/lib/minidlna"
 
 # Dependencies:
 # libavcodec-dev libavformat-dev libavutil-dev libflac-dev libogg-dev libvorbis-dev libsqlite3-dev libjpeg-turbo-dev

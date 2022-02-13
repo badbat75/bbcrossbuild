@@ -482,6 +482,34 @@ function inject_into_mount_tag () {
 	trap - ERR
 }
 
+function run_postinstall_scripts () {
+	trap 'STATUS=${?}; \
+		echo; \
+		echo "fail [run_postinstall_scripts]." >> ${LOG_PATH}/images_${_param_1}.log; \
+		echo; \
+		set +x; \
+		trap - ERR; \
+		if [ -f ${LOG_PATH}/images_${_param_1}.log ]; \
+		then \
+			echo "Log ${LOG_PATH}/images_${_param_1}.log:"; \
+			echo; \
+			tail -n24 ${LOG_PATH}/images_${_param_1}.log; \
+		fi; \
+		return ${STATUS};' ERR
+			
+	OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
+	[ ${_param_v:-0} -eq 1 ] && set -x || true
+
+	echo "run_postinstall_scripts ${_param_1}" >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+	export PLATFORM_PATH LOG_PATH
+	export -f param2value run_on_root_dir
+	find ${PLATFORM_PATH}/${_param_1}/postinst_scripts -type f -printf '%P\n' | sort -n | xargs -I{} bash -c "run_on_root_dir ${_param_1} root \"set -x; source /postinst_scripts/{}\"" >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+	sudo rm -rfv ${PLATFORM_PATH}/${_param_1}/postinst_scripts >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+
+	[ ${_param_v:-0} -eq 1 ] && set +x || true
+	trap - ERR
+}
+
 unset LODEVIMAGES
 unset MOUNTPOINTS
 declare -A LODEVIMAGES

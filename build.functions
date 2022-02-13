@@ -1217,6 +1217,8 @@ function build () (
 		PKG_OVERRIDELTO \
 		PKG_PREBUILD \
 		PKG_POSTBUILD \
+		PKG_POSTINSTALL \
+		PKG_POSTINSTALL_PRIO \
 		PKG_TOOLCHAIN \
 		PKG_TWOSTEPSBUILD \
 		VAR_INSTALL_LIBDIR \
@@ -1432,11 +1434,15 @@ function build () (
 		fi
 		;;
 	esac
-	if [ ! -d ${STATUS_PATH} ]
-	then
-		mkdir -p ${STATUS_PATH}
-	fi
 	#rm -rf ${PKG_SRCPATH} &&
+
+	if [ -n "${PKG_POSTINSTALL}" ]
+	then
+		mkdir ${PKG_PKGPATH}/postinst_scripts
+		echo "${PKG_POSTINSTALL}" > ${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_NAME}
+	fi
+
+	##### Create package
 	case x${BUILD_PROCESS} in
 	xbuilddebpkg)
 			(
@@ -1472,6 +1478,11 @@ function build () (
 			fi
 		;;
 	esac
+	### Save build status
+	if [ ! -d ${STATUS_PATH} ]
+	then
+		mkdir -p ${STATUS_PATH}
+	fi
 	if [ ${_param_no_save_status:-0} -eq 0 ]
 	then
 		md5sum ${PKG_PATH}/${_param_1}.pkg > ${STATUS_PATH}/${PKG_NAME}

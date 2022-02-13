@@ -17,11 +17,6 @@ PKG_PREBUILD="
 	cp -rv www \${PKG_BLDPATH}/www
 "
 PKG_POSTBUILD="
-	mkdir -p ${PKG_PKGPATH}/root
-	cp ${SRC_PATH}/moode-pkgbuild/packages/moode-player/postinstall.sh ${PKG_PKGPATH}/root/
-	sed -i 's/systemctl st/# systemctl st/g' ${PKG_PKGPATH}/root/postinstall.sh
-	sed -i 's#/usr/local/bin/moodeutl -r#mpd /etc/mpd.conf#' ${PKG_PKGPATH}/root/postinstall.sh
-
 	# Variable mapping
 	# $MOODE_DIR      -> \${PKG_SRCPATH}
 	# $BUILD_ROOT_DIR -> \${PKG_BLDPATH}
@@ -116,4 +111,14 @@ PKG_POSTBUILD="
 
 	# # chmod -R ug-s /var/local/www
 	chmod -R 0755  ${PKG_PKGPATH}/usr/local/bin
+
+	if [ -f ~/moodecfg.ini ]
+	then
+		echo \"Uploading custom moodecfg.ini configuration...\"
+		mkdir -p ${BIN_PATH}/boot
+		cp ~/moodecfg.ini ${BIN_PATH}/boot/
+		echo \"Done.\"
+	fi
 "
+
+PKG_POSTINSTALL="chown -R pi:pi /home/pi"

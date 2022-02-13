@@ -13,3 +13,6 @@ PKG_DEPS="moode/libupnpp_0.21 raspbian/libmicrohttpd_0.9.72-2 raspbian/libjsoncp
 PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/var/cache/upmpdcli/ohcreds
     	openssl genrsa -out ${PKG_PKGPATH}/var/cache/upmpdcli/ohcreds/credkey.pem 4096
 		chmod 600 ${PKG_PKGPATH}/var/cache/upmpdcli/ohcreds/credkey.pem"
+
+PKG_POSTINSTALL="useradd -r -M -s /usr/sbin/nologin -c \"UPnP Media Renderer Client\" -d /var/lib/upmpdcli upmpdcli
+chown upmpdcli /var/cache/upmpdcli/ohcreds/credkey.pem"

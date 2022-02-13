@@ -18,4 +18,6 @@ PKG_POSTBUILD="install -m 0755 -d \${PKG_PKGPATH}/media
     cp debian/udevil.1 ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man1/ && gzip -f ${PKG_PKGPATH}\${BUILD_PREFIX}/share/man/man1/udevil.1"
 PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH}
 
+PKG_POSTINSTALL="chown root:plugdev /usr/bin/udevil"
+
 # Note: Build-Depends: debhelper (>= 10), libglib2.0-dev, intltool, libudev-dev, dh-systemd (>= 1.5)

@@ -34,5 +34,7 @@ case x${WITH_SSL} in
 	;;
 esac
 
+PKG_POSTINSTALL="useradd -r -M -s /usr/sbin/nologin -G audio -c \"AirPlay Daemon\" -d /var/lib/shairport-sync shairport-sync"
+
 # Dependencies:
 # libpopt-dev avahi-daemon libavahi-client-dev glib2.0
