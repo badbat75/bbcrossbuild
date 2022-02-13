@@ -2,13 +2,12 @@
 PKG_SUFFIX=.63
 PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-5${PKG_SUFFIX}.tar.xz"
 PKG_DEPS="raspbian/ell_0.48-0.1"
-#PKG_DEPS="raspbian/libdw raspian/libell"
+#PKG_DEPS+=" lfs/elfutils_0.182"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--libexecdir=${BUILD_EXECPREFIX}/sbin --with-dbusconfdir=${BUILD_SYSCONFDIR}/dbus-1 \
     --with-dbussystembusdir=${BUILD_PREFIX}/share/dbus-1/system-services \
     --with-dbussessionbusdir=${BUILD_PREFIX}/share/dbus-1/services \
-    --enable-library --enable-deprecated --enable-tools --enable-threads --enable-backtrace --enable-nfc --enable-sap --enable-monitor --enable-udev --enable-obex --enable-client --enable-systemd --enable-sixaxis --enable-health --enable-hid2hci --enable-experimental"
-CONF_FLAGS+=" --enable-external-ell"
+    --enable-library --enable-deprecated --enable-tools --enable-threads --enable-backtrace --enable-nfc --enable-sap --enable-monitor --enable-udev --enable-obex --enable-client --enable-systemd --enable-sixaxis --enable-health --enable-hid2hci --enable-experimental --enable-external-ell"
 INST_CMD="install-strip"
 #PATCHDEB=""
 # Moode directory location search for bluetoothd and obexd

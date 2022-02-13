@@ -38,7 +38,7 @@ then
 	run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
 		libc6-dev libpython3-dev libsqlite3-dev \
 		libusb-dev libglib2.0-dev libudev-dev libical-dev libreadline-dev libdbus-1-dev \
-		libbsd-dev libncurses5-dev \
+		libbsd-dev libncurses5-dev libdw-dev \
 		\
 		libcurl4-gnutls-dev libyajl-dev \
 		libavahi-client-dev libsystemd-dev libwrap0-dev libicu-dev libglib2.0-dev \
@@ -199,7 +199,7 @@ then
 	run_on_root_dir final root "apt-get update --allow-releaseinfo-change"
 	run_on_root_dir final root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
 	run_on_root_dir final root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
-		libgomp1 triggerhappy \
+		libgomp1 triggerhappy libdw1 \
 		php-fpm nginx sqlite3 php-sqlite3 php7.4-gd php-yaml \
 		\
 		telnet sysstat squashfs-tools shellinabox \
