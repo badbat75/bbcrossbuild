@@ -388,14 +388,18 @@ function build () (
 			return 100' SIGINT
 
 		set -x
-		if [ ! -z ${PKG_URL} ]
+		if [ ! -z "${PKG_URL}" ]
 		then
-			if [ ${MAKEDIR:-0} -eq 1 ]
-			then
-				STRIPCOMPONENTS=0 download_uncompress "${PKG_URL}" ${PKG_SRCPATH}
-			else
-				download_uncompress "${PKG_URL}" ${PKG_SRCPATH}
-			fi
+			[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH}
+			for url in ${PKG_URL}
+			do
+				if [ ${MAKEDIR:-0} -eq 1 ]
+				then
+					NODELETEDESTDIR=1 STRIPCOMPONENTS=0 download_uncompress "${url}" ${PKG_SRCPATH}
+				else
+					NODELETEDESTDIR=1 download_uncompress "${url}" ${PKG_SRCPATH}
+				fi
+			done
 		else
 			if [ ! -z ${GIT_URL} ]
 			then
@@ -538,7 +542,12 @@ function build () (
 		create_environment_source
 		source environment.source
 
-		eval "${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS}"
+		if [[ "${CONF_CMD}" =~ ^\./.* ]]
+		then
+			eval "${CONF_CMD} ${CONF_FLAGS}"
+		else 
+			eval "${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS}"
+		fi
 		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
 		then
 			for target in ${PKG_MAKETARGETS:-all}
@@ -667,6 +676,7 @@ function build () (
 				nm = '${NM}'
 				ranlib = '${RANLIB}'
 				pkgconfig = '${PKG_CONFIG}'
+				exe_wrapper = 'qemu-${HM}-static'
 
 				[host_machine]
 				system = '${HOS}'
@@ -696,7 +706,7 @@ function build () (
 		create_environment_source
 		source environment.source
 		createmesoncross
-		meson ${PKG_SRCPATH} ${PKG_BLDPATH} -Dbuildtype=release -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} \
+		meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} \
 			--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
 			--includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} \
 			${CONF_FLAGS}
@@ -1393,7 +1403,7 @@ function build () (
 		${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 		;;
 	x*)
-		if [ ! -z ${PKG_URL} ] || [ ! -z ${GIT_URL} ]
+		if [ ! -z "${PKG_URL}" ] || [ ! -z "${GIT_URL}" ]
 		then
 			echo -n "Downloading ${PKG_NAME}..."
 			downloadsources >> ${LOG_PATH}/${PKG_NAME}.log 2>&1

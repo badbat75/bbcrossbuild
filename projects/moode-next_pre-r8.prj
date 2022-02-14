@@ -42,6 +42,7 @@ then
 		libc6-dev libpython3-dev libsqlite3-dev \
 		libusb-dev libglib2.0-dev libudev-dev libical-dev libreadline-dev libdbus-1-dev \
 		libbsd-dev libncurses5-dev \
+		libpolkit-agent-1-dev libpolkit-gobject-1-dev libparted-dev libatasmart-dev libgirepository1.0-dev \
 		\
 		libcurl4-gnutls-dev libyajl-dev \
 		libavahi-client-dev libsystemd-dev libwrap0-dev libicu-dev libglib2.0-dev \
@@ -282,7 +283,7 @@ then
 		# AlsaEqual
 		rm /usr/share/alsa/alsa.conf.d/equal.conf
 		amixer -D alsaequal
-		chmod 0755 /usr/local/bin/alsaequal.bin
+		chmod 0644 /usr/local/bin/alsaequal.bin
 		chown mpd:audio /usr/local/bin/alsaequal.bin
 
 		# MPD configuration

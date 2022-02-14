@@ -2,7 +2,7 @@
 PKG_URL="https://github.com/fernandotcl/udisks-glue/archive/refs/tags/release-1.3.5.tar.gz"
 BUILD_PROCESS=configmake
 AUTOCONF=1
-PKG_DEPS="moode/dbus-glib-0.112 moode/libconfuse_3.3"
+PKG_DEPS="moode/dbus-glib-0.112 moode/libconfuse_3.3 moode/udisks_1.0.5-1"
 CONF_FLAGS=""
 INST_CMD=install-strip
 PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH}
