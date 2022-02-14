@@ -290,7 +290,15 @@ function unmount_tag () {
 		echo "Done."
 	fi
 
-	[ ${_param_finalize:-0} -eq 1 ] && mv ${LODEVIMAGES[${_param_1}]} ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.img || true
+	if [ ${_param_finalize:-0} -eq 1 ]
+	then
+		mv ${LODEVIMAGES[${_param_1}]} ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.img
+		cat >${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.dd <<-EOF
+			#!/bin/bash
+			sudo dd if=${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.img of=\${1:-/dev/mmcblk0} bs=1M status=progress oflag=direct
+		EOF
+		chmod +x ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.dd
+	fi
 
 	echo
 	set +x

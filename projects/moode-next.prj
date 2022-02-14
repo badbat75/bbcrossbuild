@@ -150,40 +150,6 @@ build moode/udisks-glue_1.3.5
 
 unmount_tag distos
 
-# Create firstboot script
-mkdir -p ${BIN_PATH}/root
-cat > ${BIN_PATH}/root/firstboot <<-EOF
-	#!/bin/sh
-	export PATH=/usr/sbin:/usr/bin:/sbin:/bin
-	date -s "@$(date +%s)"
-	mkdir /dev/pts
-	mount -t devpts devpts /dev/pts
-	mount -t proc proc /proc
-	mount -t sysfs sys /sys
-	mount -t tmpfs tmp /run
-	mkdir -p /run/systemd
-	mount -oremount,rw /dev/mmcblk0p2 /
-	mount /dev/mmcblk0p1 /boot
-	mount > /root/mount.firstboot
-
-	echo "** Generate alsaequal binary"
-	mkdir -p /opt/alsaequal/
-	amixer -D alsaequal > /dev/null
-	chown mpd:audio /opt/alsaequal/alsaequal.bin
-
-	echo "** revert to normal boot..."
-	sed -i 's#init=/root/firstboot##' /boot/cmdline.txt
-
-	umount /boot
-	rm -f /root/firstboot
-	mount -oremount,ro /dev/mmcblk0p2 /
-
-	sleep 10
-	echo b > /proc/sysrq-trigger
-	exit 0
-EOF
-chmod +x ${BIN_PATH}/root/firstboot
-
 # Build common final Image to be used to deploy moode
 
 if [ -z ${DISABLE_FINAL_IMG} ]
@@ -230,9 +196,6 @@ then
 	inject_into_mount_tag temp binaries --remove_devfiles
 	run_postinstall_scripts temp
 
-	# Run /root/firstboot at first boot, enable verbose boot and set physical boot device
-	run_on_root_dir temp root "sed -i \"s|elevator=[^ ]*||;s|root=[^ ]*|root=/dev/mmcblk0p2|;s|init=/usr/lib/raspi-config/init_resize.sh|init=/root/firstboot|;s| quiet||\" /boot/cmdline.txt"
-
 	# Overclock RaspberryPi 1
 	case x${PLATFORM_NAME} in
 		xrpi)
@@ -248,62 +211,58 @@ then
 	run_on_root_dir temp root "systemctl enable ssh"
 
 	# Uncomment it to navigate in the temp filesystem
-	#pause
+	# pause
 
 	unmount_tag --finalize temp
 fi
 
+# Create QEMU run scripts
+
 case ${PLATFORM_NAME} in
 	rpi2)
 		QEMU_MACHINE=raspi2b
-		QEMU_CPU=cortex-a7
 		QEMU_CPU_CORES=4
 		QEMU_MEMORY=1024
 		DTB=${BIN_PATH}/boot/bcm2709-rpi-2-b.dtb
 		;;
 	rpi3|rpi3-aarch64)
 		QEMU_MACHINE=raspi3b
-		QEMU_CPU=cortex-a53
 		QEMU_CPU_CORES=4
 		QEMU_MEMORY=1024
 		DTB=${BIN_PATH}/boot/bcm2710-rpi-3-b.dtb
 		;;
 esac
 
-cat >${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/moode-next.dd <<EOF
-#!/bin/bash
-sudo dd if=moode-next.img of=/dev/mmcblk0 bs=1M status=progress oflag=direct
-EOF
-chmod +x ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/moode-next.dd
-
 if [ -n "${QEMU_MACHINE}" ]
 then
 	echo "Creating QEMU Script for: ${QEMU_MACHINE}"
 	KERNEL=${BIN_PATH}/boot/${KERNEL_NAME}
-	IMAGE=${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/moode-next.img
+	IMAGE=${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.img
+	QEMU_ARCH=${HM}
+	QEMU_CPU=${HMCPU}
 
-	cat >${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/moode-next.qemu <<EOF
-#!/bin/sh
+	cat >${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.qemu <<-EOF
+		#!/bin/sh
 
-qemu-img resize ${IMAGE} 4G
+		qemu-img resize ${IMAGE} 4G
 
-qemu-system-aarch64 \\
-	-machine ${QEMU_MACHINE} \\
-	-cpu ${QEMU_CPU} \\
-	-smp ${QEMU_CPU_CORES} \\
-	-m ${QEMU_MEMORY} \\
-	-dtb ${DTB} \\
-	-kernel ${KERNEL} \\
-	-nographic \\
-	-monitor telnet:127.0.0.1:5020,server,nowait \\
-	-usb \\
-	-device usb-audio,audiodev=default -audiodev alsa,id=default \\
-	-device usb-net,netdev=eth0 -netdev user,id=eth0,hostfwd=tcp::5022-:22,hostfwd=tcp::5080-:80 \\
-	-device usb-serial,chardev=ttyS0 -chardev socket,id=ttyS0,port=5021,host=0.0.0.0,nodelay=on,server=on,wait=off,telnet=on \\
-	-append "dwc_otg.fiq_fsm_enable=0 console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait fsck.repair=yes init=/root/firstboot" \\
-	-device sd-card,drive=disk0 -drive file=${IMAGE},if=none,format=raw,id=disk0 \\
-	--no-reboot
-EOF
-	chmod +x ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/moode-next.qemu
-	echo "Run ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/moode-next.qemu to test it!!!"
+		qemu-system-${QEMU_ARCH} \\
+			-machine ${QEMU_MACHINE} \\
+			-cpu ${QEMU_CPU} \\
+			-smp ${QEMU_CPU_CORES} \\
+			-m ${QEMU_MEMORY} \\
+			-dtb ${DTB} \\
+			-kernel ${KERNEL} \\
+			-nographic \\
+			-monitor telnet:127.0.0.1:5020,server,nowait \\
+			-usb \\
+			-device usb-audio,audiodev=default -audiodev alsa,id=default \\
+			-device usb-net,netdev=eth0 -netdev user,id=eth0,hostfwd=tcp::5022-:22,hostfwd=tcp::5080-:80 \\
+			-device usb-serial,chardev=ttyS0 -chardev socket,id=ttyS0,port=5021,host=0.0.0.0,nodelay=on,server=on,wait=off,telnet=on \\
+			-append "dwc_otg.fiq_fsm_enable=0 console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait fsck.repair=yes" \\
+			-device sd-card,drive=disk0 -drive file=${IMAGE},if=none,format=raw,id=disk0 \\
+			--no-reboot
+	EOF
+	chmod +x ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.qemu
+	echo "Run ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.qemu to test it!!!"
 fi

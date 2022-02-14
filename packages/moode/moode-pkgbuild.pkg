@@ -107,4 +107,5 @@ PKG_PREBUILD="mkdir -p ${PKG_PKGPATH}/postinst_scripts
 		bash -x /postinst_scripts/99_moode_pkgbuild configure
 		mpd --kill
 		rm -f /etc/mpd.conf
-	EOFM"
+	EOFM
+	"
