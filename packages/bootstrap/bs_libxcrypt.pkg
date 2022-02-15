@@ -3,7 +3,7 @@ PKG_URL="https://github.com/besser82/libxcrypt/archive/v${BS_LIBXCRYPT_VER}.tar.
 PKG_PREBUILD="./autogen.sh"
 BUILD_PROCESS=configmake
 PKG_OVERRIDELTO=0
-CONF_FLAGS="--disable-failure-tokens --disable-valgrind \
+CONF_FLAGS="--disable-werror --disable-failure-tokens --disable-valgrind \
 	--enable-hashes=all --enable-obsolete-api=glibc --enable-obsolete-api-enosys=no"
 INST_CMD=install-strip
 

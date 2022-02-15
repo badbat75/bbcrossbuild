@@ -4,7 +4,7 @@ PATCHES="https://www.linuxfromscratch.org/patches/downloads/glibc/glibc-${BS_GLI
 BUILD_PROCESS=configmake
 
 PKG_OVERRIDELTO=0
-PKG_TWOSTEPSBUILD=0
+PKG_TWOSTEPSBUILD=1
 CONF_CONFIGPARMS="
 slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 rootsbindir=${BUILD_PREFIX}/sbin
