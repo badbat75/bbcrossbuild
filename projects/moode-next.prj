@@ -190,11 +190,22 @@ then
 
 	run_on_root_dir final root "apt-get -y purge --autoremove libcephfs2"
 	run_on_root_dir final root "apt-get clean"
-	unmount_tag final
 
-	cp -v ${DISKIMAGES_PATH}/final.img ${DISKIMAGES_PATH}/temp.img
-	
-	mount_tag temp --mountlist "2:/ 1:/boot"
+	if [ ${MOODEIMG_FS:-ext4} == ext4 ]
+	then
+		unmount_tag final
+		cp -v ${DISKIMAGES_PATH}/final.img ${DISKIMAGES_PATH}/temp.img
+		mount_tag temp --mountlist "2:/ 1:/boot"
+	else
+		echo -n "Creating new temp image..."
+		create_image temp --rootfstype ${MOODEIMG_FS} --size 3G
+		echo -n "Mounting..."
+		mount_tag temp --mountlist "2:/ 1:/boot"
+		echo -n "Copying files..."
+		sudo cp -a ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/final ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/temp
+		echo "Done."
+		unmount_tag final
+	fi
 
 	inject_into_mount_tag temp binaries --remove_devfiles
 	run_postinstall_scripts temp

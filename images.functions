@@ -27,7 +27,7 @@ function create_image() {
 	local IMAGE_PATH=${DISKIMAGES_PATH}/${_param_1}.img
 	local MOUNT_DIR=${PLATFORM_PATH}/${_param_1}
 	local ROOTFS_TYPE=${_param_rootfstype:-ext4}
-	local SIZE=${_param_size:-1MiB}
+	local SIZEIEC=${_param_size:-2G}
 
 	if [ -z ${_param_layout} ]
 	then
@@ -48,7 +48,10 @@ function create_image() {
 	then
 		mkdir -pv ${DISKIMAGES_PATH} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	fi
-	dd if=/dev/zero of=${IMAGE_PATH} bs=1KiB count=${SIZE} status=progress >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+	local SIZE=$( numfmt --from=iec ${SIZEIEC} )
+	local BS=$( numfmt --from=iec 1M )
+	local COUNT=$(( ${SIZE} / ${BS} ))
+	dd if=/dev/zero of=${IMAGE_PATH} bs=${BS} count=${COUNT} status=progress oflag=direct >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo "ok."
 	echo -n "Partitioning... "
 	echo "${LAYOUT}" | sfdisk ${IMAGE_PATH} >> ${LOG_PATH}/images_${_param_1}.log 2>&1

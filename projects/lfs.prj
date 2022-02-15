@@ -130,7 +130,7 @@ chmod +x ${BIN_PATH}/root/postinstall
 ############################
 
 function build_lfs_image () {
-	create_image lfs --rootfstype btrfs --size 3MiB
+	create_image lfs --rootfstype btrfs --size 3G
 	mount_tag lfs --mountlist "2:/ 1:/boot"
 	inject_into_mount_tag lfs binaries --remove_devfiles
 	run_on_root_dir lfs root "/root/postinstall"

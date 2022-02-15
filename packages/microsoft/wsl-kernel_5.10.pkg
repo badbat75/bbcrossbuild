@@ -1,0 +1,16 @@
+# wsl-kernel_5.10
+PKG_SUFFIX=.93.2
+PKG_URL="https://github.com/microsoft/WSL2-Linux-Kernel/archive/refs/tags/linux-msft-wsl-5.10.93.2.tar.gz"
+BUILD_PROCESS=kernelbuild
+
+case ${WITH_EXTOPTS:-1} in
+	yes|1)
+		CONF_FLAGS+=" -e BTRFS_FS -e F2FS_FS"
+		;;
+esac
+case ${WITH_RT:-0} in
+	yes|1)
+	# Enable preemptive/realtime kernel
+		CONF_FLAGS+=" -d CONFIG_PREEMPT_NONE -d CONFIG_PREEMPT_VOLUNTARY -e CONFIG_PREEMPT"
+		;;
+esac
