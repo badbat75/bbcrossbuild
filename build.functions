@@ -853,7 +853,7 @@ function build () (
 		fi
 
 		# Config kernel build
-		make4kern ${KERNEL_DEFCONFIG} .config
+		make4kern KCONFIG_CONFIG=${KERNEL_DEFCONFIG} olddefconfig
 
 		case ${KERNEL_OPTLEVEL:-null} in
 			s|S)	scripts/config -e CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3
