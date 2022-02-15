@@ -20,9 +20,7 @@ mkdir -p ${PKG_PKGPATH}/etc/bluetooth/
 cp -pv \${PKG_SRCPATH}/{src/main.conf,profiles/input/input.conf,profiles/network/network.conf} ${PKG_PKGPATH}/etc/bluetooth/"
 PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH}
 
-PKG_POSTINSTALL="
-	# create bluetooth group if not already present
-	if ! getent group bluetooth > /dev/null; then
-		addgroup --quiet --system bluetooth
-	fi
-	"
+PKG_POSTINSTALL="# create bluetooth group if not already present
+if ! getent group bluetooth > /dev/null; then
+	addgroup --quiet --system bluetooth
+fi"

@@ -1,15 +1,68 @@
 #!/bin/bash
-sudo dnf install -y bc parted e2fsprogs bzip2 rsync vim-common \
-    gcc g++ binutils binutils-devel libzstd libzstd-devel \
-    ccache \
-    tree curl gawk bison flex cmake ninja-build npm \
-	autoconf autoconf-archive automake gettext-devel libtool \
-    git xmltoman docbook-utils swig doxygen texinfo python3-docutils
+
+# GCC build
+PACKAGES="bc parted e2fsprogs bzip2 rsync vim-common gcc g++ binutils binutils-devel libzstd libzstd-devel ccache tree curl gawk bison flex cmake ninja-build npm autoconf autoconf-archive automake gettext-devel libtool git xmltoman docbook-utils swig doxygen texinfo python3-docutils"
 
 # CLang build
-sudo dnf install -y binutils-devel python3-devel libedit-devel lua-devel ocaml-findlib ocaml-ctypes ocaml-ocamldoc
+PACKAGES+=" binutils-devel python3-devel libedit-devel lua-devel ocaml-findlib ocaml-ctypes ocaml-ocamldoc"
 
+# Debian Packages
+PACKAGES+=" dpkg-dev devscripts apt debhelper perl-ExtUtils-MakeMaker perl-Archive-Zip"
+
+# For Image emulation
+PACKAGES+=" qemu-user-static"
+
+# for meson-ninja
+PACKAGES+=" python3-pip meson ninja-build"
+#PACKAGES+=" meson ninja
+
+# for Python 3.7
+PACKAGES+=" openssl-devel libffi-devel"
+
+# for moode
+PACKAGES+=" sqlite"
+
+# for wpa-supplicant
+PACKAGES+=" docbook-utils-pdf"
+
+# for libid3tag
+PACKAGES+=" gperf"
+
+# for zziplib
+PACKAGES+=" python2"
+
+# for lxml
+PACKAGES+=" libxml2-devel"
+
+# for glib-dbus-1.0
+PACKAGES+=" dbus-glib-devel"
+
+# for udevil
+PACKAGES+=" intltool"
+
+# for dlc-daemon
+PACKAGES+=" pandoc"
+
+# for systemd
+PACKAGES+=" libxslt docbook-xsl docbook2X"
+
+# for man-db
+PACKAGES+=" groff"
+
+# for btrfs-progs
+PACKAGES+=" xmlto asciidoc"
+
+# for gobject-introspection
+PACKAGES+=" gobject-introspection-devel"
+
+# for chromium
+PACKAGES+=" libevent-devel"
+
+sudo dnf -y install ${PACKAGES}
+
+# Python environment
 sudo alternatives --install /usr/bin/python python /usr/bin/python3.10 1
+python2 <(curl -s https://bootstrap.pypa.io/pip/2.7/get-pip.py)
 
 # Libtool updates
 if [ ! -f /usr/share/libtool/build-aux/ltmain.sh.orig ]
@@ -21,8 +74,6 @@ fi
 sudo sed -i 's/-specs=\*.*)/-specs=\*|-fsanitize=\*|-fuse-ld=\*|-Wa,\*|--target=\*|-B\*)/' /usr/share/libtool/build-aux/ltmain.sh
 
 # Debian Packages
-sudo dnf install -y dpkg-dev devscripts apt debhelper \
-    perl-ExtUtils-MakeMaker perl-Archive-Zip
 (
     cd /tmp
     git clone https://salsa.debian.org/reproducible-builds/strip-nondeterminism.git
@@ -40,52 +91,3 @@ else
     sudo cp -fv /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm.orig /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm
 fi
 sudo sed -i "s/'0755'/0755/g" /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm
-
-#autoconf2.64
-
-# For Image emulation
-sudo dnf install -y qemu-user-static
-
-# for meson-ninja
-sudo dnf install -y python3-pip meson ninja-build
-#sudo pip3 install meson ninja
-
-# for Python 3.7
-sudo dnf install -y openssl-devel libffi-devel
-
-# for moode
-sudo dnf install -y sqlite
-
-# for wpa-supplicant
-sudo dnf install -y docbook-utils-pdf
-
-# for libid3tag
-sudo dnf install -y gperf
-
-# for zziplib
-sudo dnf install -y python2
-
-# for lxml
-sudo dnf install -y libxml2-devel
-
-# for glib-dbus-1.0
-sudo dnf install -y dbus-glib-devel
-
-# for udevil
-sudo dnf install -y intltool
-
-# for dlc-daemon
-sudo dnf install -y pandoc
-
-# for systemd
-sudo dnf install -y libxslt docbook-xsl docbook2X
-
-# for man-db
-sudo dnf install -y groff
-
-# for btrfs-progs
-sudo dnf install -y xmlto asciidoc
-
-# for chromium
-sudo dnf install -y libevent-devel
-python2 <(curl -s https://bootstrap.pypa.io/pip/2.7/get-pip.py)

@@ -11,6 +11,7 @@ CONF_FLAGS="--disable-option-checking \
 	--disable-dmmp \
 	--disable-lvm2"
 INST_CMD=install-strip
-PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH}
 PKG_CFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}/gudev-1.0 -I${DISTOS_PATH}${BUILD_INCLUDEDIR}/dbus-1.0 -I${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/dbus-1.0/include"
 PKG_COPYSRC=1
+
+# Dependencies: libpolkit-gobject-1-dev libparted-dev libatasmart-dev

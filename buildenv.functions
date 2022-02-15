@@ -446,6 +446,8 @@ function setup_gcc () {
 		rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
 		rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${BINUTILS_VER}
 	fi
+	setup_pkgconfig
+	setup_ldd
 	echo "done."
 
 	trap - ERR
@@ -727,6 +729,8 @@ function setup_llvm () {
 	then
 		rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}
 	fi
+	setup_pkgconfig
+	setup_ldd
 	echo "done."
 
 	trap ERR
@@ -1049,6 +1053,36 @@ function setup_pkgconfig () {
 	chmod +x ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config
 }
 
+function setup_ldd () {
+	local LDD_PATH=${1:-${DISTOS_PATH}}
+	echo -n "Checking if ldd is present in ${LDD_PATH}... "
+	if [ -f "${LDD_PATH}/usr/bin/ldd" ] || [ -f "${LDD_PATH}/bin/ldd" ]
+	then
+		eval local $(grep "^RTLDLIST=" ${LDD_PATH}/usr/bin/ldd)
+		echo -n "Found. Checking glibc ld libraries (${RTDLIST})..."
+		for ldso in ${RTLDLIST}
+		do
+			if [ -f ${LDD_PATH}${ldso} ]
+			then
+				local RTD=${RTD:+ }${LDD_PATH}${ldso}
+			fi
+		done
+		if [ -n "${RTD}" ]
+		then
+			echo -n "Found. Creating cross-ldd in local toolchain folder..."
+			if [ ! -d ${TOOLCHAIN_PATH}/bin ]
+			then
+				mkdir ${TOOLCHAIN_PATH}/bin
+			fi
+			sed "/^RTLDLIST=/ s#\".*\"#\"${RTD}\"#" ${LDD_PATH}/usr/bin/ldd > ${TOOLCHAIN_PATH}/bin/ldd
+			chmod +x ${TOOLCHAIN_PATH}/bin/ldd
+			echo "Done."
+		fi
+	else
+		echo "Not found."
+	fi
+}
+
 export MAKEFLAGS="-j${NPROCS} ${MAKEFLAGS:+ ${MAKEFLAGS}}"
 
 TOOLCHAIN_SRCPATH=${SRC_PATH}/toolchain
@@ -1072,5 +1106,3 @@ then
 	exit 1
 fi
 BARCH=$(gcc -dumpmachine)
-
-setup_pkgconfig

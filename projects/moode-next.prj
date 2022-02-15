@@ -38,7 +38,7 @@ then
 	run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
 		libc6-dev libpython3-dev libsqlite3-dev \
 		libusb-dev libglib2.0-dev libudev-dev libical-dev libreadline-dev libdbus-1-dev \
-		libbsd-dev libncurses5-dev libdw-dev \
+		libbsd-dev libncurses5-dev libdw-dev libpolkit-gobject-1-dev libparted-dev libatasmart-dev \
 		\
 		libcurl4-gnutls-dev libyajl-dev \
 		libavahi-client-dev libsystemd-dev libwrap0-dev libicu-dev libglib2.0-dev \
@@ -147,6 +147,9 @@ build raspbian/flac_1.3.3-2
 build moode/trx_0.6
 build raspbian/haveged_1.9.14-1
 build moode/udisks-glue_1.3.5
+
+# Uncomment it to navigate in the temp filesystem
+# pause
 
 unmount_tag distos
 
