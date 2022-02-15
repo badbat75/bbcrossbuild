@@ -11,4 +11,4 @@ BUILD_LIBSTATIC=1
 
 setup_gcc --install
 #setup_llvm
-microsoft/wsl-kernel_5.10
+build microsoft/wsl-kernel_5.10

@@ -1055,11 +1055,9 @@ function setup_pkgconfig () {
 
 function setup_ldd () {
 	local LDD_PATH=${1:-${DISTOS_PATH}}
-	echo -n "Checking if ldd is present in ${LDD_PATH}... "
 	if [ -f "${LDD_PATH}/usr/bin/ldd" ] || [ -f "${LDD_PATH}/bin/ldd" ]
 	then
 		eval local $(grep "^RTLDLIST=" ${LDD_PATH}/usr/bin/ldd)
-		echo -n "Found. Checking glibc ld libraries (${RTDLIST})..."
 		for ldso in ${RTLDLIST}
 		do
 			if [ -f ${LDD_PATH}${ldso} ]
@@ -1069,17 +1067,13 @@ function setup_ldd () {
 		done
 		if [ -n "${RTD}" ]
 		then
-			echo -n "Found. Creating cross-ldd in local toolchain folder..."
 			if [ ! -d ${TOOLCHAIN_PATH}/bin ]
 			then
 				mkdir ${TOOLCHAIN_PATH}/bin
 			fi
 			sed "/^RTLDLIST=/ s#\".*\"#\"${RTD}\"#" ${LDD_PATH}/usr/bin/ldd > ${TOOLCHAIN_PATH}/bin/ldd
 			chmod +x ${TOOLCHAIN_PATH}/bin/ldd
-			echo "Done."
 		fi
-	else
-		echo "Not found."
 	fi
 }
 
