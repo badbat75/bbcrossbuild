@@ -1,6 +1,6 @@
 # moode-dynamic-ver_2.0
 MOODEREL=r800
-MOODEDEVCOMMIT=699dc28090b5b59efb29d09dae88aeba7e2eb06d
+MOODEDEVCOMMIT=0ec2ada3db946757f71f6643f6563badb957f7c8
 if [ -z "${MOODEDEVCOMMIT}" ]
 then
 	PKG_URL="https://github.com/moode-player/moode/archive/${MOODEREL}prod.tar.gz"
@@ -11,7 +11,6 @@ PKG_SRCDIR=moode_${MOODEREL}
 BUILD_PROCESS=downloadonly
 PKG_DEPS="python/RPi.GPIO python/python-musicpd raspbian/zip_3.0-8 moode/moode-pkgbuild"
 PKG_PREBUILD="
-	sed -i 's#/usr/local/bin#/opt/alsaequal#g' etc/alsa/conf.d/alsaequal.conf
 	mkdir -p \${PKG_BLDPATH}/build/dist/binary
 	cp -v package.json package-lock.json gulpfile.js \${PKG_BLDPATH}
 	cp -rv www \${PKG_BLDPATH}/www
