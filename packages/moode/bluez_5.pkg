@@ -5,15 +5,24 @@ PKG_DEPS="raspbian/ell_0.48-0.1"
 #PKG_DEPS+=" lfs/elfutils_0.182"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--libexecdir=${BUILD_EXECPREFIX}/sbin --with-dbusconfdir=${BUILD_SYSCONFDIR} \
-    --with-dbussystembusdir=${BUILD_PREFIX}/share/dbus-1/system-services \
-    --with-dbussessionbusdir=${BUILD_PREFIX}/share/dbus-1/services \
-    --with-udevdir=${BUILD_LIBDIR}/udev \
-    --enable-library --enable-deprecated --enable-tools --enable-threads --enable-backtrace --enable-nfc --enable-sap --enable-monitor --enable-udev --enable-obex --enable-client --enable-systemd --enable-sixaxis --enable-health --enable-hid2hci --enable-experimental --enable-external-ell"
+	--with-dbussystembusdir=${BUILD_PREFIX}/share/dbus-1/system-services \
+	--with-dbussessionbusdir=${BUILD_PREFIX}/share/dbus-1/services \
+	--with-udevdir=${BUILD_LIBDIR}/udev \
+	--enable-library --enable-deprecated --enable-tools --enable-threads --enable-backtrace --enable-nfc --enable-sap --enable-monitor --enable-udev --enable-obex --enable-client --enable-systemd --enable-sixaxis --enable-health --enable-hid2hci --enable-experimental --enable-external-ell"
 INST_CMD="install-strip"
 #PATCHDEB=""
 # Moode directory location search for bluetoothd and obexd
 PKG_POSTBUILD="mkdir -p ${PKG_PKGPATH}/bin
 mv ${PKG_PKGPATH}/usr/bin/hciconfig ${PKG_PKGPATH}/bin
 ln -fs bluetooth/bluetoothd ${PKG_PKGPATH}/usr/sbin/bluetoothd
-ln -fs bluetooth/obexd ${PKG_PKGPATH}/usr/sbin/obexd"
+ln -fs bluetooth/obexd ${PKG_PKGPATH}/usr/sbin/obexd
+mkdir -p ${PKG_PKGPATH}/etc/bluetooth/
+cp -pv \${PKG_SRCPATH}/{src/main.conf,profiles/input/input.conf,profiles/network/network.conf} ${PKG_PKGPATH}/etc/bluetooth/"
 PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH}
+
+PKG_POSTINSTALL="
+	# create bluetooth group if not already present
+	if ! getent group bluetooth > /dev/null; then
+		addgroup --quiet --system bluetooth
+	fi
+	"
