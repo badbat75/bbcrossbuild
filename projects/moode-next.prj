@@ -202,7 +202,9 @@ then
 		echo -n "Mounting..."
 		mount_tag temp --mountlist "2:/ 1:/boot"
 		echo -n "Copying files..."
-		sudo cp -a ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/final ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/temp
+		sudo rsync -a "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/final/" "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/temp" \
+			-r --exclude dev --exclude proc --exclude sys --exclude tmp
+		sudo sed -i "s/rootfstype=ext4/rootfstype=${MOODEIMG_FS}/" "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/temp/boot/cmdline.txt"
 		echo "Done."
 		unmount_tag final
 	fi
