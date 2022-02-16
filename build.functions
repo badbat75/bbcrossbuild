@@ -855,7 +855,6 @@ function build () (
 		if [ -f ${KERNEL_DEFCONFIG} ]
 		then
 			cp -v ${KERNEL_DEFCONFIG} .config
-			make4kern olddefconfig
 		else
 			make4kern ${KERNEL_DEFCONFIG} .config
 		fi
