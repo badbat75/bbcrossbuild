@@ -266,7 +266,6 @@ function unmount_tag () {
 		echo -n "Unmount all partitions... "
 		
 		echo -n "Unmounting ${MOUNT_DIR}... " >> ${LOG_PATH}/images_${_param_1}.log 2>&1		
-		EOF
 		if [ "x${MOUNTPOINTS[${MOUNT_DIR}]}" != "x" ]
 		then
 			for dir in ${MOUNTPOINTS[${MOUNT_DIR}]}
