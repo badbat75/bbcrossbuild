@@ -150,7 +150,7 @@ function setup_gcc () {
 			fi
 		fi
 
-		GCC_CONFIG="--enable-checking=release --enable-multiarch --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --with-system-zlib --with-glibc-version=2.11 --with-gcc-major-version-only --enable-linker-build-id --disable-option-checking ${SILENTCONFIG}"
+		GCC_CONFIG="--enable-checking=release --enable-multiarch --disable-multilib --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --with-system-zlib --with-glibc-version=2.11 --with-gcc-major-version-only --enable-linker-build-id --disable-option-checking ${SILENTCONFIG}"
 
 		if [ -n "${GCC_SYSROOT}" ]
 		then
@@ -161,7 +161,7 @@ function setup_gcc () {
 			fi
 			BINUTILS_CONFIG=" --enable-gold --enable-plugins --enable-64-bit-bfd --enable-install-libbfd"	
 		else
-			GCC_CONFIG+=" --disable-lto --disable-threads --enable-languages=c --with-newlib --disable-shared --disable-decimal-float --disable-plugin --disable-multilib --disable-nls --disable-libstdcxx --disable-gcov --without-headers --disable-libatomic --disable-libgomp --disable-libssp --disable-libvtv --disable-libsanitizer --disable-libitm --disable-libmpx"
+			GCC_CONFIG+=" --disable-lto --disable-threads --enable-languages=c --with-newlib --disable-shared --disable-decimal-float --disable-plugin --disable-nls --disable-libstdcxx --disable-gcov --without-headers --disable-libatomic --disable-libgomp --disable-libssp --disable-libvtv --disable-libsanitizer --disable-libitm --disable-libmpx"
 			BINUTILS_CONFIG=" --enable-ld=default --disable-plugins --enable-64-bit-bfd"
 		fi
 		COMPFLAGS="${GNU_EXTRACOMPFLAGS}"
@@ -244,11 +244,14 @@ function setup_gcc () {
 		mkdir -p ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 
 		local CONFIG_ARCH_PARAMS="--build=${BARCH} --host=${BARCH} --target=${HARCH}"
-		case ${HARCH} in
-			*)	local PLATFORM_ARCHFLAGS="--with-arch-directory=${HM} ${HMARCH:+ --with-arch=${HMARCH}}${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
+		case ${HM} in
+			x86_64) local PLATFORM_ARCHFLAGS=""
+				;;
+
+			*)	local PLATFORM_ARCHFLAGS=" ${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
 				;;
 		esac
-
+		local PLATFORM_ARCHFLAGS="--enable-targets=${HM}-${HOS}-${HLIBC} --with-arch-directory=${HM} ${HMARCH:+ --with-arch=${HMARCH}}${PLATFORM_ARCHFLAGS}"
 		echo "GCC_BUILD_PATH: ${TOOLCHAIN_PATH}/gcc-${GCC_VER}"
 		pushd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 		CC_FOR_BUILD="${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc)" \
