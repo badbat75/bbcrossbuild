@@ -852,11 +852,11 @@ function build () (
 			return
 		fi
 
-		if [ -f ${KERNEL_DEFCONFIG} ]
+		if [ -f arch/${HM}/configs/${KERNEL_DEFCONFIG} ]
 		then
-			cp -v ${KERNEL_DEFCONFIG} .config
+			cp -v arch/${HM}/configs/${KERNEL_DEFCONFIG} .config
 		else
-			make4kern ${KERNEL_DEFCONFIG} .config
+			cp -v ${KERNEL_DEFCONFIG} .config
 		fi
 		# Config kernel build
 
