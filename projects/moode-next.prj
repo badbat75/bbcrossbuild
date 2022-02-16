@@ -202,11 +202,23 @@ then
 		echo -n "Mounting..."
 		mount_tag temp --mountlist "2:/ 1:/boot"
 		echo -n "Copying files..."
-		sudo rsync -a "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/final/" "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/temp" \
-			-r --exclude dev --exclude proc --exclude sys --exclude tmp
-		sudo sed -i "s/rootfstype=ext4/rootfstype=${MOODEIMG_FS}/" "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/temp/boot/cmdline.txt"
-		echo "Done."
+
+		( set -x; sudo rsync -av "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/final/" "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/temp" \
+			-r --exclude dev --exclude proc --exclude tmp --exclude etc/fstab; set +x ) >> ${LOG_PATH}/images_temp.log 2>&1
 		unmount_tag final
+		echo -n "Tuning boot parameters for ${MOODEIMG_FS}..."
+		PARTUUID=$(grep '/ ' ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/temp/etc/fstab | awk '{print $1}')
+		run_on_root_dir temp root "sed -i \"s/rootfstype=ext4/rootfstype=${MOODEIMG_FS}/;s/root=PARTUUID=[^ ]*/root=${PARTUUID}/\" /boot/cmdline.txt"
+		run_on_root_dir temp root "systemctl disable resize2fs_once.service"
+		echo -n "Installing ${MOODEIMG_FS} utilities..."
+		case ${MOODEIMG_FS} in
+			f2fs)
+				FSTOOL=f2fs-tools
+				;;
+		esac
+		run_on_root_dir temp root "apt-get -y install ${FSTOOL}"
+		run_on_root_dir temp root "cat /boot/cmdline.txt; cat /etc/fstab"
+		echo "Done."
 	fi
 
 	inject_into_mount_tag temp binaries --remove_devfiles
@@ -226,8 +238,9 @@ then
 	run_on_root_dir temp root "systemctl disable regenerate_ssh_host_keys"
 	run_on_root_dir temp root "systemctl enable ssh"
 
+
 	# Uncomment it to navigate in the temp filesystem
-	# pause
+	#pause
 
 	unmount_tag --finalize temp
 fi
@@ -275,7 +288,7 @@ then
 			-device usb-audio,audiodev=default -audiodev alsa,id=default \\
 			-device usb-net,netdev=eth0 -netdev user,id=eth0,hostfwd=tcp::5022-:22,hostfwd=tcp::5080-:80 \\
 			-device usb-serial,chardev=ttyS0 -chardev socket,id=ttyS0,port=5021,host=0.0.0.0,nodelay=on,server=on,wait=off,telnet=on \\
-			-append "dwc_otg.fiq_fsm_enable=0 console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 rootwait fsck.repair=yes" \\
+			-append "dwc_otg.fiq_fsm_enable=0 console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=${MOODEIMG_FS:-ext4} rootwait fsck.repair=yes" \\
 			-device sd-card,drive=disk0 -drive file=${IMAGE},if=none,format=raw,id=disk0 \\
 			--no-reboot
 	EOF

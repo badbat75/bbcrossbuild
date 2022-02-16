@@ -196,7 +196,7 @@ function mount_tag () {
 	if [ "${ROOTREADY}" -eq 1 ]
 	then
 		sudo mount --bind /dev ${MOUNT_DIR}/dev >> ${LOG_PATH}/images_${_param_1}.log 2>&1
-		sudo mount --bind /dev/pts ${MOUNT_DIR}/dev/pts >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+		#sudo mount --bind /dev/pts ${MOUNT_DIR}/dev/pts >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		sudo mount -t proc /proc ${MOUNT_DIR}/proc >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 
 		if [ ! -d ${MOUNT_DIR}/tmp/bbxb ]
@@ -264,6 +264,9 @@ function unmount_tag () {
 		fi
 		# Unmount everything
 		echo -n "Unmount all partitions... "
+		
+		echo -n "Unmounting ${MOUNT_DIR}... " >> ${LOG_PATH}/images_${_param_1}.log 2>&1		
+		EOF
 		if [ "x${MOUNTPOINTS[${MOUNT_DIR}]}" != "x" ]
 		then
 			for dir in ${MOUNTPOINTS[${MOUNT_DIR}]}
@@ -272,14 +275,21 @@ function unmount_tag () {
 				local STATUS=1
 				while [ ! ${STATUS} -eq 0 ]
 				do
-					sudo umount -f ${dir} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
-					local STATUS=${?}
+					if mountpoint -q ${dir}
+					then
+						sudo umount -f ${dir} >> ${LOG_PATH}/images_${_param_1}.log 2>&1 && local STATUS=0 || local STATUS=1
+					else
+						STATUS=0
+					fi
 					case ${STATUS} in
 						0)
 							echo "done." >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 							;;
 						*)
-							echo "failed ${STATUS}, sleeping... " >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+							echo "failed, sleeping... " >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+							echo "Current DIR: ${PWD}" >> ${LOG_PATH}/images_${_param_1}.log
+							echo "Current active processes:" >> ${LOG_PATH}/images_${_param_1}.log
+							lsof -t -w ${dir} >> ${LOG_PATH}/images_${_param_1}.log
 							sleep 1
 							;;
 					esac
