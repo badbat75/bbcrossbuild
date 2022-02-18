@@ -1,5 +1,6 @@
-# alsa-cdsp+bbf06dd
-PKG_URL="https://github.com/scripple/alsa_cdsp/archive/bbf06dd941b9225aa1f675acdbdf75a2b1516046.tar.gz"
+# alsa-cdsp
+PKG_SUFFIX=+232838f
+PKG_URL="https://github.com/scripple/alsa_cdsp/archive/232838fd160c7c05a85dd36c83f3fc4302986c7a.tar.gz"
 BUILD_PROCESS=simplemake
 # CONF_FLAGS=""
 PKG_DEPS="moode/camilladsp_0.6.3"
