@@ -780,8 +780,15 @@ function build () (
 		EOF
 
 		local MODULE_NAME=${PKG_NAME}${PKG_SUFFIX}
+		local KERNEL=$(basename ${PKG_DEPS})
 
-		source ${PKG_PATH}/${PKG_DEPS}.pkg
+		source ${PKG_PATH}/${KERNEL}.pkg
+
+		local PKG_NAME=${KERNEL}${PKG_SUFFIX}
+		local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_NAME}}
+		local PKG_BLDPATH=${BLD_PATH}/${PKG_NAME}
+		local PKG_PKGPATH=${PACKAGES_PATH}/${PKG_NAME}
+
 		kernelbuild --module ${MODULE_NAME}
 
 		set +x
