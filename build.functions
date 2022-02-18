@@ -866,8 +866,8 @@ function build () (
 		then
 			cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		fi
-		cd ${PKG_BLDPATH}
 
+		cd ${PKG_BLDPATH}
 		settcenv
 
 		if [ ! -n "${_param_module}" ]
