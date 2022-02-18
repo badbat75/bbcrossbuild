@@ -767,6 +767,27 @@ function build () (
 		trap - ERR
 	}
 
+	function kernelmodbuild () {
+		trap 'STATUS=${?}; \
+		set +x; \
+		trap - ERR; \
+		return ${STATUS};' ERR
+
+		if [ ! -f "${PKG_SRCPATH}/Makefile" ]
+		cat <<-EOF > "${PKG_BLDPATH}/Makefile"
+			KMOD:=${PKG_SRCPATH}
+			obj-m:=${PKG_KERNEL_MOD}.o
+		EOF
+
+		local MODULE_NAME=${PKG_NAME}${PKG_SUFFIX}
+
+		source ${PKG_PATH}/${PKG_DEPS}.pkg
+		kernelbuild --module ${MODULE_NAME}
+
+		set +x
+		trap - ERR
+	}
+
 	function kernelbuild () {
 		function make4kern () {
 			env
@@ -825,110 +846,119 @@ function build () (
 			set x
 			return ${STATUS}
 		}
+
 		trap 'STATUS=${?}; \
 		set +x; \
 		trap - ERR; \
 		return ${STATUS};' ERR
 
+		OPTS="" OPTS_WITH_VALUE="--module" param2value "${@}"
 		set -x
-		unset PKG_CONFIG_LIBDIR
-		unset PKG_CONFIG_SYSROOT_DIR
 
-		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+		if [ ! -n "${_param_module}" ]
+		then
+			cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+		fi
 		cd ${PKG_BLDPATH}
-		KERNEL_VER=$(make kernelversion)
 
 		settcenv
 
-		echo "Kernel headers only: ${KERNEL_HDRS_ONLY:-1}"
-		# Install headers
-		make4kern INSTALL_HDR_PATH=${PKG_PKGPATH}${BUILD_PREFIX} headers_install 
-
-		# Break if only headers installation required
-		if [ ${KERNEL_HDRS_ONLY:-0} -eq 1 ]
+		if [ ! -n "${_param_module}" ]
 		then
-			set +x
-			trap - ERR
-			return
-		fi
+			echo "Kernel headers only: ${KERNEL_HDRS_ONLY:-1}"
+			# Install headers
+			make4kern INSTALL_HDR_PATH=${PKG_PKGPATH}${BUILD_PREFIX} headers_install 
 
-		if [ -f arch/${HM}/configs/${KERNEL_DEFCONFIG} ]
-		then
-			cp -v arch/${HM}/configs/${KERNEL_DEFCONFIG} .config
-		else
-			cp -v ${KERNEL_DEFCONFIG} .config
-		fi
-		# Config kernel build
+			# Break if only headers installation required
+			if [ ${KERNEL_HDRS_ONLY:-0} -eq 1 ]
+			then
+				set +x
+				trap - ERR
+				return
+			fi
 
-		case ${KERNEL_OPTLEVEL:-null} in
-			s|S)	scripts/config -e CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3
-			;;
-			2)	scripts/config -d CC_OPTIMIZE_FOR_SIZE -e CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3
-			;;
-			3)	# Patch kernel to build with -O3 flag
-				sed -i '/depends on ARC$/d' init/Kconfig
-				scripts/config -d CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -e CC_OPTIMIZE_FOR_PERFORMANCE_O3
-			;;
-		esac
+			if [ -f arch/${HM}/configs/${KERNEL_DEFCONFIG} ]
+			then
+				cp -v arch/${HM}/configs/${KERNEL_DEFCONFIG} .config
+			else
+				cp -v ${KERNEL_DEFCONFIG} .config
+			fi
+			# Config kernel build
 
-		if [ "x${CONF_FLAGS}" != "x" ]
-		then
-			scripts/config ${CONF_FLAGS}
-		fi
+			case ${KERNEL_OPTLEVEL:-null} in
+				s|S)	scripts/config -e CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3
+				;;
+				2)	scripts/config -d CC_OPTIMIZE_FOR_SIZE -e CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3
+				;;
+				3)	# Patch kernel to build with -O3 flag
+					sed -i '/depends on ARC$/d' init/Kconfig
+					scripts/config -d CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -e CC_OPTIMIZE_FOR_PERFORMANCE_O3
+				;;
+			esac
 
-		if [ ${TOOLCHAIN} == llvm ]
-		then
-			echo "LTO type: ${KERNEL_LTOENABLE}"
-			case x${KERNEL_LTOENABLE} in
-				x1|xlto)
-					scripts/config -d FTRACE -d KASAN -d GCOV_KERNEL
-					scripts/config -e LTO_CLANG
+			if [ "x${CONF_FLAGS}" != "x" ]
+			then
+				scripts/config ${CONF_FLAGS}
+			fi
+
+			if [ ${TOOLCHAIN} == llvm ]
+			then
+				echo "LTO type: ${KERNEL_LTOENABLE}"
+				case x${KERNEL_LTOENABLE} in
+					x1|xlto)
+						scripts/config -d FTRACE -d KASAN -d GCOV_KERNEL
+						scripts/config -e LTO_CLANG
+						;;
+					x2|xthin)
+						scripts/config -d FTRACE -d KASAN -d GCOV_KERNEL
+						scripts/config -e LTO_CLANG_THIN
+						;;
+				esac
+			fi
+
+			make4kern olddefconfig
+		
+			if [ ! -d ${PKG_PKGPATH}/boot ]
+			then
+				mkdir -p ${PKG_PKGPATH}/boot
+			fi
+
+			# Build and install kernel
+			make4kern ${KERNEL_IMAGE}
+			case ${KERNEL_NAME}
+			in
+				kernel*)
+					cp arch/${KERNEL_ARCH}/boot/${KERNEL_IMAGE} ${PKG_PKGPATH}/boot/${KERNEL_NAME}
+					local STATUS=${?}
 					;;
-				x2|xthin)
-					scripts/config -d FTRACE -d KASAN -d GCOV_KERNEL
-					scripts/config -e LTO_CLANG_THIN
+				*)
+					[ ! -d ${PKG_PKGPATH}/boot ] && mkdir ${PKG_PKGPATH}/boot
+					make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_PATH=${PKG_PKGPATH}/boot ${INST_CMD} install
 					;;
 			esac
 		fi
-
-		make4kern olddefconfig
-	
-		if [ ! -d ${PKG_PKGPATH}/boot ]
-		then
-			mkdir -p ${PKG_PKGPATH}/boot
-		fi
-
-		# Build and install kernel
-		make4kern ${KERNEL_IMAGE}
-		case ${KERNEL_NAME}
-		in
-			kernel*)
-				cp arch/${KERNEL_ARCH}/boot/${KERNEL_IMAGE} ${PKG_PKGPATH}/boot/${KERNEL_NAME}
-				local STATUS=${?}
-				;;
-			*)
-				[ ! -d ${PKG_PKGPATH}/boot ] && mkdir ${PKG_PKGPATH}/boot
-				make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_PATH=${PKG_PKGPATH}/boot ${INST_CMD} install
-				;;
-		esac
-
+		
 		# Build and install modules
-		make4kern modules
-		make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_MOD_PATH=${PKG_PKGPATH} ${INST_CMD} modules_install
+		make4kern ${_param_module:+M=../${_param_module}} modules
+		make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_MOD_PATH=${PKG_PKGPATH} ${INST_CMD} ${_param_module:+M=../${_param_module}} modules_install
 		local KERNELRELEASE=$(cat include/config/kernel.release)
 		rm ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/build
 		rm ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/source
 
-		# Build and install DTBS
-		if [ ${KERNEL_DTBS:-0} -eq 1 ] && [ ${STATUS} -eq 0 ]
+		if [ ! -n "${_param_module}" ]
 		then
-			if [ ! -d ${PKG_PKGPATH}/boot/overlays ]
+			# Build and install DTBS
+			if [ ${KERNEL_DTBS:-0} -eq 1 ] && [ ${STATUS} -eq 0 ]
 			then
-				mkdir -p ${PKG_PKGPATH}/boot/overlays
+				if [ ! -d ${PKG_PKGPATH}/boot/overlays ]
+				then
+					mkdir -p ${PKG_PKGPATH}/boot/overlays
+				fi
+				make4kern dtbs
+				make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_DTBS_PATH=${PKG_PKGPATH}/boot ${INST_CMD} dtbs_install
 			fi
-			make4kern dtbs
-			make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_DTBS_PATH=${PKG_PKGPATH}/boot ${INST_CMD} dtbs_install
 		fi
+
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -1224,6 +1254,7 @@ function build () (
 		PKG_CFLAGS \
 		PKG_CXXFLAGS \
 		PKG_FCFLAGS \
+		PKG_KERNEL_MOD \
 		PKG_LDFLAGS \
 		PKG_RUSTFLAGS \
 		PKG_LLVMPOLLYFEATURES \
