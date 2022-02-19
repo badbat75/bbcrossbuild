@@ -110,7 +110,7 @@ build moode/caps_0.9.26-eqfa12p+22ef349
 
 # STEP 9b - CamillaDSP and alsa_cdsp
 build moode/camilladsp_0.6.3
-build moode/alsa-cdsp
+build moode/alsa-cdsp_1
 build moode/camillagui-backend_0.8.0
 
 # COMPONENT 1 - MiniDLNA
