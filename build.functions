@@ -800,7 +800,7 @@ function build () (
 		fi
 
 		eval ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} modules
-		eval ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} INSTALL_MOD_PATH=${PKG_PKGPATH} ${INST_CMD:-modules_install}
+		eval ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} INSTALL_MOD_PATH=${PKG_PKGPATH} INSTALL_MOD_DIR=${PKG_KERNEL_MODPATH} ${INST_CMD:-modules_install}
 		rm -f ${PKG_PKGPATH}/lib/modules/*/modules.*
 
 		mkdir -pv ${PKG_PKGPATH}/postinst_scripts
@@ -1272,6 +1272,7 @@ function build () (
 		PKG_CXXFLAGS \
 		PKG_FCFLAGS \
 		PKG_KERNEL_MOD \
+		PKG_KERNEL_MODPATH \
 		PKG_LDFLAGS \
 		PKG_RUSTFLAGS \
 		PKG_LLVMPOLLYFEATURES \
