@@ -803,6 +803,11 @@ function build () (
 		eval ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} INSTALL_MOD_PATH=${PKG_PKGPATH} ${INST_CMD:-modules_install}
 		rm -f ${PKG_PKGPATH}/lib/modules/*/modules.*
 
+		mkdir -pv ${PKG_PKGPATH}/postinst_scripts
+		cat <<-EOF > ${PKG_PKGPATH}/postinst_scripts/49_kernmodpost
+			depmod -a ${PKG_KERNEL_VERSION}
+		EOF
+
 		cd -
 		set +x
 		trap - ERR
