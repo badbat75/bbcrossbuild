@@ -1,0 +1,5 @@
+# rtl8812au_5.6.4.2
+PKG_URL="https://github.com/aircrack-ng/rtl8812au/archive/refs/heads/v5.6.4.2.tar.gz"
+PKG_DEPS="raspberrypi/rpi-kernel_5.16"
+PKG_KERNEL_LOCALBUILD=1
+BUILD_PROCESS=kernelmodbuild

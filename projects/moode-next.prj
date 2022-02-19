@@ -74,6 +74,7 @@ generate_ssh_keys --install binaries
 
 WITH_EXTOPTS=1 build --keep_builddir raspberrypi/rpi-kernel_5.16
 build --keep_builddir moode/ax88179_178a
+build --keep_builddir moode/rtl8812au_5.6.4.2
 build raspberrypi/raspi-config
 build raspberrypi/raspberrypi-sys-mods
 build raspberrypi/raspberrypi-net-mods
