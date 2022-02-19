@@ -782,6 +782,7 @@ function build () (
 		local PKG_KERNEL_SUFFIX="$( cat ${PKG_PATH}/${PKG_DEPS}.pkg | grep "PKG_SUFFIX=" | cut -d"=" -f2 )"
 		local PKG_KERNEL_BLDDIR="${PKG_KERNEL_NAME}${PKG_KERNEL_SUFFIX}"
 		local PKG_KERNEL_BLDPATH="${BLD_PATH}/${PKG_KERNEL_BLDDIR}"
+		local PKG_KERNEL_VERSION="$(cd ${PKG_KERNEL_BLDPATH}; ./make4kern.sh kernelversion)"
 
 		if [ ! -f "${PKG_BLDPATH}/Makefile" ]
 		then
@@ -796,12 +797,10 @@ function build () (
 		if [ ${PKG_KERNEL_LOCALBUILD:-0} -eq 0 ]
 		then
 			local BUILD_OPTION="-C ${PKG_KERNEL_BLDPATH} "
-		else
-			local BUILD_OPTION="KSRC=${PKG_KERNEL_BLDPATH} "
 		fi
 
-		${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} modules
-		${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} INSTALL_MOD_PATH=${PKG_PKGPATH} modules_install
+		eval ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} modules
+		eval ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} INSTALL_MOD_PATH=${PKG_PKGPATH} ${INST_CMD:-modules_install}
 		rm -f ${PKG_PKGPATH}/lib/modules/*/modules.*
 
 		cd -
