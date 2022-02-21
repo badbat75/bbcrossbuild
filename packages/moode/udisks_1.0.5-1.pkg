@@ -11,5 +11,6 @@ CONF_FLAGS="--libexecdir=${BUILD_LIBDIR}/udisks --disable-option-checking --disa
 INST_CMD=install-strip
 PKG_CFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}/gudev-1.0 -I${DISTOS_PATH}${BUILD_INCLUDEDIR}/dbus-1.0 -I${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/dbus-1.0/include"
 PKG_COPYSRC=1
+PKG_PREBUILD="sed -i '/#include <time.h>/a #include <sys/types.h>\n#include <sys/stat.h>\n#include <unistd.h>' src/helpers/job-drive-detach.c"
 
 # Dependencies: libpolkit-gobject-1-dev libparted-dev libatasmart-dev
