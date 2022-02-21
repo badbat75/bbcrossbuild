@@ -157,7 +157,7 @@ then
 	run_on_root_dir final root "apt-get -y purge --autoremove libcephfs2"
 	run_on_root_dir final root "apt-get clean"
 
-	if [ ${MOODEIMG_FS:-ext4} == ext4 ]
+	if [ ${MOODEIMG_FS:-f2fs} == ext4 ]
 	then
 		unmount_tag final
 		cp -v ${DISKIMAGES_PATH}/final.img ${DISKIMAGES_PATH}/temp.img
