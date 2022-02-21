@@ -376,7 +376,7 @@ function crossapt () {
 	echo
 }
 
-function build () (
+function build () {(
 	function downloadsources () {
 		trap 'STATUS=${?}; \
 			set +x; \
@@ -423,12 +423,14 @@ function build () (
 		trap 'STATUS=${?}; \
 			echo "Fail."; \
 			set +x; \
-			trap - ERR SIGINT; \
+			trap - ERR
+			trap - SIGINT; \
 			#[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH} || true; \
 			return ${STATUS};' ERR
 
 		trap 'set +x; \
-			trap - ERR SIGINT; \
+			trap - ERR
+			trap - SIGINT; \
 			[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH} || true;
 			return 100' SIGINT
 
@@ -498,9 +500,12 @@ function build () (
 	function configmake () {
 		trap 'STATUS=${?}; \
 			set +x; \
+			echo "fail. [configmake]"; \
+			echo; \
 			trap - ERR; \
-			return ${STATUS};' ERR
+			return ${STATUS}' ERR
 		set -x
+		env | grep "^BUILD_"
 		if [ ${AUTOCONF:-0} -eq 1 ]
 		then
 			echo -n "${SPACES}AutoReconf ${PKG_NAME}..."
@@ -696,20 +701,19 @@ function build () (
 		}
 
 		trap 'STATUS=${?}; \
-		set +x; \
-		trap - ERR; \
-		return ${STATUS};' ERR
-		set -x
+			set +x; \
+			trap - ERR; \
+			echo "fail. [mesonninja - ${PKG_NAME}]"; \
+			echo; \
+			return ${STATUS}' ERR
 
+		set -x
 		mkdir -p ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
 		create_environment_source
 		source environment.source
 		createmesoncross
-		meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} \
-			--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-			--includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} \
-			${CONF_FLAGS}
+		meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS}
 		local NINJA_FLAGS="-j${NPROCS}$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v')"
 		ninja ${NINJA_FLAGS} ${PKG_MAKEVARS}
 		DESTDIR=${PKG_PKGPATH} ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} ${INST_CMD:-install}
@@ -778,11 +782,11 @@ function build () (
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
 
-		local PKG_KERNEL_NAME="$( basename ${PKG_DEPS} )"
-		local PKG_KERNEL_SUFFIX="$( cat ${PKG_PATH}/${PKG_DEPS}.pkg | grep "PKG_SUFFIX=" | cut -d"=" -f2 )"
-		local PKG_KERNEL_BLDDIR="${PKG_KERNEL_NAME}${PKG_KERNEL_SUFFIX}"
-		local PKG_KERNEL_BLDPATH="${BLD_PATH}/${PKG_KERNEL_BLDDIR}"
-		local PKG_KERNEL_VERSION="$(cd ${PKG_KERNEL_BLDPATH}; ./make4kern.sh kernelversion)"
+		#local PKG_KERNEL_NAME="$( basename ${PKG_DEPS} )"
+		#local PKG_KERNEL_SUFFIX="$( cat ${PKG_PATH}/${PKG_DEPS}.pkg | grep "PKG_SUFFIX=" | cut -d"=" -f2 )"
+		#local PKG_KERNEL_BLDDIR="${PKG_KERNEL_NAME}${PKG_KERNEL_SUFFIX}"
+		#local PKG_KERNEL_BLDPATH="${BLD_PATH}/${PKG_KERNEL_BLDDIR}"
+		#local PKG_KERNEL_VERSION="$(cd ${PKG_KERNEL_BLDPATH}; ./make4kern.sh kernelversion)"
 
 		if [ ! -f "${PKG_BLDPATH}/Makefile" ]
 		then
@@ -875,9 +879,9 @@ function build () (
 		}
 
 		trap 'STATUS=${?}; \
-		set +x; \
-		trap - ERR; \
-		return ${STATUS};' ERR
+			set +x; \
+			trap - ERR; \
+			return ${STATUS};' ERR
 
 		set -x
 
@@ -886,6 +890,7 @@ function build () (
 		cd ${PKG_BLDPATH}
 		make4kern
 
+		echo "Build ${PKG_FILE} with extra modules ${PKG_KERNEL_BUILD_MODULES}"
 		echo "Kernel headers only: ${KERNEL_HDRS_ONLY:-1}"
 		# Install headers
 		./make4kern.sh INSTALL_HDR_PATH=${PKG_PKGPATH}${BUILD_PREFIX} headers_install 
@@ -959,8 +964,8 @@ function build () (
 		esac
 		
 		# Build and install modules
-		./make4kern.sh ${_param_module:+M=../${_param_module}} modules
-		make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_MOD_PATH=${PKG_PKGPATH} ${INST_CMD} ${_param_module:+M=../${_param_module}} modules_install
+		./make4kern.sh modules
+		make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_MOD_PATH=${PKG_PKGPATH} ${INST_CMD} modules_install
 		local KERNELRELEASE=$(cat include/config/kernel.release)
 		rm ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/build
 		rm ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/source
@@ -975,6 +980,20 @@ function build () (
 			./make4kern.sh dtbs
 			make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_DTBS_PATH=${PKG_PKGPATH}/boot ${INST_CMD} dtbs_install
 		fi
+
+		#local PKG_KERNEL_NAME="$( basename ${PKG_DEPS} )"
+		#local PKG_KERNEL_SUFFIX="$( cat ${PKG_PATH}/${PKG_DEPS}.pkg | grep "PKG_SUFFIX=" | cut -d"=" -f2 )"
+		#local PKG_KERNEL_BLDDIR="${PKG_KERNEL_NAME}${PKG_KERNEL_SUFFIX}"
+
+		PKG_KERNEL_BLDPATH="${PWD}"
+		PKG_KERNEL_VERSION="$(./make4kern.sh kernelversion)"
+
+		IFS=,
+		for module in ${PKG_KERNEL_BUILD_MODULES}
+		do
+			build --force ${module}
+		done
+		unset IFS
 
 		cd ${BB_HOME}
 		set +x
@@ -1233,9 +1252,9 @@ function build () (
 		trap - ERR
 	}
 
-
-	trap 'local STATUS=${?}; \
-		echo "fail."; \
+	trap 'STATUS=${?}; \
+		trap - ERR; \
+		echo "fail. [build - ${PKG_NAME}]"; \
 		echo; \
 		if [ -f ${LOG_PATH}/${PKG_NAME}.log ]; \
 		then \
@@ -1244,25 +1263,34 @@ function build () (
 			tail -n24 ${LOG_PATH}/${PKG_NAME}.log; \
 		fi; \
 		set +x; \
-		trap - ERR; \
 		return ${STATUS}' ERR
 
-	unset PKG_URL \
-		GIT_URL \
-		GIT_COMMIT \
+	unset \
+		AUTOCONF \
+		AUTOCONF_PATH \
+		BUILD_EXECPREFIX \
+		BUILD_INCLUDEDIR \
+		BUILD_LIBDIR \
+		BUILD_LOCALSTATEDIR \
+		BUILD_PREFIX \
 		BUILD_PROCESS \
-		STD_CONF_FLAGS \
+		BUILD_SYSCONFDIR \
+		BUILD_SYSTEMDDIR \
+		BUILD_USERSYSTEMDDIR \
+		CARGO_BIN \
+		CARGO_LIB \
+		CARGO_BINLIST \
+		CARGO_LIBLIST \
 		CONF_CMD \
 		CONF_FLAGS \
 		CONF_PATH \
 		CONF_CONFIGPARMS \
+		GIT_URL \
+		GIT_COMMIT \
 		INST_CMD \
 		MAKEDIR \
-		AUTOCONF \
-		AUTOCONF_PATH \
 		PATCHDEB \
 		PATCHES \
-		PKG_NAME \
 		PKG_SUFFIX \
 		PKG_SRCDIR \
 		PKG_DEPS \
@@ -1271,6 +1299,7 @@ function build () (
 		PKG_CFLAGS \
 		PKG_CXXFLAGS \
 		PKG_FCFLAGS \
+		PKG_KERNEL_BUILD_MODULES \
 		PKG_KERNEL_MOD \
 		PKG_KERNEL_MODPATH \
 		PKG_LDFLAGS \
@@ -1285,40 +1314,46 @@ function build () (
 		PKG_POSTINSTALL_PRIO \
 		PKG_TOOLCHAIN \
 		PKG_TWOSTEPSBUILD \
+		PKG_URL \
+		STD_CONF_FLAGS \
 		VAR_INSTALL_LIBDIR \
 		VAR_INSTALL_LIBSUFFIX \
 		VAR_INSTALL_INCDIR \
 		VAR_INSTALL_CONFDIR \
-		CARGO_BIN \
-		CARGO_LIB \
-		CARGO_BINLIST \
-		CARGO_LIBLIST
+		MULTI_ARCH
 
-	OPTS="--force --no_gcc_check --no_save_status --keep_builddir" OPTS_WITH_VALUE="--toolchain" param2value "${@}"
+	OPTS="--force --no_gcc_check --no_save_status --keep_builddir" OPTS_WITH_VALUE="--toolchain --with_extra_modules" param2value "${@}"
 	[ ${_param_v:-0} -eq 1 ] && set -x || true
+	local PKG_FILE="${_param_1}"
+	local GCC_CHECK=${_param_no_gcc_check:-0}
+	local FORCE=${_param_force:-0}
+	local NOSAVESTATUS=${_param_no_save_status:-0}
+	local KEEPBUILDDIR=${_param_keep_builddir:-0}
 
 	if [ -z "${NUMSPACES}" ]
 	then
 		local NUMSPACES=0
 	fi
 	
-	if [ ! -f ${PKG_PATH}/${_param_1}.pkg ]
+	if [ ! -f ${PKG_PATH}/${PKG_FILE}.pkg ]
 	then
-		echo "Package ${_param_1} does not exists."
+		echo "Package ${PKG_FILE} does not exists."
 		echo
+		set +x
+		trap - ERR;
 		return 1
 	fi
 	
-	local PKG_NAME=$(basename ${_param_1})\${PKG_SUFFIX}
+	local PKG_NAME=$(basename ${PKG_FILE})\${PKG_SUFFIX}
 	local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_NAME}}
 	local PKG_BLDPATH=${BLD_PATH}/${PKG_NAME}
 	local PKG_PKGPATH=${PACKAGES_PATH}/${PKG_NAME}
 
-	source ${PKG_PATH}/${_param_1}.pkg
+	setbuildenv
+	source ${PKG_PATH}/${PKG_FILE}.pkg
 
 	PKG_TOOLCHAIN=${_param_toolchain:-${PKG_TOOLCHAIN}}
-
-	setbuildenv
+	PKG_KERNEL_BUILD_MODULES="${_param_with_extra_modules:-${PKG_KERNEL_BUILD_MODULES}}"
 
 	eval local PKG_NAME=${PKG_NAME}
 	eval local PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
@@ -1341,19 +1376,21 @@ function build () (
 		local NUMSPACES=$((NUMSPACES+1))
 		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
 		echo -n "${SPACES}Requires "
-		#echo "Called from ${_param_1}"
+		#echo "Called from ${PKG_FILE}"
 		build ${deps}
 		local NUMSPACES=$((NUMSPACES-1))
 		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
 	done
 
 
-	if [ -f ${STATUS_PATH}/${PKG_NAME} ] && [ ${_param_force:-0} -eq 0 ]
+	if [ -f ${STATUS_PATH}/${PKG_NAME} ] && [ ${FORCE} -eq 0 ]
 	then
-		if [ "$(md5sum ${PKG_PATH}/${_param_1}.pkg)" == "$(cat ${STATUS_PATH}/${PKG_NAME})" ]
+		if [ "$(md5sum ${PKG_PATH}/${PKG_FILE}.pkg)" == "$(cat ${STATUS_PATH}/${PKG_NAME})" ]
 		then
 			echo "${SPACES}Package ${PKG_NAME} already built."
 			echo
+			set +x
+			trap - ERR
 			return 0
 		else
 			rm -f ${STATUS_PATH}/${PKG_NAME}
@@ -1362,7 +1399,7 @@ function build () (
 
 	eval "> ${LOG_PATH}/${PKG_NAME}.log"
 	
-	if [ ${_param_no_gcc_check:-0} -eq 0 ] && [ "${BUILD_PROCESS}" != "none" ] && [ "${BUILD_PROCESS}" != "downloadonly" ]
+	if [ ${GCC_CHECK} -eq 0 ] && [ "${BUILD_PROCESS}" != "none" ] && [ "${BUILD_PROCESS}" != "downloadonly" ]
 	then
 		check_${PKG_TOOLCHAIN:-${TOOLCHAIN}}_c
 	fi
@@ -1484,7 +1521,7 @@ function build () (
 		fi
 		if [ ! ${BUILD_PROCESS:-none} == none ]
 		then
-			echo -n "Building ${PKG_NAME}..."
+			echo -n "Building ${PKG_NAME} [${BUILD_PROCESS}]..."
 			${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 		fi
 		if [ ! -z "${PKG_POSTBUILD}" ]
@@ -1512,14 +1549,14 @@ function build () (
 			(
 				set -ex
 				pwd
-				if [ ${_param_no_save_status:-0} -eq 0 ]
+				if [ ${NOSAVESTATUS} -eq 0 ]
 				then
 					tar cfp - --owner=0 --group=0 -C ${PKG_PKGPATH} . | xz -T${NPROCS} - > ${PKG_PKGPATH}.tar.xz 
 				fi
 				sudo rm -rf ${PKG_PKGPATH}
 				set +ex
 			) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-			if [ ${_param_keep_builddir:-0} -eq 0 ]
+			if [ ${KEEPBUILDDIR} -eq 0 ]
 			then
 				rm -rf ${PKG_BLDPATH}
 			fi
@@ -1528,7 +1565,7 @@ function build () (
 			(
 				set -ex
 				pwd
-				if [ ${_param_no_save_status:-0} -eq 0 ]
+				if [ ${NOSAVESTATUS} -eq 0 ]
 				then
 					tar cfp - --owner=0 --group=0 -C ${PKG_PKGPATH} . | xz -T${NPROCS} - > ${PKG_PKGPATH}.tar.xz 
 				fi
@@ -1536,7 +1573,7 @@ function build () (
 				sudo rm -rf ${PKG_PKGPATH}
 				set +ex
 			) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-			if [ ${_param_keep_builddir:-0} -eq 0 ]
+			if [ ${KEEPBUILDDIR} -eq 0 ]
 			then
 				rm -rf ${PKG_BLDPATH}
 			fi
@@ -1547,15 +1584,15 @@ function build () (
 	then
 		mkdir -p ${STATUS_PATH}
 	fi
-	if [ ${_param_no_save_status:-0} -eq 0 ]
+	if [ ${NOSAVESTATUS} -eq 0 ]
 	then
-		md5sum ${PKG_PATH}/${_param_1}.pkg > ${STATUS_PATH}/${PKG_NAME}
+		md5sum ${PKG_PATH}/${PKG_FILE}.pkg > ${STATUS_PATH}/${PKG_NAME}
 	fi
 	set +x
 	echo "Done."
 	echo
 	trap - ERR
-)
+)}
 
 function is_build_functions () {
 	return 0

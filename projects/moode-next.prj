@@ -38,7 +38,7 @@ then
 	run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
 		libc6-dev libpython3-dev libsqlite3-dev \
 		libusb-dev libglib2.0-dev libudev-dev libical-dev libreadline-dev libdbus-1-dev \
-		libbsd-dev libncurses5-dev libdw-dev libpolkit-gobject-1-dev libparted-dev libatasmart-dev \
+		libbsd-dev libncurses5-dev libdw-dev libgirepository1.0-dev libpolkit-gobject-1-dev libparted-dev libatasmart-dev \
 		\
 		libcurl4-gnutls-dev libyajl-dev \
 		libavahi-client-dev libsystemd-dev libwrap0-dev libicu-dev libglib2.0-dev \
@@ -72,9 +72,7 @@ generate_ssh_keys --install binaries
 #clean_project
 #pause
 
-WITH_EXTOPTS=1 build --keep_builddir raspberrypi/rpi-kernel_5.16
-build --keep_builddir moode/ax88179_178a
-build --keep_builddir moode/rtl8812au_5.6.4.2
+build raspberrypi/rpi-kernel_5.16 --with_extra_modules moode/ax88179_178a,moode/rtl8812au_5.6.4.2
 build raspberrypi/raspi-config
 build raspberrypi/raspberrypi-sys-mods
 build raspberrypi/raspberrypi-net-mods
@@ -85,7 +83,7 @@ build raspbian/hostapd_2.9.0
 build raspbian/wpa_supplicant_2.9.0
 build moode/mediainfo_21.09
 build moode/alsacap
-build moode/udisks-glue_1.3.5
+build moode/udisks-glue_1.3.5               	
 build raspbian/udevil_0.4.4-2
 build moode/bluez_5
 build raspberrypi/pi-bluetooth

@@ -1,4 +1,20 @@
 #!/bin/bash
+trap 'STATUS=${?}; \
+	set +x; \
+	echo "ERR received. [bbxb]"; \
+	echo; \
+	pause; \
+	check_images_functions; \
+	unmount_tag --all --kill || true; \
+	trap - ERR SIGINT; \
+	exit ${STATUS}' ERR
+trap 'set +x; \
+	echo "SIGINT received. [bbxb]"; \
+	trap - ERR SIGINT; \
+	echo; \
+	check_images_functions && unmount_tag --all --kill || true; \
+	exit 0' SIGINT
+
 START_PWD=${PWD}
 BB_HOME=$(dirname $(realpath ${BASH_SOURCE}))
 PROGRAM_NAME=$(basename ${BASH_SOURCE})
@@ -6,7 +22,7 @@ PROGRAM_NAME=$(basename ${BASH_SOURCE})
 . ${BB_HOME}/core.functions
 check_core_functions
 
-OPTS="--prjdebug" OPTS_WITH_VALUE="" param2value "${@}"
+OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
 [ ${_param_v:-0} -eq 1 ] && set -x || true
 
 PRJ_NAME=${_param_1}
@@ -34,17 +50,6 @@ fi
 
 echo "Project path: ${DATA_PATH}/${PRJ_NAME}"
 echo
-
-if [ ${_param_prjdebug:-0} -eq 0 ]
-then
-	trap 'STATUS=${?}; echo; echo "ERR received."; echo; read -p "Press ENTER to continue"; check_images_functions && unmount_tag --all --kill || true; trap - ERR SIGINT; exit ${STATUS}' ERR
-	trap 'echo; echo "SIGINT received."; trap - ERR SIGINT; echo; check_images_functions && unmount_tag --all --kill || true; exit 0' SIGINT
-	. $PRJ
-	check_images_functions && unmount_tag --all || true
-	trap - ERR SIGINT
-else
-	echo "Interactive debug session."
-	echo "=========================="
-	echo
-	cd ${PLATFORM_PATH}
-fi
+. $PRJ
+check_images_functions && pause && unmount_tag --all || true
+trap - ERR SIGINT

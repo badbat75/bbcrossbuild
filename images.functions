@@ -238,9 +238,10 @@ function unmount_tag () {
 			unmount_tag ${_param_finalize:+--finalize} ${_param_finalize:+--kill} ${image}
 		done
 	else
-		local MOUNT_DIR=${PLATFORM_PATH}/${_param_1}
+		local MOUNT_NAME=${_param_1}
+		local MOUNT_DIR=${PLATFORM_PATH}/${MOUNT_NAME}
 
-		echo -n "Unmounting ${_param_1}... "
+		echo -n "Unmounting ${MOUNT_NAME}... "
 
 		if [ ${_param_kill:-0} -eq 1 ]
 		then
@@ -260,51 +261,51 @@ function unmount_tag () {
 		echo -n "Restore local resolv.conf... "
 		if [ -f ${MOUNT_DIR}/etc/resolv.conf.bbxb ]
 		then
-			sudo mv ${MOUNT_DIR}/etc/resolv.conf.bbxb ${MOUNT_DIR}/etc/resolv.conf >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+			sudo mv ${MOUNT_DIR}/etc/resolv.conf.bbxb ${MOUNT_DIR}/etc/resolv.conf >> ${LOG_PATH}/images_${MOUNT_NAME}.log 2>&1
 		fi
 		# Unmount everything
 		echo -n "Unmount all partitions... "
 		
-		echo -n "Unmounting ${MOUNT_DIR}... " >> ${LOG_PATH}/images_${_param_1}.log 2>&1		
+		echo -n "Unmounting ${MOUNT_DIR}... " >> ${LOG_PATH}/images_${MOUNT_NAME}.log 2>&1		
 		if [ "x${MOUNTPOINTS[${MOUNT_DIR}]}" != "x" ]
 		then
 			for dir in ${MOUNTPOINTS[${MOUNT_DIR}]}
 			do
-				echo -n "Unmounting ${dir}... " >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+				echo -n "Unmounting ${dir}... " >> ${LOG_PATH}/images_${MOUNT_NAME}.log 2>&1
 				local STATUS=1
 				while [ ! ${STATUS} -eq 0 ]
 				do
 					if mountpoint -q ${dir}
 					then
-						sudo umount -f ${dir} >> ${LOG_PATH}/images_${_param_1}.log 2>&1 && local STATUS=0 || local STATUS=1
+						sudo umount -f ${dir} >> ${LOG_PATH}/images_${MOUNT_NAME}.log 2>&1 && local STATUS=0 || local STATUS=1
 					else
 						STATUS=0
 					fi
 					case ${STATUS} in
 						0)
-							echo "done." >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+							echo "done." >> ${LOG_PATH}/images_${MOUNT_NAME}.log 2>&1
 							;;
 						*)
-							echo "failed, sleeping... " >> ${LOG_PATH}/images_${_param_1}.log 2>&1
-							echo "Current DIR: ${PWD}" >> ${LOG_PATH}/images_${_param_1}.log
-							echo "Current active processes:" >> ${LOG_PATH}/images_${_param_1}.log
-							lsof -t -w ${dir} >> ${LOG_PATH}/images_${_param_1}.log
+							echo "failed, sleeping... " >> ${LOG_PATH}/images_${MOUNT_NAME}.log 2>&1
+							echo "Current DIR: ${PWD}" >> ${LOG_PATH}/images_${MOUNT_NAME}.log
+							echo "Current active processes:" >> ${LOG_PATH}/images_${MOUNT_NAME}.log
+							lsof -t -w ${dir} >> ${LOG_PATH}/images_${MOUNT_NAME}.log
 							sleep 1
 							;;
 					esac
 				done
 			done
 		fi
-		MOUNTED_IMAGES=$(echo ${MOUNTED_IMAGES} | sed "s/ *${_param_1}//")
+		MOUNTED_IMAGES=$(echo ${MOUNTED_IMAGES} | sed "s/ *${MOUNT_NAME}//")
 		# Delete the loopback devices
 		echo -n "Delete loopback device... "
-		sudo losetup -D ${LOOPDEV} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+		sudo losetup -D ${LOOPDEV} >> ${LOG_PATH}/images_${MOUNT_NAME}.log 2>&1
 		echo "Done."
 	fi
 
 	if [ ${_param_finalize:-0} -eq 1 ]
 	then
-		mv ${LODEVIMAGES[${_param_1}]} ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.img
+		mv ${LODEVIMAGES[${MOUNT_NAME}]} ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.img
 		cat >${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.dd <<-EOF
 			#!/bin/bash
 			sudo dd if=${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.img of=\${1:-/dev/mmcblk0} bs=1M status=progress oflag=direct

@@ -1,11 +1,11 @@
 # libbs2b_3.1.0+dfsg-2.2
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libb/libbs2b/libbs2b_3.1.0%2Bdfsg.orig.tar.gz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libb/libbs2b/libbs2b_3.1.0%2Bdfsg-2.2.debian.tar.xz"
+PKG_DEPS="moode/libsndfile_1.0.31"
 BUILD_PROCESS=configmake
 AUTOCONF=1
 CONF_FLAGS="ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes"
 INST_CMD=install-strip
-#PKG_DEPS="raspbian/libsndfile"
 PKG_PREBUILD="rm -f ltmain.sh"
 
 # Note:

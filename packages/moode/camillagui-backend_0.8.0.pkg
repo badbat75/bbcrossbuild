@@ -4,7 +4,7 @@ PKG_DEPS="python/pycamilladsp_0.6.0 python/pycamilladsp-plot_0.6.2 moode/camilla
 PKG_DEPS+=" moode/moode-pkgbuild"
 BUILD_PROCESS=downloadonly
 
-local MOODE_CAMILLAGUI_PATH=${SRC_PATH}/moode-pkgbuild/packages/camillagui
+MOODE_CAMILLAGUI_PATH=${SRC_PATH}/moode-pkgbuild/packages/camillagui
 PKG_PREBUILD="patch -p1 < ${MOODE_CAMILLAGUI_PATH}/camillagui_backend_hide_files.patch"
 PKG_POSTBUILD="mkdir -p ${PKG_PKGPATH}/opt/camillagui
     cp -frv \${PKG_SRCPATH}/* ${PKG_PKGPATH}/opt/camillagui
