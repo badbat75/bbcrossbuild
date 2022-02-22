@@ -51,5 +51,5 @@ fi
 echo "Project path: ${DATA_PATH}/${PRJ_NAME}"
 echo
 . $PRJ
-check_images_functions && pause && unmount_tag --all || true
+check_images_functions && unmount_tag --all || true
 trap - ERR SIGINT

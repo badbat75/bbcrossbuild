@@ -198,6 +198,15 @@ then
 		;;
 	esac
 
+	# Import backed up configuration
+	if [ -f ~/moodecfg.ini ]
+	then
+		echo -n "Uploading custom moodecfg.ini configuration..."
+		mkdir -p ${BIN_PATH}/boot
+		cp ~/moodecfg.ini ${BIN_PATH}/boot/
+		echo "Done."
+	fi
+
 	# Enable SSH at boot
 	run_on_root_dir temp root "systemctl disable regenerate_ssh_host_keys"
 	run_on_root_dir temp root "systemctl enable ssh"
