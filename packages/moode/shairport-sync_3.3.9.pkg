@@ -30,7 +30,8 @@ case x${WITH_SSL} in
 	;;
 esac
 
-PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/etc/{dbus-1/system.d,default}
+PKG_POSTBUILD="install -m 0755 -d ${PKG_PKGPATH}/run/shairport-sync
+	mkdir -pv ${PKG_PKGPATH}/etc/{dbus-1/system.d,default}
 	cp -pv \${PKG_SRCPATH}/scripts/shairport-sync-dbus-policy.conf ${PKG_PKGPATH}/etc/dbus-1/system.d/
 	cp -pv \${PKG_SRCPATH}/scripts/shairport-sync-mpris-policy.conf ${PKG_PKGPATH}/etc/dbus-1/system.d/
 	cp -pv \${PKG_SRCPATH}/scripts/shairport-sync.conf ${PKG_PKGPATH}/etc/
@@ -91,7 +92,8 @@ elif [ \"\$(getent passwd shairport-sync | awk -F: '{ print \$6 }')\" = \"/var/l
 		# Ignore the failure if it's non-empty.
 		rmdir /var/lib/shairport-sync || true
 	fi
-fi"
+fi
+chown shairport-sync:shairport-sync /run/shairport-sync"
 
 # Dependencies:
 # libpopt-dev avahi-daemon libavahi-client-dev glib2.0

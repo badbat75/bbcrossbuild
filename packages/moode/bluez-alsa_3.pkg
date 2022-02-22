@@ -40,8 +40,8 @@ PKG_POSTBUILD="install -d ${PKG_PKGPATH}/run/bluealsa
 		[Install]
 		WantedBy=bluetooth.target
 	EOF
-	mkdir -p ${PKG_PKGPATH}/etc/default <<-EOF
-	cat > ${PKG_PKGPATH}/etc/default/bluez-alsa
+	mkdir -p ${PKG_PKGPATH}/etc/default
+	cat > ${PKG_PKGPATH}/etc/default/bluez-alsa <<-EOF
 		# Config file for blues-alsa.service
 		# Set the bluealsa option, please see bluealsa manpage
 		OPTIONS=\"\"
