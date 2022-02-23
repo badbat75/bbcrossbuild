@@ -110,14 +110,6 @@ PKG_POSTBUILD="
 
 	# # chmod -R ug-s /var/local/www
 	chmod -R 0755  ${PKG_PKGPATH}/usr/local/bin
-
-	# bbcrossbuild customisations
-	#find \${PKG_SRCPATH} -name "*.sed*" | while read -r file
-	#do
-	#	renfile=\$( echo \${file} | sed \"s#^\${PKG_SRCPATH}#${PKG_PKGPATH}#;s/.sed//\" )
-	#	[ ! -d \${renfile} ] && mkdir -pv \$(dirname \${renfile}) || true
-	#	cp -pv \${file} \${renfile}
-	#done
 "
 
 PKG_POSTINSTALL="chown -R pi:pi /home/pi"
