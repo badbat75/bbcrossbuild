@@ -452,7 +452,11 @@ function inject_into_mount_tag () {
 	echo -e "Target files:\n${TARGET_FILE}\n" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 
 	echo -n "Injecting ${OBJECT} into ${ROOT_DIR}${TARGET_DIR}... "
-	[ ${_param_remove_devfiles:-0} -eq 1 ] && remove_devfiles no-exitstatus || true
+	# [ ${_param_remove_devfiles:-0} -eq 1 ] && remove_devfiles no-exitstatus || true
+	if [ ${_param_remove_devfiles:-0} -eq 1 ]
+	then
+		local RSYNC_EXCLUDE="--exclude ${BUILD_INCLUDEDIR} --exclude ${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/cmake --exclude ${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig --exclude *.a --exclude *.la"
+	fi
 	if [ ! -d ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR} ]
 	then
 		sudo mkdir -p ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
@@ -460,22 +464,25 @@ function inject_into_mount_tag () {
 	fi
 	echo -n "Syncing ${SOURCE_PATH} to ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}... " >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	cd ${SOURCE_PATH}
-	sudo rsync -K -a --no-owner --no-group ${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+	sudo rsync -K -av ${RSYNC_EXCLUDE} --no-owner --no-group ${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	cd - > /dev/null
 	echo -e "Done.\n" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	echo -n "Setting ownership... "
 	case ${OBJECT} in
 		binaries)
 			find ${BIN_PATH} -printf "%P\n" | xargs -I{} -d'\n' -n1 -P${NPROCS} bash -c "
-				sudo chown -v -h ${TARGET_OWNER} \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\"
-				# Check SUID from source path to change it on destination path
-				if [ -u \"${BIN_PATH}/{}\" ]
+				if [ -e \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\" ]
 				then
-					sudo chmod -v u+s \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\"
-				fi
-				if [ -g \"${BIN_PATH}/{}\" ]
-				then
-					sudo chmod -v g+s \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\"
+					sudo chown -v -h ${TARGET_OWNER} \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\"
+					# Check SUID from source path to change it on destination path
+					if [ -u \"${BIN_PATH}/{}\" ]
+					then
+						sudo chmod -v u+s \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\"
+					fi
+					if [ -g \"${BIN_PATH}/{}\" ]
+					then
+						sudo chmod -v g+s \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\"
+					fi
 				fi
 			" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 			;;
@@ -494,7 +501,7 @@ function inject_into_mount_tag () {
 			" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 			;;
 	esac
-	[ ${_param_remove_devfiles:-0} -eq 1 ] && resume_devfiles no-exitstatus || true
+	#[ ${_param_remove_devfiles:-0} -eq 1 ] && resume_devfiles no-exitstatus || true
 
 	echo -e "Done.\n"
 	echo >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1

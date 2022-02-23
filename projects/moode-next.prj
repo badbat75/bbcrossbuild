@@ -28,7 +28,7 @@ LLVM_POLLY_FEATURES=all
 PKG_CONFIG_SYSROOT_DIR=${BIN_PATH}
 
 mount_tag distos --url "${RASPBIAN_URL}${RASPBIAN_IMAGE}.zip" --imgfile "${RASPBIAN_IMAGE}.img" --mountlist "2:/ 1:/boot" --resize 2:3G
-if [ -z ${SKIP_DISTOS_APTS} ]
+if [ -z ${SKIP_APTS} ]
 then
 	run_on_root_dir distos root "apt-get -y purge --autoremove raspberrypi-kernel rpi-eeprom firmware-* \
 		libasound2 bluez wpasupplicant iw htop libnl-3-200 RPi.GPIO libcamera-apps-lite libsource-highlight4v5 \
@@ -122,39 +122,40 @@ unmount_tag distos
 if [ -z ${DISABLE_FINAL_IMG} ]
 then
 	mount_tag final --url ${RASPBIAN_URL}${RASPBIAN_IMAGE}.zip --imgfile ${RASPBIAN_IMAGE}.img --mountlist "2:/ 1:/boot" --resize 2:3G
-
-	run_on_root_dir final root "apt-get -y purge --autoremove raspberrypi-kernel libraspberrypi-dev \
-		gcc-10 build-essential libc6-dev dpkg-dev manpages-dev initramfs-tools-core RPi.GPIO bluez \
-		wpasupplicant iw htop libnl-3-200 libcamera-apps-lite libsource-highlight4v5 \
-		libasound2 raspberrypi-sys-mods raspberrypi-net-mods"
-	run_on_root_dir final root "apt-get update --allow-releaseinfo-change"
-	run_on_root_dir final root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
-	run_on_root_dir final root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
-		libgomp1 triggerhappy libdw1 \
-		php-fpm nginx sqlite3 php-sqlite3 php7.4-gd php-yaml \
-		\
-		telnet sysstat squashfs-tools shellinabox \
-		samba smbclient exfat-fuse inotify-tools \
-		avahi-utils winbind libnss-winbind djmount xfsprogs id3v2 \
-		udisks2 libatasmart4 libdbus-glib-1-2 libgudev-1.0-0 libsgutils2-2 libdevmapper-event1.02.1 \
-		\
-		libyajl2 libavahi-client3 libcurl3-gnutls \
-		\
-		dnsmasq \
-		\
-		expect \
-		\
-		python3-dbus python3-matplotlib python3-aiohttp python3-yaml"
-
-	if [ ${ENABLE_DISPLAY:-0} -eq 1 ]
+	if [ -z ${SKIP_APTS} ]
 	then
+		run_on_root_dir final root "apt-get -y purge --autoremove raspberrypi-kernel libraspberrypi-dev \
+			gcc-10 build-essential libc6-dev dpkg-dev manpages-dev initramfs-tools-core RPi.GPIO bluez \
+			wpasupplicant iw htop libnl-3-200 libcamera-apps-lite libsource-highlight4v5 \
+			libasound2 raspberrypi-sys-mods raspberrypi-net-mods"
+		run_on_root_dir final root "apt-get update --allow-releaseinfo-change"
+		run_on_root_dir final root "DEBIAN_FRONTEND=noninteractive apt-get -y dist-upgrade"
 		run_on_root_dir final root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
-			xinit xorg xserver-xorg-legacy chromium-browser libgtk-3-0 libgles2"
+			libgomp1 triggerhappy libdw1 \
+			php-fpm nginx sqlite3 php-sqlite3 php7.4-gd php-yaml \
+			\
+			telnet sysstat squashfs-tools shellinabox \
+			samba smbclient exfat-fuse inotify-tools \
+			avahi-utils winbind libnss-winbind djmount xfsprogs id3v2 \
+			udisks2 libatasmart4 libdbus-glib-1-2 libgudev-1.0-0 libsgutils2-2 libdevmapper-event1.02.1 \
+			\
+			libyajl2 libavahi-client3 libcurl3-gnutls \
+			\
+			dnsmasq \
+			\
+			expect \
+			\
+			python3-dbus python3-matplotlib python3-aiohttp python3-yaml"
+
+		if [ ${ENABLE_DISPLAY:-0} -eq 1 ]
+		then
+			run_on_root_dir final root "DEBIAN_FRONTEND=noninteractive apt-get -y install \
+				xinit xorg xserver-xorg-legacy chromium-browser libgtk-3-0 libgles2"
+		fi
+
+		run_on_root_dir final root "apt-get -y purge --autoremove libcephfs2"
+		run_on_root_dir final root "apt-get clean"
 	fi
-
-	run_on_root_dir final root "apt-get -y purge --autoremove libcephfs2"
-	run_on_root_dir final root "apt-get clean"
-
 	if [ ${MOODEIMG_FS:-f2fs} == ext4 ]
 	then
 		unmount_tag final

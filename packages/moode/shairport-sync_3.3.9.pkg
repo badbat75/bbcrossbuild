@@ -35,7 +35,7 @@ PKG_POSTBUILD="install -m 0755 -d ${PKG_PKGPATH}/run/shairport-sync
 	cp -pv \${PKG_SRCPATH}/scripts/shairport-sync-dbus-policy.conf ${PKG_PKGPATH}/etc/dbus-1/system.d/
 	cp -pv \${PKG_SRCPATH}/scripts/shairport-sync-mpris-policy.conf ${PKG_PKGPATH}/etc/dbus-1/system.d/
 	cp -pv \${PKG_SRCPATH}/scripts/shairport-sync.conf ${PKG_PKGPATH}/etc/
-	cat <<-EOF > ${PKG_PKGPATH}/etc/default/shairport-sync-default
+	cat <<-EOF > ${PKG_PKGPATH}/etc/default/shairport-sync
 		# Defaults for shairport-sync initscript
 		# sourced by /etc/init.d/shairport-sync
 		# and /lib/systemd/system/shairport-sync.service
