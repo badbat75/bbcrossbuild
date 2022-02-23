@@ -1512,7 +1512,10 @@ function build () {(
 		mkdir -p ${PKG_PKGPATH}
 		if [ ! -z "${PKG_PREBUILD}" ]
 		then
-			cd ${PKG_SRCPATH}
+			if [ -d ${PKG_SRCPATH} ]
+			then
+				cd ${PKG_SRCPATH}
+			fi
 			(eval "trap 'return 1' ERR; set -x && ${PKG_PREBUILD} 2>&1 && set +x; trap - ERR") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 		fi
 		if [ ${PKG_COPYSRC:-0} -eq 1 ] 
