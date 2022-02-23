@@ -155,6 +155,7 @@ function create_sfx_package () {
 					echo "--test:			Does not extract, only test archive"
 					echo "-v:			Verbose output"
 					echo "-d:			Debug output"
+					echo
 					exit 0
 					;;
 			esac
