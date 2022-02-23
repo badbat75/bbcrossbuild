@@ -1554,7 +1554,8 @@ function build () {(
 				pwd
 				if [ ${NOSAVESTATUS} -eq 0 ]
 				then
-					tar cfp - --owner=0 --group=0 -C ${PKG_PKGPATH} . | xz -T${NPROCS} - > ${PKG_PKGPATH}.tar.xz 
+					#tar cfp - --owner=0 --group=0 -C ${PKG_PKGPATH} . | xz -T${NPROCS} - > ${PKG_PKGPATH}.tar.xz
+					create_sfx_package ${PKG_PKGPATH}
 				fi
 				sudo rm -rf ${PKG_PKGPATH}
 				set +ex
@@ -1570,7 +1571,8 @@ function build () {(
 				pwd
 				if [ ${NOSAVESTATUS} -eq 0 ]
 				then
-					tar cfp - --owner=0 --group=0 -C ${PKG_PKGPATH} . | xz -T${NPROCS} - > ${PKG_PKGPATH}.tar.xz 
+					#tar cfp - --owner=0 --group=0 -C ${PKG_PKGPATH} . | xz -T${NPROCS} - > ${PKG_PKGPATH}.tar.xz
+					create_sfx_package ${PKG_PKGPATH}
 				fi
 				rsync -aKv ${PKG_PKGPATH}/ ${BIN_PATH}
 				sudo rm -rf ${PKG_PKGPATH}
