@@ -147,6 +147,16 @@ function create_sfx_package () {
 				-d)
 					set -x
 					;;
+				-h|--help)
+					echo "--h|--help:		This help"
+					echo "--with-dev:		Extract also development files"
+					echo "--with-conf:		Extract also configuration files (overwrite)"
+					echo "--dest <dir>:		Specify destination directory (default:/)"
+					echo "--test:			Does not extract, only test archive"
+					echo "-v:			Verbose output"
+					echo "-d:			Debug output"
+					exit 0
+					;;
 			esac
 			shift
 		done
