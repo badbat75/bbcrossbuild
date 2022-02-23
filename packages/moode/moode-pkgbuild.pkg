@@ -113,6 +113,5 @@ PKG_PREBUILD="
 		bash -x /postinst_scripts/99_moode_pkgbuild configure
 		mpd --kill
 		rm -f /etc/mpd.conf
-		sed -i 's/#AutoEnable=false/AutoEnable=true/' /etc/bluetooth/main.conf
 	EOFM
 	"

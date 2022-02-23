@@ -202,8 +202,7 @@ then
 	if [ -f ~/moodecfg.ini ]
 	then
 		echo -n "Uploading custom moodecfg.ini configuration..."
-		mkdir -p ${BIN_PATH}/boot
-		cp ~/moodecfg.ini ${BIN_PATH}/boot/
+		inject_into_mount_tag temp ~/moodecfg.ini /boot
 		echo "Done."
 	fi
 
