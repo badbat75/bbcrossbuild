@@ -116,7 +116,8 @@ function create_sfx_package () {
 	fi
 	
 	cat >${PKG_OBJ}.sfx <<-EOF
-		#!/bin/sh -e
+		#!/usr/bin/env bash
+		set -e
 		DEV_FILES="--exclude=.${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/*.a --exclude=.${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/*.la --exclude=.${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/cmake"
 		CONF_FILES="--exclude=.${BUILD_SYSCONFDIR}"
 		DEST=
@@ -145,7 +146,7 @@ function create_sfx_package () {
 					V=v
 					;;
 				-d)
-					set -x
+					set -ex
 					;;
 				-h|--help)
 					echo "--h|--help:		This help"
@@ -164,7 +165,7 @@ function create_sfx_package () {
 
 		ARCHIVE=\`awk '/^__ARCHIVE_BELOW__/ {print NR + 1; exit 0; }' \$0\`
 		tail -n+\$ARCHIVE \$0 | tar \${X:-x}\${V}Jf - --keep-directory-symlink \${DEV_FILES} \${CONF_FILES} -C \${DEST:-/}
-		set +x
+		set +ex
 		exit 0
 
 		__ARCHIVE_BELOW__
