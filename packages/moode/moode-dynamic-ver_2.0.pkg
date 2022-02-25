@@ -83,6 +83,7 @@ PKG_POSTBUILD="
 
 	# /var/lib/mpd
 	mkdir -p ${PKG_PKGPATH}/var/lib/mpd/music/RADIO
+	chmod 0777 ${PKG_PKGPATH}/var/lib/mpd/music/RADIO
 
 	# /var/wwww
 	mkdir -p ${PKG_PKGPATH}/var/www
