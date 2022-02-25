@@ -16,7 +16,7 @@ CONF_FLAGS+=" -Ddsd=true -Dneighbor=false -Dupnp=disabled -Dnfs=disabled -Dsmbcl
 PKG_DEPS="moode/boost_1.78.0 \
 	moode/alsa-lib_1.2.6.1 \
 	moode/faad2_2.10.0 \
-	moode/ffmpeg_5 \
+	moode/ffmpeg_4 \
 	moode/lame_3.100 \
 	moode/libmad_0.15.1b \
 	moode/libtwolame_0.4.0 \

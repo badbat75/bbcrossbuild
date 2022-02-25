@@ -1,5 +1,6 @@
-# ffmpeg-4.4
-PKG_URL="https://ffmpeg.org/releases/ffmpeg-4.4.tar.xz"
+# ffmpeg-4
+PKG_SUFFIX=.4.1
+PKG_URL="https://ffmpeg.org/releases/ffmpeg-4${PKG_SUFFIX}.tar.xz"
 BUILD_PROCESS=configmake
 STD_CONF_FLAGS=0
 CONF_FLAGS="--prefix=${BUILD_PREFIX} --incdir=${BUILD_INCLUDEDIR} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
@@ -55,6 +56,7 @@ fi
 [ ${BUILD_LIBSHARED} -eq 1 ] && CONF_FLAGS+=" --enable-shared" || CONF_FLAGS+=" --disable-shared"
 [ ${BUILD_LIBSTATIC} -eq 1 ] && CONF_FLAGS+=" --enable-static" || CONF_FLAGS+=" --disable-static"
 [ ! "${LTOENABLE:-0}" == "0" ] && CONF_FLAGS+=" --enable-lto" || true
+
 INST_CMD=install
 PKG_OVERRIDELTO=0
 if [ "$(echo ${LLVM_POLLY_FEATURES} | grep -o parallel)" == "parallel" ] || [ "$(echo ${LLVM_POLLY_FEATURES} | grep -o all)" == "all" ] && [ "${HM}"="arm" ]
