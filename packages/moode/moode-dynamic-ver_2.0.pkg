@@ -1,6 +1,6 @@
 # moode-dynamic-ver_2.0
 MOODEREL=r800
-MOODEDEVCOMMIT=0ec2ada3db946757f71f6643f6563badb957f7c8
+MOODEDEVCOMMIT=fadc78931fa1914bb111194a4de7af3a86cb833a
 if [ -z "${MOODEDEVCOMMIT}" ]
 then
 	PKG_URL="https://github.com/moode-player/moode/archive/${MOODEREL}prod.tar.gz"
