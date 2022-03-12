@@ -1,13 +1,13 @@
 # bluez-alsa_3
-PKG_SUFFIX=".1.0+816cf14"
-PKG_URL="https://github.com/Arkq/bluez-alsa/archive/816cf14aca9bcc1bcf4bf03b9827d0daee7bf97e.tar.gz"
+PKG_SUFFIX=".1.0+6950e8b"
+PKG_URL="https://github.com/Arkq/bluez-alsa/archive/6950e8bb26c471436ba4dc6a2c412a998cffafdf.tar.gz"
 BUILD_PROCESS=configmake
 AUTOCONF=1
 CONF_FLAGS="--with-alsaplugindir=\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX}/alsa-lib --enable-hcitop --enable-aac  --enable-ldac --enable-mpg123 --enable-manpages"
 CONF_FLAGS+=" --disable-payloadcheck"
 PKG_CFLAGS="-I${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/dbus-1.0/include -I${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/glib-2.0/include"
 INST_CMD=install-strip
-PKG_DEPS="moode/alsa-lib_1.2.6.1 moode/bluez_5 raspbian/sbc-1.4 moode/fdk-aac_2.0.1 moode/libldac_2.0.2.3+af2dd23 moode/mpg123_1.29.2"
+PKG_DEPS="moode/alsa-lib_1.2 moode/bluez_5 raspbian/sbc-1.4 moode/fdk-aac_2.0.1 moode/libldac_2.0.2.3+af2dd23 moode/mpg123_1.29.2"
 PATCHES=
 
 PKG_POSTBUILD="install -d ${PKG_PKGPATH}/run/bluealsa

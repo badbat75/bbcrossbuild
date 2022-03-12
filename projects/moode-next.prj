@@ -76,7 +76,7 @@ build raspberrypi/rpi-kernel_5.16 --with_extra_modules moode/ax88179_178a,moode/
 build raspberrypi/raspi-config
 build raspberrypi/raspberrypi-sys-mods
 build raspberrypi/raspberrypi-net-mods
-build moode/alsa-utils_1.2.6
+build moode/alsa-utils_1.2
 build raspbian/iw_5.9-3
 build firmwares/wireless-regdb_2021.08.28
 build raspbian/hostapd_2.9.0

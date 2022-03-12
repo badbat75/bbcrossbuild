@@ -8,7 +8,7 @@ CONF_FLAGS="--enable-cxx -with-pic=yes --disable-dependency-tracking"
 PKG_CFLAGS="${COMMON_LDFLAGS} -s"
 PKG_MAKEVARS="-j1"
 INST_CMD=install
-PKG_DEPS="moode/alsa-lib_1.2.6.1"
+PKG_DEPS="moode/alsa-lib_1.2"
 PKG_PREBUILD="rm -f ltmain.sh"
 
 # Note:

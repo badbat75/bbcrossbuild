@@ -3,7 +3,7 @@ PKG_URL="http://www.volkerschatz.com/noise/alsacap.tgz"
 #PATCHES=
 BUILD_PROCESS=simplemake
 INST_CMD=all
-PKG_DEPS="moode/alsa-lib_1.2.6.1"
+PKG_DEPS="moode/alsa-lib_1.2"
 PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX}"
 PKG_PREBUILD="sed -i '/PREFIX =/i CC ?= gcc' Makefile &&
 sed -i 's/PREFIX = /PREFIX ?= /g' Makefile &&

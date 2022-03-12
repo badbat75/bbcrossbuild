@@ -30,7 +30,7 @@ CONF_FLAGS="--prefix=${BUILD_PREFIX} --incdir=${BUILD_INCLUDEDIR} --libdir=${BUI
             --enable-ladspa      \
             --enable-openssl     \
             --docdir=${BUILD_PREFIX}/share/doc/ffmpeg-4.4"
-PKG_DEPS="moode/alsa-lib_1.2.6.1 \
+PKG_DEPS="moode/alsa-lib_1.2 \
     moode/opus_1.3.1 \
     moode/libogg_1.3.5 \
     moode/libvorbis_1.3.7 \

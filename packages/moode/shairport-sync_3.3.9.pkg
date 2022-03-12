@@ -6,7 +6,7 @@ CONF_FLAGS="--with-dummy --with-stdout --with-pipe --with-soxr --with-metadata -
 		--with-alsa --with-convolution --with-piddir=/run/shairport-sync --without-configfiles \
 		--without-libdaemon --with-mqtt-client --with-systemd --with-dbus-interface"
 INST_CMD=install-strip
-PKG_DEPS="moode/alsa-lib_1.2.6.1 moode/libsndfile_1.0.31 raspbian/libsoxr_0.1.3-1 raspbian/libconfig_1.5-0.4 raspbian/mosquitto_2.0.11-1"
+PKG_DEPS="moode/alsa-lib_1.2 moode/libsndfile_1.0.31 raspbian/libsoxr_0.1.3-1 raspbian/libconfig_1.5-0.4 raspbian/mosquitto_2.0.11-1"
 PKG_PREBUILD="sed -i '/AC_PROG_INSTALL/a AM_PROG_AR' configure.ac
 	sed -i 's/^\tgetent/#\tgetent/g' Makefile.am
 	sed -i 's| org.gnome.ShairportSync.xml| \$(VPATH)/org.gnome.ShairportSync.xml|g' Makefile.am"
