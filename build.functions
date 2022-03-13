@@ -843,8 +843,8 @@ function build () {(
 					;;
 			esac
 			cat <<-EOF > make4kern.sh
-				export PATH=${PATH}
-				export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}
+				export PATH="${PATH}"
+				export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}"
 				KBUILD_BUILD_TIMESTAMP='' \\
 				make \\
 					V=${MAKEVERBOSE:-0} \\
