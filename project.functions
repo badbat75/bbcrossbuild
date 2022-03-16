@@ -149,7 +149,7 @@ function create_sfx_package () {
 					set -ex
 					;;
 				-h|--help)
-					echo "--h|--help:		This help"
+					echo "-h|--help:		This help"
 					echo "--with-dev:		Extract also development files"
 					echo "--with-conf:		Extract also configuration files (overwrite)"
 					echo "--dest <dir>:		Specify destination directory (default:/)"
