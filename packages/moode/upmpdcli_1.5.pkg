@@ -10,9 +10,48 @@ AUTOCONF=1
 PKG_CXXFLAGS="-D_FILE_OFFSET_BITS=64"
 INST_CMD=install-strip
 PKG_DEPS="moode/libupnpp_0.21 raspbian/libmicrohttpd_0.9.72-2 raspbian/libjsoncpp_1.9.4-5 python/bottle"
-PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/var/cache/upmpdcli/ohcreds
-    	openssl genrsa -out ${PKG_PKGPATH}/var/cache/upmpdcli/ohcreds/credkey.pem 4096
-		chmod 600 ${PKG_PKGPATH}/var/cache/upmpdcli/ohcreds/credkey.pem"
+PKG_PREBUILD="patch -p1 <<EOF
+diff --git a/Makefile.am b/Makefile.am
+index 08f5f58..4481622 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -264,6 +264,7 @@ install-data-hook: web.tar.gz rdpl2stream.tar.gz uprclbottle.tar.gz
+ 	(cd \\\$(DESTDIR)/$(cdpluginsspotifydir); chmod a+x spotify-app.py) 
+ 	(cd \\\$(DESTDIR)/$(cdpluginsuprcldir); chmod a+x uprcl-app.py) 
+ 	(cd \\\$(DESTDIR)/$(radioscriptsdir);chmod a+rx . *)
++	(cd \\\$(DESTDIR)/$(radioscriptsdir);chmod a-x radiolist.conf)
+         
+ dist_pkgdata_SCRIPTS = samplescripts/Analog-Input
+ 
+diff --git a/samplescripts/Analog-Input b/samplescripts/Analog-Input
+old mode 100644
+new mode 100755
+index ac956fd..87cff68
+--- a/samplescripts/Analog-Input
++++ b/samplescripts/Analog-Input
+@@ -1,4 +1,4 @@
+-#!/usr/bin//python
++#!/usr/bin/python3
+ 
+ from __future__ import print_function
+ 
+@@ -190,4 +190,3 @@ while True:
+ 
+ time.sleep(1)
+ cleanup(0)
+-
+EOF
+"
+PKG_POSTBUILD="	mkdir -p ${PKG_PKGPATH}/lib/systemd/system
+	cp \${PKG_SRCPATH}/systemd/upmpdcli.service ${PKG_PKGPATH}/lib/systemd/system/
+	mkdir -pv ${PKG_PKGPATH}/var/cache/upmpdcli/ohcreds
+	openssl genrsa -out ${PKG_PKGPATH}/var/cache/upmpdcli/ohcreds/credkey.pem 4096
+	chmod 600 ${PKG_PKGPATH}/var/cache/upmpdcli/ohcreds/credkey.pem"
 
-PKG_POSTINSTALL="useradd -r -M -s /usr/sbin/nologin -c \"UPnP Media Renderer Client\" -d /var/lib/upmpdcli upmpdcli
+PKG_POSTINSTALL="if ! getent passwd upmpdcli > /dev/null; then
+	adduser --disabled-password --quiet --system --home /nonexistent --no-create-home --shell /bin/false upmpdcli
+fi
+if ! groups upmpdcli | cut -d' ' -f 3- | grep -q -w audio ; then
+	usermod -a -G audio upmpdcli
+fi
 chown upmpdcli /var/cache/upmpdcli/ohcreds/credkey.pem"
