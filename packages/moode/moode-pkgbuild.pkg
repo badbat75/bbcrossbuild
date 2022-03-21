@@ -1,5 +1,5 @@
 # moode-pkgbuild
-PKG_URL="https://github.com/moode-player/pkgbuild/archive/4cf2febf312c635eedc6a012915ea1eb7bd010d3.tar.gz"
+PKG_URL="https://github.com/moode-player/pkgbuild/archive/3e26fee9c538b735f31dd71fc3e10cc21ee2ed8f.tar.gz"
 BUILD_PROCESS=downloadonly
 PKG_PREBUILD="
 	mkdir -p ${PKG_PKGPATH}/postinst_scripts
