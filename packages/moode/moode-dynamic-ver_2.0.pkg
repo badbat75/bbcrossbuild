@@ -1,6 +1,6 @@
 # moode-dynamic-ver_2.0
 MOODEREL=r802
-#MOODEDEVCOMMIT=295a07e9322acc08eb0212881a0309479d9d17f0
+#MOODEDEVCOMMIT=58e766bd5574bea697df073b5af96137139422c4
 if [ -z "${MOODEDEVCOMMIT}" ]
 then
 	PKG_URL="https://github.com/moode-player/moode/archive/${MOODEREL}prod.tar.gz"
@@ -42,15 +42,15 @@ PKG_POSTBUILD="
 
 	# generate moode radio stations backup file (used for populating the station from the installer)
 	cat \${PKG_SRCPATH}/var/local/www/db/moode-sqlite3.db.sql | sqlite3 \${PKG_BLDPATH}/moode-sqlite3.db
-	\${PKG_SRCPATH}/www/command/stationmanager.py --db \${PKG_BLDPATH}/moode-sqlite3.db --logopath \${PKG_SRCPATH}/var/local/www/imagesw/radio-logos --scope moode --export \${PKG_BLDPATH}/moode-stations-full_$PKGVERSION.zip
+	\${PKG_SRCPATH}/www/command/stationmanager.py --db \${PKG_BLDPATH}/moode-sqlite3.db --logopath \${PKG_SRCPATH}/var/local/www/imagesw/radio-logos --scope moode --export \${PKG_BLDPATH}/moode-stations-full_\$PKGVERSION.zip
 	#### To check when ../dist/binary/moode-stations-full_8.0.0.zip is available
-	#if [ ! -f $MAJOR_BASE_STATIONS ]
+	#if [ ! -f \$MAJOR_BASE_STATIONS ]
 	#then
-	#	echo \"${RED}Error: radio station base backup $MAJOR_BASE_STATIONS not found!${NORMAL}\"
+	#	echo \"\${RED}Error: radio station base backup \$MAJOR_BASE_STATIONS not found!\${NORMAL}\"
 	#	cd ..
 	#	exit 1
 	#fi
-	#\${PKG_SRCPATH}/www/command/stationmanager.py --db \${PKG_BLDPATH}/moode-sqlite3.db --logopath \${PKG_SRCPATH}/var/local/www/imagesw/radio-logos --diff \${PKG_BLDPATH}/moode-stations-update_$PKGVERSION.zip --scope moode $MAJOR_BASE_STATIONS
+	#\${PKG_SRCPATH}/www/command/stationmanager.py --db \${PKG_BLDPATH}/moode-sqlite3.db --logopath \${PKG_SRCPATH}/var/local/www/imagesw/radio-logos --diff \${PKG_BLDPATH}/moode-stations-update_\$PKGVERSION.zip --scope moode \$MAJOR_BASE_STATIONS
 
 	rm -f \${PKG_BLDPATH}/moode-sqlite3.db || true
 	# move it to the dist location
