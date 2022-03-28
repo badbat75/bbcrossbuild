@@ -29,8 +29,8 @@ PKG_POSTBUILD="
 	# \1 -> \\1
 	# \2 -> \\2
 
-	PKGVERSION=${MOODE_REL}
-	MAJOR_BASE_STATIONS=../dist/binary/moode-stations-full_8.0.0.zip
+	PKGVERSION=${MOODEREL}
+	MAJOR_BASE_STATIONS=${USERDATA_PATH}/moode-stations-full_r800.zip
 
 	npm ci
 	node_modules/.bin/gulp build
@@ -42,19 +42,16 @@ PKG_POSTBUILD="
 
 	# generate moode radio stations backup file (used for populating the station from the installer)
 	cat \${PKG_SRCPATH}/var/local/www/db/moode-sqlite3.db.sql | sqlite3 \${PKG_BLDPATH}/moode-sqlite3.db
-	\${PKG_SRCPATH}/www/command/stationmanager.py --db \${PKG_BLDPATH}/moode-sqlite3.db --logopath \${PKG_SRCPATH}/var/local/www/imagesw/radio-logos --scope moode --export \${PKG_BLDPATH}/moode-stations-full_\$PKGVERSION.zip
-	#### To check when ../dist/binary/moode-stations-full_8.0.0.zip is available
-	#if [ ! -f \$MAJOR_BASE_STATIONS ]
-	#then
-	#	echo \"\${RED}Error: radio station base backup \$MAJOR_BASE_STATIONS not found!\${NORMAL}\"
-	#	cd ..
-	#	exit 1
-	#fi
-	#\${PKG_SRCPATH}/www/command/stationmanager.py --db \${PKG_BLDPATH}/moode-sqlite3.db --logopath \${PKG_SRCPATH}/var/local/www/imagesw/radio-logos --diff \${PKG_BLDPATH}/moode-stations-update_\$PKGVERSION.zip --scope moode \$MAJOR_BASE_STATIONS
+	\${PKG_SRCPATH}/www/command/stationmanager.py --db \${PKG_BLDPATH}/moode-sqlite3.db --logopath \${PKG_SRCPATH}/var/local/www/imagesw/radio-logos --scope moode --export moode-stations-full_\$PKGVERSION.zip
+	#### To check when moode-stations-full_r800.zip is available
+	if [ -f \$MAJOR_BASE_STATIONS ]
+	then
+		\${PKG_SRCPATH}/www/command/stationmanager.py --db \${PKG_BLDPATH}/moode-sqlite3.db --logopath \${PKG_SRCPATH}/var/local/www/imagesw/radio-logos --diff ${USERDATA_PATH}/moode-stations-update_\$PKGVERSION.zip --scope moode \$MAJOR_BASE_STATIONS
+	fi
 
 	rm -f \${PKG_BLDPATH}/moode-sqlite3.db || true
 	# move it to the dist location
-	mv -f \${PKG_BLDPATH}/moode-stations-*_$PKGVERSION.zip  \${PKG_BLDPATH}/build/dist/binary/
+	mv -f moode-stations-*_\$PKGVERSION.zip ${USERDATA_PATH}
 
 	# location for files that should overwrite existing files (not owned by moode-player)
 	NOT_OWNED_TEMP=${PKG_PKGPATH}/usr/share/moode-player
