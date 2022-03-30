@@ -1,5 +1,6 @@
 # moode-dynamic-ver_2.0
-MOODEREL=r802
+MOODEVER=8.0.2
+MOODEREL=r$(echo ${MOODEVER} | sed 's/\.//g')
 #MOODEDEVCOMMIT=58e766bd5574bea697df073b5af96137139422c4
 if [ -z "${MOODEDEVCOMMIT}" ]
 then
@@ -9,9 +10,8 @@ else
 fi
 PKG_SRCDIR=moode_${MOODEREL}
 BUILD_PROCESS=downloadonly
-PKG_DEPS="python/RPi.GPIO python/python-musicpd raspbian/zip_3.0-12 moode/moode-runonce"
-PKG_PREBUILD="
-	mkdir -p \${PKG_BLDPATH}/build/dist/binary
+PKG_DEPS="python/RPi.GPIO python/python-musicpd raspbian/zip_3.0-12 moode/moode-pkgbuild moode/moode-runonce"
+PKG_PREBUILD="mkdir -pv \${PKG_BLDPATH}
 	cp -v package.json package-lock.json gulpfile.js \${PKG_BLDPATH}
 	cp -rv www \${PKG_BLDPATH}/www
 "
@@ -29,8 +29,8 @@ PKG_POSTBUILD="
 	# \1 -> \\1
 	# \2 -> \\2
 
-	PKGVERSION=${MOODEREL}
-	MAJOR_BASE_STATIONS=${USERDATA_PATH}/moode-stations-full_r800.zip
+	PKGVERSION=${MOODEVER}
+	MAJOR_BASE_STATIONS=${USERDATA_PATH}/moode-stations-full_8.0.0.zip
 
 	npm ci
 	node_modules/.bin/gulp build
@@ -117,9 +117,15 @@ PKG_POSTBUILD="
 	chmod -R 0777  ${PKG_PKGPATH}/var/local/www/commandw/*
 	chmod -R 0766  ${PKG_PKGPATH}/var/local/www/db
 	chmod -R 0755  ${PKG_PKGPATH}/usr/local/bin
-
 	# # chmod -R ug-s /var/local/www
-	chmod -R 0755  ${PKG_PKGPATH}/usr/local/bin
+
+	mkdir -pv postinst_scripts
+	cp ${SRC_PATH}/moode-pkgbuild/packages/moode-player/postinstall.sh postinst_scripts/99_moode_player
+	sed -i '/PKG_VERSION/ s/x.x.x/${MOODEVER}/' postinst_scripts/99_moode_player
+	sed -i 's/systemctl st/# systemctl st/g' postinst_scripts/99_moode_player
+	cp -rv postinst_scripts ${PKG_PKGPATH}/
 "
 
-PKG_POSTINSTALL="chown -R pi:pi /home/pi"
+PKG_POSTINSTALL_PRIO=51
+PKG_POSTINSTALL="chown -R pi:pi /home/pi
+bash -x /postinst_scripts/99_moode_player configure"

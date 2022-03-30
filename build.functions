@@ -1556,7 +1556,7 @@ function build () {(
 
 	if [ -n "${PKG_POSTINSTALL}" ]
 	then
-		mkdir ${PKG_PKGPATH}/postinst_scripts
+		mkdir -p ${PKG_PKGPATH}/postinst_scripts
 		echo "${PKG_POSTINSTALL}" > ${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_NAME}
 	fi
 

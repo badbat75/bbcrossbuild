@@ -1,14 +1,7 @@
 # moode-pkgbuild
 PKG_URL="https://github.com/moode-player/pkgbuild/archive/004475c5f3c9f9e699cfae23537579a4eeac9dec.tar.gz"
 BUILD_PROCESS=downloadonly
-PKG_PREBUILD="
-	mkdir -p ${PKG_PKGPATH}/postinst_scripts
-	cp packages/moode-player/postinstall.sh ${PKG_PKGPATH}/postinst_scripts/99_moode_pkgbuild
-	sed -i 's/systemctl st/# systemctl st/g' ${PKG_PKGPATH}/postinst_scripts/99_moode_pkgbuild
-	cat <<-EOFM > ${PKG_PKGPATH}/postinst_scripts/99_moode_pkgbuild.starter
-		bash -x /postinst_scripts/99_moode_pkgbuild configure
-	EOFM
-	mkdir -p ${PKG_PKGPATH}/etc/runonce.d/
+PKG_PREBUILD="mkdir -p ${PKG_PKGPATH}/etc/runonce.d/
 	cat <<-EOFM > ${PKG_PKGPATH}/etc/runonce.d/alsaequal
 		mkdir -p /opt/alsaequal
 		amixer -D alsaequal > /dev/null
