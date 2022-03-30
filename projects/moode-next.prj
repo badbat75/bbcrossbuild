@@ -190,7 +190,7 @@ then
 	inject_into_mount_tag temp binaries --remove_devfiles
 	run_postinstall_scripts temp
 
-	run_on_root_dir temp root "echo "moode >/etc/hostname"
+	run_on_root_dir temp root "echo 'moode' >/etc/hostname"
 	run_on_root_dir temp root "sed '/127.0.0.1/ s/raspberrypi/moode/' /etc/hosts"
 	run_on_root_dir temp root "echo 'pi:moodeaudio' | chpasswd"
 
