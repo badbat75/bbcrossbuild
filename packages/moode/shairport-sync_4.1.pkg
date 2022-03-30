@@ -39,7 +39,7 @@ esac
 case x${WITH_SSL} in
 	xmbedtls) ### Build with MBEDTLS
 		CONF_FLAGS+=" --with-ssl=mbedtls"
-		PKG_DEPS+=" raspbian/mbedtls_2.16.9-0.1"
+		PKG_DEPS+=" raspbian/mbedtls_2.28.0-1"
 		PKG_LDFLAGS="-lssl -lcrypto"
 	;;
 	x*) ### Build with OpenSSL

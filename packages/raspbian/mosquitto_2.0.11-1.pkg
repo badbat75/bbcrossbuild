@@ -1,7 +1,7 @@
 # mosquitto_2.0.11-1
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/m/mosquitto/mosquitto_2.0.11.orig.tar.gz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/m/mosquitto/mosquitto_2.0.11-1.debian.tar.xz"
-PKG_DEPS="raspbian/libwebsockets_4.0.20-1 raspbian/dlt-daemon_2.18.6-1"
+PKG_DEPS="raspbian/libwebsockets_4.0.20-2 raspbian/dlt-daemon_2.18.6-2"
 BUILD_PROCESS=cmakebuild
 CONF_FLAGS="-DWITH_BUNDLED_DEPS=yes -DWITH_ADNS=yes -DUSE_LIBWRAP=ON -DWITH_WEBSOCKETS=ON -DWITH_DLT=ON -DWITH_SRV=ON \
     -DWITH_SYSTEMD=yes \

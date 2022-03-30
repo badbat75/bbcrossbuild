@@ -1,0 +1,9 @@
+# zziplib_0.13.72+dfsg.1-1.1
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/z/zziplib/zziplib_0.13.72%2Bdfsg.1.orig.tar.xz"
+BUILD_PROCESS=cmakebuild
+INST_CMD="install/strip"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/z/zziplib/zziplib_0.13.72%2Bdfsg.1-1.1.debian.tar.xz"
+CONF_FLAGS="-DZLIB_LIBRARY=${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libz.so"
+VAR_INSTALL_LIBDIR=CMAKE_INSTALL_LIBDIR
+
+# Note: Build-Depends: debhelper (>= 9), pkg-config, zlib1g-dev, python, zip, dh-exec, dh-autoreconf

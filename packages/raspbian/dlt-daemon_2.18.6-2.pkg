@@ -1,6 +1,6 @@
-# dlt-daemon_2.18.6-1
+# dlt-daemon_2.18.6-2
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/d/dlt-daemon/dlt-daemon_2.18.6.orig.tar.gz"
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/d/dlt-daemon/dlt-daemon_2.18.6-1.debian.tar.xz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/d/dlt-daemon/dlt-daemon_2.18.6-2.debian.tar.xz"
 BUILD_PROCESS=cmakebuild
 CONF_FLAGS="-DWITH_SYSTEMD=ON -DWITH_SYSTEMD_JOURNAL=ON -DWITH_MAN=ON -DWITH_DLT_ADAPTOR=ON \
 	-DWITH_DLT_DBUS=ON -DWITH_DLT_SYSTEM=ON -DWITH_DLT_KPI=ON \

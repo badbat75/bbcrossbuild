@@ -9,7 +9,7 @@ else
 fi
 PKG_SRCDIR=moode_${MOODEREL}
 BUILD_PROCESS=downloadonly
-PKG_DEPS="python/RPi.GPIO python/python-musicpd raspbian/zip_3.0-8 moode/moode-runonce"
+PKG_DEPS="python/RPi.GPIO python/python-musicpd raspbian/zip_3.0-12 moode/moode-runonce"
 PKG_PREBUILD="
 	mkdir -p \${PKG_BLDPATH}/build/dist/binary
 	cp -v package.json package-lock.json gulpfile.js \${PKG_BLDPATH}

@@ -9,7 +9,7 @@ AUTOCONF=1
 # CONF_FLAGS=""
 PKG_CXXFLAGS="-D_FILE_OFFSET_BITS=64"
 INST_CMD=install-strip
-PKG_DEPS="moode/libupnpp_0.21 raspbian/libmicrohttpd_0.9.72-2 raspbian/libjsoncpp_1.9.4-5 python/bottle"
+PKG_DEPS="moode/libupnpp_0.21 raspbian/libmicrohttpd_0.9.75-3 raspbian/libjsoncpp_1.9.4-5 python/bottle"
 PKG_POSTBUILD="mkdir -p ${PKG_PKGPATH}/lib/systemd/system
 	cp \${PKG_SRCPATH}/systemd/upmpdcli.service ${PKG_PKGPATH}/lib/systemd/system/
 	mkdir -pv ${PKG_PKGPATH}/var/cache/upmpdcli/ohcreds

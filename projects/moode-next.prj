@@ -64,7 +64,7 @@ prepare_sysroot
 setup_gcc
 setup_llvm
 setup_rust
-setup_python 3.9.8
+setup_python 3.9.12
 
 #create_key_sscertificate
 generate_ssh_keys --install binaries
@@ -78,8 +78,8 @@ build raspberrypi/raspi-config
 build raspberrypi/raspberrypi-sys-mods
 build raspberrypi/raspberrypi-net-mods
 build moode/alsa-utils_1.2
-build raspbian/iw_5.9-3
-build firmwares/wireless-regdb_2021.08.28
+build raspbian/iw_5.16-1
+build firmwares/wireless-regdb
 build raspbian/hostapd_2.9.0
 build raspbian/wpa_supplicant_2.9.0
 build moode/mediainfo_21.09

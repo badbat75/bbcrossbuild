@@ -1,12 +1,13 @@
-# zstd_1.4.8+dfsg-3+rpi1
-PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libz/libzstd/libzstd_1.4.8%2Bdfsg.orig.tar.xz"
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libz/libzstd/libzstd_1.4.8%2Bdfsg-3%2Brpi1.debian.tar.xz"
+# zstd_1.4.9+dfsg-1+rpi1
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libz/libzstd/libzstd_1.4.9%2Bdfsg.orig.tar.xz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libz/libzstd/libzstd_1.4.9%2Bdfsg-1%2Brpi1.debian.tar.xz"
 #PKG_CFLAGS="-DZ_SOLO"
 #PKG_LDFLAGS=
 BUILD_PROCESS=simplemake
 INST_CMD="install"
-PKG_DEPS="raspbian/lz4_1.9.3-1+rpi1"
+PKG_DEPS="raspbian/lz4_1.9.3-2"
 PKG_MAKETARGETS="default"
 PKG_MAKEVARS="PREFIX=${BUILD_PREFIX} libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
 
 # Note: Build-Depends: d-shlibs, debhelper-compat (= 13), help2man, liblz4-dev, liblzma-dev, zlib1g-dev
+

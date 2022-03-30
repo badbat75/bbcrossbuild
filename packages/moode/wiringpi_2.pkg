@@ -1,6 +1,6 @@
-# wiringpi
-PKG_SUFFIX=".20211223"
-PKG_URL="https://github.com/WiringPi/WiringPi/archive/5de0d8f5739ccc00ab761639a7e8d3d1696a480a.tar.gz"
+# wiringpi_2
+PKG_SUFFIX=".61-1"
+PKG_URL="https://github.com/WiringPi/WiringPi/archive/refs/tags/2${PKG_SUFFIX}.tar.gz"
 PATCHES="wiringpi-makefiles.patch"
 BUILD_PROCESS=simplemake
 INST_CMD=install

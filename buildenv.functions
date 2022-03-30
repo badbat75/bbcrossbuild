@@ -909,7 +909,6 @@ function setup_python () {
 		make
 		make install
 		${BUILD_PYTHON} ${TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py
-		#pip${PYTHONBIN_VER} install meson ninja
 		cd ${START_PWD}
 		rm -rf ${TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
 		set +x
@@ -927,7 +926,7 @@ function setup_python () {
 		${BUILD_PYTHONPIP} install crossenv
 		${BUILD_PYTHON} -m crossenv ${HOST_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH}
 		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate
-		build-python -m pip install --upgrade cython setuptools wheel 2>&1
+		build-python -m pip install --upgrade cython setuptools==60.10.0 wheel 2>&1
 		mkdir -p ${TOOLCHAIN_BLDPATH}/build_python_crossenv
 		pushd ${TOOLCHAIN_BLDPATH}/build_python_crossenv
 		TOOLCHAIN=gnu create_environment_source

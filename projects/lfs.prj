@@ -80,7 +80,7 @@ build lfs/usb-utils_013
 build lfs/lsof_4.91
 ### Network
 build lfs/dhcp_4.4.2
-build firmwares/wireless-regdb_2021.08.28
+build firmwares/wireless-regdb
 build lfs/wpa_supplicant_2.9.0
 build lfs/iw_5.9
 build lfs/wireless-tools_29

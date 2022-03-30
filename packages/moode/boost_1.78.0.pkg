@@ -1,4 +1,4 @@
 # boost_1.78.0
 PKG_URL="https://boostorg.jfrog.io/artifactory/main/release/1.78.0/source/boost_1_78_0.tar.gz"
-PKG_DEPS="raspbian/zstd_1.4.8+dfsg-3+rpi1"
+PKG_DEPS="raspbian/zstd_1.4.9+dfsg-1+rpi1"
 BUILD_PROCESS=boostbuild

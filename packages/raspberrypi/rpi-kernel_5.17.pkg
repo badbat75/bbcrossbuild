@@ -1,6 +1,6 @@
 # rpi-kernel_5.17
-PKG_SUFFIX=
-PKG_URL="https://github.com/raspberrypi/linux/archive/45ac0f75d167f1050f7c823efc3c66c7203f6b31.tar.gz"
+PKG_SUFFIX=.1
+PKG_URL="https://github.com/raspberrypi/linux/archive/5b75d7c60a8102366474dd45339ca9be21eec554.tar.gz"
 BUILD_PROCESS=kernelbuild
 INST_CMD="INSTALL_MOD_STRIP=1"
 
