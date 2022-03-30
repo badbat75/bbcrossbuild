@@ -119,11 +119,17 @@ PKG_POSTBUILD="
 	chmod -R 0755  ${PKG_PKGPATH}/usr/local/bin
 	# # chmod -R ug-s /var/local/www
 
-	mkdir -pv postinst_scripts
-	cp ${SRC_PATH}/moode-pkgbuild/packages/moode-player/postinstall.sh postinst_scripts/99_moode_player
-	sed -i '/PKG_VERSION/ s/x.x.x/${MOODEVER}/' postinst_scripts/99_moode_player
-	sed -i 's/systemctl st/# systemctl st/g' postinst_scripts/99_moode_player
-	cp -rv postinst_scripts ${PKG_PKGPATH}/
+	mkdir -pv ${PKG_PKGPATH}/etc/runonce.d/
+	cat <<-EOFM > ${PKG_PKGPATH}/etc/runonce.d/alsaequal
+		mkdir -p /opt/alsaequal
+		amixer -D alsaequal > /dev/null
+		chown mpd:audio /opt/alsaequal/alsaequal.bin
+	EOFM
+
+	mkdir -pv ${PKG_PKGPATH}/postinst_scripts
+	cp ${SRC_PATH}/moode-pkgbuild/packages/moode-player/postinstall.sh ${PKG_PKGPATH}/postinst_scripts/99_moode_player
+	sed -i '/PKG_VERSION/ s/x.x.x/${MOODEVER}/' ${PKG_PKGPATH}/postinst_scripts/99_moode_player
+	sed -i 's/systemctl st/# systemctl st/g' ${PKG_PKGPATH}/postinst_scripts/99_moode_player
 "
 
 PKG_POSTINSTALL_PRIO=51

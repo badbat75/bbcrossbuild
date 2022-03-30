@@ -1,10 +1,3 @@
 # moode-pkgbuild
 PKG_URL="https://github.com/moode-player/pkgbuild/archive/004475c5f3c9f9e699cfae23537579a4eeac9dec.tar.gz"
 BUILD_PROCESS=downloadonly
-PKG_PREBUILD="mkdir -p ${PKG_PKGPATH}/etc/runonce.d/
-	cat <<-EOFM > ${PKG_PKGPATH}/etc/runonce.d/alsaequal
-		mkdir -p /opt/alsaequal
-		amixer -D alsaequal > /dev/null
-		chown mpd:audio /opt/alsaequal/alsaequal.bin
-	EOFM
-	"
