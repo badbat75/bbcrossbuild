@@ -11,7 +11,7 @@ function check_build_functions () {
 	fi
 }
 
-function settoolflags () {
+function setbuildenv () {
 	if [ ${HARCH} != ${BARCH} ]
 	then
 		export CROSS_COMPILING=yes
@@ -30,55 +30,353 @@ function settoolflags () {
 	export QEMU_LD_PREFIX="${BIN_PATH}"
 	if [ ${MULTI_ARCH} -eq 1 ]
 	then
-		export BUILD_LIBSUFFIX="/${HARCH}"
+		BUILD_LIBSUFFIX="/${HARCH}"
 	fi
 	BUILD_LIBSHARED=${BUILD_LIBSHARED:-1}
 	BUILD_LIBSTATIC=${BUILD_LIBSTATIC:-1}
-
 	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
-	PLATFORM_RUSTFLAGS="${HMARCH_RUST:+-C target-feature=${HMARCH_RUST} }${HMCPU:+-C target-cpu=${HMCPU}}"
-	COMMON_CFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
-	COMMON_CXXFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
-	COMMON_FCFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
-	COMMON_CPPFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
+	PLATFORM_RUSTFLAGS="${HMCPU:+-C target-cpu=${HMCPU}}${HMARCH_RUST:+ -C target-feature=${HMARCH_RUST} }"
+
+	case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
+		gnu) local SYSINCLUDE_OPT="-isystem";;
+		llvm|*) local SYSINCLUDE_OPT="-I";;
+	esac
+
+	COMMON_CFLAGS="${SYSINCLUDE_OPT}${BIN_PATH}${BUILD_INCLUDEDIR}"
+	COMMON_CXXFLAGS="${SYSINCLUDE_OPT}${BIN_PATH}${BUILD_INCLUDEDIR}"
+	COMMON_FCFLAGS="${SYSINCLUDE_OPT}${BIN_PATH}${BUILD_INCLUDEDIR}"
+	COMMON_CPPFLAGS="${SYSINCLUDE_OPT}${BIN_PATH}${BUILD_INCLUDEDIR}"
 	COMMON_LDFLAGS="-Wl,-rpath-link,${BIN_PATH}/lib${BUILD_LIBSUFFIX} -L${BIN_PATH}/lib${BUILD_LIBSUFFIX}"
 	COMMON_LDFLAGS+=" -Wl,-rpath-link,${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -L${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
 	COMMON_PKG_CONFIG_LIBDIR="${BIN_PATH}/lib${BUILD_LIBSUFFIX}/pkgconfig"
 	COMMON_PKG_CONFIG_LIBDIR+=":${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig:${BIN_PATH}${BUILD_PREFIX}/share/pkgconfig"
 	COMMON_PKG_CONFIG_SYSROOT="${BIN_PATH}"
+	local SYSROOT_GCCVER=
 	# Construct build tools flags
 	# Build Include search paths
-	if [ -d ${DISTOS_PATH}/usr/include ]
+	if [ -d ${DISTOS_PATH}${BUILD_INCLUDEDIR} ]
 	then
-		COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include${BUILD_LIBSUFFIX}}"
-		COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CXXFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include${BUILD_LIBSUFFIX}}"
-		COMMON_FCFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CXXFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include${BUILD_LIBSUFFIX}}"
-		COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include ${STD_CPPFLAGS} ${HARCH:+-I${DISTOS_PATH}/usr/include${BUILD_LIBSUFFIX}}"
-		COMMON_LDFLAGS+=" ${STD_LDFLAGS}"
-		COMMON_PKG_CONFIG_LIBDIR+=":${DISTOS_PATH}/usr/lib${BUILD_LIBSUFFIX}/pkgconfig:${DISTOS_PATH}/usr/share/pkgconfig"
+		COMMON_CFLAGS+=" ${SYSINCLUDE_OPT}${DISTOS_PATH}${BUILD_INCLUDEDIR} ${STD_CFLAGS} ${SYSINCLUDE_OPT}${DISTOS_PATH}${BUILD_INCLUDEDIR}${BUILD_LIBSUFFIX}"
+		COMMON_CXXFLAGS+=" ${SYSINCLUDE_OPT}${DISTOS_PATH}${BUILD_INCLUDEDIR} ${STD_CXXFLAGS} ${SYSINCLUDE_OPT}${DISTOS_PATH}${BUILD_INCLUDEDIR}${BUILD_LIBSUFFIX}"
+		COMMON_FCFLAGS+=" ${SYSINCLUDE_OPT}${DISTOS_PATH}${BUILD_INCLUDEDIR} ${STD_CXXFLAGS} ${SYSINCLUDE_OPT}${DISTOS_PATH}${BUILD_INCLUDEDIR}${BUILD_LIBSUFFIX}"
+		COMMON_CPPFLAGS+=" ${SYSINCLUDE_OPT}${DISTOS_PATH}${BUILD_INCLUDEDIR} ${STD_CPPFLAGS} ${SYSINCLUDE_OPT}${DISTOS_PATH}${BUILD_INCLUDEDIR}${BUILD_LIBSUFFIX}"
+		COMMON_LDFLAGS+=" -Wl,-rpath-link,${DISTOS_PATH}/lib${BUILD_LIBSUFFIX} -L${DISTOS_PATH}/lib${BUILD_LIBSUFFIX}"
+		COMMON_LDFLAGS+=" -Wl,-rpath-link,${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -L${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
+		COMMON_PKG_CONFIG_LIBDIR+=":${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig:${DISTOS_PATH}/usr/share/pkgconfig"
 		COMMON_PKG_CONFIG_SYSROOT="${DISTOS_PATH}"
-		SYSROOT_CFLAGS="${DISTOS_PATH:+--sysroot=${DISTOS_PATH}}"
-		SYSROOT_LDFLAGS="${DISTOS_PATH:+-Wl,--sysroot=${DISTOS_PATH}}"
-		export QEMU_LD_PREFIX="${DISTOS_PATH}"
+		# Try to find if gcc libraries are installed and not yet defined in binary dir, if so set search path on that path
+		if [ "${GCC_SYSROOT}" != "${BIN_PATH}" ]
+		then
+			local SYSROOT_GCCVER="$(find ${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/ -mindepth 1 -maxdepth 1 -type d -printf '%P\n' | sort -hr | head -n1)"
+			if [ -n "${SYSROOT_GCCVER}" ]
+			then
+				COMMON_CXXFLAGS+=" -I${DISTOS_PATH}${BUILD_INCLUDEDIR}/c++/${SYSROOT_GCCVER} -I${DISTOS_PATH}${BUILD_INCLUDEDIR}/${HARCH}/c++/${SYSROOT_GCCVER}"
+				COMMON_CPPFLAGS+=" -I${DISTOS_PATH}${BUILD_INCLUDEDIR}/c++/${SYSROOT_GCCVER} -I${DISTOS_PATH}${BUILD_INCLUDEDIR}/${HARCH}/c++/${SYSROOT_GCCVER}"
+				COMMON_LDFLAGS+=" -Wl,-rpath-link,${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER} -L${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
+				case ${TOOLCHAIN} in
+					gnu)
+						local GCC_BINS="$(${HARCH}-gcc -print-search-dirs | grep "^programs" | cut -d '=' -f2 | cut -d ':' -f1)"
+						COMMON_CFLAGS+=" -B${GCC_BINS} -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
+						COMMON_CXXFLAGS+=" -B${GCC_BINS} -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
+						COMMON_LDFLAGS+=" -B${GCC_BINS} -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
+						;;
+				esac			
+			fi
+		fi
+		# Build LDFLAGS search paths
+		#if [ -d ${DISTOS_PATH}/etc/ld.so.conf.d ]
+		#then
+		#	for entry in ${GCCSEARCHLIBS}
+		#	do
+		#		COMMON_LDFLAGS+=" -L$entry -Wl,-rpath-link,$entry"
+		#	done
+		#	for entry in $(cat ${DISTOS_PATH}/etc/ld.so.conf.d/* | grep -v '#' | sort)
+		#	do
+		#		COMMON_LDFLAGS+=" -L${DISTOS_PATH}$entry -Wl,-rpath-link,${DISTOS_PATH}$entry"
+		#	done
+		#fi
+		SYSROOT="${DISTOS_PATH}"
 	else
-		SYSROOT_CFLAGS="${BIN_PATH:+--sysroot=${BIN_PATH}}"
-		SYSROOT_LDFLAGS="${BIN_PATH:+-Wl,--sysroot=${BIN_PATH}}"
+		SYSROOT="${BIN_PATH}"
 	fi
-	# Build LDFLAGS search paths
-	if [ -d ${DISTOS_PATH}/etc/ld.so.conf.d ]
+	SYSROOT_FLAGS="--sysroot=${SYSROOT}"
+}
+
+function setllvmpollyenv () {
+	unset LLVM_EXTRAPOLLYFLAGS
+	unset LLVM_KERNELPOLLYFLAGS
+	unset LLVM_EXTRAPOLLYFLAGSLIBS
+	unset LLVM_KERNELPOLLYFLAGSLIBS
+
+	local OPTIONS="${@}"
+
+	local LIBCLANG_RTBUILTINS="${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
+	#if [ ! -z "${OPTIONS}" ] && [ -f ${LIBCLANG_RTBUILTINS} ]
+
+	case x${HMARCH} in
+		xarmv*)
+				if [[ "${HMARCH}" < "armv7" && "${HMARCH}" != "armv6m" ]]
+				then
+					unset OPTIONS
+				fi
+			;;
+	esac
+
+	case x${HM} in
+		xarm)
+			if [ "${HMFLOATABI}" == "hard" ]
+			then
+				local LLVM_ARCH=armhf
+			else
+				local LLVM_ARCH=arm
+			fi
+			;;
+		*) local LLVM_ARCH=${HM}
+			;;
+	esac
+
+	if [ ! -z "${OPTIONS}" ]
 	then
-		for entry in ${GCCSEARCHLIBS}
+		LLVM_EXTRAPOLLYFLAGS="-mllvm -polly"
+		#### Missing _mulodi4 symbol, skip polly build for kernel 
+		case ${HM} in
+			arm)
+				# Need to add static rtbuiltins libraries to arm link to avoid missing _mulodi4 symbol
+				# but this is not supported in kernel building so we can't set polly for kernel build
+				LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
+				LLVM_KERNELPOLLYFLAGS=
+				;;
+			*)
+				# Normal behaviour
+				LLVM_KERNELPOLLYFLAGS="-mllvm -polly"
+				;;
+		esac
+
+		if [ "$( echo ${OPTIONS} | grep -o "all" )" == "all" ]
+		then
+			local OPTIONS="polly vectorizer parallel"
+		fi 
+		
+		for option in ${OPTIONS}
 		do
-			COMMON_LDFLAGS+=" -L$entry -Wl,-rpath-link,$entry"
-		done
-		for entry in $(cat ${DISTOS_PATH}/etc/ld.so.conf.d/* | grep -v '#' | sort)
-		do
-			COMMON_LDFLAGS+=" -L${DISTOS_PATH}$entry -Wl,-rpath-link,${DISTOS_PATH}$entry"
+			case ${option} in
+				polly)
+					;;
+				vectorizer)
+					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-vectorizer=stripmine"
+					if [ "${HM}" != "arm" ]
+					then
+						LLVM_KERNELPOLLYFLAGS+=" -mllvm -polly-vectorizer=stripmine"
+					fi
+					;;
+				parallel)
+					# polly-parallel not supported in kernel build because libgomp cannot be statically linked to kernel
+					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-parallel"
+					;;
+				*)
+					echo "Error: ${option} not recognized"
+					return 1
+					;;
+			esac
 		done
 	fi
 }
 
-function build () (
+function settcenv () {
+	unset TOOLCHAIN_CC \
+		TOOLCHAIN_CXX \
+		TOOLCHAIN_CPP \
+		TOOLCHAIN_FC \
+		TOOLCHAIN_F90 \
+		TOOLCHAIN_AR \
+		TOOLCHAIN_AS \
+		TOOLCHAIN_NM \
+		TOOLCHAIN_RANLIB \
+		TOOLCHAIN_STRIP \
+		TOOLCHAIN_OBJCOPY \
+		TOOLCHAIN_OBJDUMP \
+		TOOLCHAIN_READELF \
+		TOOLCHAIN_LD \
+		TOOLCHAIN_LINKERFLAGS \
+		TOOLCHAIN_COMPFLAGS \
+		TOOLCHAIN_EXTRA_C_CMD \
+		OPTCOMP_FLAGS \
+		OPTLINK_FLAGS
+
+	local TOOLCHAIN=${PKG_TOOLCHAIN:-${TOOLCHAIN}}
+	echo Toolchain: ${TOOLCHAIN}
+	if [ ${TOOLCHAIN} == llvm ]
+	then
+		if [ -z "${PKG_LLVMPOLLYFEATURES}" ]
+		then
+			setllvmpollyenv ${LLVM_POLLY_FEATURES}
+		else
+			eval "echo 'Override LLVM Polly features: ${PKG_LLVMPOLLYFEATURES}' >> ${LOG_PATH}/${PKG_NAME}.log"
+			setllvmpollyenv ${PKG_LLVMPOLLYFEATURES}
+		fi
+	fi
+	case ${TOOLCHAIN} in
+		gnu)
+			TOOLCHAIN_CC=${HARCH}-gcc
+			TOOLCHAIN_CXX=${HARCH}-g++
+			TOOLCHAIN_CPP=${HARCH}-cpp
+			TOOLCHAIN_FC=${HARCH}-gfortran
+			TOOLCHAIN_F90=${HARCH}-gfortran
+			TOOLCHAIN_AR=${HARCH}-gcc-ar
+			TOOLCHAIN_AS=${HARCH}-as
+			TOOLCHAIN_NM=${HARCH}-gcc-nm
+			TOOLCHAIN_RANLIB=${HARCH}-gcc-ranlib
+			TOOLCHAIN_STRIP=${HARCH}-strip
+			TOOLCHAIN_OBJCOPY=${HARCH}-objcopy
+			TOOLCHAIN_OBJDUMP=${HARCH}-objdump
+			TOOLCHAIN_READELF=${HARCH}-readelf
+			TOOLCHAIN_LD=${GCC_DEFAULT_LD:-gold}
+			if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
+			then
+				TOOLCHAIN_COMPFLAGS="${GNU_EXTRAGCCFLAGS}"
+				TOOLCHAIN_EXTRA_C_CMD="${SYSROOT_FLAGS}"
+		
+			else
+				TOOLCHAIN_COMPFLAGS="${SYSROOT_FLAGS} ${GNU_EXTRAGCCFLAGS}"
+				TOOLCHAIN_EXTRA_C_CMD=""
+			fi
+			TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LD} ${GNU_EXTRALDFLAGS}"
+			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
+				1|2|fat|thin)
+					OPTCOMP_FLAGS+=" -flto=${NPROCS}"
+					OPTLINK_FLAGS+=" -fuse-linker-plugin"
+					;;
+			esac
+			;;
+		llvm)
+			TOOLCHAIN_CC=clang
+			TOOLCHAIN_CXX=clang++
+			TOOLCHAIN_CPP="clang -E"
+			TOOLCHAIN_FC=flang
+			TOOLCHAIN_F90=flang
+			TOOLCHAIN_AR=llvm-ar
+			TOOLCHAIN_AS=llvm-as
+			TOOLCHAIN_NM=llvm-nm
+			TOOLCHAIN_RANLIB=llvm-ranlib
+			TOOLCHAIN_STRIP=llvm-strip
+			TOOLCHAIN_OBJCOPY=llvm-objcopy
+			TOOLCHAIN_OBJDUMP=llvm-objdump
+			TOOLCHAIN_READELF=llvm-readelf
+			TOOLCHAIN_LD=${LLVM_DEFAULT_LD:-lld}
+			if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
+			then
+				TOOLCHAIN_COMPFLAGS="${LLVM_EXTRACLANGFLAGS}"
+				TOOLCHAIN_EXTRA_C_CMD="--target=${HARCH} ${SYSROOT_FLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
+			else
+				TOOLCHAIN_COMPFLAGS="${SYSROOT_FLAGS} ${LLVM_EXTRACLANGFLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
+				TOOLCHAIN_EXTRA_C_CMD="--target=${HARCH}"
+			fi
+			TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LD} -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
+			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
+				1|fat)
+					TOOLCHAIN_COMPFLAGS+=" -flto=full"
+					;;
+				2|thin)
+					TOOLCHAIN_COMPFLAGS+=" -flto=thin"
+					;;
+			esac
+			;;
+	esac
+	case ${TOOLCHAIN_LD} in
+		gold)
+			TOOLCHAIN_LINKERFLAGS+=" -fuse-linker-plugin -Wl,--threads -Wl,--thread-count,${NPROCS}"
+			;;
+		lld)
+			TOOLCHAIN_LINKERFLAGS+=" -Wl,--thinlto-jobs=${NPROCS}"
+			;;
+	esac
+			
+	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+}
+
+function create_environment_source () {
+	settcenv
+	cat <<-EOF > environment.source
+		#################################################################################
+		###### ${PKG_NAME}
+		### Source file with all the environment specified
+		### Tool chain: ${PKG_TOOLCHAIN:-${TOOLCHAIN}}
+		### C Wrapper: ${CCWRAPPER}
+		### Build type: ${BUILD_PROCESS}
+		###### Other environment variables:
+		### DISTOS_PATH=${DISTOS_PATH}
+		### BIN_PATH=${BIN_PATH}
+		### PKG_SRCDIR=${PKG_SRCDIR}
+		### PKG_BLDDIR=${PKG_BLDDIR}
+		#################################################################################
+
+		export CC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+		export CXX='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+		export CPP='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CPP}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+		export FC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_FC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+		export F90='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_F90}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+		export AR='${TOOLCHAIN_AR}'
+		export AS='${TOOLCHAIN_AS}'
+		export NM='${TOOLCHAIN_NM}'
+		export RANLIB='${TOOLCHAIN_RANLIB}'
+		export STRIP='${TOOLCHAIN_STRIP}'
+		export OBJCOPY='${TOOLCHAIN_OBJCOPY}'
+		export OBJDUMP='${TOOLCHAIN_OBJDUMP}'
+		export READELF='${TOOLCHAIN_READELF}'
+		#export LD='${TOOLCHAIN_LD}'
+		export CFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}'
+		export CXXFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}'
+		export CPPFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CPPFLAGS} ${PLATFORM_CFLAGS} ${PKG_CPPFLAGS}'
+		export FFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
+		export F90FLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
+		export LDFLAGS='${TOOLCHAIN_LINKERFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}'
+		export PKG_CONFIG=${HARCH}-pkg-config
+		export PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR}
+		export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}
+		export PKG_CONFIG_ALLOW_CROSS=${PKG_CONFIG_ALLOW_CROSS}
+		export LD_LIBRARY_PATH='${LD_LIBRARY_PATH}'
+		export PATH='${PATH}'
+		export CARGO_HOME=${GLOBAL_TOOLCHAIN_PATH}
+		export RUSTUP_HOME=${GLOBAL_TOOLCHAIN_PATH}/var/rustup
+		export QEMU_LD_PREFIX="${SYSROOT}"
+	EOF
+}
+
+function crossapt () {
+	if [ ! -d ${CACHE_PATH}/apt/state ]
+	then
+		mkdir -pv ${CACHE_PATH}/apt/state
+	fi
+	if [ ! -d ${CACHE_PATH}/dpkg ]
+	then
+		mkdir -pv ${CACHE_PATH}/dpkg
+	fi
+	if [ ! -f ${CACHE_PATH}/status ]
+	then
+		touch -v ${CACHE_PATH}/status
+	fi
+	echo "Updating apt..."
+	apt \
+		-o Dir::Etc="${DISTOS_PATH}/etc/apt" \
+		-o Dir::Cache="${CACHE_PATH}/apt" \
+		-o Dir::State="${CACHE_PATH}/apt/state" \
+		-o Dir::State::status="${CACHE_PATH}/dpkg/status" \
+		-o APT::Sandbox::User="$(whoami)" \
+		update
+	echo "Done"
+	echo running "apt ${@}"
+	apt \
+		-o Dir::Etc="${DISTOS_PATH}/etc/apt" \
+		-o Dir::Cache="${CACHE_PATH}/apt" \
+		-o Dir::State="${CACHE_PATH}/apt/state" \
+		-o Dir::State::status="${CACHE_PATH}/dpkg/status" \
+		-o APT::Sandbox::User="$(whoami)" \
+		${@}
+	echo "Done"
+	echo
+}
+
+function build () {(
 	function downloadsources () {
 		trap 'STATUS=${?}; \
 			set +x; \
@@ -90,14 +388,18 @@ function build () (
 			return 100' SIGINT
 
 		set -x
-		if [ ! -z ${PKG_URL} ]
+		if [ ! -z "${PKG_URL}" ]
 		then
-			if [ ${MAKEDIR:-0} -eq 1 ]
-			then
-				STRIPCOMPONENTS=0 download_uncompress "${PKG_URL}" ${PKG_SRCPATH}
-			else
-				download_uncompress "${PKG_URL}" ${PKG_SRCPATH}
-			fi
+			[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH}
+			for url in ${PKG_URL}
+			do
+				if [ ${MAKEDIR:-0} -eq 1 ]
+				then
+					NODELETEDESTDIR=1 STRIPCOMPONENTS=0 download_uncompress "${url}" ${PKG_SRCPATH}
+				else
+					NODELETEDESTDIR=1 download_uncompress "${url}" ${PKG_SRCPATH}
+				fi
+			done
 		else
 			if [ ! -z ${GIT_URL} ]
 			then
@@ -121,12 +423,14 @@ function build () (
 		trap 'STATUS=${?}; \
 			echo "Fail."; \
 			set +x; \
-			trap - ERR SIGINT; \
+			trap - ERR
+			trap - SIGINT; \
 			#[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH} || true; \
 			return ${STATUS};' ERR
 
 		trap 'set +x; \
-			trap - ERR SIGINT; \
+			trap - ERR
+			trap - SIGINT; \
 			[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH} || true;
 			return 100' SIGINT
 
@@ -183,20 +487,29 @@ function build () (
 	}
 
 	function downloadonly () {
-		return 0
+		set -x
+		if [ -d ${PKG_BLDPATH} ]
+		then
+			cd ${PKG_BLDPATH}
+			create_environment_source
+			source environment.source
+		fi
+		set +x
 	}
 
 	function configmake () {
 		trap 'STATUS=${?}; \
 			set +x; \
+			echo "fail. [configmake]"; \
+			echo; \
 			trap - ERR; \
-			return ${STATUS};' ERR
+			return ${STATUS}' ERR
 		set -x
-		cd ${PKG_SRCPATH}
-		if [ ${AUTOCONF:-1} -eq 1 ]
+		env | grep "^BUILD_"
+		if [ ${AUTOCONF:-0} -eq 1 ]
 		then
 			echo -n "${SPACES}AutoReconf ${PKG_NAME}..."
-			[ ! -z ${AUTOCONF_PATH} ] && cd ${AUTOCONF_PATH}
+			cd ${PKG_SRCPATH}/${AUTOCONF_PATH}
 			[ -d m4 ] && local ACINCLUDE="-Im4" || mkdir m4
 			[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" -I${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal"
 			[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" -I${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
@@ -212,10 +525,10 @@ function build () (
 		fi
 		mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 		cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
-		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+		echo -e "${CONF_CONFIGPARMS}" > configparms
 		if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 		then
-			CONF_FLAGS="--prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --libexecdir=${BUILD_LIBDIR} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} \
+			CONF_FLAGS="--prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} \
 				--with-systemdsystemunitdir=${BUILD_SYSTEMDDIR} --with-systemduserunitdir=${BUILD_USERSYSTEMDDIR} --localstatedir=${BUILD_LOCALSTATEDIR} ${CONF_FLAGS}"
 			CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH} ${CONF_FLAGS}"
 			if [ ${BUILD_LIBSHARED} -eq 1 ]
@@ -231,27 +544,20 @@ function build () (
 				CONF_FLAGS=" --disable-static ${CONF_FLAGS}"
 			fi
 		fi
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-			CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS} ${PKG_CFLAGS}" \
-			CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
-			CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS} ${PKG_CXXFLAGS}" \
-			CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-			CPP="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-cpp ${SYSROOT_CFLAGS}" \
-			CPPFLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS}" \
-			LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-			AR=${HARCH}-gcc-ar \
-			AS=${HARCH}-as \
-			NM=${HARCH}-gcc-nm \
-			RANLIB=${HARCH}-gcc-ranlib \
-			STRIP=${HARCH}-strip \
-			OBJDUMP=${HARCH}-objdump \
-			PKG_CONFIG=${HARCH}-pkg-config \
+		create_environment_source
+		source environment.source
+
+		if [[ "${CONF_CMD}" =~ ^\./.* ]]
+		then
+			eval "${CONF_CMD} ${CONF_FLAGS}"
+		else 
 			eval "${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS}"
+		fi
 		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
 		then
 			for target in ${PKG_MAKETARGETS:-all}
 			do
-				eval "make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}"
+				make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}
 			done
 		fi
 		make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${INST_CMD:-}
@@ -268,55 +574,23 @@ function build () (
 		set -x
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
-		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
+		create_environment_source
+		source environment.source
 		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
 		then
 			for target in ${PKG_MAKETARGETS:-all}
 			do
 				echo "Making ${target}..."
-				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
-				CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
-				CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
-				CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-				FC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gfortran ${SYSROOT_CFLAGS}" \
-				FFLAGS="${COMMON_FFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FFLAGS}" \
-				CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
-				CPPFLAGS="${COMMON_CPPFLAGS}" \
-				LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-				AR=${HARCH}-gcc-ar \
-				AS=${HARCH}-as \
-				NM=${HARCH}-gcc-nm \
-				RANLIB=${HARCH}-gcc-ranlib \
-				STRIP=${HARCH}-strip \
-				OBJDUMP=${HARCH}-objdump \
-				PKG_CONFIG=${HARCH}-pkg-config \
-					eval "make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}"
+				eval "make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}"
 			done
 		fi
-		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
-		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
-		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
-		CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-		FC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gfortran ${SYSROOT_CFLAGS}" \
-		FFLAGS="${COMMON_FFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FFLAGS}" \
-		CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
-		CPPFLAGS="${COMMON_CPPFLAGS}" \
-		LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-		AR=${HARCH}-gcc-ar \
-		AS=${HARCH}-as \
-		NM=${HARCH}-gcc-nm \
-		RANLIB=${HARCH}-gcc-ranlib \
-		STRIP=${HARCH}-strip \
-		OBJDUMP=${HARCH}-objdump \
-		PKG_CONFIG=${HARCH}-pkg-config \
-			eval "make ${PKG_MAKEVARS} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}"
+		eval "make ${PKG_MAKEVARS} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}"
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
 	}
 
-	function cmakemake () {
+	function cmakebuild () {
 		trap 'STATUS=${?}; \
 		set +x; \
 		trap - ERR; \
@@ -325,7 +599,6 @@ function build () (
 		set -x
 		mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 		cd ${PKG_BLDPATH}
-		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ ${BUILD_LIBSHARED} -eq 1 ]
 		then
 			CONF_FLAGS+=" -DBUILD_SHARED_LIBS=ON"
@@ -338,34 +611,22 @@ function build () (
 		else
 			CONF_FLAGS+=" -DBUILD_STATIC_LIBS=OFF"
 		fi
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-		PKG_CONFIG=${HARCH}-pkg-config \
+		create_environment_source
+		source environment.source
 		cmake ${PKG_SRCPATH} \
+			-G Ninja \
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DTOOLCHAIN_PREFIX=${HARCH}- \
 			-DCMAKE_CROSSCOMPILING="TRUE" \
-			-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \
-			-DCMAKE_C_COMPILER="${HARCH}-gcc" \
-			-DCMAKE_C_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
-			-DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \
-			-DCMAKE_CXX_COMPILER="${HARCH}-g++" \
-			-DCMAKE_CXX_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-			-DCMAKE_CPP_COMPILER="${HARCH}-cpp" \
-			-DCMAKE_CPP_FLAGS="${SYSROOT_CFLAGS} ${COMMON_CPPFLAGS}" \
-			-DCMAKE_EXE_LINKER_FLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-			-DCMAKE_AR=${TOOLCHAIN_PATH}/bin/${HARCH}-gcc-ar \
-			-DCMAKE_NM=${HARCH}-gcc-nm \
-			-DCMAKE_CC_COMPILER_RANLIB=${HARCH}-gcc-ranlib \
-			-DCMAKE_CXX_COMPILER_RANLIB=${HARCH}-gcc-ranlib \
-			-DCMAKE_STRIP=${HARCH}-strip \
 			-DCMAKE_INSTALL_PREFIX=${BUILD_PREFIX} \
 			-D${VAR_INSTALL_LIBDIR:-"LIB_INSTALL_DIR"}=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
 			-D${VAR_INSTALL_LIBSUFFIX:-"LIB_SUFFIX"}=${BUILD_LIBSUFFIX} \
 			-D${VAR_INSTALL_INCDIR:-"INCLUDE_INSTALL_DIR"}=${BUILD_INCLUDEDIR} \
 			-D${VAR_INSTALL_CONFDIR:-"SYSCONF_INSTALL_DIR"}=${BUILD_SYSCONFDIR} \
 			${CONF_FLAGS}
-		make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0}
-		make ${PKG_MAKEVARS} VERBOSE=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${INST_CMD}
+		local NINJA_FLAGS="-j${NPROCS}$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v')"
+		ninja ${NINJA_FLAGS} ${PKG_MAKEVARS}
+		DESTDIR=${PKG_PKGPATH} ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} ${INST_CMD:-install}
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -387,7 +648,6 @@ function build () (
 				echo
 			}
 			set +x
-			OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 			if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 			then
 				CONF_FLAGS+=" --prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR}"
@@ -400,36 +660,28 @@ function build () (
 					CONF_FLAGS+=" --default-library=shared"
 				fi
 			fi
-			[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-			local CC="${HARCH}-gcc"
-			local CFLAGS="${SYSROOT_CFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}"
-			local CXX="${HARCH}-g++"
-			local CXXFLAGS="${SYSROOT_CFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-			local FC=${HARCH}-gfortran
-			local FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FFLAGS}"
-			local CPP=${HARCH}-cpp
-			local CPPFLAGS="${COMMON_CPPFLAGS}"
-			local LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}"
-			local AR=${HARCH}-gcc-ar
-			local NM=${HARCH}-gcc-nm
-			local RANLIB=${HARCH}-gcc-ranlib
-			local STRIP=${HARCH}-strip
+			local C=$(buildmesonargs "${CC}")
 			local C_ARGS=$(buildmesonargs "${CFLAGS}")
+			local CPP=$(buildmesonargs "${CXX}")
 			local CPP_ARGS=$(buildmesonargs "${CXXFLAGS}")
+			local FORTRAN=$(buildmesonargs "${FC}")
 			local FORTRAN_ARGS=$(buildmesonargs "${FFLAGS}")
 			local C_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
 			local CPP_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
 			local FORTRAN_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
 			cat > cross-${PLATFORM_NAME} <<-EOF
 				[binaries]
-				c = '${CC}'
-				cpp = '${CXX}'
-				fortran = '${FC}'
+				c = [${C}]
+				c_ld = '$(echo ${LD} | sed "s/ld.//;s/${HARCH}-//" )'
+				cpp = [${CPP}]
+				cpp_ld = '$(echo ${LD} | sed "s/ld.//;s/${HARCH}-//" )'
+				fortran = [${FORTRAN}]
 				ar = '${AR}'
 				strip = '${STRIP}'
 				nm = '${NM}'
 				ranlib = '${RANLIB}'
-				pkgconfig = '${HARCH}-pkg-config'
+				pkgconfig = '${PKG_CONFIG}'
+				exe_wrapper = 'qemu-${HM}-static'
 
 				[host_machine]
 				system = '${HOS}'
@@ -449,23 +701,22 @@ function build () (
 		}
 
 		trap 'STATUS=${?}; \
-		set +x; \
-		trap - ERR; \
-		return ${STATUS};' ERR
-		set -x
+			set +x; \
+			trap - ERR; \
+			echo "fail. [mesonninja - ${PKG_NAME}]"; \
+			echo; \
+			return ${STATUS}' ERR
 
+		set -x
 		mkdir -p ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
-		local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n '-v')"
+		create_environment_source
+		source environment.source
 		createmesoncross
-		CMAKE=cmake \
-		PKG_CONFIG=${HARCH}-pkg-config \
-		meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release --strip -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} \
-			--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-			--includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} \
-			${CONF_FLAGS}
-		ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH}
-		DESTDIR=${PKG_PKGPATH} ninja ${NINJA_FLAGS} -C ${PKG_BLDPATH} install
+		meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS}
+		local NINJA_FLAGS="-j${NPROCS}$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v')"
+		ninja ${NINJA_FLAGS} ${PKG_MAKEVARS}
+		DESTDIR=${PKG_PKGPATH} ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} ${INST_CMD:-install}
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -480,23 +731,25 @@ function build () (
 	
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
-		OPTCOMP_FLAGS+="${OPTLEVEL:+ -C opt-level=${OPTLEVEL}}"
+		create_environment_source
+		source environment.source
 		local CARGO_BIN=${CARGO_BIN:-${BUILD_EXECPREFIX}/bin}
 		local CARGO_LIB=${CARGO_LIB:-${BUILD_LIBDIR}${BUILD_LIBSUFFIX}}
-		[ ${CARGO_STRIP:-0} -eq 1 ] && local STRIP_FLAG=-s
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_RUSTFLAGS+=" -C lto"
-		cat > ${HARCH}-gcc <<-EOF
-			#!/bin/bash
-			echo "$(which ${HARCH}-gcc) \${@} ${STRIP_FLAG} ${SYSROOT_CFLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS}" >> ${LOG_PATH}/${PKG_NAME}.log
-			exec $(which ${HARCH}-gcc) \${@} ${STRIP_FLAG} ${SYSROOT_CFLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS}
-			return \${?}
-		EOF
-		chmod +x ${HARCH}-gcc
 		local CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
-		RUSTFLAGS="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} \
-			-C linker=${PKG_BLDPATH}/${HARCH}-gcc ${PKG_RUSTFLAGS}" \
-		PKG_CONFIG=${HARCH}-pkg-config \
-			cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}
+		export CARGO_PROFILE_RELEASE_OPT_LEVEL=${OPTLEVEL}
+		case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
+			1|fat) export CARGO_PROFILE_RELEASE_LTO=fat
+				;;
+			2|thin)	export CARGO_PROFILE_RELEASE_LTO=thin
+				;;
+		esac
+		for param in $(echo ${TOOLCHAIN_EXTRA_C_CMD} ${SYSROOT_FLAGS} ${STRIP_FLAG} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS} ${TOOLCHAIN_LINKERFLAGS} ${PKG_LDFLAGS})
+		do
+			export RUSTFLAGS+=" -C link-arg=${param}"
+		done
+		export RUSTFLAGS+=" ${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}"
+		echo "RUSTFLAGS=${RUSTFLAGS}"
+		cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}
 		for file in ${CARGO_BINLIST}
 		do
 			if [ ! -d ${PKG_PKGPATH}${CARGO_BIN} ]
@@ -518,61 +771,147 @@ function build () (
 		trap - ERR
 	}
 
-	function kernelbuild () {
-		function make4kern () {
-			env
-			set -x
-			if [ ${KERN_LTOENABLE:-0} -eq 1 ] 
-			then
-				KERN_OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-				KBUILD_BUILD_TIMESTAMP='' make V=${MAKEVERBOSE:-0} \
-				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
-				LD="scripts/gcc-ld" \
-				AR="${HARCH}-gcc-ar" \
-				RANLIB="${HARCH}-gcc-ranlib" \
-				KCFLAGS="${PKG_CFLAGS}" \
-				KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-				LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-				ARCH=${KERN_ARCH} \
-				CROSS_COMPILE=${HARCH}- \
-				EXTRAVERSION=${KERN_EXTRAVERSION} \
-				${EXTRA_PARMS} \
-				DISABLE_LTO=-fno-lto \
-				${@} ${PKG_MAKEVARS}
-				local STATUS=${?}
-			else
-				KBUILD_BUILD_TIMESTAMP='' make V=${MAKEVERBOSE:-0} \
-				CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc" \
-				KCFLAGS="${PKG_CFLAGS}" \
-				KBUILD_LDFLAGS="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-				LDFLAGS_MODULE="${KERN_OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-				ARCH=${KERN_ARCH} \
-				CROSS_COMPILE=${HARCH}- \
-				EXTRAVERSION=${KERN_EXTRAVERSION} \
-				${EXTRA_PARMS} \
-				${@} ${PKG_MAKEVARS}
-				local STATUS=${?}
-			fi
-			set x
-			return ${STATUS}
-		}
+	function kernelmodbuild () {
 		trap 'STATUS=${?}; \
 		set +x; \
 		trap - ERR; \
 		return ${STATUS};' ERR
 
 		set -x
-		unset PKG_CONFIG_LIBDIR
-		unset PKG_CONFIG_SYSROOT_DIR
 
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
-		KERN_VER=$(make kernelversion)
 
+		#local PKG_KERNEL_NAME="$( basename ${PKG_DEPS} )"
+		#local PKG_KERNEL_SUFFIX="$( cat ${PKG_PATH}/${PKG_DEPS}.pkg | grep "PKG_SUFFIX=" | cut -d"=" -f2 )"
+		#local PKG_KERNEL_BLDDIR="${PKG_KERNEL_NAME}${PKG_KERNEL_SUFFIX}"
+		#local PKG_KERNEL_BLDPATH="${BLD_PATH}/${PKG_KERNEL_BLDDIR}"
+		#local PKG_KERNEL_VERSION="$(cd ${PKG_KERNEL_BLDPATH}; ./make4kern.sh kernelversion)"
+
+		if [ ! -f "${PKG_BLDPATH}/Makefile" ]
+		then
+			cat <<-EOF > "${PKG_BLDPATH}/Makefile"
+				KDIR:=${PKG_KERNEL_BLDPATH}
+				KMOD:=${PKG_BLDPATH}
+				obj-m:=${PKG_KERNEL_MOD}.o
+				${PKG_KERNEL_MOD}-y:=
+			EOF
+		fi
+
+		if [ ${PKG_KERNEL_LOCALBUILD:-0} -eq 0 ]
+		then
+			local BUILD_OPTION="-C ${PKG_KERNEL_BLDPATH} "
+		fi
+
+		eval KCFLAGS=\"${PKG_CFLAGS}\" ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} modules
+		eval ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} INSTALL_MOD_PATH=${PKG_PKGPATH} INSTALL_MOD_DIR=${PKG_KERNEL_MODPATH} ${INST_CMD:-modules_install}
+		rm -f ${PKG_PKGPATH}/lib/modules/*/modules.*
+
+		mkdir -pv ${PKG_PKGPATH}/postinst_scripts
+		cat <<-EOF > ${PKG_PKGPATH}/postinst_scripts/49_kernmodpost
+			depmod -a ${PKG_KERNEL_VERSION}
+		EOF
+
+		cd -
+		set +x
+		trap - ERR
+	}
+
+	function kernelbuild () {
+		function make4kern () {
+			settcenv
+			case ${TOOLCHAIN} in
+				gnu)
+					local HOSTCC=gcc
+					local HOSTCXX=g++
+					local HOSTAR=gcc-ar
+					local HOSTLD=ld.bfd
+					;;
+				llvm)
+					if clang -v 2>&1 > /dev/null && ld.lld -v 2>&1
+					then
+						local HOSTCC=clang
+						local HOSTCXX=clang++
+						local HOSTAR=llvm-ar
+						local HOSTLD=ld.lld
+					else
+						local HOSTCC=gcc
+						local HOSTCXX=g++
+						local HOSTAR=gcc-ar
+						local HOSTLD=ld.bfd
+					fi
+					;;
+			esac
+			cat <<-EOF > make4kern.sh
+				export PATH="${PATH}"
+				export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}"
+				KBUILD_BUILD_TIMESTAMP='' \\
+				make \\
+					V=${MAKEVERBOSE:-0} \\
+					CC="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}" \\
+					LD="$(
+						case ${TOOLCHAIN_LD} in
+							gold|bfd) echo ${HARCH}-ld.bfd;;
+							lld) echo ld.lld;;
+						esac
+						)" \\
+					AS="${TOOLCHAIN_AS}" \\
+					NM="${TOOLCHAIN_NM}" \\
+					AR="${TOOLCHAIN_AR}" \\
+					OBJCOPY="${TOOLCHAIN_OBJCOPY}" \\
+					OBJDUMP="${TOOLCHAIN_OBJDUMP}" \\
+					READELF="${TOOLCHAIN_READELF}" \\
+					STRIP="${TOOLCHAIN_STRIP}" \\
+					KCFLAGS="\${KCFLAGS}${LLVM_KERNELPOLLYFLAGS:+ ${LLVM_KERNELPOLLYFLAGS}}${PKG_CFLAGS:+ ${PKG_CFLAGS}}" \\
+					KBUILD_LDFLAGS="${KERNEL_OPTLINK_FLAGS}${PKG_LDFLAGS:+ ${PKG_LDFLAGS}}" \\
+					ARCH=${KERNEL_ARCH} \\
+					CROSS_COMPILE=${HARCH}- \\
+					HOSTCC="${CCWRAPPER:+${CCWRAPPER} }${HOSTCC}" \\
+					HOSTCXX="${CCWRAPPER:+${CCWRAPPER} }${HOSTCXX}" \\
+					HOSTAR=${HOSTAR} \\
+					HOSTLD=${HOSTLD} \\
+					LLVM_IAS=0 \\
+					EXTRAVERSION=${KERNEL_EXTRAVERSION} \\
+					LOCALVERSION=${KERNEL_LOCALVERSION} \\
+					${EXTRA_PARMS} ${PKG_MAKEVARS} \${@}
+			EOF
+			chmod +x make4kern.sh
+		}
+
+		trap 'STATUS=${?}; \
+			set +x; \
+			trap - ERR; \
+			return ${STATUS};' ERR
+
+		set -x
+
+		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+
+		cd ${PKG_BLDPATH}
+		make4kern
+
+		echo "Build ${PKG_FILE} with extra modules ${PKG_KERNEL_BUILD_MODULES}"
+		echo "Kernel headers only: ${KERNEL_HDRS_ONLY:-1}"
+		# Install headers
+		./make4kern.sh INSTALL_HDR_PATH=${PKG_PKGPATH}${BUILD_PREFIX} headers_install 
+
+		# Break if only headers installation required
+		if [ ${KERNEL_HDRS_ONLY:-0} -eq 1 ]
+		then
+			set +x
+			trap - ERR
+			return
+		fi
+
+		if [ -f arch/${HM}/configs/${KERNEL_DEFCONFIG} ]
+		then
+			cp -v arch/${HM}/configs/${KERNEL_DEFCONFIG} .config
+		else
+			cp -v ${KERNEL_DEFCONFIG} .config
+		fi
 		# Config kernel build
-		make V=${MAKEVERBOSE:-0} ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} ${KERN_DEFCONFIG} .config
 
-		case ${KERN_OPTLEVEL:-null} in
+		case ${KERNEL_OPTLEVEL:-null} in
 			s|S)	scripts/config -e CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3
 			;;
 			2)	scripts/config -d CC_OPTIMIZE_FOR_SIZE -e CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3
@@ -588,54 +927,74 @@ function build () (
 			scripts/config ${CONF_FLAGS}
 		fi
 
-		make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} oldconfig
+		if [ ${TOOLCHAIN} == llvm ]
+		then
+			echo "LTO type: ${KERNEL_LTOENABLE}"
+			case x${KERNEL_LTOENABLE} in
+				x1|xlto)
+					scripts/config -d FTRACE -d KASAN -d GCOV_KERNEL
+					scripts/config -e LTO_CLANG
+					;;
+				x2|xthin)
+					scripts/config -d FTRACE -d KASAN -d GCOV_KERNEL
+					scripts/config -e LTO_CLANG_THIN
+					;;
+			esac
+		fi
+
+		./make4kern.sh olddefconfig
 	
 		if [ ! -d ${PKG_PKGPATH}/boot ]
 		then
 			mkdir -p ${PKG_PKGPATH}/boot
 		fi
 
-		# Install headers
-		make V=${MAKEVERBOSE:-0} ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_HDR_PATH=${PKG_PKGPATH}${BUILD_PREFIX} headers_install 
-
-		# Break if only headers installation required
-		if [ ${KERN_HDRS_ONLY:-0} -eq 1 ]
-		then
-			set +x
-			return ${STATUS}
-		fi
-
 		# Build and install kernel
-		make4kern ${KERN_IMAGE}
-		case ${KERN_NAME}
+		./make4kern.sh ${KERNEL_IMAGE}
+		case ${KERNEL_NAME}
 		in
 			kernel*)
-				cp arch/${KERN_ARCH}/boot/${KERN_IMAGE} ${PKG_PKGPATH}/boot/${KERN_NAME}
+				cp arch/${KERNEL_ARCH}/boot/${KERNEL_IMAGE} ${PKG_PKGPATH}/boot/${KERNEL_NAME}
 				local STATUS=${?}
 				;;
 			*)
 				[ ! -d ${PKG_PKGPATH}/boot ] && mkdir ${PKG_PKGPATH}/boot
-				make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_PATH=${PKG_PKGPATH}/boot ${INST_CMD} install
+				make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_PATH=${PKG_PKGPATH}/boot ${INST_CMD} install
 				;;
 		esac
-
+		
 		# Build and install modules
-		make4kern modules
-		make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_MOD_PATH=${PKG_PKGPATH} ${INST_CMD} modules_install
+		./make4kern.sh modules
+		make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_MOD_PATH=${PKG_PKGPATH} ${INST_CMD} modules_install
 		local KERNELRELEASE=$(cat include/config/kernel.release)
 		rm ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/build
 		rm ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/source
 
 		# Build and install DTBS
-		if [ ${KERN_DTBS:-0} -eq 1 ] && [ ${STATUS} -eq 0 ]
+		if [ ${KERNEL_DTBS:-0} -eq 1 ] && [ ${STATUS} -eq 0 ]
 		then
 			if [ ! -d ${PKG_PKGPATH}/boot/overlays ]
 			then
 				mkdir -p ${PKG_PKGPATH}/boot/overlays
 			fi
-			make4kern dtbs
-			make ${KERN_ARCH:+ARCH=${KERN_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_DTBS_PATH=${PKG_PKGPATH}/boot ${INST_CMD} dtbs_install
+			./make4kern.sh dtbs
+			make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_DTBS_PATH=${PKG_PKGPATH}/boot ${INST_CMD} dtbs_install
 		fi
+
+		#local PKG_KERNEL_NAME="$( basename ${PKG_DEPS} )"
+		#local PKG_KERNEL_SUFFIX="$( cat ${PKG_PATH}/${PKG_DEPS}.pkg | grep "PKG_SUFFIX=" | cut -d"=" -f2 )"
+		#local PKG_KERNEL_BLDDIR="${PKG_KERNEL_NAME}${PKG_KERNEL_SUFFIX}"
+
+		PKG_KERNEL_BLDPATH="${PWD}"
+		PKG_KERNEL_VERSION="$(./make4kern.sh kernelversion)"
+
+		IFS=,
+		for module in ${PKG_KERNEL_BUILD_MODULES}
+		do
+			build --force ${module}
+		done
+		unset IFS
+
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
@@ -670,7 +1029,6 @@ function build () (
 		then
 			COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}"
 		fi
-		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ ${MAKEVERBOSE:-0} -eq 1 ]
 		then
 			local VERBOSE="-v"
@@ -691,28 +1049,10 @@ function build () (
 			fi
 			export PYTHONPATH
 		done
+		create_environment_source
+		source environment.source
 		cross-python -m site
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
-		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
-		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
-		CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-		CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
-		CPPFLAGS="${COMMON_CPPFLAGS} ${PKG_CFLAGS}" \
-		FC=${HARCH}-gfortran \
-		FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
-		F90=${HARCH}-gfortran \
-		F90FLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
-		LD="${HARCH}-ld.gold ${PKG_LDFLAGS}" \
-		LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-		AR=${HARCH}-gcc-ar \
-		AS=${HARCH}-as \
-		NM=${HARCH}-gcc-nm \
-		RANLIB=${HARCH}-gcc-ranlib \
-		STRIP=${HARCH}-strip \
-		OBJDUMP=${HARCH}-objdump \
-		PKG_CONFIG=${HARCH}-pkg-config \
-			eval '${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}'
+		eval '${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}'
 		eval '${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} \
 			${INSTALL_TARGET}'
 		cd ${BB_HOME}
@@ -727,6 +1067,8 @@ function build () (
 		return ${STATUS};' ERR
 
 		set -x
+		mkdir -pv ${PKG_BLDPATH}
+		cd ${PKG_BLDPATH}
 		local PYTHONBIN_VER=$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)
 		local PYTHONBIN_MAJVER=$(echo ${PYTHONBIN_VER} | cut -d'.' -f1,1)
 		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
@@ -747,7 +1089,6 @@ function build () (
 		then
 			COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}"
 		fi
-		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ ${MAKEVERBOSE:-0} -eq 1 ]
 		then
 			local VERBOSE="-v"
@@ -767,39 +1108,22 @@ function build () (
 			fi
 		done
 		#PYTHONUSERBASE="${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
-		export PYTHONPATH
 		#export PYTHONUSERBASE
+		export PYTHONPATH
+		create_environment_source
+		source environment.source
 		cross-python -m site
 		if [ ${PKG_PYTHONBUILD:-1} -eq 1 ]
 		then
 			local PYTHONBUILD="--no-binary :all:"
 		fi
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
 		#build-python -m pip ${VERBOSE} install --upgrade ${PKG_NAME}
-		CC="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc ${SYSROOT_CFLAGS}" \
-		CFLAGS="${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}" \
-		CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS}" \
-		CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}" \
-		CPP="${HARCH}-cpp ${SYSROOT_CFLAGS}" \
-		CPPFLAGS="${COMMON_CPPFLAGS} ${PKG_CFLAGS}" \
-		FC=${HARCH}-gfortran \
-		FFLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
-		F90=${HARCH}-gfortran \
-		F90FLAGS="${SYSROOT_CFLAGS} ${COMMON_FCFLAGS} ${PKG_FCFLAGS}" \
-		LD="${HARCH}-ld.gold ${PKG_LDFLAGS}" \
-		LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}" \
-		AR=${HARCH}-gcc-ar \
-		AS=${HARCH}-as \
-		NM=${HARCH}-gcc-nm \
-		RANLIB=${HARCH}-gcc-ranlib \
-		STRIP=${HARCH}-strip \
-		OBJDUMP=${HARCH}-objdump \
-		PKG_CONFIG=${HARCH}-pkg-config \
-			cross-python -m pip ${VERBOSE} install ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX} ${PKG_NAME}
+		cross-python -m pip ${VERBOSE} install -I ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX} ${PKG_NAME}
 		if [ ${PYTHON_PKGDIR} == dist-packages ]
 		then
 			mv ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages
 		fi
+		cd ${BB_HOME}
 		set +x
 		trap - ERR
 	}
@@ -813,7 +1137,6 @@ function build () (
 		set -x
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
-		OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
 		then
 			COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
@@ -836,24 +1159,28 @@ function build () (
 		fi
 		case ${HM} in
 			arm)
-				local HMABI=aapcs
-				local HMADDRMOD=32
+				local BOOST_ARCH=arm
+				local BOOST_ABI=aapcs
+				local BOOST_ADDRMOD=32
 				;;
 			aarch64)
-				local HMABI=aapcs
-				local HMADDRMOD=64
+				local BOOST_ARCH=arm
+				local BOOST_ABI=aapcs
+				local BOOST_ADDRMOD=64
 				;;
-			i386|ppc32)
-				local HMABI=sysv
-				local HMADDRMOD=32
+			i386)
+				local BOOST_ARCH=x86
+				local BOOST_ABI=sysv
+				local BOOST_ADDRMOD=32
 				;;
-			x86_64|ppc64)
-				local HMABI=sysv
-				local HMADDRMOD=64
+			x86_64)
+				local BOOST_ARCH=x86
+				local BOOST_ABI=sysv
+				local BOOST_ADDRMOD=64
 				;;
-			mips1)
-				local HMABI=o32
-				local HMADDRMOD=32
+			*)
+				echo "Missing architecture mapping for ${HM}"
+				return 1
 				;;
 		esac
 		case ${HOS} in
@@ -861,25 +1188,73 @@ function build () (
 			windows) local HMBINFMT=pe;;
 			macosx|ios) local HMBINFMT=mach-o;;
 		esac
-		[ ${LTOENABLE:-0} -eq 1 ] && OPTCOMP_FLAGS+=" ${COMMON_LTOFLAGS}"
-
-		local PLATFORM_CFLAGS=$(echo ${PLATFORM_CFLAGS} | sed 's/-mtls-dialect=gnu2//g')
-		local CXX="${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++ ${SYSROOT_CFLAGS} ${PKG_CXXFLAGS}"
-		local CXXFLAGS="${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}"
-		local LDFLAGS="${SYSROOT_LDFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}"
-		./bootstrap.sh --prefix=${PKG_PKGPATH}${BUILD_PREFIX} --exec-prefix=${PKG_PKGPATH}${BUILD_EXECPREFIX} --libdir=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${PKG_PKGPATH}${BUILD_INCLUDEDIR} --with-python-version=${PYTHONBIN_VER} &&
-		sed -i "s|using gcc ;|using gcc : : ${CXX} ;|" project-config.jam &&
-		PKG_CONFIG=${HARCH}-pkg-config \
+		case ${TOOLCHAIN} in
+			llvm) local BBTC=clang;;
+			gnu) local BBTC=gcc;;
+		esac
+		create_environment_source
+		source environment.source
+		
+		./bootstrap.sh \
+			--prefix=${PKG_PKGPATH}${BUILD_PREFIX} \
+			--exec-prefix=${PKG_PKGPATH}${BUILD_EXECPREFIX} \
+			--libdir=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+			--includedir=${PKG_PKGPATH}${BUILD_INCLUDEDIR} \
+			--with-python-version=${PYTHONBIN_VER} \
+			--with-toolset=${BBTC}
+		sed -i "s|using ${BBTC} ;|using ${BBTC} : : ${CXX} ;|" project-config.jam &&
 		./b2 -j${NPROCS} -q ${B2_FLAGS} \
-			architecture=${HM} address-model=${HMADDRMOD} binary-format=${HMBINFMT} abi=${HMABI} target-os=${HOS} \
-			toolset=gcc threading=multi cxxflags="-fPIC ${CXXFLAGS}" linkflags="${LDFLAGS}" install
+			architecture=${BOOST_ARCH} binary-format=${HMBINFMT} abi=${BOOST_ABI} target-os=${HOS} \
+			variant=release address-model=${BOOST_ADDRMOD} threading=multi \
+			toolset=${BBTC} cflags="${CFLAGS}" cxxflags="-fPIC ${CXXFLAGS}" linkflags="${LDFLAGS}" install
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
 	}
 
-	trap 'local STATUS=${?}; \
-		echo "fail."; \
+	function builddebpkg () {
+		trap 'STATUS=${?}; \
+		set +x; \
+		trap - ERR; \
+		return ${STATUS};' ERR
+
+		cd $(find ${PKG_BLDPATH} -mindepth 1 -maxdepth 1 -type d)
+		run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get update"
+		run_on_root_dir distos root "DEBIAN_FRONTEND=noninteractive apt-get -y build-dep ${PKG_NAME}"
+		set -x
+		case ${HM} in
+			arm) [ "${HMFLOATABI}" == "hard" ] && local DEBARCH=armhf || local DEBARCH=arm
+			;;
+			aarch64) DEBARCH=arm64
+			;;
+			*) local DEBARCH=${HM}
+			;;
+		esac
+		create_environment_source
+		source environment.source
+		DPKG_ROOT=${DISTOS_PATH} \
+		CONFIG_SITE=${DISTOS_PATH}/etc/dpkg \
+		LD_LIBRARY_PATH+=:${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+		DEB_BUILD_OPTIONS="nocheck noddebs" \
+		DH_OPTIONS="-v --dpkg-shlibdeps-params=--ignore-missing-info" \
+		dpkg-buildpackage \
+			--host-arch=${DEBARCH} \
+			--host-type=${HARCH} \
+			--target-arch=${DEBARCH} \
+			--target-type=${HARCH} \
+			-d -b -uc -us \
+			-Pcross,nocheck \
+			--admindir=${DISTOS_PATH}/var/lib/dpkg
+		cd ..
+		cp -v *.deb ${PKG_PKGPATH}
+		set +x
+		echo "Done"
+		trap - ERR
+	}
+
+	trap 'STATUS=${?}; \
+		trap - ERR; \
+		echo "fail. [build - ${PKG_NAME}]"; \
 		echo; \
 		if [ -f ${LOG_PATH}/${PKG_NAME}.log ]; \
 		then \
@@ -887,77 +1262,104 @@ function build () (
 			echo; \
 			tail -n24 ${LOG_PATH}/${PKG_NAME}.log; \
 		fi; \
-		trap - ERR; \
+		set +x; \
 		return ${STATUS}' ERR
 
-	unset PKG_URL \
-		GIT_URL \
-		GIT_COMMIT \
-		BUILD_PROCESS \
-		STD_CONF_FLAGS \
-		CONF_CMD \
-		CONF_FLAGS \
-		CONF_PATH \
-		INST_CMD \
-		MAKEDIR \
+	unset \
 		AUTOCONF \
 		AUTOCONF_PATH \
-		PATCHDEB \
-		PATCHES \
-		PKG_NAME \
-		PKG_SUFFIX \
-		PKG_SRCDIR \
-		PKG_DEPS \
-		PKG_COPYSRC \
-		PKG_CFLAGS \
-		PKG_CXXFLAGS \
-		PKG_FCFLAGS \
-		PKG_LDFLAGS \
-		PKG_RUSTFLAGS \
-		PKG_MAKETARGETS \
-		PKG_MAKEVARS \
-		PKG_PREBUILD \
-		PKG_POSTBUILD \
-		PKG_TWOSTEPSBUILD \
-		VAR_INSTALL_LIBDIR \
-		VAR_INSTALL_LIBSUFFIX \
-		VAR_INSTALL_INCDIR \
-		VAR_INSTALL_CONFDIR \
+		BUILD_EXECPREFIX \
+		BUILD_INCLUDEDIR \
+		BUILD_LIBDIR \
+		BUILD_LOCALSTATEDIR \
+		BUILD_PREFIX \
+		BUILD_PROCESS \
+		BUILD_SYSCONFDIR \
+		BUILD_SYSTEMDDIR \
+		BUILD_USERSYSTEMDDIR \
 		CARGO_BIN \
 		CARGO_LIB \
 		CARGO_BINLIST \
 		CARGO_LIBLIST \
-		CARGO_STRIP
+		CONF_CMD \
+		CONF_FLAGS \
+		CONF_PATH \
+		CONF_CONFIGPARMS \
+		GIT_URL \
+		GIT_COMMIT \
+		INST_CMD \
+		MAKEDIR \
+		PATCHDEB \
+		PATCHES \
+		PKG_SUFFIX \
+		PKG_SRCDIR \
+		PKG_DEPS \
+		PKG_COPYSRC \
+		PKG_FAULTYCFLAGS \
+		PKG_CFLAGS \
+		PKG_CXXFLAGS \
+		PKG_FCFLAGS \
+		PKG_KERNEL_BUILD_MODULES \
+		PKG_KERNEL_MOD \
+		PKG_KERNEL_MODPATH \
+		PKG_LDFLAGS \
+		PKG_RUSTFLAGS \
+		PKG_LLVMPOLLYFEATURES \
+		PKG_MAKETARGETS \
+		PKG_MAKEVARS \
+		PKG_OVERRIDELTO \
+		PKG_PREBUILD \
+		PKG_POSTBUILD \
+		PKG_POSTINSTALL \
+		PKG_POSTINSTALL_PRIO \
+		PKG_TOOLCHAIN \
+		PKG_TWOSTEPSBUILD \
+		PKG_URL \
+		STD_CONF_FLAGS \
+		VAR_INSTALL_LIBDIR \
+		VAR_INSTALL_LIBSUFFIX \
+		VAR_INSTALL_INCDIR \
+		VAR_INSTALL_CONFDIR \
+		MULTI_ARCH
+
+	OPTS="--force --no_gcc_check --no_save_status --keep_builddir" OPTS_WITH_VALUE="--toolchain --with_extra_modules" param2value "${@}"
+	[ ${_param_v:-0} -eq 1 ] && set -x || true
+	local PKG_FILE="${_param_1}"
+	local GCC_CHECK=${_param_no_gcc_check:-0}
+	local FORCE=${_param_force:-0}
+	local NOSAVESTATUS=${_param_no_save_status:-0}
+	local KEEPBUILDDIR=${_param_keep_builddir:-0}
 
 	if [ -z "${NUMSPACES}" ]
 	then
 		local NUMSPACES=0
 	fi
 	
-	if [ ! -f ${PKG_PATH}/${1}.pkg ]
+	if [ ! -f ${PKG_PATH}/${PKG_FILE}.pkg ]
 	then
-		echo "Package ${1} does not exists."
+		echo "Package ${PKG_FILE} does not exists."
 		echo
+		set +x
+		trap - ERR;
 		return 1
 	fi
-
-	settoolflags
 	
-	local PKG_NAME=$(basename ${1})\${PKG_SUFFIX}
+	local PKG_NAME=$(basename ${PKG_FILE})\${PKG_SUFFIX}
 	local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_NAME}}
 	local PKG_BLDPATH=${BLD_PATH}/${PKG_NAME}
 	local PKG_PKGPATH=${PACKAGES_PATH}/${PKG_NAME}
 
-	source ${PKG_PATH}/${1}.pkg
+	setbuildenv
+	source ${PKG_PATH}/${PKG_FILE}.pkg
+
+	PKG_TOOLCHAIN=${_param_toolchain:-${PKG_TOOLCHAIN}}
+	PKG_KERNEL_BUILD_MODULES="${_param_with_extra_modules:-${PKG_KERNEL_BUILD_MODULES}}"
 
 	eval local PKG_NAME=${PKG_NAME}
 	eval local PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
 	eval local PKG_BLDPATH=${PKG_BLDPATH}
 	eval local PKG_PKGPATH=${PKG_PKGPATH}
-
-	export PKG_CONFIG_LIBDIR=${COMMON_PKG_CONFIG_LIBDIR}
-	export PKG_CONFIG_SYSROOT_DIR=${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}
-
+	
 	echo "Package ${PKG_NAME}"
 
 	if [ ${DEBUG:-0} -gt 0 ]
@@ -974,35 +1376,41 @@ function build () (
 		local NUMSPACES=$((NUMSPACES+1))
 		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
 		echo -n "${SPACES}Requires "
-		#echo "Called from ${1}"
+		#echo "Called from ${PKG_FILE}"
 		build ${deps}
 		local NUMSPACES=$((NUMSPACES-1))
 		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
 	done
 
 
-	if [ -f ${STATUS_PATH}/${PKG_NAME} ]
+	if [ -f ${STATUS_PATH}/${PKG_NAME} ] && [ ${FORCE} -eq 0 ]
 	then
-		if [ "$(md5sum ${PKG_PATH}/${1}.pkg)" == "$(cat ${STATUS_PATH}/${PKG_NAME})" ]
+		if [ "$(md5sum ${PKG_PATH}/${PKG_FILE}.pkg)" == "$(cat ${STATUS_PATH}/${PKG_NAME})" ]
 		then
 			echo "${SPACES}Package ${PKG_NAME} already built."
 			echo
+			set +x
+			trap - ERR
 			return 0
 		else
 			rm -f ${STATUS_PATH}/${PKG_NAME}
-			if [ -d ${PKG_SRCPATH} ]
-			then
-				rm -rf ${PKG_SRCPATH}
-			fi
 		fi
 	fi
 
-	if [ ${OVERRIDE_TARGET_GCC_CHECK:-0} -eq 0 ] && [ "${BUILD_PROCESS}" != "none" ] && [ "${BUILD_PROCESS}" != "downloadonly" ]
+	eval "> ${LOG_PATH}/${PKG_NAME}.log"
+	
+	if [ ${GCC_CHECK} -eq 0 ] && [ "${BUILD_PROCESS}" != "none" ] && [ "${BUILD_PROCESS}" != "downloadonly" ]
 	then
-		check_target_gcc
+		check_${PKG_TOOLCHAIN:-${TOOLCHAIN}}_c
 	fi
+
 	echo -n "${SPACES}"
 	# Build defaults
+	### To manage source path removal at beginning or at the end...
+	#if [ -d ${PKG_SRCPATH} ]
+	#then
+	#	rm -rf ${PKG_SRCPATH}
+	#fi
 	if [ ! -d ${BLD_PATH} ]
 	then
 		mkdir -p ${BLD_PATH}
@@ -1011,12 +1419,22 @@ function build () (
 	then
 		mkdir -p ${BIN_PATH}
 	fi
-	> ${LOG_PATH}/${PKG_NAME}.log
+	echo "Pre build script:" >> ${LOG_PATH}/${PKG_NAME}.log
+	echo "==================" >> ${LOG_PATH}/${PKG_NAME}.log
+	echo "${PKG_PREBUILD}" >> ${LOG_PATH}/${PKG_NAME}.log
+	echo "==================" >> ${LOG_PATH}/${PKG_NAME}.log
+	echo >> ${LOG_PATH}/${PKG_NAME}.log
+	echo "Post build script:" >> ${LOG_PATH}/${PKG_NAME}.log
+	echo "==================" >> ${LOG_PATH}/${PKG_NAME}.log
+	echo "${PKG_POSTBUILD}" >> ${LOG_PATH}/${PKG_NAME}.log
+	echo "==================" >> ${LOG_PATH}/${PKG_NAME}.log
+	echo >> ${LOG_PATH}/${PKG_NAME}.log
 	case x${BUILD_PROCESS} in
 	xpythonpip)
 		if [ ! -z "${PKG_PREBUILD}" ]
 		then
-			(eval "trap 'exit 1' ERR; set -x && ${PKG_PREBUILD} 2>&1 && set +x") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			echo "Running pre build script..." >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			(eval "set -ex; ${PKG_PREBUILD} 2>&1; set +ex") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 		fi
 		if [ ! ${BUILD_PROCESS:-none} == none ]
 		then
@@ -1025,11 +1443,70 @@ function build () (
 		fi
 		if [ ! -z "${PKG_POSTBUILD}" ]
 		then
-			(eval "trap 'exit 1' ERR; set -x && ${PKG_POSTBUILD} 2>&1 && set +x") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			echo "Running post build script..." >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			(eval "set -ex; ${PKG_POSTBUILD} 2>&1; +ex") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 		fi
 		;;
+	xbuilddebpkg)
+		if [ ! -d ${CACHE_PATH}/apt/state ]
+		then
+			mkdir -pv ${CACHE_PATH}/apt/state
+		fi
+		if [ ! -d ${CACHE_PATH}/dpkg ]
+		then
+			mkdir -pv ${CACHE_PATH}/dpkg
+		fi
+		if [ ! -f ${CACHE_PATH}/dpkg/status ]
+		then
+			touch ${CACHE_PATH}/dpkg/status
+		fi
+		if [ ! -d ${CACHE_PATH}/apt/conf ]
+		then
+			mkdir -pv ${CACHE_PATH}/apt/conf
+		fi
+		mkdir -p ${PKG_SRCPATH}
+		cd ${PKG_SRCPATH}
+		echo -n "Downloading ${PKG_NAME}..."
+		(
+		run_on_root_dir distos root "for file in $( find /etc/apt/sources.list.d -type f ) /etc/apt/sources.list; do \
+			sed -i 's/^#deb-src/deb-src/g' \${file}; done"
+		apt-get \
+			-o Dir::Etc="${DISTOS_PATH}/etc/apt" \
+			-o Dir::Cache="${CACHE_PATH}/apt" \
+			-o Dir::State="${CACHE_PATH}/apt/state" \
+			-o Dir::State::status="${CACHE_PATH}/dpkg/status" \
+			-o APT::Sandbox::User="$(whoami)" \
+			update
+		apt-get \
+			-o Dir::Etc="${DISTOS_PATH}/etc/apt" \
+			-o Dir::Cache="${CACHE_PATH}/apt" \
+			-o Dir::State="${CACHE_PATH}/apt/state" \
+			-o Dir::State::status="${CACHE_PATH}/dpkg/status" \
+			-o APT::Sandbox::User="$(whoami)" \
+			-o Binary::apt::APT::Keep-Downloaded-Packages="1" \
+			source ${PKG_NAME}
+		) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		mkdir -pv ${PKG_PKGPATH}
+		if [ ! -z "${PKG_PREBUILD}" ]
+		then
+			(
+			trap 'exit 1' ERR
+			set -x
+			cd $(find ${PKG_SRCPATH} -mindepth 1 -maxdepth 1 -type d)
+			eval "${PKG_PREBUILD}" 2>&1
+			set +x
+			) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		fi
+		if [ -d ${PKG_BLDPATH} ]
+		then
+			rm -rf ${PKG_BLDPATH}
+		fi
+		cp -R ${PKG_SRCPATH} ${PKG_BLDPATH} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		echo -n "Building ${PKG_NAME}..."
+		${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+		;;
 	x*)
-		if [ ! -z ${PKG_URL} ] || [ ! -z ${GIT_URL} ]
+		if [ ! -z "${PKG_URL}" ] || [ ! -z "${GIT_URL}" ]
 		then
 			echo -n "Downloading ${PKG_NAME}..."
 			downloadsources >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
@@ -1045,63 +1522,96 @@ function build () (
 			sudo rm -rf ${PKG_PKGPATH}
 		fi
 		mkdir -p ${PKG_PKGPATH}
-		if [ ! -z "${PKG_PREBUILD}" ]
+		if [ -n "${PKG_PREBUILD}" ]
 		then
-			cd ${PKG_SRCPATH}
-			(eval "trap 'exit 1' ERR; set -x && ${PKG_PREBUILD} 2>&1 && set +x") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			if [ -d ${PKG_SRCPATH} ]
+			then
+				cd ${PKG_SRCPATH}
+			fi
+			echo "Running pre build script..." >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			(eval "set -ex; ${PKG_PREBUILD} 2>&1; set +ex") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 		fi
 		if [ ${PKG_COPYSRC:-0} -eq 1 ] 
 		then
-			cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+			(set -ex; cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH} 2>&1; set +ex) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 		fi
 		if [ ! ${BUILD_PROCESS:-none} == none ]
 		then
-			echo -n "Building ${PKG_NAME}..."
+			echo -n "Building ${PKG_NAME} [${BUILD_PROCESS}]..."
 			${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 		fi
-		if [ ! -z "${PKG_POSTBUILD}" ]
+		if [ -n "${PKG_POSTBUILD}" ]
 		then
 			if [ ! -d ${PKG_BLDPATH} ]
 			then
 				mkdir -p ${PKG_BLDPATH}
 			fi
 			cd ${PKG_BLDPATH}
-			(eval "trap 'exit 1' ERR; set -x && ${PKG_POSTBUILD} 2>&1 && set +x") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			echo "Running post build script..." >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			(eval "set -ex; ${PKG_POSTBUILD} 2>&1; set +ex") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 		fi
 		;;
 	esac
-	if [ ! -d ${STATUS_PATH} ]
-	then
-		mkdir -p ${STATUS_PATH}
-	fi
 	#rm -rf ${PKG_SRCPATH} &&
+
+	if [ -n "${PKG_POSTINSTALL}" ]
+	then
+		mkdir -p ${PKG_PKGPATH}/postinst_scripts
+		echo "${PKG_POSTINSTALL}" > ${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_NAME}
+	fi
+
+	##### Create package
 	case x${BUILD_PROCESS} in
+	xbuilddebpkg)
+			(
+				set -ex
+				pwd
+				if [ ${NOSAVESTATUS} -eq 0 ]
+				then
+					#tar cfp - --owner=0 --group=0 -C ${PKG_PKGPATH} . | xz -T${NPROCS} - > ${PKG_PKGPATH}.tar.xz
+					create_sfx_package ${PKG_PKGPATH}
+				fi
+				sudo rm -rf ${PKG_PKGPATH}
+				set +ex
+			) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			if [ ${KEEPBUILDDIR} -eq 0 ]
+			then
+				rm -rf ${PKG_BLDPATH}
+			fi
+		;;
 		*)
 			(
 				set -ex
 				pwd
-				if [ ${PKG_SAVE_STATUS:-1} -eq 1 ]
+				if [ ${NOSAVESTATUS} -eq 0 ]
 				then
-					tar cJfp ${PKG_PKGPATH}.tar.xz --owner=0 --group=0 -C ${PKG_PKGPATH} .
+					#tar cfp - --owner=0 --group=0 -C ${PKG_PKGPATH} . | xz -T${NPROCS} - > ${PKG_PKGPATH}.tar.xz
+					create_sfx_package ${PKG_PKGPATH}
 				fi
 				rsync -aKv ${PKG_PKGPATH}/ ${BIN_PATH}
 				sudo rm -rf ${PKG_PKGPATH}
 				set +ex
 			) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-			if [ ${KEEP_BUILDDIR:-0} -eq 0 ]
+			if [ ${KEEPBUILDDIR} -eq 0 ]
 			then
 				rm -rf ${PKG_BLDPATH}
 			fi
 		;;
 	esac
-	if [ ${PKG_SAVE_STATUS:-1} -eq 1 ]
+	### Save build status
+	if [ ! -d ${STATUS_PATH} ]
 	then
-		md5sum ${PKG_PATH}/${1}.pkg > ${STATUS_PATH}/${PKG_NAME}
+		mkdir -p ${STATUS_PATH}
 	fi
+	if [ ${NOSAVESTATUS} -eq 0 ]
+	then
+		md5sum ${PKG_PATH}/${PKG_FILE}.pkg > ${STATUS_PATH}/${PKG_NAME}
+	fi
+	set +x
 	echo "Done."
 	echo
 	trap - ERR
-)
+)}
 
 function is_build_functions () {
 	return 0

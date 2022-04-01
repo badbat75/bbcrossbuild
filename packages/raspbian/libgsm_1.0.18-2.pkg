@@ -6,12 +6,15 @@ BUILD_PROCESS=simplemake
 #INST_CMD=install
 PKG_DEPS=
 PKG_MAKEVARS="-j1 INSTALL_ROOT=${PKG_PKGPATH}${BUILD_PREFIX} GSM_INSTALL_LIB=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} GSM_INSTALL_INC=${PKG_PKGPATH}${BUILD_INCLUDEDIR} MULHACK=-DUSE_FLOAT_MUL"
-PKG_CFLAGS="-ansi -pedantic"
+PKG_CFLAGS="-ansi -pedantic -fPIC"
 PKG_PREBUILD="
     sed -i 's/CC		= /CC ?= /' Makefile
     sed -i 's/AR		= /AR ?= /' Makefile   
     sed -i 's/RANLIB	 	= /RANLIB ?= /' Makefile
     sed -i 's/CFLAGS	= /CFLAGS += /' Makefile
+    sed -i 's/CFLAGS	= /CFLAGS += /' Makefile
+    sed -i 's/CFLAGS	= /CFLAGS += /' Makefile
+    sed -i 's/-O2//' Makefile
     mkdir -p ${PKG_PKGPATH}{${BUILD_PREFIX}/bin,${BUILD_LIBDIR}${BUILD_LIBSUFFIX},${BUILD_INCLUDEDIR},${BUILD_PREFIX}/man/man3}
     "
 PKG_POSTBUILD="

@@ -1,0 +1,11 @@
+# mbedtls_2.28.0-1
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/m/mbedtls/mbedtls_2.28.0.orig.tar.gz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/m/mbedtls/mbedtls_2.28.0-1.debian.tar.xz"
+PKG_DEPS=""
+BUILD_PROCESS=cmakebuild
+CONF_FLAGS="-DUSE_SHARED_MBEDTLS_LIBRARY=ON"
+PKG_CFLAGS="-Wno-error=unreachable-code"
+INST_CMD=install/strip
+
+# Note:
+# Dependencies: cmake, doxygen, python

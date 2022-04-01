@@ -1,7 +1,7 @@
 # libmediainfo_21.09
 PKG_URL="https://mediaarea.net/download/source/libmediainfo/21.09/libmediainfo_21.09.tar.xz"
 BUILD_PROCESS=configmake
-AUTOCONF=0
+
 #AUTOCONF_PATH=Project/GNU/Library
 PKG_COPYSRC=1
 CONF_PATH=Project/GNU/Library

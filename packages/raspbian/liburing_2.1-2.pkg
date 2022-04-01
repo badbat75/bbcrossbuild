@@ -1,0 +1,18 @@
+# liburing_2.1-2
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libu/liburing/liburing_2.1.orig.tar.gz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libu/liburing/liburing_2.1-2.debian.tar.xz"
+PKG_COPYSRC=1
+BUILD_PROCESS=configmake
+STD_CONF_FLAGS=0
+CONF_FLAGS="--prefix=${BUILD_PREFIX} \
+	  --includedir=${BUILD_INCLUDEDIR} \
+	  --datadir=/usr/share \
+	  --mandir=/usr/share/man \
+	  --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+	  --libdevdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+	  --cc=\"\${CC}\" \
+      --cxx=\"\${CXX}\""
+INST_CMD=install
+PKG_POSTBUILD="\${STRIP} -s ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/liburing.so.*"
+
+PKG_TOOLCHAIN=gnu

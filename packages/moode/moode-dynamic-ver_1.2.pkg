@@ -7,7 +7,7 @@ else
 fi
 PKG_SRCDIR=moode_${MOODEREL}
 BUILD_PROCESS=downloadonly
-PKG_DEPS="python/RPi.GPIO python/python-musicpd raspbian/zip_3.0-8"
+PKG_DEPS="python/RPi.GPIO python/python-musicpd raspbian/zip_3.0-12"
 if [ ${MOODEINSTALL:-1} -eq 1 ]
 then
 	PKG_PREBUILD="
@@ -172,7 +172,6 @@ then
 		sed -i 's/^BTMAC=.*/BTMAC=00:00:00:00:00:00/' ${PKG_PKGPATH}/usr/local/bin/a2dp-autoconnect
 		echo '### Changes on core configuration files'
 		sed -i 's/listen 80;/listen [::]:80 ipv6only=off;/' ${PKG_PKGPATH}/etc/nginx/nginx.conf
-		#sed -i '/^\/\/\tpipe_name/ s|//||' ${PKG_PKGPATH}/etc/shairport-sync.conf
 		############################################
 		# Changes until moode support bullseye OS  #
 		sed -i 's/php7.3/php7.4/g' ${PKG_PKGPATH}/etc/nginx/nginx.conf

@@ -1,5 +1,5 @@
 MPDMAJVER=0.23
-MPDMINVER=4
+MPDMINVER=6
 MPDVER=${MPDMAJVER}.${MPDMINVER}
 PKG_SUFFIX=.${MPDMINVER}
 
@@ -9,72 +9,79 @@ export BOOST_ROOT=${BIN_PATH}
 export BOOST_INCLUDEDIR=${BIN_PATH}${BUILD_INCLUDEDIR}
 export BOOST_LIBRARYDIR=${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 
-CONF_FLAGS="-Dalsa=enabled -Dbzip2=enabled -Dcurl=enabled -Ddatabase=true -Ddsd=true -Dffmpeg=enabled \
-	-Dfaad=enabled -Dflac=enabled -Dhttpd=true -Did3tag=enabled -Dlame=enabled -Dlibmpdclient=enabled \
-	-Dmad=enabled -Dmpg123=enabled -Dpipe=true -Drecorder=true -Dshout=enabled -Dsoxr=enabled -Dvorbis=enabled \
-	-Dwave_encoder=true -Dwavpack=enabled -Dzeroconf=avahi -Dpcre=enabled -Dzzip=enabled \
-	\
-	-Dao=disabled -Daudiofile=disabled -Ddbus=disabled -Dexpat=disabled -Dfluidsynth=disabled -Dgme=disabled \
-	-Djack=disabled -Dlibsamplerate=disabled -Dnfs=disabled -Doss=disabled -Dpulse=disabled -Dsidplay=disabled \
-	-Dsmbclient=disabled -Dsndfile=disabled -Dsqlite=disabled -Dudisks=disabled -Dupnp=disabled \
-	-Dwildmidi=disabled -Dsoundcloud=disabled -Dqobuz=disabled"
-PKG_DEPS="moode/boost_1.77.0 \
-	moode/libmpdclient-2.19 \
-	moode/alsa-lib_1.2.5.1 \
-	moode/ffmpeg_4.4 \
+CONF_FLAGS="-Dalsa=enabled -Dbzip2=enabled -Dcdio_paranoia=enabled -Dcue=true -Dcurl=enabled -Ddatabase=true -Dexpat=enabled -Dffmpeg=enabled -Dfaad=enabled -Dfifo=true -Dflac=enabled -Dhttpd=true -Dicu=enabled -Did3tag=enabled -Dinotify=true -Dio_uring=enabled -Dipv6=enabled -Diso9660=enabled -Dlame=enabled -Dlibmpdclient=enabled -Dlocal_socket=true -Dmad=enabled -Dmpg123=enabled -Dmpg123=enabled -Dopus=enabled -Dpcre=enabled -Dpipe=true -Drecorder=true -Dshout=enabled -Dsoxr=enabled -Dsqlite=enabled -Dsyslog=enabled -Dsystemd=enabled -Dtcp=true -Dvorbis=enabled -Dvorbisenc=enabled -Dwave_encoder=true -Dwavpack=enabled -Dyajl=enabled -Dzeroconf=avahi -Dzlib=enabled -Dzzip=enabled"
+CONF_FLAGS+=" -Dqobuz=disabled -Dshine=disabled -Dtest=false -Dtremor=disabled -Dtwolame=disabled"
+# Moode changes
+CONF_FLAGS+=" -Ddsd=true -Dneighbor=false -Dupnp=disabled -Dnfs=disabled -Dsmbclient=disabled -Dudisks=disabled -Dwebdav=disabled -Dadplug=disabled -Daudiofile=disabled -Dfluidsynth=disabled -Dgme=disabled -Dmikmod=disabled -Dmodplug=disabled -Dmpcdec=disabled -Dopenmpt=disabled -Dsidplay=disabled -Dsndfile=disabled -Dwildmidi=disabled -Dlibsamplerate=disabled -Dchromaprint=disabled -Dsndio=disabled -Djack=disabled -Dao=disabled -Doss=disabled -Dopenal=disabled -Dpipewire=disabled -Dpulse=disabled -Dsnapcast=false -Dsoundcloud=disabled -Dmms=disabled"
+PKG_DEPS="moode/boost_1.78.0 \
+	moode/alsa-lib_1.2 \
+	moode/faad2_2.10.0 \
+	moode/ffmpeg_4 \
 	moode/lame_3.100 \
-	moode/mpg123_1.29.2 \
 	moode/libmad_0.15.1b \
 	moode/libtwolame_0.4.0 \
-	moode/faad2_2.10.0 \
-	moode/opus_1.3.1 \
+	moode/lame_3.100 \
+	moode/libmpdclient-2.20 \
 	moode/libogg_1.3.5 \
-	moode/libvorbis_1.3.7 \
 	moode/libshout_2.4.3 \
-	raspbian/libsoxr_0.1.3-1 \
-	raspbian/libid3tag_0.15.1b-14 \
-	raspbian/zziplib_0.13.62-3.2~deb9u1 \
-	raspbian/libpcre++_0.9.5-6 \
+	moode/libvorbis_1.3.7 \
+	moode/libwavpack_5.4.0 \
+	moode/mpg123_1.29.2 \
+	moode/opus_1.3.1 \
+	raspbian/flac_1.3.3-2 \
 	raspbian/fmtlib_7.1.3+ds1-6 \
 	raspbian/libcdio-paranoia_10.2+2.0.0-1 \
-	moode/libwavpack_5.4.0"
+	raspbian/libid3tag_0.15.1b-14 \
+	raspbian/libpcre++_0.9.5-6 \
+	raspbian/libsoxr_0.1.3-1 \
+	raspbian/liburing_2.1-2 \
+	raspbian/zziplib_0.13.72+dfsg.1-1.1 \
+	moode/libwavpack_5.4.0 \
+	moode/moode-pkgbuild"
 
-if test_version ${MOODEREL} -ge r750
-then
-	# Patch availability bitmask
-	local SELECTIVE_RESAMPLING=1
-	local SOX_CUSTOM_RECIPE=2
-	# Patch identifier
-	local PATCH_ID=_p0x$(($SELECTIVE_RESAMPLING + $SOX_CUSTOM_RECIPE))
-	# Patch source archive
-	PKG_DEPS+=" moode/moode-dynamic-ver_1.2"
-	PKG_PREBUILD="
-		if [ ! -f mpd.patched ]
-		then
-			patch -p1 < ${SRC_PATH}/moode_${MOODEREL}/other/mpd/_patches/mpd_0.23.xx_selective_resample_mode.patch
-			sed -i \"/version: '0/s/',/$PATCH_ID',/\" meson.build
-			touch mpd.patched
-		fi
-		"
-fi
+# Disabled by moode
+#PKG_DEPS+=" moode/libsndfile_1.0.31 \
+#	raspbian/libmms_0.6.4-3 \
+#	raspbian/libsndfile_1.0.27"
 
-PKG_CXXFLAGS="-Wno-shadow"
-INST_CMD=install-strip
-PKG_POSTBUILD="install -d ${PKG_PKGPATH}/var/lib/mpd
-install -d ${PKG_PKGPATH}/var/lib/mpd/music
-install -d ${PKG_PKGPATH}/var/lib/mpd/playlists
-install -D -m 0644 /dev/null ${PKG_PKGPATH}/var/lib/mpd/state
-install -d ${PKG_PKGPATH}/var/log/mpd
-install -D -m 0644 /dev/null ${PKG_PKGPATH}/var/log/mpd/log
-install -d ${PKG_PKGPATH}/run/mpd
-install -d ${PKG_PKGPATH}/usr/local/bin
-ln -fs /usr/bin/mpd ${PKG_PKGPATH}/usr/local/bin/mpd
-rm -f ${PKG_PKGPATH}/usr/lib/systemd/system/mpd.service
-rm -f ${PKG_PKGPATH}/usr/lib/systemd/system/mpd.socket
-rm -f ${PKG_PKGPATH}/usr/lib/systemd/user/mpd.service
-if test_version ${MOODEREL} -ge r660 && test_version ${MOODEREL} -lt r760
-then
-	install -D ${PKG_PKGPATH}${BUILD_EXECPREFIX}/bin/mpd ${PKG_PKGPATH}/var/local/www/mpd_versions/mpd-${MPDVER}
-	echo \"${MPDVER};${MPDVER} (Default)\" >> ${PKG_PKGPATH}/var/local/www/mpd_versions.conf
-fi
-"
+PKG_PREBUILD="patch -p1 < ${SRC_PATH}/moode-pkgbuild/packages/mpd/mpd_0.23.xx_selective_resample_mode.patch
+	cat <<EOF | patch -p1
+Description: source \\\$MPDCONF from /etc/default/mpd
+Author: Florian Schlichting <fsfs@debian.org>
+Forwarded: not-needed
+
+--- a/systemd/system/mpd.service.in
++++ b/systemd/system/mpd.service.in
+@@ -5,7 +5,8 @@
+ 
+ [Service]
+ Type=notify
+-ExecStart=@prefix@/bin/mpd --systemd
++EnvironmentFile=/etc/default/mpd
++ExecStart=@prefix@/bin/mpd --systemd \\\$MPDCONF
+ 
+ # Enable this setting to ask systemd to watch over MPD, see
+ # systemd.service(5).  This is disabled by default because it causes
+EOF"
+PKG_CXXFLAGS="-I${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/dbus-1.0/include"
+PKG_CXXFLAGS+=" -Wno-shadow"
+INST_CMD=install
+PKG_POSTBUILD="
+mkdir -p ${PKG_PKGPATH}{/etc/default,/var/lib/mpd/{music,playlists},/var/log/mpd,/run/mpd}
+touch ${PKG_PKGPATH}{/var/lib/mpd/state,/var/log/mpd/log}
+	cat > ${PKG_PKGPATH}/etc/default/mpd <<-EOF
+		## Defaults for the MPD init script, sourced by /etc/init.d/mpd on Debian
+		## systems.  Uncomment (remove the leading '#') and change values as needed.
+
+		## If you don't want MPD to be started as a system service (for example, if
+		## you want to run it from a regular user account), disable it using the
+		## command 'update-rc.d mpd disable' (or 'systemctl disable mpd' for systemd).
+
+		## The configuration file location for mpd:
+		# MPDCONF=/etc/mpd.conf
+	EOF"
+
+PKG_POSTINSTALL="useradd -r -M -s /usr/sbin/nologin -G audio -c \"MediaPlayer Daemon\" -d /var/lib/mpd mpd
+chown -R mpd:audio /var/lib/mpd
+chown -R mpd:audio /var/log/mpd
+chown mpd:audio /run/mpd"

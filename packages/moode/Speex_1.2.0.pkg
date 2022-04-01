@@ -1,6 +1,7 @@
 # Speex_1.2.0
 GIT_URL="https://github.com/xiph/speex"
 GIT_COMMIT="tags/Speex-1.2.0"
+AUTOCONF=1
 BUILD_PROCESS=configmake
 PKG_DEPS="moode/SpeexDSP-1.2.0 moode/libogg_1.3.5"
 CONF_FLAGS=""

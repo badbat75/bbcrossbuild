@@ -1,7 +1,0 @@
-# mpc_0.33
-PKG_URL="https://www.musicpd.org/download/mpc/0/mpc-0.33.tar.xz"
-BUILD_PROCESS=mesonninja
-# CONF_FLAGS=""
-INST_CMD=install-strip
-#PKG_DEPS="raspbian/check-0.10.0 moode/libmpdclient-2.19"
-PKG_DEPS="moode/libmpdclient-2.19"

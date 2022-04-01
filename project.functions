@@ -25,7 +25,7 @@ function remove_devfiles () {
 		trap ERR; \
 		return ${STATUS};' ERR
 
-	settoolflags
+	setbuildenv
 	echo -n "Removing development files... "
 	if [ ! -d ${BIN_PATH} ]
 	then
@@ -95,7 +95,7 @@ function resume_devfiles () {
 	trap ERR
 }
 
-function zip_project () {
+function create_sfx_package () {
 	trap 'STATUS=${?}; \
 		echo "fail."; \
 		echo; \
@@ -103,77 +103,76 @@ function zip_project () {
 		trap ERR; \
 		return ${STATUS};' ERR
 
-	if [ "$(echo ${@} | grep -o remove_devfiles)" == "remove_devfiles" ]
-	then
-		remove_devfiles no-exitstatus
-	fi
-	echo -n "Creating compressed file ${PRJ_NAME}.tar.xz... "
-	cd ${BIN_PATH}	
-	[ -f ../${PRJ_NAME}.tar.xz ] && rm -f ../${PRJ_NAME}.tar.xz
-	tar cf ../${PRJ_NAME}.tar --owner=0 --group=0 .
-	cd ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}
-	xz -T0 ${PRJ_NAME}.tar
-	cd ${BB_HOME}
-	if [ "$(echo ${@} | grep -o remove_devfiles)" == "remove_devfiles" ]
-	then
-		resume_devfiles no-exitstatus
-	fi
-	if [ ! "$(echo ${@} | grep -o no-exitstatus)" == "no-exitstatus" ]
-	then
-		echo "done."
-		echo
-	fi
-	trap ERR
-}
+	OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
 
-function create_sfx_archive () {
-	trap 'STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		set +x; \
-		trap ERR; \
-		return ${STATUS};' ERR
+	local PKG_OBJ="${_param_1}"
+	local PKG_NAME="$(basename "${PKG_OBJ}")"
+	local PKG_PKGPATH="$(dirname "${PKG_OBJ}")"
 
-	local ZIP_PARAMS=
-	if [ "$(echo ${@} | grep -o remove_devfiles)" == "remove_devfiles" ]
-	then
-		local ZIP_PARAMS=remove_devfiles
-	fi
-
-	zip_project ${ZIP_PARAMS} no-exitstatus
 	echo -n "Creating self-extracting file ${PRJ_NAME}.sfx... "
-	cat >${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx <<-EOF
-		#!/bin/sh -ex
+	if [ -d "${PKG_OBJ}" ]
+	then
+		tar cfp - --owner=0 --group=0 -C ${PKG_OBJ} . | xz -T${NPROCS} - > ${PKG_OBJ}.tar.xz 
+	fi
+	
+	cat >${PKG_OBJ}.sfx <<-EOF
+		#!/usr/bin/env bash
+		set -e
+		DEV_FILES="--exclude=.${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/*.a --exclude=.${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/*.la --exclude=.${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/cmake"
+		CONF_FILES="--exclude=.${BUILD_SYSCONFDIR}"
+		DEST=
+
 		echo ""
 		echo "Self Extracting Installer"
 		echo ""
+		
+		while (( "\$#" ))
+		do
+			case \${1} in
+				--with-dev)
+					DEV_FILES=
+					;;
+				--with-conf)
+					CONF_FILES=
+					;;
+				--dest)
+					DEST=\${2}
+					shift
+					;;
+				--test)
+					X=t
+					;;
+				-v)
+					V=v
+					;;
+				-d)
+					set -ex
+					;;
+				-h|--help)
+					echo "-h|--help:		This help"
+					echo "--with-dev:		Extract also development files"
+					echo "--with-conf:		Extract also configuration files (overwrite)"
+					echo "--dest <dir>:		Specify destination directory (default:/)"
+					echo "--test:			Does not extract, only test archive"
+					echo "-v:			Verbose output"
+					echo "-d:			Debug output"
+					echo
+					exit 0
+					;;
+			esac
+			shift
+		done
 
 		ARCHIVE=\`awk '/^__ARCHIVE_BELOW__/ {print NR + 1; exit 0; }' \$0\`
-
-	EOF
-	if [ -f ${USERDATA_PATH}/pre.sfx ]
-	then
-		cat ${USERDATA_PATH}/pre.sfx >> ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx
-		rm ${USERDATA_PATH}/pre.sfx
-	fi
-	cat >>${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx <<-EOF
-
-		tail -n+\$ARCHIVE \$0 | tar xJf - -C / --keep-directory-symlink
-
-	EOF
-	if [ -f ${USERDATA_PATH}/post.sfx ]
-	then
-		cat ${USERDATA_PATH}/post.sfx >> ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx
-		rm ${USERDATA_PATH}/post.sfx
-	fi
-	cat >>${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx <<-EOF
-
+		tail -n+\$ARCHIVE \$0 | tar \${X:-x}\${V}Jf - --keep-directory-symlink \${DEV_FILES} \${CONF_FILES} -C \${DEST:-/}
+		set +ex
 		exit 0
 
 		__ARCHIVE_BELOW__
 	EOF
-	cat ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.tar.xz >> ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx
-	chmod +x ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.sfx
+	cat ${PKG_OBJ}.tar.xz >> ${PKG_OBJ}.sfx
+	chmod +x ${PKG_OBJ}.sfx
+	rm ${PKG_OBJ}.tar.xz
 
 	echo "done."
 	echo

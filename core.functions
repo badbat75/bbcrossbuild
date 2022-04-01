@@ -88,7 +88,7 @@ download_uncompress () {
 	# if download file does not exists in database download package
 	if [ -z "${HASH_ROW}" ]
 	then
-		local DOWNLOAD_FILE="$(curl -vLsI -o /dev/null "${URL}" 2>&1 | egrep -i '^< content-disposition:' | tr -d "\n\r" | sed -e 's/^.*filename="\?//;s/".*//')"
+		local DOWNLOAD_FILE="$(curl -k -vLsI -o /dev/null "${URL}" 2>&1 | egrep -i '^< content-disposition:' | tr -d "\n\r" | sed -e 's/^.*filename="\?//;s/".*//')"
 		if [ -z ${DOWNLOAD_FILE} ]
 		then
 			local DOWNLOAD_FILE="$(basename ${URL})"
@@ -105,7 +105,7 @@ download_uncompress () {
 	if [ ! -f "${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}" ]
 	then
 		echo -n "downloading..."
-		curl -LsR -o ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${URL}
+		curl -k -LsR -o ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${URL}
 	fi
 	if [ -d ${DEST_DIR} ] && [ ${NODELETEDESTDIR} -eq 0 ]
 	then
@@ -213,70 +213,83 @@ pause () {
 	echo
 }
 
-BB_HOME=$(dirname $(realpath ${0}))
-NPROCS=$(echo $(nproc)/2+1 | bc)
+pathadd () {
 
-umask 0022
+	### pathadd <PATH|LD_LIBRARY_PATH> <path-name>
 
-if [ -f ${BB_HOME}/bbxb.conf ] ; then source ${BB_HOME}/bbxb.conf ; fi
+	if [ -z "${1}" ]
+	then
+		echo "Variable not defined."
+		return 1
+	fi
 
-# Check platform consistency
-PLATFORM=${BB_HOME}/${PLATFORM_DIR:-platforms}/${PLATFORM_NAME}.conf
-if [ -f ${PLATFORM} ]
-then
-	. ${PLATFORM}
-	HARCH=${HM}-${HOS}-${HLIBC}
-else
-	echo "Platform file ${PLATFORM} does not exists!!! Proceeding as no platform specified."
-	PLATFORM=native
-	HARCH=$(${TOOLCHAIN_CC:-gcc} -dumpmachine)
-	HMARCH=native
-fi
+	if [ -z "${2}" ]
+	then
+		echo "Path not defined."
+		return 1
+	fi
 
-DATA_PATH=${DATA_PATH:-${HOME}/.bbxb}
+	eval "
+	while read sp
+	do
+		if [ \"\${sp}\" == \"\${2}\" ]
+		then
+			#echo "\${2} already found in \${1}"
+			return 0
+		fi
+	done < <(tr ':' '\n' <<< \"\${${1}}\")
 
-GLOBAL_SRC_PATH=${DATA_PATH}/${SRC_DIR:-sources}
-GLOBAL_BLD_PATH=${DATA_PATH}/${BLD_DIR:-builds}
-GLOBAL_LOG_PATH=${DATA_PATH}/${LOG_DIR:-logs}
-GLOBAL_TOOLCHAIN_PATH=${DATA_PATH}/${TOOLCHAIN_DIR:-toolchain}
-DOWNLOAD_PATH=${DATA_PATH}/${DOWNLOAD_DIR:-downloads}
+	if [ -z \"\${${1}}\" ]
+	then
+		export ${1}="\${2}"
+	else
+		export ${1}="\${2}:\${${1}}"
+	fi
+	#echo "\${2} added to \${1}"
+	"
+}
 
-if [ ! -d ${GLOBAL_LOG_PATH} ]
-then
-	mkdir -p ${GLOBAL_LOG_PATH}
-fi
+pathremove () {
 
-PROJECT_PATH=${DATA_PATH}/${PRJ_NAME}
-PLATFORM_PATH=${PROJECT_PATH}/${PLATFORM_NAME}
-DISTOS_PATH=${PLATFORM_PATH}/${DISTOS_DIR:-distos}
-SRC_PATH=${PROJECT_PATH}/${SRC_DIR:-sources}
-BLD_PATH=${PLATFORM_PATH}/${BLD_DIR:-builds}
-test -z ${BIN_DIR} && BIN_DIR="binaries"
-BIN_PATH=${PLATFORM_PATH}/${BIN_DIR}
-LOG_PATH=${PLATFORM_PATH}/${LOG_DIR:-logs}
-STATUS_PATH=${PLATFORM_PATH}/${STATUS_DIR:-status}
-TOOLCHAIN_PATH=${PLATFORM_PATH}/${TOOLCHAIN_DIR:-toolchain}
-DISKIMAGES_PATH=${PLATFORM_PATH}/${DISKIMAGES_DIR:-diskimages}
-USERDATA_PATH=${PROJECT_PATH}/${USERDATA_DIR:-data}
-PACKAGES_PATH=${PLATFORM_PATH}/${PACKAGES_DIR:-packages}
+	### pathremove <PATH|LD_LIBRARY_PATH> <path-name>
 
-if [ ! -d ${LOG_PATH} ]
-then
-	mkdir -p ${LOG_PATH}
-fi
+	if [ -z "${1}" ]
+	then
+		echo "Variable not defined."
+		return 1
+	fi
 
-if [ ! -d ${USERDATA_PATH} ]
-then
-	mkdir -p ${USERDATA_PATH}
-fi
+	if [ -z "${2}" ]
+	then
+		echo "Path not defined."
+		return 1
+	fi
 
-export PATH=${GLOBAL_TOOLCHAIN_PATH}/bin:${TOOLCHAIN_PATH}/bin:${PATH}
-export LD_LIBRARY_PATH=$(gcc -m64 -Xlinker --verbose  2>/dev/null | grep SEARCH | sed 's/SEARCH_DIR("=\?\([^"]\+\)"); */\1\n/g'  | grep -vE '^$' | tr '\n' ':')${TOOLCHAIN_PATH}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
+	local i=1
+	local FPATH=
+	local FOUND=0
 
-PRJ_PATH=${BB_HOME}/${PRJ_DIR:-projects}
-PKG_PATH=${BB_HOME}/${PKG_DIR:-packages}
-PATCH_PATH=${BB_HOME}/${PATCH_DIR:-patches}
-IMG_PATH=${BB_HOME}/${IMG_DIR:-images}
+	eval "
+	while read sp
+	do
+		if [ \"\${sp}\" != \"\${2}\" ]
+		then
+			local FPATH+=\"\$( [ \$i -gt 1 ] && echo \":\" )\${sp}\"
+			let \"i+=1\"
+		else
+			local FOUND=1
+		fi
+	done < <(tr ':' '\n' <<< \"\${${1}}\")
+
+	if [ \${FOUND} -eq 1 ]
+	then
+		export ${1}=\"\${FPATH}\"
+		#echo \"\${2} removed from PATH\"
+	#else
+		#echo \"\${2} not found in PATH\"
+	fi
+	"
+}
 
 is_core_functions () {
 	return 0

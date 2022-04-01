@@ -43,7 +43,7 @@ PKG_COPYSRC=1
 # Define what build process to use
 # downloadonly: it only downloads the package and creates the source directory
 # configmake: it downloads, creates source directory and run a standard configure/make build process
-# cmakemake: it downloads, creates source directory and run a standard cmake/make build process
+# cmakebuild: it downloads, creates source directory and run a standard cmake/make build process
 # mesonninja: it downloads, creates source directory and run a standard meson/ninja build process
 # cargobuild: it downloads, creates source directory and run a standard Rust cargo build process
 # simplemake: it downloads, creates source directory, copy to build directory and run a standard make process
@@ -75,10 +75,10 @@ PKG_CFLAGS="-f<parameter> -W<parameter>"
 PKG_CXXFLAGS="-f<parameter> -W<parameter>"
 PKG_LDFLAGS="-l<library>"
 
-### LTOENABLE:
+### PKG_OVERRIDELTO:
 # Override LTOENABLE environment variable that can be specified at bbxb.conf, project or package level
 # by default (1) if not specified anywhere
-LTOENABLE=0
+PKG_OVERRIDELTO=0
 
 ### PKG_CONFIG_SYSROOT_DIR:
 # Override PKG_CONFIG_SYSROOT_DIR variable that is by default set on DISTOS path

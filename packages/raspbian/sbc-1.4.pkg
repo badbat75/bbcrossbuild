@@ -1,7 +1,9 @@
 #sbc-1.4
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/s/sbc/sbc_1.4.orig.tar.gz"
 BUILD_PROCESS=configmake
+AUTOCONF=1
 CONF_FLAGS="--disable-tester --enable-high-precision"
 INST_CMD=install-strip
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/s/sbc/sbc_1.4-1.debian.tar.xz"
 #PKG_DEPS="raspbian/libsndfile-1.0.27"
+PKG_PREBUILD="rm -f ltmain.sh"

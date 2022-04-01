@@ -26,48 +26,57 @@ PKI_KEY_NAME=badbat75
 PKI_SUBJECT="/C=IT/ST=Bologna/L=Bologna/O=BadBat75 LTD/CN=badbat75/emailAddress=emiliano.desimoni@outlook.com"
 ######
 
+### Specify C Toolkit to use
+# gnu:  gcc, g++, gfortran...
+# llvm: clang, clang++...
+#
+# TOOLCHAIN=gnu
+
 ### Specify boot C compiler (default: gcc)
 # TOOLCHAIN_CC="cc"
+### Default linker for gcc toolchain
+# CC_DEFAULT_LD=gold
+### Default linker for llvm toolchain
+# LLVM_DEFAULT_LD=lld
 
 ### Enable and set if you are using a gcc wrapper like ccache or distcc
 CCWRAPPER="ccache"
 ### Set make verbosity (0 disabled, 1 enabled)
-MAKEVERBOSE=0
-
-### Enable build of native GCC (host compiler) (0 disabled [default], 1 enabled)
-# BUILD_GCCNATIVE=0
-
-###### Common flags and parameters for LTO building
-### Default flags for LTO building
-COMMON_LTOFLAGS="-flto=${NPROCS} -fno-fat-lto-objects -fuse-linker-plugin"
-######
+MAKEVERBOSE=${MAKEVERBOSE:-0}
 
 ###### Application toolchain flags and parameters
 ### Application optimization level (s, 0, 1, 2, 3). Set -O options to compiler
 OPTLEVEL=3
-### Optional gcc compiler flags
-OPTCOMP_FLAGS="-pipe"
-### Optional gcc compiler flags to enable profiling
-#OPTCOMP_FLAGS="${OPTCOMP_FLAGS} -fprofile-generate=/tmp/pgo --coverage"
-#OPTCOMP_FLAGS="${OPTCOMP_FLAGS} -fprofile-use=/tmp/pgo -fprofile-correction -Wno-error=coverage-mismatch -Wno-error=missing-profile"
-### Optional rustc compiler flags
-OPTCOMP_RUSTFLAGS="-C codegen-units=1"
-### Optional gcc-ld linker flags
-OPTLINK_FLAGS="-fuse-ld=gold"
+### Optional C/C++ compiler flags
+# OPTCOMP_FLAGS="-pipe"
+### Optional C/C++ compiler flags to enable profiling
+# OPTCOMP_FLAGS="${OPTCOMP_FLAGS} -fprofile-generate=/tmp/pgo --coverage"
+# OPTCOMP_FLAGS="${OPTCOMP_FLAGS} -fprofile-use=/tmp/pgo -fprofile-correction -Wno-error=coverage-mismatch -Wno-error=missing-profile"
+### Optional RUSTC compiler flags
+# OPTCOMP_RUSTFLAGS=
+### Optional linker flags
 OPTLINK_FLAGS+=" -Wl,-z,relro -Wl,-z,now"
 ### Enable LTO building for the applications (can be set up in the project definition)
+# 0:         Disabled
+# 1 or fat:  Fat LTO
+# 2 or thin: Thin LTO
+###
 # LTOENABLE=1
 ######
 
 ###### Kernel toolchain flags and parameters
 ### Kernel optimization level (s, 0, 1, 2, 3). Set -O options to compiler
-KERN_OPTLEVEL=3
+KERNEL_OPTLEVEL=3
 ### Optional gcc compiler flags
-KERN_OPTCOMP_FLAGS=
+KERNEL_OPTCOMP_FLAGS=
 ### Optional ld linker flags
-KERN_OPTLINK_FLAGS=
+KERNEL_OPTLINK_FLAGS=
 ### Enable LTO building for the kernel (can be set up in the project definition)
-# KERN_LTOENABLE=1
+# 0:         Disabled
+# 1 or fat:  Fat LTO
+# 2 or thin: Thin LTO
+###
+# KERNEL_LTOENABLE=1
 ######
 
 ###### Versions for GCC and its dependencies
@@ -79,15 +88,29 @@ KERN_OPTLINK_FLAGS=
 #ISL_VER=0.24
 ### Kernel optimization level (s, 0, 1, 2, 3). Set -O options to compiler
 GCC_OPTLEVEL=3
-### Optional gcc compiler flags
-GCC_OPTCOMP_FLAGS=
-### Optional ld linker flags
-GCC_OPTLINK_FLAGS="-Wl,-z,relro -Wl,-z,now"
-### Those could break symbol dependencies. Tested on gawk versus ncurses
-#OPTLINK_FLAGS+=" -Wl,--as-needed"
 ### Enable LTO building for GCC and its libraries (can be set up in the project definition)
 # GCC_LTOENABLE=1
+### Bootstrap packages
+# BS_KERNEL_VER=5.16.5
+# BS_GLIBC_VER=2.35
+# BS_LIBXCRYPT_VER=4.4.28
 ######
+
+###### Versions for LLVM and its dependencies
+#LLVM_VER=13.0.1
+######
+
+### Extra flags for GNU or LLVM compilers
+# LLVM_EXTRACLANGFLAGS=
+# LLVM_EXTRALDFLAGS=
+## Enable LLVM Polly Features:
+## polly:            Enable polly
+## vectorizer:     Enable polly vectoralization
+## parallel:         Enable polly parallel
+## all:              Enable all features
+# LLVM_POLLY_FEATURES=
+# GNU_EXTRACOMPFLAGS=
+# GNU_EXTRALDFLAGS=
 
 ###### To be moved somewhere outside this
 #CARGO_PATH=${HOME}/.cargo

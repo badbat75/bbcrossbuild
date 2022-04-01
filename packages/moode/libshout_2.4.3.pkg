@@ -3,6 +3,7 @@
 GIT_URL="https://github.com/xiph/Icecast-libshout"
 GIT_COMMIT="v2.4.3"
 BUILD_PROCESS=configmake
-PKG_DEPS="moode/libtheora_1.1.1 moode/Speex_1.2.0"
+AUTOCONF=1
+PKG_DEPS="moode/libtheora_1.2.0 moode/Speex_1.2.0"
 CONF_FLAGS=""
 INST_CMD=install-strip

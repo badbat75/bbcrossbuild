@@ -1,0 +1,21 @@
+# udisks_1.0.5-1
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/u/udisks/udisks_1.0.5.orig.tar.gz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/u/udisks/udisks_1.0.5-1.debian.tar.xz"
+
+PKG_PREBUILD="patch -p2 < ${SRC_PATH}/moode-pkgbuild/packages/udisks/fix_missing_includes.patch"
+
+BUILD_PROCESS=configmake
+PKG_DEPS="raspbian/sg3-utils_1.46-1 moode/libgudev_237-2"
+#PKG_DEPS+=" moode/policykit-1_0.105-31.1"
+CONF_FLAGS="--libexecdir=${BUILD_LIBDIR}/udisks --disable-option-checking --disable-dmmp --disable-lvm2"
+INST_CMD=install-strip
+PKG_CFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}/gudev-1.0 -I${DISTOS_PATH}${BUILD_INCLUDEDIR}/dbus-1.0 -I${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/dbus-1.0/include"
+PKG_COPYSRC=1
+PKG_PREBUILD="sed -i '/#include <time.h>/a #include <sys/types.h>\n#include <sys/stat.h>\n#include <unistd.h>' src/helpers/job-drive-detach.c
+    sed -i '/#include <sys\/stat.h>/a #include <sys/sysmacros.h>' src/daemon.c 
+    sed -i '/#include <sys\/stat.h>/a #include <sys/sysmacros.h>' src/device.c 
+    sed -i '/#include <sys\/stat.h>/a #include <sys/sysmacros.h>' src/mount-monitor.c 
+    sed -i '/#include <sys\/stat.h>/a #include <sys/sysmacros.h>' tools/udisks.c 
+    sed -i '/#include <sys\/stat.h>/a #include <sys/sysmacros.h>' tools/umount-udisks.c"
+
+# Dependencies: libpolkit-gobject-1-dev libparted-dev libatasmart-dev028  vi src/daemon.c

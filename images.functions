@@ -16,8 +16,8 @@ function create_image() {
 	trap 'STATUS=${?}; \
 		set +x; \
 		trap - ERR; \
-		echo "Unmounting ${MOUNT_DIR}/boot ${MOUNT_DIR}" ; \
-		sudo umount ${MOUNT_DIR}/boot ${MOUNT_DIR}; \
+		echo "Unmounting ${MOUNT_DIR}" ; \
+		sudo umount -R ${MOUNT_DIR}; \
 		sudo losetup -D ; \
 		return ${STATUS};' ERR
 
@@ -27,7 +27,7 @@ function create_image() {
 	local IMAGE_PATH=${DISKIMAGES_PATH}/${_param_1}.img
 	local MOUNT_DIR=${PLATFORM_PATH}/${_param_1}
 	local ROOTFS_TYPE=${_param_rootfstype:-ext4}
-	local SIZE=${_param_size:-1MiB}
+	local SIZEIEC=${_param_size:-2G}
 
 	if [ -z ${_param_layout} ]
 	then
@@ -48,7 +48,10 @@ function create_image() {
 	then
 		mkdir -pv ${DISKIMAGES_PATH} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	fi
-	dd if=/dev/zero of=${IMAGE_PATH} bs=1KiB count=${SIZE} status=progress >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+	local SIZE=$( numfmt --from=iec ${SIZEIEC} )
+	local BS=$( numfmt --from=iec 1M )
+	local COUNT=$(( ${SIZE} / ${BS} ))
+	dd if=/dev/zero of=${IMAGE_PATH} bs=${BS} count=${COUNT} status=progress oflag=direct >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo "ok."
 	echo -n "Partitioning... "
 	echo "${LAYOUT}" | sfdisk ${IMAGE_PATH} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
@@ -95,7 +98,8 @@ function mount_tag () {
 	trap 'STATUS=${?}; \
 		set +x; \
 		trap - ERR; \
-		unmount_tag ${MOUNT_DIR}
+		unmount_tag ${MOUNT_DIR}; \
+		sudo losetup -D; \
 		return ${STATUS};' ERR
 
 	OPTS="" OPTS_WITH_VALUE="--url --imgfile --mountlist --resize" param2value "${@}"
@@ -150,16 +154,20 @@ function mount_tag () {
 	# Create loopback devices for the image and its partitions
 	echo -n "Creating loop devices... "
 	sudo losetup -f -P ${IMAGEFILE_PATH} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+	sudo losetup -j ${IMAGEFILE_PATH} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	LOOPDEV=$(sudo losetup -j ${IMAGEFILE_PATH} | awk '{print $1}' | sed 's/.$//g') >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+	echo >> ${LOG_PATH}/images_${_param_1}.log
+	echo "Loop device for ${IMAGEFILE_PATH}: ${LOOPDEV}" >> ${LOG_PATH}/images_${_param_1}.log
 	sudo partprobe ${LOOPDEV} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	sudo kpartx ${LOOPDEV} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo "Done."
+
 
 	if [ ! -z ${_param_resize} ]
 	then
 		# Check the root partition
 		echo -n "Check root filesystems... "
-		sudo e2fsck -fp ${LOOPDEV}"p"${PARTNO} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+		sudo fsck -fp ${LOOPDEV}"p"${PARTNO} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		echo "Done."
 		# Resize the root partition
 		echo -n "Resize root partition... "
@@ -181,22 +189,20 @@ function mount_tag () {
 		fi
 		MOUNTPOINTS[${MOUNT_DIR}]="${MOUNT_DIR}${MPOINT} ${MOUNTPOINTS[${MOUNT_DIR}]}"
 		if [ ! -d ${MOUNT_DIR}${MPOINT} ] ; then mkdir -p ${MOUNT_DIR}${MPOINT} ; fi
+		sudo fsck -fp ${LOOPDEV}"p"${PARTNO} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		sudo mount ${LOOPDEV}"p"${PARTNO} ${MOUNT_DIR}${MPOINT} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	done
 	#set +x
 	if [ "${ROOTREADY}" -eq 1 ]
 	then
-		#sudo mount -t tmpfs -o nosuid,nodev,mode=755 /run ${MOUNT_DIR}/run >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		sudo mount --bind /dev ${MOUNT_DIR}/dev >> ${LOG_PATH}/images_${_param_1}.log 2>&1
-		sudo mount --bind /dev/pts ${MOUNT_DIR}/dev/pts >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+		#sudo mount --bind /dev/pts ${MOUNT_DIR}/dev/pts >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 		sudo mount -t proc /proc ${MOUNT_DIR}/proc >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 
 		if [ ! -d ${MOUNT_DIR}/tmp/bbxb ]
 		then
 			mkdir -p ${MOUNT_DIR}/tmp/bbxb
 		fi
-		#sudo mount -o bind $(readlink -m ${MOUNT_DIR}/..) ${MOUNT_DIR}/tmp/bbxb
-		#MOUNTPOINTS[${MOUNT_DIR}]="${MOUNT_DIR}/proc ${MOUNT_DIR}/dev/pts ${MOUNT_DIR}/run ${MOUNT_DIR}/tmp/bbxb ${MOUNTPOINTS[${MOUNT_DIR}]}"
 		MOUNTPOINTS[${MOUNT_DIR}]="${MOUNT_DIR}/proc ${MOUNT_DIR}/dev/pts ${MOUNT_DIR}/dev ${MOUNTPOINTS[${MOUNT_DIR}]}"
 	fi
 	echo "Done."
@@ -232,9 +238,10 @@ function unmount_tag () {
 			unmount_tag ${_param_finalize:+--finalize} ${_param_finalize:+--kill} ${image}
 		done
 	else
-		local MOUNT_DIR=${PLATFORM_PATH}/${_param_1}
+		local MOUNT_NAME=${_param_1}
+		local MOUNT_DIR=${PLATFORM_PATH}/${MOUNT_NAME}
 
-		echo -n "Unmounting ${_param_1}... "
+		echo -n "Unmounting ${MOUNT_NAME}... "
 
 		if [ ${_param_kill:-0} -eq 1 ]
 		then
@@ -254,40 +261,57 @@ function unmount_tag () {
 		echo -n "Restore local resolv.conf... "
 		if [ -f ${MOUNT_DIR}/etc/resolv.conf.bbxb ]
 		then
-			sudo mv ${MOUNT_DIR}/etc/resolv.conf.bbxb ${MOUNT_DIR}/etc/resolv.conf >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+			sudo mv ${MOUNT_DIR}/etc/resolv.conf.bbxb ${MOUNT_DIR}/etc/resolv.conf >> ${LOG_PATH}/images_${MOUNT_NAME}.log 2>&1
 		fi
 		# Unmount everything
 		echo -n "Unmount all partitions... "
+		
+		echo -n "Unmounting ${MOUNT_DIR}... " >> ${LOG_PATH}/images_${MOUNT_NAME}.log 2>&1		
 		if [ "x${MOUNTPOINTS[${MOUNT_DIR}]}" != "x" ]
 		then
 			for dir in ${MOUNTPOINTS[${MOUNT_DIR}]}
 			do
-				echo -n "Unmounting ${dir}... " >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+				echo -n "Unmounting ${dir}... " >> ${LOG_PATH}/images_${MOUNT_NAME}.log 2>&1
 				local STATUS=1
 				while [ ! ${STATUS} -eq 0 ]
 				do
-					sudo umount -f ${dir} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
-					local STATUS=${?}
+					if mountpoint -q ${dir}
+					then
+						sudo umount -f ${dir} >> ${LOG_PATH}/images_${MOUNT_NAME}.log 2>&1 && local STATUS=0 || local STATUS=1
+					else
+						STATUS=0
+					fi
 					case ${STATUS} in
 						0)
-							echo "done." >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+							echo "done." >> ${LOG_PATH}/images_${MOUNT_NAME}.log 2>&1
 							;;
 						*)
-							echo "failed ${STATUS}, sleeping... " >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+							echo "failed, sleeping... " >> ${LOG_PATH}/images_${MOUNT_NAME}.log 2>&1
+							echo "Current DIR: ${PWD}" >> ${LOG_PATH}/images_${MOUNT_NAME}.log
+							echo "Current active processes:" >> ${LOG_PATH}/images_${MOUNT_NAME}.log
+							lsof -t -w ${dir} >> ${LOG_PATH}/images_${MOUNT_NAME}.log
 							sleep 1
 							;;
 					esac
 				done
 			done
 		fi
-		MOUNTED_IMAGES=$(echo ${MOUNTED_IMAGES} | sed "s/ *${_param_1}//")
+		MOUNTED_IMAGES=$(echo ${MOUNTED_IMAGES} | sed "s/ *${MOUNT_NAME}//")
 		# Delete the loopback devices
 		echo -n "Delete loopback device... "
-		sudo losetup -D ${LOOPDEV} >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+		sudo losetup -D ${LOOPDEV} >> ${LOG_PATH}/images_${MOUNT_NAME}.log 2>&1
 		echo "Done."
 	fi
 
-	[ ${_param_finalize:-0} -eq 1 ] && mv ${LODEVIMAGES[${_param_1}]} ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.img || true
+	if [ ${_param_finalize:-0} -eq 1 ]
+	then
+		mv ${LODEVIMAGES[${MOUNT_NAME}]} ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.img
+		cat >${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.dd <<-EOF
+			#!/bin/bash
+			sudo dd if=${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.img of=\${1:-/dev/mmcblk0} bs=1M status=progress oflag=direct
+		EOF
+		chmod +x ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.dd
+	fi
 
 	echo
 	set +x
@@ -341,7 +365,7 @@ function run_on_root_dir () {
 		echo; \
 		set +x; \
 		trap - ERR; \
-		if [ -f ${LOG_PATH}/images_${_param_1}.log ];
+		if [ -f ${LOG_PATH}/images_${_param_1}.log ]; \
 		then \
 			echo "Log ${LOG_PATH}/images_${_param_1}.log:"; \
 			echo; \
@@ -368,7 +392,7 @@ function run_on_root_dir () {
 		${_param_2} -c "${_param_3}" >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 	echo >> ${LOG_PATH}/images_${_param_1}.log 2>&1
 
-	set +x
+	[ ${_param_v:-0} -eq 1 ] && set +x || true
 	trap - ERR
 }
 
@@ -402,7 +426,7 @@ function inject_into_mount_tag () {
 	local TARGET_DIR=$(echo ${_param_3} | sed 's/^//g')
 	local TARGET_OWNER=${_param_4:-"root:root"}
 
-	settoolflags
+	setbuildenv
 
 	case ${OBJECT} in
 		binaries)
@@ -428,7 +452,11 @@ function inject_into_mount_tag () {
 	echo -e "Target files:\n${TARGET_FILE}\n" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 
 	echo -n "Injecting ${OBJECT} into ${ROOT_DIR}${TARGET_DIR}... "
-	[ ${_param_remove_devfiles:-0} -eq 1 ] && remove_devfiles no-exitstatus || true
+	# [ ${_param_remove_devfiles:-0} -eq 1 ] && remove_devfiles no-exitstatus || true
+	if [ ${_param_remove_devfiles:-0} -eq 1 ]
+	then
+		local RSYNC_EXCLUDE="--exclude ${BUILD_INCLUDEDIR} --exclude ${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/cmake --exclude ${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig --exclude *.a --exclude *.la"
+	fi
 	if [ ! -d ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR} ]
 	then
 		sudo mkdir -p ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
@@ -436,22 +464,25 @@ function inject_into_mount_tag () {
 	fi
 	echo -n "Syncing ${SOURCE_PATH} to ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}... " >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	cd ${SOURCE_PATH}
-	sudo rsync -K -a --no-owner --no-group ${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+	sudo rsync -K -av ${RSYNC_EXCLUDE} --no-owner --no-group ${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	cd - > /dev/null
 	echo -e "Done.\n" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	echo -n "Setting ownership... "
 	case ${OBJECT} in
 		binaries)
 			find ${BIN_PATH} -printf "%P\n" | xargs -I{} -d'\n' -n1 -P${NPROCS} bash -c "
-				sudo chown -v -h ${TARGET_OWNER} \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\"
-				# Check SUID from source path to change it on destination path
-				if [ -u \"${BIN_PATH}/{}\" ]
+				if [ -e \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\" ]
 				then
-					sudo chmod -v u+s \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\"
-				fi
-				if [ -g \"${BIN_PATH}/{}\" ]
-				then
-					sudo chmod -v g+s \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\"
+					sudo chown -v -h ${TARGET_OWNER} \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\"
+					# Check SUID from source path to change it on destination path
+					if [ -u \"${BIN_PATH}/{}\" ]
+					then
+						sudo chmod -v u+s \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\"
+					fi
+					if [ -g \"${BIN_PATH}/{}\" ]
+					then
+						sudo chmod -v g+s \"${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}/{}\"
+					fi
 				fi
 			" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 			;;
@@ -470,12 +501,41 @@ function inject_into_mount_tag () {
 			" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 			;;
 	esac
-	[ ${_param_remove_devfiles:-0} -eq 1 ] && resume_devfiles no-exitstatus || true
+	#[ ${_param_remove_devfiles:-0} -eq 1 ] && resume_devfiles no-exitstatus || true
 
 	echo -e "Done.\n"
 	echo >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 
 	set +x
+	trap - ERR
+}
+
+function run_postinstall_scripts () {
+	trap 'STATUS=${?}; \
+		echo; \
+		echo "fail [run_postinstall_scripts]." >> ${LOG_PATH}/images_${_param_1}.log; \
+		echo; \
+		set +x; \
+		trap - ERR; \
+		if [ -f ${LOG_PATH}/images_${_param_1}.log ]; \
+		then \
+			echo "Log ${LOG_PATH}/images_${_param_1}.log:"; \
+			echo; \
+			tail -n24 ${LOG_PATH}/images_${_param_1}.log; \
+		fi; \
+		return ${STATUS};' ERR
+			
+	OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
+	[ ${_param_v:-0} -eq 1 ] && set -x || true
+
+	echo -n "Running post install scripts on ${_param_1}... "
+	echo "run_postinstall_scripts ${_param_1}" >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+	export PLATFORM_PATH LOG_PATH
+	export -f param2value run_on_root_dir
+	find ${PLATFORM_PATH}/${_param_1}/postinst_scripts -type f -printf '%P\n' | sort -n | xargs -I{} bash -c "run_on_root_dir ${_param_1} root \"set -x; source /postinst_scripts/{}\"" >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+	sudo rm -rfv ${PLATFORM_PATH}/${_param_1}/postinst_scripts >> ${LOG_PATH}/images_${_param_1}.log 2>&1
+	echo "Done."
+	[ ${_param_v:-0} -eq 1 ] && set +x || true
 	trap - ERR
 }
 

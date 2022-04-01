@@ -1,6 +1,6 @@
 #aom-1.0.0
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/a/aom/aom_1.0.0.orig.tar.xz"
-BUILD_PROCESS=cmakemake
+BUILD_PROCESS=cmakebuild
 CONF_FLAGS="-DCMAKE_INSTALL_DO_STRIP:BOOL=ON \
 	-DENABLE_TESTS=0 \
 	-DGIT_EXECUTABLE=/nonexistant-binary \

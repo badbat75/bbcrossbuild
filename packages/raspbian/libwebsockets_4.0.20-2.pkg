@@ -1,0 +1,41 @@
+# libwebsockets_4.0.20-2 (Problems with OpenSSL version)
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libw/libwebsockets/libwebsockets_4.0.20.orig.tar.gz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libw/libwebsockets/libwebsockets_4.0.20-2.debian.tar.xz"
+PKG_DEPS="raspbian/libev_4.33-1 raspbian/libuv_0.10.36-3"
+BUILD_PROCESS=cmakebuild
+CONF_FLAGS="-DLWS_WITHOUT_DAEMONIZE=OFF \
+	-DLWS_WITH_LIBEV=ON -DLWS_WITH_LIBUV=ON \
+	-DLWS_UNIX_SOCK=ON \
+	-DLWS_IPV6=ON \
+	-DLWS_WITH_HTTP2=1 \
+	-DLWS_WITHOUT_TESTAPPS=ON \
+	-DLWS_WITH_EXTERNAL_POLL=ON \
+	-DZLIB_LIBRARY=${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libz.so \
+	-DLIBEV_INCLUDE_DIRS=${BIN_PATH}${BUILD_INCLUDEDIR} \
+	-DLIBEV_LIBRARIES=${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libev.so \
+	-DLIBUV_INCLUDE_DIRS=${BIN_PATH}${BUILD_INCLUDEDIR} \
+	-DLIBUV_LIBRARIES=${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libuv.so "
+PKG_CFLAGS="-D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -Wno-strict-aliasing"
+[ "${TOOLCHAIN}" = "gnu" ] && PKG_CFLAGS+=" -Wno-error=maybe-uninitialized"
+PKG_LDFLAGS=
+#PKG_MAKEVARS=-j1
+INST_CMD=install/strip
+
+case x${SSL_LIBRARIES} in
+	xmbedtls) ### Build with MBEDTLS
+		CONF_FLAGS+="-DLWS_WITH_MBEDTLS=1 \
+			-DLWS_MBEDTLS_LIBRARIES=${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libmbedcrypto.so;${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libmbedtls.so;${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libmbedx509.so \
+			-DLWS_MBEDTLS_INCLUDE_DIRS=${BIN_PATH}${BUILD_INCLUDEDIR} "
+		PKG_DEPS+=" raspbian/mbedtls_2.28.0-1"
+	;;
+	*) ### Build with OpenSSL
+		CONF_FLAGS+="-DOPENSSL_ROOT_DIR=${DISTOS_PATH}/usr \
+			-DOPENSSL_SSL_LIBRARY=${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libssl.so \
+			-DOPENSSL_CRYPTO_LIBRARY=${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libcrypto.so \
+			-DOPENSSL_INCLUDE_DIR=${DISTOS_PATH}${BUILD_INCLUDEDIR} "
+		PKG_CFLAGS+=" -Wl,-rpath-link,${DISTOS_PATH}/lib${BUILD_LIBSUFFIX}"
+	;;
+esac
+
+# Note:
+# Dependencies: cmake, doxygen, python

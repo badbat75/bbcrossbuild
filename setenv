@@ -1,0 +1,80 @@
+BB_HOME=$(dirname $(realpath ${BASH_SOURCE}))
+NPROCS=$(nproc --ignore=1)
+
+umask 0022
+
+if [ -f ${BB_HOME}/bbxb.conf ] ; then source ${BB_HOME}/bbxb.conf ; fi
+
+# Check platform consistency
+PLATFORM=${BB_HOME}/${PLATFORM_DIR:-platforms}/${PLATFORM_NAME}.conf
+if [ -f ${PLATFORM} ]
+then
+	. ${PLATFORM}
+	HARCH=${HM}-${HOS}-${HLIBC}
+else
+	echo "Platform file ${PLATFORM} does not exists!!! Proceeding as no platform specified."
+	PLATFORM=native
+	HARCH=$(${TOOLCHAIN_CC:-gcc} -dumpmachine)
+	HMARCH=native
+fi
+
+DATA_PATH=${DATA_PATH:-${HOME}/.bbxb}
+
+GLOBAL_SRC_PATH=${DATA_PATH}/${SRC_DIR:-sources}
+GLOBAL_BLD_PATH=${DATA_PATH}/${BLD_DIR:-builds}
+GLOBAL_LOG_PATH=${DATA_PATH}/${LOG_DIR:-logs}
+GLOBAL_TOOLCHAIN_PATH=${DATA_PATH}/${TOOLCHAIN_DIR:-toolchain}
+DOWNLOAD_PATH=${DATA_PATH}/${DOWNLOAD_DIR:-downloads}
+
+if [ ! -d ${GLOBAL_LOG_PATH} ]
+then
+	mkdir -p ${GLOBAL_LOG_PATH}
+fi
+
+PROJECT_PATH=${DATA_PATH}/${PRJ_NAME}
+PLATFORM_PATH=${PROJECT_PATH}/${PLATFORM_NAME}
+DISTOS_PATH=${PLATFORM_PATH}/${DISTOS_DIR:-distos}
+SRC_PATH=${PROJECT_PATH}/${SRC_DIR:-sources}
+BLD_PATH=${PLATFORM_PATH}/${BLD_DIR:-builds}
+test -z ${BIN_DIR} && BIN_DIR="binaries"
+BIN_PATH=${PLATFORM_PATH}/${BIN_DIR}
+LOG_PATH=${PLATFORM_PATH}/${LOG_DIR:-logs}
+STATUS_PATH=${PLATFORM_PATH}/${STATUS_DIR:-status}
+TOOLCHAIN_PATH=${PLATFORM_PATH}/${TOOLCHAIN_DIR:-toolchain}
+DISKIMAGES_PATH=${PLATFORM_PATH}/${DISKIMAGES_DIR:-diskimages}
+USERDATA_PATH=${PROJECT_PATH}/${USERDATA_DIR:-data}
+PACKAGES_PATH=${PLATFORM_PATH}/${PACKAGES_DIR:-packages}
+CACHE_PATH=${PLATFORM_PATH}/${CACHE_DIR:-cache}
+
+if [ ! -d ${LOG_PATH} ]
+then
+	mkdir -p ${LOG_PATH}
+fi
+
+if [ ! -d ${USERDATA_PATH} ]
+then
+	mkdir -p ${USERDATA_PATH}
+fi
+
+PRJ_PATH=${BB_HOME}/${PRJ_DIR:-projects}
+PKG_PATH=${BB_HOME}/${PKG_DIR:-packages}
+PATCH_PATH=${BB_HOME}/${PATCH_DIR:-patches}
+IMG_PATH=${BB_HOME}/${IMG_DIR:-images}
+
+TOOLCHAIN=${TOOLCHAIN:-gnu}
+
+### GNU gcc tools versions
+BINUTILS_VER=${BINUTILS_VER:-2.37}
+GCC_VER=${GCC_VER:-11.2.0}
+GMP_VER=${GMP_VER:-6.2.1}
+MPFR_VER=${MPFR_VER:-4.1.0}
+MPC_VER=${MPC_VER:-1.2.1}
+ISL_VER=${ISL_VER:-0.24}
+
+### LLVN version
+LLVM_VER=${LLVM_VER:-14.0.0}
+
+### Bootstrap libraries and headers versions
+BS_KERNEL_VER=${BS_KERNEL_VER:-5.16.7}
+BS_GLIBC_VER=${BS_GLIBC_VER:-2.35}
+BS_LIBXCRYPT_VER=${BS_LIBXCRYPT_VER:-4.4.28}
