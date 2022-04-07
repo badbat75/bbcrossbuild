@@ -440,12 +440,10 @@ function setup_gcc () {
 
 	if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ] && false
 	then
-		echo -n "removing build directory... "
 		rm -rf ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 	fi
 	if [ -d ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
 	then
-		echo -n "removing source directory... "
 		rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
 		rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${BINUTILS_VER}
 	fi
