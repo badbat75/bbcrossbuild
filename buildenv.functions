@@ -438,7 +438,7 @@ function setup_gcc () {
 		fi
 	fi
 
-	if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ] && false
+	if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ]
 	then
 		rm -rf ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 	fi
