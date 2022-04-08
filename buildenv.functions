@@ -438,14 +438,12 @@ function setup_gcc () {
 		fi
 	fi
 
-	if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ] && false
+	if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ]
 	then
-		echo -n "removing build directory... "
 		rm -rf ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 	fi
 	if [ -d ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
 	then
-		echo -n "removing source directory... "
 		rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
 		rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${BINUTILS_VER}
 	fi
@@ -470,7 +468,7 @@ function setup_llvm () {
 		trap ERR
 	}
 
-	function build_llvm () {
+	function configure_llvm () {
 		trap 'STATUS=${?}; \
 			set +x; \
 			trap ERR; \
@@ -570,6 +568,16 @@ function setup_llvm () {
 			-DCOMPILER_RT_INCLUDE_TESTS:BOOL=OFF \
 			-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON
 
+		set +x
+		trap ERR
+	}
+
+	function build_llvm () {
+		trap 'STATUS=${?}; \
+			set +x; \
+			trap ERR; \
+			return ${STATUS};' ERR
+		set -x
 		local LLVM_SHLIBDIR=$(grep -E "install_symlink.*libLLVM-${LLVM_VER}.so" ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}/tools/llvm-shlib/cmake_install.cmake | head -n1 | grep -o "lib[36][24]")
 		echo "Shared LLVM libdir: ${LLVM_SHLIBDIR}"
 		pathadd LD_LIBRARY_PATH ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}
@@ -699,7 +707,9 @@ function setup_llvm () {
 		fi
 		echo -n "downloading... "
 		download_llvm >> ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
-		echo -n "building native... "
+		echo -n "configuration... "
+		configure_llvm >> ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
+		echo -n "building host binaries... "
 		build_llvm >> ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
 	fi
 	pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib64"
@@ -725,7 +735,7 @@ function setup_llvm () {
 			echo -n "downloading... "
 			download_llvm >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
 		fi
-		echo -n "building builtins for ${HARCH}... "
+		echo -n "building target libraries... "
 		build_llvm_builtins ${HARCH} >> ${LOG_PATH}/toolchain_llvm-builtins-${LLVM_VER}.log 2>&1
 	fi
 	if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER} ]

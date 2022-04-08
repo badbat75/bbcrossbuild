@@ -5,7 +5,10 @@ BUILD_PROCESS=downloadonly
 PKG_COPYSRC=1
 MOODE_CAMILLAGUI_PATH=${SRC_PATH}/moode-pkgbuild/packages/camillagui
 PKG_PREBUILD="patch -p1 < ${MOODE_CAMILLAGUI_PATH}/camillagui_hide_files.patch"
-PKG_POSTBUILD="npm install
+PKG_POSTBUILD="
+    npm install
+    npm install browserslist@latest
+    find node_modules/*/lib -type f -name '*.js' -exec sed -i 's|md4|sha512|g' {} \\;    
     npm run build
     mkdir -pv ${PKG_PKGPATH}/opt/camillagui
     cp -frv build ${PKG_PKGPATH}/opt/camillagui/"

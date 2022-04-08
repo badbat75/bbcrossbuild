@@ -1,15 +1,14 @@
-# portaudio19_19.6.0-1
+# portaudio19_19.6.0-1.1
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/p/portaudio19/portaudio19_19.6.0.orig.tar.gz"
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/p/portaudio19/portaudio19_19.6.0-1.debian.tar.xz"
-PATCHES="portaudio_test_LDFLAGS.patch"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/p/portaudio19/portaudio19_19.6.0-1.1.debian.tar.xz"
 AUTOCONF=1
+AUTOCONF_PATH=bindings/cpp,.
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-cxx -with-pic=yes --disable-dependency-tracking"
-PKG_CFLAGS="${COMMON_LDFLAGS} -s"
+PKG_CFLAGS="-s"
 PKG_MAKEVARS="-j1"
 INST_CMD=install
 PKG_DEPS="moode/alsa-lib_1.2"
-PKG_PREBUILD="rm -f ltmain.sh"
 
 # Note:
 # Dependencies: automake, debhelper (>= 9), dh-autoreconf, doxygen, dpkg-dev (>= 1.13.19), libasound2-dev [linux-any], libjack-dev

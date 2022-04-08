@@ -3,4 +3,4 @@ PKG_URL="https://www.mpg123.de/download/mpg123-1.29.2.tar.bz2"
 BUILD_PROCESS=configmake
 CONF_FLAGS=""
 INST_CMD=install-strip
-PKG_DEPS="moode/libsndfile_1.0.31 raspbian/portaudio19_19.6.0-1"
+PKG_DEPS="moode/libsndfile_1.0.31 moode/portaudio_19"

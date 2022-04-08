@@ -33,6 +33,7 @@ PKG_POSTBUILD="
 	MAJOR_BASE_STATIONS=${USERDATA_PATH}/moode-stations-full_8.0.0.zip
 
 	npm ci
+    npm install browserslist@latest
 	node_modules/.bin/gulp build
 	node_modules/.bin/gulp deploy --test
 
