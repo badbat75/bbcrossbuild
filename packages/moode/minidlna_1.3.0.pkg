@@ -1,6 +1,5 @@
 # minidlna_1.3.0
-GIT_URL="https://git.code.sf.net/p/minidlna/git"
-GIT_COMMIT="v1_3_0"
+PKG_URL="https://altushost-swe.dl.sourceforge.net/project/minidlna/minidlna/1.3.0/minidlna-1.3.0.tar.gz"
 BUILD_PROCESS=configmake
 AUTOCONF=1
 # CONF_FLAGS=""
@@ -8,7 +7,10 @@ INST_CMD=install-strip
 PKG_DEPS="raspbian/libexif-0.6.21-5.1 raspbian/libid3tag_0.15.1b-14"
 #PKG_DEPS="raspbian/libjpeg-turbo-1.5.2 raspbian/sqlite3-3.26.0 raspbian/libexif-0.6.21-5.1"
 [ "${TOOLCHAIN}" = "gnu" ] && PKG_CFLAGS="-Wno-format-overflow -Wno-deprecated-declarations"
-PKG_PREBUILD="sed -i '/^.tmpl:/a \\\\tcp -r \$(srcdir)/linux .' Makefile.am"
+PKG_PREBUILD="sed -i '/^.tmpl:/a \\\\tcp -r \$(srcdir)/linux .' Makefile.am
+	sed -i 's|ac_cv_lib_id3tag__lz___id3_file_open|ac_cv_lib_id3tag__lz_id3_file_open|' configure.ac
+	sed -i 's|ac_cv_lib_avformat__lavcodec__lavutil__lz___av_open_input_file|ac_cv_lib_avformat__lavcodec__lavutil__lz_av_open_input_file|' configure.ac
+	sed -i 's|ac_cv_lib_avformat__lavcodec__lavutil__lz___avformat_open_input|ac_cv_lib_avformat__lavcodec__lavutil__lz_avformat_open_input|' configure.ac"
 PKG_POSTBUILD="install -d ${PKG_PKGPATH}/var/lib/minidlna
 	install -d --mode=750 ${PKG_PKGPATH}/var/cache/minidlna
 	mkdir -pv ${PKG_PKGPATH}/lib/systemd/system ${PKG_PKGPATH}/etc/{logrotate.d,default}

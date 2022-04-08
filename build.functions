@@ -509,18 +509,20 @@ function build () {(
 		if [ ${AUTOCONF:-0} -eq 1 ]
 		then
 			echo -n "${SPACES}AutoReconf ${PKG_NAME}..."
-			cd ${PKG_SRCPATH}/${AUTOCONF_PATH}
-			[ -d m4 ] && local ACINCLUDE="-Im4" || mkdir m4
-			[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" -I${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal"
-			[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" -I${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
-			autoreconf -fi ${ACINCLUDE} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-			local STATUS=${?}
-			if [ ${STATUS} -ne 0 ]
-			then
-				echo "Fail."
-				set +x
-				return ${STATUS}
-			fi
+			IFS=,
+			for cp in ${AUTOCONF_PATH:-.}
+			do
+				cd ${PKG_SRCPATH}/${cp}
+				if [ ! -d m4 ]
+				then
+					mkdir m4
+				fi
+				local ACINCLUDE="--include=m4"
+				[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal"
+				[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
+				eval autoreconf -fi ${ACINCLUDE} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			done
+			unset IFS
 			echo "Done." || echo "Fail."
 		fi
 		mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}

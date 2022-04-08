@@ -1,4 +1,4 @@
-# bbcrossbuild 2.0
+# bbcrossbuild 2.0.1
 This is a framework to automate the cross-compilation of packages through a project file.
 ## Current Limitations
 
