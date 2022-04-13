@@ -1,6 +1,6 @@
 # raspi-config
-PKG_SUFFIX=".20220307"
-PKG_URL="https://github.com/RPi-Distro/raspi-config/archive/684fbe183a53f60cccee21c341d5754357cf1288.tar.gz"
+PKG_SUFFIX=".20220407"
+PKG_URL="https://github.com/RPi-Distro/raspi-config/archive/6f2fd4b804c428126e722aa2d865c66abea616b8.tar.gz"
 BUILD_PROCESS=downloadonly
 PKG_PREBUILD="install -d -m755 ${PKG_PKGPATH}{/usr/bin,/etc/systemd/system}
     install -m755 raspi-config ${PKG_PKGPATH}/usr/bin

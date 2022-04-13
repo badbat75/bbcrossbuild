@@ -1,6 +1,6 @@
-PKG_SUFFIX=.0.4692.77
+PKG_SUFFIX=.0.4931.0
 PKG_DEPS="raspios/ffmpeg_4.4"
-PKG_URL="http://commondatastorage.googleapis.com/chromium-browser-official/chromium-97${PKG_SUFFIX}-lite.tar.xz"
+PKG_URL="http://commondatastorage.googleapis.com/chromium-browser-official/chromium-101${PKG_SUFFIX}-lite.tar.xz"
 BUILD_PROCESS=downloadonly
 PKG_COPYSRC=1
 
