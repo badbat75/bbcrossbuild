@@ -118,7 +118,7 @@ function create_sfx_package () {
 	cat >${PKG_OBJ}.sfx <<-EOF
 		#!/usr/bin/env bash
 		set -e
-		DEV_FILES="--exclude=.${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/*.a --exclude=.${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/*.la --exclude=.${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/cmake"
+		DEV_FILES="--exclude=.${BUILD_INCLUDEDIR} --exclude=.${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/*.a --exclude=.${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/*.la --exclude=.${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/cmake"
 		CONF_FILES="--exclude=.${BUILD_SYSCONFDIR}"
 		DEST=
 

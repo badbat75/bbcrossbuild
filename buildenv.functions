@@ -580,16 +580,16 @@ function setup_llvm () {
 		set -x
 		local LLVM_SHLIBDIR=$(grep -E "install_symlink.*libLLVM-${LLVM_VER}.so" ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}/tools/llvm-shlib/cmake_install.cmake | head -n1 | grep -o "lib[36][24]")
 		echo "Shared LLVM libdir: ${LLVM_SHLIBDIR}"
-		pathadd LD_LIBRARY_PATH ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}
-		ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} \
-			-C ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER} install/strip
-		pathremove LD_LIBRARY_PATH ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}
-
+		#pathadd LD_LIBRARY_PATH ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}
+		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}
+		ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} install/strip
+		#pathremove LD_LIBRARY_PATH ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}
+		popd
 		set +x
 		trap ERR
 	}
 
-	function build_llvm_builtins () {
+	function configure_llvm_builtins () {
 		trap 'STATUS=${?}; \
 			set +x; \
 			trap ERR; \
@@ -615,7 +615,6 @@ function setup_llvm () {
 			local SYSROOT=${BIN_PATH}
 			export QEMU_LD_PREFIX="${BIN_PATH}"
 		fi
-		#cd ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}
 		local PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
 		### Can we build the RT builtins?
 		case x${HMARCH} in
@@ -661,22 +660,37 @@ function setup_llvm () {
 			-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON \
 			-DBUILD_SHARED_LIBS:BOOL:BOOL=OFF
 
-		DESTDIR=${TOOLCHAIN_PATH} ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} \
-			-C ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} install/strip
+		set +x
+		trap ERR
+	}
+
+	function build_llvm_builtins () {
+		trap 'STATUS=${?}; \
+			set +x; \
+			trap ERR; \
+			return ${STATUS};' ERR
+		set -x
+		local LLVM_TARGET=${1}
+		# To be changed with: ${TOOLCHAIN_PATH}
+
+		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}
+
+		DESTDIR=${TOOLCHAIN_PATH} ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} install/strip
 
 		### Create rt_builtins package
 		[ -d ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} ] && rm -rf ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} || true
 		DESTDIR=${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}${BUILD_PREFIX} \
-			ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} -C ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} install/strip
+			ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} install/strip
 		tar cfp - --owner=0 --group=0 -C ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} . | xz -T${NPROCS} - > ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}.tar.xz
 		rm -rf ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}
 
 		if [ ${_param_install:-0} -eq 1 ]
 		then
 			DESTDIR=${BIN_PATH}${BUILD_PREFIX} \
-				ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} -C ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} install/strip
+				ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} install/strip
 		fi
 
+		popd
 		set +x
 		trap ERR
 	}
@@ -735,6 +749,8 @@ function setup_llvm () {
 			echo -n "downloading... "
 			download_llvm >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
 		fi
+		echo -n "target libraries configuration... "
+		configure_llvm_builtins ${HARCH} >> ${LOG_PATH}/toolchain_llvm-builtins-${LLVM_VER}.log 2>&1
 		echo -n "building target libraries... "
 		build_llvm_builtins ${HARCH} >> ${LOG_PATH}/toolchain_llvm-builtins-${LLVM_VER}.log 2>&1
 	fi
