@@ -1,9 +1,9 @@
-# bbcrossbuild 2.0.1
+# bbcrossbuild 2.1
 This is a framework to automate the cross-compilation of packages through a project file.
 ## Current Limitations
 
- - Tested only ARM and ARM64 cross-compile projects. Other platforms will need
-   adjustments and integration
+ - Tested only ARM and ARM64 cross-compile projects and x86_64 straight compile projects. Other platforms will need
+   adjustments and integrations
 
 ## QuickStart
 **Prepare your environment**
@@ -104,7 +104,7 @@ Tag or commit hash.
 
 **PKG_DEPS:**
 define dependencies to build and install before building this.  
-`PKG_DEPS="dir1/package1.pkg dir1/package2.pkg dir2/package3.pkg"`
+`PKG_DEPS="dir1/package1 dir1/package2 dir2/package3"`
 
 #### Prebuild process
 
@@ -122,7 +122,7 @@ By default "autoreconf -fi" is not run before configure process (0). 1 to enable
 
 **AUTOCONF_PATH:**
 Specify source subdirectory where to run autoreconf:  
-`AUTOCONF_PATH=subdir1/subdir2`
+`AUTOCONF_PATH=subdir1/subdir2[,subdir3[,subdir1/subdir2/subdir4]]`
 
 **PKG_PREBUILD:**
 Runs commands on source files before autoreconf and configuration on source directory
