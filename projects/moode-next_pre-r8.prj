@@ -97,7 +97,7 @@ build raspbian/udevil_0.4.4-2
 
 # STEP 4 - Install enhanced networking and bluetooth stack
 build moode/bluez_5
-build raspberrypi/pi-bluetooth
+build raspberrypi/pi-bluetooth_0
 WITH_APTX=libopenaptx build moode/bluez-alsa_3
 
 # STEP 6 - Compile and install MPD

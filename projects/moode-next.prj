@@ -87,7 +87,7 @@ build moode/alsacap
 build moode/udisks-glue_1.3.5               	
 build raspbian/udevil_0.4.4-2
 build moode/bluez_5
-build raspberrypi/pi-bluetooth
+build raspberrypi/pi-bluetooth_0
 WITH_APTX=libopenaptx build moode/bluez-alsa_3
 build moode/mpd_0.23
 build moode/mpc_0.34
