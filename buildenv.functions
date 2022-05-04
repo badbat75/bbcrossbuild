@@ -212,9 +212,9 @@ function setup_gcc () {
 			echo "GCC version older than 10 and BINUTILS 2.34 or earlier... "
 			ln -fs ../binutils-${BINUTILS_VER}/config/debuginfod.m4 config/debuginfod.m4
 		fi
-		if test_version ${GCC_VER} -eq 11.2.0 && test_version ${BINUTILS_VER} -ge 2.37
+		if test_version ${GCC_VER} -lt 12.0.0 && test_version ${BINUTILS_VER} -ge 2.37
 		then
-			echo "GCC version is 11.2.0 and BINUTILS 2.37 or earlier... "
+			echo "GCC version is less than 12.0.0 and BINUTILS 2.37 or earlier... "
 			mv libiberty libiberty.gcc
 			ln -fs ../binutils-${BINUTILS_VER}/libiberty .
 		fi
