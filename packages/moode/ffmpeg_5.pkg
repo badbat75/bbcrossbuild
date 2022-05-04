@@ -1,5 +1,5 @@
 # ffmpeg-5
-PKG_SUFFIX=.0
+PKG_SUFFIX=.0.1
 PKG_URL="https://ffmpeg.org/releases/ffmpeg-5${PKG_SUFFIX}.tar.xz"
 BUILD_PROCESS=configmake
 STD_CONF_FLAGS=0
