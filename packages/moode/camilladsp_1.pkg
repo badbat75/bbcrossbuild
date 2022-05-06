@@ -1,8 +1,8 @@
-# camilladsp_1.0.0
-PKG_URL="https://github.com/HEnquist/camilladsp/archive/1.0.0-alpha1.tar.gz"
+# camilladsp_1
+PKG_SUFFIX=.0.0
+PKG_URL="https://github.com/HEnquist/camilladsp/archive/1${PKG_SUFFIX}.tar.gz"
 BUILD_PROCESS=cargobuild
-#CONF_FLAGS="--no-default-features --features alsa-backend --features websocket"
-#CONF_FLAGS="--features FFTW"
+CONF_FLAGS="--no-default-features --features websocket"
 #PKG_RUSTFLAGS=
 #PKG_DEPS=
 #CARGO_BIN=/usr/bin
