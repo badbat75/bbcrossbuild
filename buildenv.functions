@@ -841,6 +841,8 @@ function setup_rust () {
 	echo -n "Setting up RUST... "
 	export CARGO_HOME=${GLOBAL_TOOLCHAIN_PATH}
 	export RUSTUP_HOME=${GLOBAL_TOOLCHAIN_PATH}/var/rustup
+	pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/bin"
+	CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
 	if [ ! -x ${GLOBAL_TOOLCHAIN_PATH}/bin/cargo ] || [ ! -x ${GLOBAL_TOOLCHAIN_PATH}/bin/rustc ]
 	then
 		echo -n "downloading... "
@@ -851,10 +853,10 @@ function setup_rust () {
 		rm -f /tmp/rustup-init
 		echo "done."
 	else
-		echo "already there."
+		echo -n "already there. Check for updates..."
+		rustup -v update
+		echo "done."
 	fi
-	pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/bin"
-	CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
 	echo -n "Adding ${CARGO_TARGET} libraries... "
 	rustup -v target add ${CARGO_TARGET} >> ${GLOBAL_LOG_PATH}/rust.log 2>&1
 	echo "done."
