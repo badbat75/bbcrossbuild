@@ -301,7 +301,7 @@ function setup_gcc () {
 		set -x
 
 		echo "Making compiler."
-		make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} all-host
+		make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} STAGE_CC_WRAPPER="${CCWRAPPER}" all-host
 		make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} install-strip-host
 
 		GCC_MAJVER=$(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -dumpversion)
@@ -340,7 +340,7 @@ function setup_gcc () {
 		do
 			local BUILD_OBJECTS+=" all-target-${object}"
 		done
-		make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} ${BUILD_OBJECTS}
+		make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER="${CCWRAPPER}" ${BUILD_OBJECTS}
 
 		for object in $( echo ${OBJECTS} | tr ',' ' ' )
 		do
@@ -368,7 +368,7 @@ function setup_gcc () {
 		find ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER} $( [ ${_param_install:-0} -eq 1 ] && echo "${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" || true ) -mindepth 1 -name "*.la" -type f | xargs -r \
 			sed -i "${LIB_LA_SEDTRANS}" 
 
-		make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} all-target-libsanitizer
+		make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER="${CCWRAPPER}" all-target-libsanitizer
 		make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} install-strip-target-libsanitizer
 
 		set +x
