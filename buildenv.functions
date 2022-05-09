@@ -517,6 +517,7 @@ function setup_llvm () {
 			-DLLVM_PARALLEL_LINK_JOBS=${PARALLEL_LINK_JOB} \
 			\
 			-DLLVM_CCACHE_BUILD:BOOL=ON \
+			-DCCACHE_PROGRAM=${CCWRAPPER} \
 			-DCMAKE_C_COMPILER="${C}" \
 			-DCMAKE_CXX_COMPILER="${CXX}" \
 			-DCMAKE_AR="${AR}" \
@@ -632,6 +633,8 @@ function setup_llvm () {
 		esac
 		cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/compiler-rt -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} -G Ninja \
 			\
+			-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \
+			-DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \
 			-DCMAKE_C_COMPILER=${LLVM_INSTALL_PATH}/bin/clang \
 			-DCMAKE_CXX_COMPILER=${LLVM_INSTALL_PATH}/bin/clang++ \
 			-DCMAKE_AR=${LLVM_INSTALL_PATH}/bin/llvm-ar \
@@ -851,17 +854,61 @@ function setup_rust () {
 		chmod +x /tmp/rustup-init &&
 		/tmp/rustup-init -v -y --no-modify-path >> ${GLOBAL_LOG_PATH}/rust.log 2>&1
 		rm -f /tmp/rustup-init
-		echo "done."
 	else
-		echo -n "already there. Check for updates..."
-		rustup -v update
-		echo "done."
+		echo -n "already there. Check for updates... "
+		rustup -v update >> ${GLOBAL_LOG_PATH}/rust.log 2>&1
 	fi
-	echo -n "Adding ${CARGO_TARGET} libraries... "
+	if [ ! -x ${GLOBAL_TOOLCHAIN_PATH}/bin/cargo-install-update ]
+	then
+		echo -n "installing update tools... "
+		cargo install cargo-update >> ${GLOBAL_LOG_PATH}/rust.log 2>&1
+	fi
+	echo -n "upgrading packages... "
+	cargo -v install-update -a >> ${GLOBAL_LOG_PATH}/rust.log 2>&1
+
+	echo -n "adding ${CARGO_TARGET} libraries... "
 	rustup -v target add ${CARGO_TARGET} >> ${GLOBAL_LOG_PATH}/rust.log 2>&1
 	echo "done."
 	echo
 
+	trap ERR
+}
+
+function setup_sccache () {
+	trap 'local STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${GLOBAL_LOG_PATH}/rust.log ];
+		then \
+			echo "Log ${GLOBAL_LOG_PATH}/rust.log:"; \
+			echo; \
+			tail -n24 ${GLOBAL_LOG_PATH}/rust.log; \
+		fi;
+		set +x; \
+		trap - ERR; \
+		return ${STATUS}' ERR
+
+	if [ ! -x ${GLOBAL_TOOLCHAIN_PATH}/bin/sccache ]
+	then
+		if [ "${CARGO_HOME}" != "${GLOBAL_TOOLCHAIN_PATH}" ]
+		then
+			setup_rust
+		fi
+		echo -n "Setting up sccache..."
+		cargo -v install sccache >> ${GLOBAL_LOG_PATH}/rust.log 2>&1
+		echo "done."
+	else
+		echo "sccache already there."		
+	fi
+	CCWRAPPER="${GLOBAL_TOOLCHAIN_PATH}/bin/sccache"
+	export RUSTC_WRAPPER="${CCWRAPPER}"
+	export SCCACHE_DIR=${GLOBAL_CACHE_PATH}/sccache
+	export SCCACHE_CACHE_SIZE="10G"
+	if [ ! -d ${SCCACHE_DIR} ]
+	then
+		mkdir -p ${SCCACHE_DIR}
+	fi
+	echo
 	trap ERR
 }
 
