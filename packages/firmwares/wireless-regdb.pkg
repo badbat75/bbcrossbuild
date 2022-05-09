@@ -1,5 +1,5 @@
 #wireless-regdb
-PKG_SUFFIX=2022.02.18
+PKG_SUFFIX=2022.04.08
 PKG_URL="https://mirrors.edge.kernel.org/pub/software/network/wireless-regdb/wireless-regdb-${PKG_SUFFIX}.tar.xz"
 BUILD_PROCESS=downloadonly
 PKG_PREBUILD="set -x

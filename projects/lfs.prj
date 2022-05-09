@@ -14,7 +14,7 @@ mkdir -p ${USERDATA_PATH}/postinstall
 setup_gcc --install
 
 build raspberrypi/rpi-firmware_1
-build firmwares/linux-firmware_20210511
+build firmwares/linux-firmware
 build raspberrypi/rpi-kernel_5.15
 build lfs/glibc_2.34
 build lfs/tzdata_2021a
