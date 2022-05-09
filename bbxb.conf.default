@@ -39,8 +39,8 @@ PKI_SUBJECT="/C=IT/ST=Bologna/L=Bologna/O=BadBat75 LTD/CN=badbat75/emailAddress=
 ### Default linker for llvm toolchain
 # LLVM_DEFAULT_LD=lld
 
-### Enable and set if you are using a gcc wrapper like ccache or distcc
-CCWRAPPER="ccache"
+### Enable and set if you are using a compiler wrapper like ccache or distcc (sccache has complete support via build_sccache)
+# CCWRAPPER="ccache"
 ### Set make verbosity (0 disabled, 1 enabled)
 MAKEVERBOSE=${MAKEVERBOSE:-0}
 
