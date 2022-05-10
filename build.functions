@@ -340,14 +340,15 @@ function create_environment_source () {
 		export RUSTUP_HOME='${RUSTUP_HOME}'
 		export QEMU_LD_PREFIX='${SYSROOT}'
 	EOF
-	if [ "${CCACHE_WRAPPER}" == "sccache" ]
+	if [ "$(basename ${CCWRAPPER:-nope})" == "sccache" ]
 	then
-		cat <<-EOF > environment.source
+		cat <<-EOF >> environment.source
 			
 			# sccache parameters
-			export RUSTC_WRAPPER='${CCACHE_WRAPPER}'
+			export RUSTC_WRAPPER='${CCWRAPPER}'
 			export SCCACHE_DIR='${SCCACHE_DIR}'
 			export SCCACHE_CACHE_SIZE='${SCCACHE_CACHE_SIZE}'
+			export SCCACHE_NO_DAEMON='${SCCACHE_NO_DAEMON}'
 		EOF
 	fi
 }
@@ -1202,7 +1203,7 @@ function build () {(
 			windows) local HMBINFMT=pe;;
 			macosx|ios) local HMBINFMT=mach-o;;
 		esac
-		case ${TOOLCHAIN} in
+		case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
 			llvm) local BBTC=clang;;
 			gnu) local BBTC=gcc;;
 		esac

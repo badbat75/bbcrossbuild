@@ -904,10 +904,12 @@ function setup_sccache () {
 	export RUSTC_WRAPPER="${CCWRAPPER}"
 	export SCCACHE_DIR=${GLOBAL_CACHE_PATH}/sccache
 	export SCCACHE_CACHE_SIZE="10G"
+	export SCCACHE_NO_DAEMON=0
 	if [ ! -d ${SCCACHE_DIR} ]
 	then
 		mkdir -p ${SCCACHE_DIR}
 	fi
+	${GLOBAL_TOOLCHAIN_PATH}/bin/sccache -s >> ${GLOBAL_LOG_PATH}/rust.log 2>&1
 	echo
 	trap ERR
 }

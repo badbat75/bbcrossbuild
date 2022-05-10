@@ -64,7 +64,7 @@ prepare_sysroot
 setup_sccache
 setup_gcc
 setup_llvm
-#setup_rust
+setup_rust
 setup_python 3.9.12
 
 #create_key_sscertificate
@@ -94,9 +94,9 @@ build moode/mpd_0.23
 build moode/mpc_0.34
 build raspbian/alsaequal_0.6-8
 build moode/caps_0.9.26-eqfa12p+22ef349
-build moode/camilladsp_0.6.3
+build moode/camilladsp_1
 build moode/alsa-cdsp_1
-build moode/camillagui-backend_0.8.0
+build moode/camillagui-backend_1
 build moode/minidlna_1.3.0
 build moode/ashuffle_3
 WITH_ALAC=1 build moode/shairport-sync_3.3.9

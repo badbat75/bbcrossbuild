@@ -1,6 +1,6 @@
 # camilladsp_1
 PKG_SUFFIX=.0.0
-PKG_URL="https://github.com/HEnquist/camilladsp/archive/1${PKG_SUFFIX}.tar.gz"
+PKG_URL="https://github.com/HEnquist/camilladsp/archive/refs/tags/v1${PKG_SUFFIX}.tar.gz"
 BUILD_PROCESS=cargobuild
 CONF_FLAGS="--no-default-features --features websocket"
 #PKG_RUSTFLAGS=
