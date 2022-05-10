@@ -624,7 +624,7 @@ function build () {(
 		else
 			CONF_FLAGS+=" -DBUILD_STATIC_LIBS=OFF"
 		fi
-		CCACHE_WRAPPER="" create_environment_source
+		CCWRAPPER="" create_environment_source
 		source environment.source
 		cmake ${PKG_SRCPATH} \
 			-G Ninja \
