@@ -83,7 +83,7 @@ build raspbian/iw_5.16-1
 build firmwares/wireless-regdb
 build raspbian/hostapd_2.9.0
 build raspbian/wpa_supplicant_2.9.0
-build moode/mediainfo_21.09
+build moode/mediainfo_22.03
 build moode/alsacap
 build moode/udisks-glue_1.3.5               	
 build raspbian/udevil_0.4.4-2
