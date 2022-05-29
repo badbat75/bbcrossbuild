@@ -100,7 +100,7 @@ build moode/camillagui-backend_1
 build moode/minidlna_1.3.0
 build moode/ashuffle_3
 WITH_ALAC=1 build moode/shairport-sync_3.3.9
-build moode/librespot_0.3.1
+build moode/librespot_0
 build moode/squeezelite_master
 build moode/upmpdcli_1.5
 build moode/libupnpp-bindings_0.21
