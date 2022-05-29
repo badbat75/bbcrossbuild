@@ -73,7 +73,7 @@ function setbuildenv () {
 				COMMON_CXXFLAGS+=" -I${DISTOS_PATH}${BUILD_INCLUDEDIR}/c++/${SYSROOT_GCCVER} -I${DISTOS_PATH}${BUILD_INCLUDEDIR}/${HARCH}/c++/${SYSROOT_GCCVER}"
 				COMMON_CPPFLAGS+=" -I${DISTOS_PATH}${BUILD_INCLUDEDIR}/c++/${SYSROOT_GCCVER} -I${DISTOS_PATH}${BUILD_INCLUDEDIR}/${HARCH}/c++/${SYSROOT_GCCVER}"
 				COMMON_LDFLAGS+=" -Wl,-rpath-link,${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER} -L${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
-				case ${TOOLCHAIN} in
+				case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
 					gnu)
 						local GCC_BINS="$(${HARCH}-gcc -print-search-dirs | grep "^programs" | cut -d '=' -f2 | cut -d ':' -f1)"
 						COMMON_CFLAGS+=" -B${GCC_BINS} -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
@@ -835,7 +835,7 @@ function build () {(
 	function kernelbuild () {
 		function make4kern () {
 			settcenv
-			case ${TOOLCHAIN} in
+			case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
 				gnu)
 					local HOSTCC=gcc
 					local HOSTCXX=g++
@@ -942,7 +942,7 @@ function build () {(
 			scripts/config ${CONF_FLAGS}
 		fi
 
-		if [ ${TOOLCHAIN} == llvm ]
+		if [ ${PKG_TOOLCHAIN:-${TOOLCHAIN}} == llvm ]
 		then
 			echo "LTO type: ${KERNEL_LTOENABLE}"
 			case x${KERNEL_LTOENABLE} in
