@@ -11,6 +11,7 @@ BUILD_LIBSTATIC=0
 
 LLVM_POLLY_FEATURES=all
 
+setup_sccache
 setup_gcc --install
 setup_llvm
-raspberrypi/rpi-kernel_5.16
+build raspberrypi/rpi-kernel_5.18

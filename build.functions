@@ -918,9 +918,9 @@ function build () {(
 			return
 		fi
 
-		if [ -f arch/${HM}/configs/${KERNEL_DEFCONFIG} ]
+		if [ -f arch/${KERNEL_ARCH}/configs/${KERNEL_DEFCONFIG} ]
 		then
-			cp -v arch/${HM}/configs/${KERNEL_DEFCONFIG} .config
+			cp -v arch/${KERNEL_ARCH}/configs/${KERNEL_DEFCONFIG} .config
 		else
 			cp -v ${KERNEL_DEFCONFIG} .config
 		fi

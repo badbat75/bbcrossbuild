@@ -301,7 +301,33 @@ function setup_gcc () {
 		set -x
 
 		echo "Making compiler."
-		make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} STAGE_CC_WRAPPER="${CCWRAPPER}" all-host
+		### Create sccache_wrapper to work around an issue of not supporting correctly the
+		### -B parameter. It is not able to find the local cc1 executable running xgcc
+		if [[ ${CCWRAPPER} == *sccache ]]
+		then
+			cat <<-EOF > ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper
+				#!/bin/sh
+
+				set -e
+
+				dir=\$(dirname \$(realpath \$1))
+				cc1=\${dir}/cc1
+
+				if [ -e "\${cc1}"  ]; then
+					export PATH=\${dir}:\${PATH}
+					echo "${CCWRAPPER} \$@" >> \$dir/sccache_wrapper.log
+					exec ${CCWRAPPER} "\$@"
+				else
+					echo "\$@" >> \$dir/sccache_wrapper.log
+					exec "\$@"
+				fi
+			EOF
+			chmod +x ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper
+			make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} STAGE_CC_WRAPPER="${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper" all-host
+		else
+			make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} STAGE_CC_WRAPPER="${CCWRAPPER}" all-host
+		fi
+		###
 		make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} install-strip-host
 
 		GCC_MAJVER=$(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -dumpversion)
