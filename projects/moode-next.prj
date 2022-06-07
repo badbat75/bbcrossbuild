@@ -177,6 +177,7 @@ then
 		PARTUUID=$(grep '/ ' ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/temp/etc/fstab | awk '{print $1}')
 		run_on_root_dir temp root "sed -i \"s/rootfstype=ext4/rootfstype=${MOODEIMG_FS:-f2fs}/;s/root=PARTUUID=[^ ]*/root=${PARTUUID}/\" /boot/cmdline.txt"
 		run_on_root_dir temp root "systemctl disable resize2fs_once.service"
+		run_on_root_dir temp root "systemctl disable e2scrub_all"
 		echo -n "Installing ${MOODEIMG_FS:-f2fs} utilities..."
 		case ${MOODEIMG_FS:-f2fs} in
 			f2fs)
