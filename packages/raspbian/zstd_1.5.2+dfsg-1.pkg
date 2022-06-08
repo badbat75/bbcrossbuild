@@ -1,6 +1,6 @@
-# zstd_1.4.9+dfsg-1+rpi1
-PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libz/libzstd/libzstd_1.4.9%2Bdfsg.orig.tar.xz"
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libz/libzstd/libzstd_1.4.9%2Bdfsg-1%2Brpi1.debian.tar.xz"
+# zstd_1.5.2+dfsg-1
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libz/libzstd/libzstd_1.5.2%2Bdfsg.orig.tar.xz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libz/libzstd/libzstd_1.5.2%2Bdfsg-1.debian.tar.xz"
 #PKG_CFLAGS="-DZ_SOLO"
 #PKG_LDFLAGS=
 BUILD_PROCESS=simplemake
