@@ -37,14 +37,14 @@ PKG_DEPS="moode/boost_1.79.0 \
 	raspbian/liburing_2.1-2 \
 	raspbian/zziplib_0.13.72+dfsg.1-1.1 \
 	moode/libwavpack_5.4.0 \
-	moode/moode-pkgbuild"
+	moode/moode-pkgbuild_8"
 
 # Disabled by moode
 #PKG_DEPS+=" moode/libsndfile_1.0.31 \
 #	raspbian/libmms_0.6.4-3 \
 #	raspbian/libsndfile_1.0.27"
 
-PKG_PREBUILD="patch -p1 < ${SRC_PATH}/moode-pkgbuild/packages/mpd/mpd_0.23.xx_selective_resample_mode.patch
+PKG_PREBUILD="patch -p1 < ${SRC_PATH}/moode-pkgbuild_8/packages/mpd/mpd_0.23.xx_selective_resample_mode.patch
 	cat <<EOF | patch -p1
 Description: source \\\$MPDCONF from /etc/default/mpd
 Author: Florian Schlichting <fsfs@debian.org>

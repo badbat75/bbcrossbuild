@@ -1,11 +1,11 @@
 # camillagui-backend_1
 PKG_SUFFIX=.0.0-rc5
 PKG_URL="https://github.com/HEnquist/camillagui-backend/archive/refs/tags/v1${PKG_SUFFIX}.tar.gz"
-PKG_DEPS="python/pycamilladsp_1 python/pycamilladsp-plot_1 moode/camillagui_1 moode/moode-pkgbuild"
-PKG_DEPS+=" moode/moode-pkgbuild"
+PKG_DEPS="python/pycamilladsp_1 python/pycamilladsp-plot_1 moode/camillagui_1 moode/moode-pkgbuild_8"
+PKG_DEPS+=" moode/moode-pkgbuild_8"
 BUILD_PROCESS=downloadonly
 
-MOODE_CAMILLAGUI_PATH=${SRC_PATH}/moode-pkgbuild/packages/camillagui
+MOODE_CAMILLAGUI_PATH=${SRC_PATH}/moode-pkgbuild_8/packages/camillagui
 PKG_PREBUILD="patch -p1 < ${MOODE_CAMILLAGUI_PATH}/camillagui_backend_hide_files.patch"
 PKG_POSTBUILD="mkdir -p ${PKG_PKGPATH}/opt/camillagui
     cp -frv \${PKG_SRCPATH}/* ${PKG_PKGPATH}/opt/camillagui

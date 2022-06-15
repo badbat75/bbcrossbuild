@@ -1,7 +1,7 @@
-# moode-dynamic-ver_2.0
-MOODEVER=8.0.2
+# moode_8
+MOODEVER=8.1.0
 MOODEREL=r$(echo ${MOODEVER} | sed 's/\.//g')
-#MOODEDEVCOMMIT=58e766bd5574bea697df073b5af96137139422c4
+MOODEDEVCOMMIT=1410ac8c6db1a3eedb80e22514b2d9fc395ca602
 if [ -z "${MOODEDEVCOMMIT}" ]
 then
 	PKG_URL="https://github.com/moode-player/moode/archive/${MOODEREL}prod.tar.gz"
@@ -10,7 +10,7 @@ else
 fi
 PKG_SRCDIR=moode_${MOODEREL}
 BUILD_PROCESS=downloadonly
-PKG_DEPS="python/RPi.GPIO python/python-musicpd raspbian/zip_3.0-12 moode/moode-pkgbuild moode/moode-runonce"
+PKG_DEPS="python/RPi.GPIO python/python-musicpd raspbian/zip_3.0-12 moode/moode-pkgbuild_8 moode/moode-runonce"
 PKG_PREBUILD="mkdir -pv \${PKG_BLDPATH}
 	cp -v package.json package-lock.json gulpfile.js \${PKG_BLDPATH}
 	cp -rv www \${PKG_BLDPATH}/www
@@ -43,11 +43,11 @@ PKG_POSTBUILD="
 
 	# generate moode radio stations backup file (used for populating the station from the installer)
 	cat \${PKG_SRCPATH}/var/local/www/db/moode-sqlite3.db.sql | sqlite3 \${PKG_BLDPATH}/moode-sqlite3.db
-	\${PKG_SRCPATH}/www/command/stationmanager.py --db \${PKG_BLDPATH}/moode-sqlite3.db --logopath \${PKG_SRCPATH}/var/local/www/imagesw/radio-logos --scope moode --export moode-stations-full_\$PKGVERSION.zip
+	\${PKG_SRCPATH}/www/util/stationmanager.py --db \${PKG_BLDPATH}/moode-sqlite3.db --logopath \${PKG_SRCPATH}/var/local/www/imagesw/radio-logos --scope moode --export moode-stations-full_\$PKGVERSION.zip
 	#### To check when moode-stations-full_r800.zip is available
 	if [ -f \$MAJOR_BASE_STATIONS ]
 	then
-		\${PKG_SRCPATH}/www/command/stationmanager.py --db \${PKG_BLDPATH}/moode-sqlite3.db --logopath \${PKG_SRCPATH}/var/local/www/imagesw/radio-logos --diff ${USERDATA_PATH}/moode-stations-update_\$PKGVERSION.zip --scope moode \$MAJOR_BASE_STATIONS
+		\${PKG_SRCPATH}/www/util/stationmanager.py --db \${PKG_BLDPATH}/moode-sqlite3.db --logopath \${PKG_SRCPATH}/var/local/www/imagesw/radio-logos --diff ${USERDATA_PATH}/moode-stations-update_\$PKGVERSION.zip --scope moode \$MAJOR_BASE_STATIONS
 	fi
 
 	rm -f \${PKG_BLDPATH}/moode-sqlite3.db || true
@@ -114,6 +114,7 @@ PKG_POSTBUILD="
 	# echo \"** Reset permissions\"
 	chmod -R 0755  ${PKG_PKGPATH}/var/www
 	chmod 0755  ${PKG_PKGPATH}/var/www/command/*
+	chmod 0755  ${PKG_PKGPATH}/var/www/util/*
 	chmod -R 0755  ${PKG_PKGPATH}/var/local/www
 	chmod -R 0777  ${PKG_PKGPATH}/var/local/www/commandw/*
 	chmod -R 0766  ${PKG_PKGPATH}/var/local/www/db
@@ -128,7 +129,7 @@ PKG_POSTBUILD="
 	EOFM
 
 	mkdir -pv ${PKG_PKGPATH}/postinst_scripts
-	cp ${SRC_PATH}/moode-pkgbuild/packages/moode-player/postinstall.sh ${PKG_PKGPATH}/postinst_scripts/99_moode_player
+	cp ${SRC_PATH}/moode-pkgbuild_8/packages/moode-player/postinstall.sh ${PKG_PKGPATH}/postinst_scripts/99_moode_player
 	sed -i '/PKG_VERSION/ s/x.x.x/${MOODEVER}/' ${PKG_PKGPATH}/postinst_scripts/99_moode_player
 	sed -i 's/systemctl st/# systemctl st/g' ${PKG_PKGPATH}/postinst_scripts/99_moode_player
 "

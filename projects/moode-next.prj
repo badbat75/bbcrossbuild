@@ -112,7 +112,7 @@ build raspbian/sox_14.4.2+git20190427-2
 build raspbian/flac_1.3.3-2
 build moode/trx_0.6
 build raspbian/haveged_1.9.14-1
-build moode/moode-dynamic-ver_2.0
+build moode/moode_8
 
 # Uncomment it to navigate in the temp filesystem
 # pause

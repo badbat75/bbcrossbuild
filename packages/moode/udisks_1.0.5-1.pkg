@@ -2,7 +2,7 @@
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/u/udisks/udisks_1.0.5.orig.tar.gz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/u/udisks/udisks_1.0.5-1.debian.tar.xz"
 
-PKG_PREBUILD="patch -p2 < ${SRC_PATH}/moode-pkgbuild/packages/udisks/fix_missing_includes.patch"
+PKG_PREBUILD="patch -p2 < ${SRC_PATH}/moode-pkgbuild_8/packages/udisks/fix_missing_includes.patch"
 
 BUILD_PROCESS=configmake
 PKG_DEPS="raspbian/sg3-utils_1.46-1 moode/libgudev_237-2"

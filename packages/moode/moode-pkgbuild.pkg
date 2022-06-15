@@ -1,3 +1,0 @@
-# moode-pkgbuild
-PKG_URL="https://github.com/moode-player/pkgbuild/archive/0217de747f06cdd51a588d2d2b84b8b27b8fd6b4.tar.gz"
-BUILD_PROCESS=downloadonly
