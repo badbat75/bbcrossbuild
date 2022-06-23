@@ -1,7 +1,7 @@
 # moode_8
 MOODEVER=8.1.0
 MOODEREL=r$(echo ${MOODEVER} | sed 's/\.//g')
-MOODEDEVCOMMIT=1410ac8c6db1a3eedb80e22514b2d9fc395ca602
+#MOODEDEVCOMMIT=5dc7361de1874ddda67b25ceeb5c49c959e265bf
 if [ -z "${MOODEDEVCOMMIT}" ]
 then
 	PKG_URL="https://github.com/moode-player/moode/archive/${MOODEREL}prod.tar.gz"

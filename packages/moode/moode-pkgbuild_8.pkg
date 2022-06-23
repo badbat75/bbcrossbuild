@@ -1,11 +1,11 @@
 # moode-pkgbuild_8
-MOODEVER=8.1.0
-MOODEREL=v$(echo ${MOODEVER} | sed 's/\.//g')
-MOODEDEVCOMMIT=1410ac8c6db1a3eedb80e22514b2d9fc395ca602
+MOODEPKGBUILD=8.1.0
+MOODEPKGBUILDREL=v$(echo ${MOODEPKGBUILD} | sed 's/\.//g')
+#MOODEPKGBUILDCOMMIT=6694a8387fc2a19da8c0389cc26fc9d32e43374b
 if [ -z "${MOODEDEVCOMMIT}" ]
 then
-	PKG_URL="https://github.com/moode-player/pkgbuild/archive/refs/tags/${MOODEREL}.tar.gz"
+	PKG_URL="https://github.com/moode-player/pkgbuild/archive/refs/tags/${MOODEPKGBUILDREL}.tar.gz"
 else
-	PKG_URL="https://github.com/moode-player/pkgbuild/archive/${MOODEDEVCOMMIT}.tar.gz"
+	PKG_URL="https://github.com/moode-player/pkgbuild/archive/${MOODEPKGBUILDCOMMIT}.tar.gz"
 fi
 BUILD_PROCESS=downloadonly
