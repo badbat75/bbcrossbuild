@@ -1,7 +1,7 @@
 # moode-pkgbuild_8
-MOODEPKGBUILD=8.1.0
+MOODEPKGBUILD=8.1.1
 MOODEPKGBUILDREL=v$(echo ${MOODEPKGBUILD} | sed 's/\.//g')
-#MOODEPKGBUILDCOMMIT=6694a8387fc2a19da8c0389cc26fc9d32e43374b
+#MOODEPKGBUILDCOMMIT=a2283ca0df8169d5e8cf8b422e2a4c6761e5aa2d
 if [ -z "${MOODEDEVCOMMIT}" ]
 then
 	PKG_URL="https://github.com/moode-player/pkgbuild/archive/refs/tags/${MOODEPKGBUILDREL}.tar.gz"

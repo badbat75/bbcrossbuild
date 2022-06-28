@@ -73,7 +73,7 @@ generate_ssh_keys --install binaries
 #clean_project
 #pause
 
-build raspberrypi/rpi-kernel_5.17
+build raspberrypi/rpi-kernel_5.18
 #build raspberrypi/rpi-kernel_5.15 --with_extra_modules moode/ax88179_178a,moode/rtl8812au_5.6.4.2
 build raspberrypi/raspi-config
 build raspberrypi/raspberrypi-sys-mods
