@@ -529,9 +529,9 @@ function build () {(
 					mkdir m4
 				fi
 				local ACINCLUDE="--include=m4"
-				[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal"
+				#[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal"
 				[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
-				eval autoreconf -fi ${ACINCLUDE} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+				eval autoreconf -f -i -v ${ACINCLUDE} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 			done
 			unset IFS
 			echo "Done." || echo "Fail."

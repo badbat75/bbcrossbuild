@@ -1,4 +1,4 @@
-# iw_5.16-1
+# iw_5.19-1
 PKG_URL="https://www.kernel.org/pub/software/network/iw/iw-5.9.tar.xz"
 PKG_DEPS="lfs/libnl_3.5.0"
 #PKG_OVERRIDELTO=0

@@ -1,5 +1,5 @@
-# tfsxml-libmediainfo_22.03
-PKG_URL="https://mediaarea.net/download/source/libmediainfo/22.03/libmediainfo_22.03.tar.xz"
+# tfsxml-libmediainfo_22.06
+PKG_URL="https://mediaarea.net/download/source/libmediainfo/22.06/libmediainfo_22.06.tar.xz"
 BUILD_PROCESS=simplemake
 CONF_PATH=Source/ThirdParty/tfsxml
 INST_CMD=install-strip

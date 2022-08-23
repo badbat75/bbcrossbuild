@@ -1,7 +1,7 @@
 # bluez_5
-PKG_SUFFIX=.64
+PKG_SUFFIX=.65
 PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-5${PKG_SUFFIX}.tar.xz"
-PKG_DEPS="raspbian/ell_0.50-1"
+PKG_DEPS="raspbian/ell_0.52-1"
 #PKG_DEPS+=" lfs/elfutils_0.182"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--with-dbusconfdir=${BUILD_SYSCONFDIR} \
@@ -30,20 +30,6 @@ index 8a1e25801..d6e1c7a03 100644
    <policy context=\"default\">
      <allow send_destination=\"org.bluez\"/>
    </policy>
---
-diff --git a/src/main.conf b/src/main.conf
-index f47cab46d..e791caaf7 100644
---- a/src/main.conf
-+++ b/src/main.conf
-@@ -235,7 +235,7 @@
- # AutoEnable defines option to enable all controllers when they are found.
- # This includes adapters present on start as well as adapters that are plugged
- # in later on. Defaults to 'false'.
--#AutoEnable=false
-+AutoEnable=true
- 
- # Audio devices that were disconnected due to suspend will be reconnected on
- # resume. ResumeDelay determines the delay between when the controller
 --
 EOF
 "

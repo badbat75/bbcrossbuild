@@ -1,6 +1,5 @@
 # libtwolame_0.4.0
-GIT_URL="https://github.com/njh/twolame"
-GIT_COMMIT="0.4.0"
+PKG_URL="https://github.com/njh/twolame/archive/refs/tags/0.4.0.tar.gz"
 BUILD_PROCESS=configmake
 AUTOCONF=1
 PKG_DEPS="moode/libsndfile_1.0.31"

@@ -2,9 +2,8 @@
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libz/libzen/libzen_0.4.39.orig.tar.gz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libz/libzen/libzen_0.4.39-1.debian.tar.xz"
 BUILD_PROCESS=configmake
-AUTOCONF=1
-AUTOCONF_PATH=Project/GNU/Library
 PKG_COPYSRC=1
 CONF_PATH=Project/GNU/Library
 # CONF_FLAGS=""
 INST_CMD=install-strip
+PKG_PREBUILD="cd Project/GNU/Library; ./autogen.sh; cd -"

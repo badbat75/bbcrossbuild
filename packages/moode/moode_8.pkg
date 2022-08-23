@@ -43,11 +43,11 @@ PKG_POSTBUILD="
 
 	# generate moode radio stations backup file (used for populating the station from the installer)
 	cat \${PKG_SRCPATH}/var/local/www/db/moode-sqlite3.db.sql | sqlite3 \${PKG_BLDPATH}/moode-sqlite3.db
-	\${PKG_SRCPATH}/www/util/stationmanager.py --db \${PKG_BLDPATH}/moode-sqlite3.db --logopath \${PKG_SRCPATH}/var/local/www/imagesw/radio-logos --scope moode --export moode-stations-full_\$PKGVERSION.zip
+	\${PKG_SRCPATH}/www/util/station_manager.py --db \${PKG_BLDPATH}/moode-sqlite3.db --logopath \${PKG_SRCPATH}/var/local/www/imagesw/radio-logos --scope moode --export moode-stations-full_\$PKGVERSION.zip
 	#### To check when moode-stations-full_r800.zip is available
 	if [ -f \$MAJOR_BASE_STATIONS ]
 	then
-		\${PKG_SRCPATH}/www/util/stationmanager.py --db \${PKG_BLDPATH}/moode-sqlite3.db --logopath \${PKG_SRCPATH}/var/local/www/imagesw/radio-logos --diff ${USERDATA_PATH}/moode-stations-update_\$PKGVERSION.zip --scope moode \$MAJOR_BASE_STATIONS
+		\${PKG_SRCPATH}/www/util/station_manager.py --db \${PKG_BLDPATH}/moode-sqlite3.db --logopath \${PKG_SRCPATH}/var/local/www/imagesw/radio-logos --diff ${USERDATA_PATH}/moode-stations-update_\$PKGVERSION.zip --scope moode \$MAJOR_BASE_STATIONS
 	fi
 
 	rm -f \${PKG_BLDPATH}/moode-sqlite3.db || true
