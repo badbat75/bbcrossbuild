@@ -187,8 +187,7 @@ function setup_gcc () {
 		local GMPURL=https://gmplib.org/download/gmp/gmp-${GMP_VER}.tar.xz
 		local MPFRURL=https://www.mpfr.org/mpfr-${MPFR_VER}/mpfr-${MPFR_VER}.tar.xz
 		local MPCURL=https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VER}.tar.gz
-		#local ISLURL=http://isl.gforge.inria.fr/isl-${ISL_VER}.tar.xz
-		local ISLURL=https://mirror.sobukus.de/files/src/isl/isl-${ISL_VER}.tar.xz
+		local ISLURL=https://libisl.sourceforge.io/isl-${ISL_VER}.tar.xz
 		local BINUTILSURL=https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz
 		#local GCCURL=https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.xz
 		local GCCURL=https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz
