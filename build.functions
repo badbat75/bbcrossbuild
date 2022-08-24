@@ -1152,6 +1152,12 @@ function build () {(
 		set -x
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
+		if [ -d ${DISTOS_PATH}${BUILD_INCLUDEDIR} ]
+		then
+			local ICU_INCLUDEDIR=${DISTOS_PATH}${BUILD_INCLUDEDIR}
+		else
+			local ICU_INCLUDEDIR=${BIN_PATH}${BUILD_INCLUDEDIR}
+		fi
 		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
 		then
 			COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
@@ -1204,24 +1210,61 @@ function build () {(
 			macosx|ios) local HMBINFMT=mach-o;;
 		esac
 		case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
-			llvm) local BBTC=clang;;
-			gnu) local BBTC=gcc;;
+			llvm) 
+					local BBTC=clang
+					local CXX_EXE=${CCWRAPPER:+${CCWRAPPER} }clang++
+					local WORKAROUND="--target=${HARCH} "
+					local LINKER_FLAGS="-fuse-ld=${LLVM_DEFAULT_LD:-lld} -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS}"
+				;;
+			gnu) 
+					local BBTC=gcc
+					local CXX_EXE=${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++
+					local LINKER_FLAGS="-fuse-ld=${LLVM_DEFAULT_LD:-gold} ${GNU_EXTRALDFLAGS}"
+				;;
 		esac
-		create_environment_source
-		source environment.source
-		
+		case ${OPTLEVEL} in
+			2)	local OPTIMIZATION=minimal
+				;;
+			3)	local OPTIMIZATION=speed
+				;;
+			s)	local OPTIMIZATION=space
+				;;
+			*)	local OPTIMIZATION=off
+				;;
+		esac
+		case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
+			1|fat)
+				local LTO=on
+				local LTOMODE=full
+				;;
+			2|thin)
+				local LTO=on
+				local LTOMODE=thin
+				;;
+			*)
+				local LTO=off
+				;;
+		esac
+#		create_environment_source
+#		source environment.source
 		./bootstrap.sh \
 			--prefix=${PKG_PKGPATH}${BUILD_PREFIX} \
 			--exec-prefix=${PKG_PKGPATH}${BUILD_EXECPREFIX} \
 			--libdir=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
 			--includedir=${PKG_PKGPATH}${BUILD_INCLUDEDIR} \
+			--with-icu=${ICU_INCLUDEDIR} \
 			--with-python-version=${PYTHONBIN_VER} \
 			--with-toolset=${BBTC}
-		sed -i "s|using ${BBTC} ;|using ${BBTC} : : ${CXX} ;|" project-config.jam &&
-		./b2 -j${NPROCS} -q ${B2_FLAGS} \
-			architecture=${BOOST_ARCH} binary-format=${HMBINFMT} abi=${BOOST_ABI} target-os=${HOS} \
-			variant=release address-model=${BOOST_ADDRMOD} threading=multi \
-			toolset=${BBTC} cflags="${CFLAGS}" cxxflags="-fPIC ${CXXFLAGS}" linkflags="${LDFLAGS}" install
+		sed -i "s|using ${BBTC} ;|using ${BBTC} : : ${CXX_EXE} ;|" project-config.jam &&
+		./b2 -j${NPROCS} -q \
+			architecture=${BOOST_ARCH} address-model=${BOOST_ADDRMOD} \
+			binary-format=${HMBINFMT} abi=${BOOST_ABI} target-os=${HOS} \
+			variant=release optimization=${OPTIMIZATION} lto=${LTO} lto-mode=${LTOMODE} threading=multi ${B2_FLAGS} \
+			toolset=${BBTC} \
+			cflags="${WORKAROUND}${SYSROOT_FLAGS} ${PLATFORM_CFLAGS} ${PKG_CFLAGS}" \
+			cxxflags="${COMMON_CXXFLAGS} -fPIC ${PKG_CXXFLAGS}" \
+			linkflags="${WORKAROUND}${SYSROOT_FLAGS} ${LINKER_FLAGS} ${COMMON_LDFLAGS} ${PKG_LDFLAGS}" \
+			install
 		cd ${BB_HOME}
 		set +x
 		trap - ERR
