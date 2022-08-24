@@ -1,0 +1,9 @@
+# file_5
+PKG_SUFFIX=.41
+PKG_URL="http://ftp.astron.com/pub/file/file-5${PKG_SUFFIX}.tar.gz"
+PKG_DEPS="lfs/zlib_1.2.12 lfs/bzip2_1.0.8"
+#PATCHES=
+BUILD_PROCESS=configmake
+CONF_FLAGS=""
+INST_CMD="install-strip"
+AUTOCONF=1

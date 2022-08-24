@@ -2,9 +2,10 @@
 PKG_URL="https://ftp.gnu.org/gnu/bc/bc-1.07.tar.gz"
 PKG_DEPS="lfs/ncurses_6.2+p20210130 lfs/readline_8.1"
 BUILD_PROCESS=configmake
+AUTOCONF=1
 CONF_FLAGS="--with-readline"
 PKG_MAKEVARS=""
-INST_CMD="install-strip CC_FOR_BUILD=gcc"
+INST_CMD="install-strip"
 
 PKG_PREBUILD='cat <<EOF | patch -s -p1 || true
 diff -Naur bc-1.07.orig/bc/Makefile.am bc-1.07/bc/Makefile.am
@@ -325,4 +326,6 @@ diff -Naur bc-1.07.orig/m4/cc_for_build.m4 bc-1.07/m4/cc_for_build.m4
 +fi
 +AC_SUBST(EXEEXT_FOR_BUILD)])dnl
 EOF
+sed -i "/^%.o_host : CFLAGS:=/a %.o_host : CPPFLAGS:=" lib/Makefile.am
+sed -i "/^%.o_host : CFLAGS:=/a %.o_host : CPPFLAGS:=" bc/Makefile.am
 '

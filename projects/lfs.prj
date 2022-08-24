@@ -11,20 +11,21 @@ build lfs/create-base-config_1.0
 
 mkdir -p ${USERDATA_PATH}/postinstall
 
+setup_sccache
 setup_gcc --install
 
 build raspberrypi/rpi-firmware_1
 build firmwares/linux-firmware
-build raspberrypi/rpi-kernel_5.15
-build lfs/glibc_2.34
-build lfs/tzdata_2021a
+build raspberrypi/rpi-kernel_5.19
+build lfs/glibc_2.36
+build lfs/tzdata_2022c
 build lfs/man-pages_5.10
 build lfs/iana-etc_20210202
-build lfs/zlib_1.2.11
+build lfs/zlib_1.2.12
 build lfs/bzip2_1.0.8
 build lfs/xz_5.2.5
 build lfs/zstd_1.4.8
-build lfs/file_5.39
+build lfs/file_5
 build lfs/readline_8.1
 build lfs/bc_1.0.7
 build lfs/gmp_6.2.1
@@ -44,7 +45,7 @@ build lfs/inetutils_2.0
 build perl/XML::Parser_2.46
 build lfs/perl_5.32.1
 build lfs/intltool_0.51.0
-build lfs/kmod_28
+build lfs/kmod_30
 build lfs/elfutils_0.182
 build lfs/libffi_3.3
 build lfs/openssl_1.1.1i
@@ -62,7 +63,7 @@ build lfs/libpipeline_1.5.3
 build lfs/man-db_2.9.3
 build lfs/tar_1.33
 build lfs/vim_8.2.2433
-build lfs/systemd_247
+build lfs/systemd_251
 build lfs/D-Bus_1.12.20
 build lfs/procps-ng_3.3.16
 build lfs/util-linux_2.36.2

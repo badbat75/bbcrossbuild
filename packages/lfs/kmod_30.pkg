@@ -1,8 +1,8 @@
-# kmod_28
-PKG_URL="https://www.kernel.org/pub/linux/utils/kernel/kmod/kmod-28.tar.xz"
-PKG_DEPS="lfs/zlib_1.2.11 lfs/zstd_1.4.8"
+# kmod_30
+PKG_URL="https://www.kernel.org/pub/linux/utils/kernel/kmod/kmod-30.tar.xz"
+PKG_DEPS="lfs/openssl_1.1.1i lfs/zlib_1.2.12 lfs/zstd_1.4.8"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--with-xz --with-zstd --with-zlib"
+CONF_FLAGS="--with-openssl --with-xz --with-zstd --with-zlib"
 INST_CMD="install-strip"
 
 PKG_POSTBUILD="[ ! -d ${PKG_PKGPATH}${BUILD_PREFIX}/sbin ] && mkdir ${PKG_PKGPATH}${BUILD_PREFIX}/sbin || true

@@ -1,6 +1,6 @@
-# glibc_2.34
+# glibc_2.36
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-2.34.tar.xz"
-PATCHES="http://www.linuxfromscratch.org/patches/lfs/development/glibc-2.34-fhs-1.patch"
+PATCHES="http://www.linuxfromscratch.org/patches/lfs/development/glibc-2.36-fhs-1.patch"
 BUILD_PROCESS=configmake
 
 PKG_OVERRIDELTO=0
@@ -36,10 +36,13 @@ else
 	if [ ${BUILD_LIBDIR}${BUILD_LIBSUFFIX} != ${BUILD_LIBDIR} ]
 	then
 		PKG_POSTBUILD+="
-			ld=\$(find ${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX} -name "ld-*.so")
-			ldlink=\$(find ${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX} -name "ld-*.so.*")
-			ln -fsv \${ld#${PKG_PKGPATH}/lib/} ${PKG_PKGPATH}/lib/\${ldlink#${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX}/}
-			ln -fsv \${ldlink#${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX}/} ${PKG_PKGPATH}/lib/ld-linux.so.\$(echo \${ldlink} | sed 's/.*.so.//' )"
+			if [ -d ${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX} ]
+			then
+				ld=\$(find ${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX} -name "ld-*.so")
+				ldlink=\$(find ${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX} -name "ld-*.so.*")
+				ln -fsv \${ld#${PKG_PKGPATH}/lib/} ${PKG_PKGPATH}/lib/\${ldlink#${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX}/}
+				ln -fsv \${ldlink#${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX}/} ${PKG_PKGPATH}/lib/ld-linux.so.\$(echo \${ldlink} | sed 's/.*.so.//' )
+			fi"
 	fi
 	PKG_POSTBUILD+="
 		touch ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/ld.so.conf
