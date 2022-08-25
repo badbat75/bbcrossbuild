@@ -1,8 +1,9 @@
-# util-linux_2.36.2
-PKG_URL="https://www.kernel.org/pub/linux/utils/util-linux/v2.36/util-linux-2.36.2.tar.xz"
-PKG_DEPS="lfs/zlib_1.2.12 lfs/bzip2_1.0.8 lfs/ncurses_6.2+p20210130 lfs/readline_8.1"
+# util-linux_2.38.1
+PKG_URL="https://github.com/util-linux/util-linux/archive/refs/tags/v2.38.1.tar.gz"
+PKG_DEPS="lfs/zlib_1.2.12 lfs/bzip2_1.0.8 lfs/ncurses_6.3+p20220820 lfs/readline_8.2"
 
 BUILD_PROCESS=configmake
+#AUTOCONF=1
 CONF_FLAGS="ADJTIME_PATH=/var/lib/hwclock/adjtime \
             --disable-chfn-chsh \
             --disable-login \
@@ -16,5 +17,6 @@ CONF_FLAGS="ADJTIME_PATH=/var/lib/hwclock/adjtime \
             --without-tinfo \
             runstatedir=/run"
 INST_CMD="install-strip"
-PKG_MAKEVARS="NCURSES_LIBS=\"-Wl,-Bsymbolic-functions -lncursesw\""
-PKG_PREBUILD=""
+#PKG_MAKEVARS="NCURSES_LIBS=\"-Wl,-Bsymbolic-functions -lncursesw\""
+PKG_MAKEVARS="NCURSES_LIBS=-lncursesw"
+PKG_PREBUILD="./autogen.sh"

@@ -1,6 +1,6 @@
-# glibc_2.36
-PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-2.36.tar.xz"
-PATCHES="http://www.linuxfromscratch.org/patches/lfs/development/glibc-2.36-fhs-1.patch"
+# glibc
+PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${BS_GLIBC_VER}.tar.xz"
+PATCHES="http://www.linuxfromscratch.org/patches/lfs/development/glibc-${BS_GLIBC_VER}-fhs-1.patch"
 BUILD_PROCESS=configmake
 
 PKG_OVERRIDELTO=0
@@ -16,6 +16,7 @@ CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}${BUILD_INCLUDEDIR} \
 	--enable-stackguard-randomization --enable-stack-protector=strong \
 	--enable-pt_chown --enable-tunables --enable-bind-now"
 PKG_MAKEVARS="cross-compiling=yes"
+PKG_OVERRIDELD=bfd
 
 PKG_PREBUILD="if [ x\$(grep \"*result = local->data.services[database_index];\" nss/nss_database.c) == x ]
 	then

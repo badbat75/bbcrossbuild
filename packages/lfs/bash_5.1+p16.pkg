@@ -1,6 +1,6 @@
-# bash_5.1+p4
-PKG_URL="https://git.savannah.gnu.org/cgit/bash.git/snapshot/bash-76404c85d492c001f59f2644074333ffb7608532.tar.gz"
-PKG_DEPS="lfs/ncurses_6.2+p20210130 lfs/readline_8.1"
+# bash_5.1+p16
+PKG_URL="https://git.savannah.gnu.org/cgit/bash.git/snapshot/bash-9439ce094c9aa7557a9d53ac7b412a23aa66e36b.tar.gz"
+PKG_DEPS="lfs/ncurses_6.3+p20220820 lfs/readline_8.2"
 
 BUILD_PROCESS=configmake
 #PKG_OVERRIDELTO=0

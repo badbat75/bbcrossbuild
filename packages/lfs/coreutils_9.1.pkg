@@ -1,0 +1,5 @@
+# coreutils_9.1
+PKG_URL="https://ftp.gnu.org/gnu/coreutils/coreutils-9.1.tar.xz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--enable-install-program=hostname --enable-no-install-program=kill,uptime"
+INST_CMD="install-strip"

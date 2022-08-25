@@ -1,0 +1,20 @@
+# openssl_3.0.5
+PKG_URL="https://www.openssl.org/source/openssl-3.0.5.tar.gz"
+
+CONF_COPYRSC=1
+CONF_CMD="Configure"
+STD_CONF_FLAGS=0
+CONF_FLAGS="--prefix=${BUILD_PREFIX} --openssldir=${BUILD_SYSCONFDIR}/ssl $(
+    case x${HARCH} in
+    xarm-linux-*)
+        echo linux-generic32 
+        ;;
+    *)
+        echo ${HOS}-${HM}
+        ;;
+    esac
+    ) shared zlib-dynamic no-tests"
+BUILD_PROCESS=configmake
+INST_CMD="install"
+PKG_TWOSTEPSBUILD=1
+PKG_MAKEVARS="MANSUFFIX=ssl LIBDIR=lib${BUILD_LIBSUFFIX}"

@@ -1,6 +1,6 @@
-# vim_8.2.2433
-PKG_URL="http://anduin.linuxfromscratch.org/LFS/vim-8.2.2433.tar.gz"
-PKG_DEPS="lfs/ncurses_6.2+p20210130 lfs/elfutils_0.182"
+# vim_9.0.0228
+PKG_URL="https://anduin.linuxfromscratch.org/LFS/vim-9.0.0228.tar.gz"
+PKG_DEPS="lfs/ncurses_6.3+p20220820 lfs/elfutils_0.187"
 BUILD_PROCESS=configmake
 
 PKG_COPYSRC=1

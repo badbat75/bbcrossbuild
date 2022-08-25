@@ -1,16 +1,20 @@
-# perl_5.32.1
-PKG_PERL_MAJVER=5.32
-PKG_PERL_SUBVER=1
+# perl_5
+PKG_PERL_MAJVER=5.37
+PKG_PERL_SUBVER=3
 PKG_PERL_VER=${PKG_PERL_MAJVER}.${PKG_PERL_SUBVER}
+# perl-cross_1.4+f842531
+PKG_PERLCROSS_VER=f842531ca3198ac30dddfd36f881b947cbffebdd
 PKG_URL="https://www.cpan.org/src/5.0/perl-${PKG_PERL_VER}.tar.xz"
-PKG_DEPS="lfs/gdbm_1.19 lfs/expat_2.2.10"
+PKG_DEPS="lfs/gdbm_1.23 lfs/expat_2.4.8"
 BUILD_PROCESS=downloadonly
 #PKG_MAKEVARS="-j1"
 PKG_COPYSRC=1
-PKG_PREBUILD="NODELETEDESTDIR=1 download_uncompress https://github.com/arsv/perl-cross/releases/download/1.3.5/perl-cross-1.3.5.tar.gz \${PKG_SRCPATH}"
+PKG_PREBUILD="NODELETEDESTDIR=1 download_uncompress https://github.com/arsv/perl-cross/archive/${PKG_PERLCROSS_VER}.tar.gz \${PKG_SRCPATH}"
 PKG_POSTBUILD="
 	set -x
 	[ -d ${SRC_PATH}/perl ] && cp -frpv ${SRC_PATH}/perl/* . || true
+	echo OPTCOMP_FLAGS: \${OPTCOMP_FLAGS}
+	echo OPTLINK_FLAGS: \${OPTLINK_FLAGS}
 	\${PKG_SRCPATH}/configure \
 		--prefix=/usr --target=${HARCH} --sysroot=${BIN_PATH} \
 		--host-cc=${BARCH}-gcc \
@@ -19,9 +23,9 @@ PKG_POSTBUILD="
 		--with-cc='${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc' \
 		--with-cpp='${CCWRAPPER:+${CCWRAPPER} }${HARCH}-cpp' \
 		--with-ranlib=${HARCH}-gcc-ranlib \
-		-Dccflags='${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS}' \
-		-Doptimize='${OPTLEVEL:+-O${OPTLEVEL}} $([ ${LTOENABLE:-0} -eq 1 ] && echo ${COMMON_GNULTOFLAGS} || true)' \
-		-Dldflags='${OPTLINK_FLAGS}' \
+		-Dccflags='${PLATFORM_CFLAGS}' \
+		-Doptimize=\"\${OPTCOMP_FLAGS}\" \
+		-Dldflags=\"\${OPTLINK_FLAGS}\" \
 		-Dpager='${BUILD_PREFIX}/bin/less -isR' \
 		-Duseshrplib \
 		-Dusethreads \

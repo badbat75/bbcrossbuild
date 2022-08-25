@@ -38,7 +38,7 @@ function setbuildenv () {
 	PLATFORM_RUSTFLAGS="${HMCPU:+-C target-cpu=${HMCPU}}${HMARCH_RUST:+ -C target-feature=${HMARCH_RUST} }"
 
 	case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
-		gnu) local SYSINCLUDE_OPT="-isystem";;
+#		gnu) local SYSINCLUDE_OPT="-isystem";;
 		llvm|*) local SYSINCLUDE_OPT="-I";;
 	esac
 
@@ -230,7 +230,7 @@ function settcenv () {
 			TOOLCHAIN_OBJCOPY=${HARCH}-objcopy
 			TOOLCHAIN_OBJDUMP=${HARCH}-objdump
 			TOOLCHAIN_READELF=${HARCH}-readelf
-			TOOLCHAIN_LD=${GCC_DEFAULT_LD:-gold}
+			TOOLCHAIN_LD=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
 			if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
 			then
 				TOOLCHAIN_COMPFLAGS="${GNU_EXTRAGCCFLAGS}"
@@ -262,7 +262,7 @@ function settcenv () {
 			TOOLCHAIN_OBJCOPY=llvm-objcopy
 			TOOLCHAIN_OBJDUMP=llvm-objdump
 			TOOLCHAIN_READELF=llvm-readelf
-			TOOLCHAIN_LD=${LLVM_DEFAULT_LD:-lld}
+			TOOLCHAIN_LD=${PKG_OVERRIDELD:-${LLVM_DEFAULT_LD:-lld}}
 			if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
 			then
 				TOOLCHAIN_COMPFLAGS="${LLVM_EXTRACLANGFLAGS}"
@@ -1365,6 +1365,7 @@ function build () {(
 		PKG_LLVMPOLLYFEATURES \
 		PKG_MAKETARGETS \
 		PKG_MAKEVARS \
+		PKG_OVERRIDELD \
 		PKG_OVERRIDELTO \
 		PKG_PREBUILD \
 		PKG_POSTBUILD \

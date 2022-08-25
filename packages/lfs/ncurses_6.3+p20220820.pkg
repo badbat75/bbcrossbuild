@@ -1,5 +1,5 @@
-# ncurses_6.2+p20210130
-PKG_URL="https://github.com/mirror/ncurses/archive/5d5daf53864fdb666df16c82c3710025cf119e9d.tar.gz"
+# ncurses_6.3+p20220820
+PKG_URL="https://github.com/mirror/ncurses/archive/00351a08b43e8b1c62e2c2d79b62ddca8531cfba.tar.gz"
 #GIT_URL="https://github.com/mirror/ncurses.git"
 #GIT_COMMIT=
 

@@ -1,6 +1,7 @@
 # attr_2.4.48
 PKG_URL="http://download.savannah.gnu.org/releases/attr/attr-2.4.48.tar.gz"
 BUILD_PROCESS=configmake
+AUTOCONF=1
 CONF_FLAGS=""
 INST_CMD="install-strip"
 PKG_PREBUILD="cat <<EOF | patch -s -p1 || true

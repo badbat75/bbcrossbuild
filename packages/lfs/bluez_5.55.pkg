@@ -1,6 +1,6 @@
 # bluez_5.55
 PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-5.55.tar.xz"
-PKG_DEPS="lfs/readline_8.1 lfs/glib_2.66.7 lfs/libical_3.0.9"
+PKG_DEPS="lfs/readline_8.2 lfs/glib_2.66.7 lfs/libical_3.0.9"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-library --enable-deprecated"
 INST_CMD="install-strip"

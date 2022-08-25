@@ -1,5 +1,5 @@
-# iana-etc_20210202
-PKG_URL="https://github.com/Mic92/iana-etc/releases/download/20210202/iana-etc-20210202.tar.gz"
+# iana-etc_20220819
+PKG_URL="https://github.com/Mic92/iana-etc/releases/download/20220819/iana-etc-20220819.tar.gz"
 BUILD_PROCESS=downloadonly
 PKG_PREBUILD="mkdir -pv ${PKG_PKGPATH}/etc 
 	cp -fv protocols services ${PKG_PKGPATH}/etc/"

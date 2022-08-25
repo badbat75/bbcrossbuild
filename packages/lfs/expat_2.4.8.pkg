@@ -1,0 +1,5 @@
+# expat_2.4.8
+PKG_URL="https://downloads.sourceforge.net/project/expat/expat/2.4.8/expat-2.4.8.tar.xz?ts=gAAAAABjB3kzuVRC6692KNnQqJ-TefbV5Sw7b2rc-NBRwHdIZPSwGAqQp-gGHqaMMTFT_1MKywQIpQdnZZpCxOnkhFozR9Wt4A%3D%3D&use_mirror=autoselect&r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fexpat%2Ffiles%2Fexpat%2F2.4.8%2Fexpat-2.4.8.tar.xz%2Fdownload"
+BUILD_PROCESS=configmake
+CONF_FLAGS=""
+INST_CMD="install-strip"

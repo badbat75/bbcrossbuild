@@ -1,5 +1,5 @@
-# openssh_8.4p1
-PKG_URL="http://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-8.4p1.tar.gz"
+# openssh_9.0p1
+PKG_URL="http://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.0p1.tar.gz"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--sysconfdir=${BUILD_SYSCONFDIR}/ssh --with-md5-passwords --with-privsep-path=/var/lib/sshd"
 INST_CMD="install"

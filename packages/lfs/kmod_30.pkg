@@ -1,6 +1,6 @@
 # kmod_30
 PKG_URL="https://www.kernel.org/pub/linux/utils/kernel/kmod/kmod-30.tar.xz"
-PKG_DEPS="lfs/openssl_1.1.1i lfs/zlib_1.2.12 lfs/zstd_1.4.8"
+PKG_DEPS="lfs/openssl_3.0.5 lfs/zlib_1.2.12 lfs/zstd_1.5.2"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--with-openssl --with-xz --with-zstd --with-zlib"
 INST_CMD="install-strip"
