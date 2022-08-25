@@ -13,8 +13,8 @@ PACKAGES+=" dpkg-dev devscripts apt debhelper perl-ExtUtils-MakeMaker perl-Archi
 PACKAGES+=" qemu-user-static"
 
 # for meson-ninja
-PACKAGES+=" python3-pip meson ninja-build"
-#PACKAGES+=" meson ninja
+PACKAGES+=" python3-pip"
+PACKAGES+=" meson ninja-build"
 
 # for Python 3.7
 PACKAGES+=" openssl-devel libffi-devel"

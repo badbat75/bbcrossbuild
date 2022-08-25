@@ -1,0 +1,46 @@
+# bluez_5
+PKG_SUFFIX=.65
+PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-5${PKG_SUFFIX}.tar.xz"
+PKG_DEPS="lfs/readline_8.2 lfs/glib_2.73 lfs/libical_3.0.9 lfs/ell_0.52"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--with-dbusconfdir=${BUILD_SYSCONFDIR} \
+	--with-dbussystembusdir=${BUILD_PREFIX}/share/dbus-1/system-services \
+	--with-dbussessionbusdir=${BUILD_PREFIX}/share/dbus-1/services \
+	--with-udevdir=${BUILD_LIBDIR}/udev \
+	--enable-library --enable-deprecated --enable-tools --enable-threads --enable-backtrace --enable-nfc --enable-sap --enable-monitor --enable-udev --enable-obex --enable-client --enable-systemd --enable-sixaxis --enable-health --enable-hid2hci --enable-experimental --enable-external-ell"
+INST_CMD="install-strip"
+#PATCHDEB=""
+# Moode directory location search for bluetoothd and obexd
+
+PKG_PREBUILD="patch -p1 <<EOF
+diff --git a/src/bluetooth.conf b/src/bluetooth.conf
+index 8a1e25801..d6e1c7a03 100644
+--- a/src/bluetooth.conf
++++ b/src/bluetooth.conf
+@@ -22,6 +22,11 @@
+     <allow send_interface=\"org.mpris.MediaPlayer2.Player\"/>
+   </policy>
+ 
++  <!-- allow users of bluetooth group to communicate -->
++  <policy group=\"bluetooth\">
++    <allow send_destination=\"org.bluez\"/>
++  </policy>
++
+   <policy context=\"default\">
+     <allow send_destination=\"org.bluez\"/>
+   </policy>
+--
+EOF
+"
+
+PKG_POSTBUILD="mkdir -p ${PKG_PKGPATH}/bin
+mv ${PKG_PKGPATH}/usr/bin/hciconfig ${PKG_PKGPATH}/bin
+install -dm0700 ${PKG_PKGPATH}/var/lib/bluetooth
+mkdir -p ${PKG_PKGPATH}/etc/bluetooth/
+cp -pv \${PKG_SRCPATH}/{src/main.conf,profiles/input/input.conf,profiles/network/network.conf} ${PKG_PKGPATH}/etc/bluetooth/"
+PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH}
+
+PKG_POSTINSTALL="# create bluetooth group if not already present
+if ! getent group bluetooth > /dev/null; then
+	addgroup --quiet --system bluetooth
+fi"

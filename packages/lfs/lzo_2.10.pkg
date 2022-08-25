@@ -1,5 +1,6 @@
 # lzo_2.10
 PKG_URL="http://www.oberhumer.com/opensource/lzo/download/lzo-2.10.tar.gz"
 BUILD_PROCESS=configmake
+AUTOCONF=1
 CONF_FLAGS=""
 INST_CMD="install-strip"

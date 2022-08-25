@@ -1,8 +1,9 @@
-# procps-ng_3.3.16
-PKG_URL="https://sourceforge.net/projects/procps-ng/files/Production/procps-ng-3.3.16.tar.xz"
+# procps-ng_4.0.0
+PKG_URL="https://sourceforge.net/projects/procps-ng/files/Production/procps-ng-4.0.0.tar.xz"
 PKG_DEPS="lfs/ncurses_6.3+p20220820 lfs/systemd_251"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--disable-kill --enable-watch8bit --with-systemd \
+AUTOCONF=1
+CONF_FLAGS="--disable-kill --with-systemd \
      NCURSES_LIBS=-ltinfo ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes"
 INST_CMD="install-strip"
 PKG_PREBUILD='cat <<EOF | patch -s -p0 || true

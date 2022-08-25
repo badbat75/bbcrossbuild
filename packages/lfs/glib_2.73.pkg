@@ -1,0 +1,6 @@
+# glib_2.73
+PKG_URL="https://download.gnome.org/sources/glib/2.73/glib-2.73.3.tar.xz"
+PKG_DEPS="lfs/libxslt_1.1.34 lfs/pcre_8.45"
+BUILD_PROCESS=mesonninja
+CONF_FLAGS="-Dman=true -Dinstalled_tests=false -Db_coverage=false"
+INST_CMD="install/strip"

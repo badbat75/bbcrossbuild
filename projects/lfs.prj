@@ -64,18 +64,18 @@ build lfs/man-db_2.10.2
 build lfs/tar_1.34
 build lfs/vim_9.0.0228
 build lfs/systemd_251
-build lfs/D-Bus_1.12.20
-build lfs/procps-ng_3.3.16
+build lfs/D-Bus_1.13.22
+build lfs/procps-ng_4.0.0
 build lfs/util-linux_2.38.1
 build lfs/e2fsprogs_1.46
-build lfs/btrfs-progs_5.10.1
+build lfs/btrfs-progs_5.19
 build lfs/dosfstools_4.2
 ### Security
-build lfs/sudo_1.9.5p2
+build lfs/sudo_1.9
 build lfs/openssh_9.0p1
 ### System Utilities
 build raspberrypi/pi-bluetooth_0
-build lfs/bluez_5.55
+build lfs/bluez_5
 build lfs/usb-utils_013
 #build lfs/pciutils_5.7.0
 build lfs/lsof_4.91

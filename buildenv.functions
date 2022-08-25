@@ -1013,6 +1013,7 @@ function setup_python () {
 		${BUILD_PYTHON} ${TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py
 		cd ${START_PWD}
 		rm -rf ${TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
+		${TOOLCHAIN_PATH}/bin/pip -v install meson ninja jinja2
 		set +x
 		trap ERR
 	}
@@ -1033,7 +1034,8 @@ function setup_python () {
 		pushd ${TOOLCHAIN_BLDPATH}/build_python_crossenv
 		TOOLCHAIN=gnu create_environment_source
 		source environment.source
-		cross-pip -v install --upgrade cython 2>&1
+		cross-pip -v install --upgrade setuptools cython 2>&1
+		build-pip -v install --upgrade setuptools jinja2 2>&1
 		popd
 		rm -rf ${TOOLCHAIN_BLDPATH}/build_python_crossenv
 		set +x
