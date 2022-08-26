@@ -338,7 +338,7 @@ function create_environment_source () {
 		export PATH='${PATH}'
 		export CARGO_HOME='${CARGO_HOME}'
 		export RUSTUP_HOME='${RUSTUP_HOME}'
-		export QEMU_LD_PREFIX='${SYSROOT}'
+		export QEMU_LD_PREFIX='${SYSROOT}${BUILD_PREFIX}'
 	EOF
 	if [ "$(basename ${CCWRAPPER:-nope})" == "sccache" ]
 	then

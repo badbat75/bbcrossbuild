@@ -1,0 +1,6 @@
+# ell_0.52
+PKG_URL="https://mirrors.edge.kernel.org/pub/linux/libs/ell/ell-0.52.tar.xz"
+BUILD_PROCESS=configmake
+AUTOCONF=1
+CONF_FLAGS=""
+INST_CMD=install-strip
