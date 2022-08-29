@@ -1,5 +1,6 @@
 # openssh_9.0p1
 PKG_URL="http://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.0p1.tar.gz"
+PKG_DEPS="lfs/krb5_1.20 lfs/net-tools_2.10"
 BUILD_PROCESS=configmake
 AUTOCONF=1
 CONF_FLAGS="--sysconfdir=${BUILD_SYSCONFDIR}/ssh --with-md5-passwords --with-privsep-path=/var/lib/sshd"
@@ -46,5 +47,5 @@ PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/lib/systemd/system
 PKG_POSTINSTALL="# create bluetooth group if not already present
 # OpenSSH
 install  -v -m700 -d /var/lib/sshd
-groupadd -g 50 sshd
-useradd  -c 'sshd PrivSep' -d /var/lib/sshd -g sshd -s /bin/false -u 50 sshd"
+groupadd --system -g 50 sshd
+useradd --system -c 'sshd PrivSep' -d /var/lib/sshd -g sshd -s /bin/false -u 50 sshd"

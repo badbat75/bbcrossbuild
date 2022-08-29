@@ -41,5 +41,5 @@ cp -pv \${PKG_SRCPATH}/{src/main.conf,profiles/input/input.conf,profiles/network
 
 PKG_POSTINSTALL="# create bluetooth group if not already present
 if ! getent group bluetooth > /dev/null; then
-	addgroup --quiet --system bluetooth
+	groupadd --system bluetooth
 fi"

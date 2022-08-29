@@ -72,6 +72,7 @@ build lfs/btrfs-progs_5.19
 build lfs/dosfstools_4.2
 ### Security
 build lfs/sudo_1.9
+build lfs/net-tools_2.10
 build lfs/openssh_9.0p1
 ### System Utilities
 build raspberrypi/pi-bluetooth_0
@@ -91,7 +92,9 @@ build lfs/curl_7.84.0
 build lfs/strace_5.19
 
 ### Final configurations ###
-echo "arm_64bit=1" >${BIN_PATH}/boot/config.txt
+case x${PLATFORM_NAME} in
+	xrpi3-aarch64) echo "arm_64bit=1" >${BIN_PATH}/boot/config.txt;;
+esac
 echo "net.ifnames=0 console=tty1 root=/dev/mmcblk0p2 fsck.repair=yes rootwait" >${BIN_PATH}/boot/cmdline.txt
 
 if [ ! -x ${LFS_HOSTNAME} ]
