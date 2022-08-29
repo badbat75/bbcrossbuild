@@ -349,8 +349,10 @@ function setup_gcc () {
 		local LIB_LA_SEDTRANS="s&^dependency_libs=' -L${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/./ld&dependency_libs='&; s&^libdir='${TOOLCHAIN_PATH}&libdir='${BUILD_PREFIX}&"
 
 		### Define objects to be built
-		echo "Targets to build: ${_param_targets:-all}"
-		if [ "${_param_targets:-all}" = "all" ]
+		echo "Targets to build: ${GCC_TARGETS}"
+		echo "Install target: ${GCC_INSTALL_TARGETS}"
+		echo "GCC main: ${GCC_IS_MAIN}"
+	if [ "${GCC_TARGETS}" = "all" ]
 		then
 			local OBJECTS="libgcc libstdc++-v3 libgomp libssp libatomic"
 			if [ "$(echo ${GCC_LANGUAGES} | grep -o fortran)" == "fortran" ]
@@ -358,7 +360,7 @@ function setup_gcc () {
 				OBJECTS+=" libquadmath"
 			fi
 		else
-			local OBJECTS="${_param_targets}"
+			local OBJECTS="${GCC_TARGETS}"
 		fi
 		local BUILD_OBJECTS=
 		for object in $( echo ${OBJECTS} | tr ',' ' ' )
@@ -384,19 +386,19 @@ function setup_gcc () {
 				rm -rf ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}
 			fi
 			### Install in BIN_PATH if requested via --install
-			if [ ${_param_install:-0} -eq 1 ] 
+			if [ ${GCC_INSTALL_TARGETS} -eq 1 ] 
 			then
 				make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} DESTDIR="${BIN_PATH}" prefix=${BUILD_PREFIX} install-strip-target-${object}
-				if [ "${object}" == "libgcc" ] && [ ${_param_main_libgcc:-0} -eq 1 ]
-				then
-					find "${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" -mindepth 1 -name "libgcc_s.so*" -type f | xargs -r -I{} \
-						bash -x -c "ln -sfv ../gcc/${HARCH}/${GCC_MAJVER}/"'$(basename {})'" ${BIN_PATH}/lib${BUILD_LIBSUFFIX}/"'$(basename {})'
-				fi
 			fi
 		done
+		if [ ${GCC_INSTALL_TARGETS} -eq 1 ] && [ ${GCC_IS_MAIN} -eq 1 ]
+		then
+			find "${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" -mindepth 1 \( -name "libgcc_s.so*" -o -name "libssp.so*" \) | xargs -r -I{} \
+				bash -x -c "ln -sfv ../gcc/${HARCH}/${GCC_MAJVER}/"'$(basename {})'" ${BIN_PATH}/lib${BUILD_LIBSUFFIX}/"'$(basename {})'
+		fi
 
 		echo "Adapt .la libraries to ${BIN_PATH}${BIN_PREFIX}"
-		find ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER} $( [ ${_param_install:-0} -eq 1 ] && echo "${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" || true ) -mindepth 1 -name "*.la" -type f | xargs -r \
+		find ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER} $( [ ${GCC_INSTALL_TARGETS:-0} -eq 1 ] && echo "${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" || true ) -mindepth 1 -name "*.la" -type f | xargs -r \
 			sed -i "${LIB_LA_SEDTRANS}" 
 
 		make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER="${CCWRAPPER}" all-target-libsanitizer
@@ -413,12 +415,15 @@ function setup_gcc () {
 		echo; \
 		return ${STATUS}' ERR
 
-	OPTS="--install --main_libgcc" OPTS_WITH_VALUE="--targets" param2value "${@}"
+	OPTS="--install --main_gcc" OPTS_WITH_VALUE="--targets" param2value "${@}"
 	[ ${_param_v:-0} -eq 1 ] && set -x || true
-
 	
 	echo -n "Setting up gcc"
 	echo -n "-${GCC_VER}... "
+
+	local GCC_TARGETS=${_param_targets:-all}
+	local GCC_INSTALL_TARGETS=${_param_install:-0}
+	local GCC_IS_MAIN=${_param_main_gcc:-0}
 
 	pathadd PATH "${TOOLCHAIN_PATH}/bin"
 	if [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc ] && [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ ]
@@ -446,7 +451,7 @@ function setup_gcc () {
 			local SPACES="   "
 			echo -n "${SPACES}"
 			echo -n "building bootstrap libgcc... "
-			_param_targets="libgcc" _param_install=0 gcc_make_target_libs > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}target-gcclibs-${GCC_VER}.log 2>&1
+			GCC_TARGETS="libgcc" GCC_INSTALL_TARGETS=0 gcc_make_target_libs > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}target-gcclibs-${GCC_VER}.log 2>&1
 			echo "done."
 			### Build & install kernel headers
 			echo -n "${SPACES}"

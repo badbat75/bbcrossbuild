@@ -12,7 +12,7 @@ build lfs/create-base-config_1.0
 mkdir -p ${USERDATA_PATH}/postinstall
 
 setup_sccache
-setup_gcc --install --main_libgcc
+setup_gcc --install --main_gcc
 
 build raspberrypi/rpi-firmware_1
 build firmwares/linux-firmware
@@ -93,7 +93,8 @@ build lfs/strace_5.19
 
 ### Final configurations ###
 case x${PLATFORM_NAME} in
-	xrpi3-aarch64) echo "arm_64bit=1" >${BIN_PATH}/boot/config.txt;;
+	xrpi|xrpi2|xrpi3) 	echo "arm_64bit=0" >${BIN_PATH}/boot/config.txt ;;
+	xrpi3-aarch64) 		echo "arm_64bit=1" >${BIN_PATH}/boot/config.txt ;;
 esac
 echo "net.ifnames=0 console=tty1 root=/dev/mmcblk0p2 fsck.repair=yes rootwait" >${BIN_PATH}/boot/cmdline.txt
 
