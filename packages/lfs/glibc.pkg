@@ -14,14 +14,11 @@ libc_cv_c_cleanup=yes"
 CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}${BUILD_INCLUDEDIR} \
 	--disable-werror --disable-sanity-checks --disable-profile \
 	--enable-stackguard-randomization --enable-stack-protector=strong \
-	--enable-pt_chown --enable-tunables --enable-bind-now"
+	--enable-pt_chown --enable-tunables --enable-bind-now --enable-kernel=5.0.0"
 PKG_MAKEVARS="cross-compiling=yes"
 PKG_OVERRIDELD=bfd
 
-PKG_PREBUILD="if [ x\$(grep \"*result = local->data.services[database_index];\" nss/nss_database.c) == x ]
-	then
-		sed -e '402a\      *result = local->data.services[database_index];' -i nss/nss_database.c
-	fi"
+#PKG_PREBUILD=""
 
 if [ ${WITH_LIBXCRYPT:-0} -eq 1 ]
 then

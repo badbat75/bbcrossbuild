@@ -13,7 +13,6 @@ CONF_FLAGS="ADJTIME_PATH=/var/lib/hwclock/adjtime \
             --disable-runuser \
             --disable-pylibmount \
             --disable-makeinstall-chown \
-            --without-python \
             --without-tinfo \
             runstatedir=/run"
 INST_CMD="install-strip"

@@ -150,7 +150,7 @@ function setup_gcc () {
 			fi
 		fi
 
-		GCC_CONFIG="--enable-checking=release --enable-multiarch --disable-multilib --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --with-system-zlib --with-glibc-version=2.11 --with-gcc-major-version-only --enable-linker-build-id --disable-option-checking ${SILENTCONFIG}"
+		GCC_CONFIG="--enable-checking=release --enable-multiarch --disable-multilib --enable-version-specific-runtime-libs --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --with-system-zlib --with-glibc-version=2.11 --with-gcc-major-version-only --enable-linker-build-id --disable-option-checking ${SILENTCONFIG}"
 
 		if [ -n "${GCC_SYSROOT}" ]
 		then
@@ -379,13 +379,19 @@ function setup_gcc () {
 				echo "Adapt .la libraries to ${BIN_PATH}${BIN_PREFIX}"
 				find ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER} -mindepth 1 -name "*.la" -type f | xargs -r \
 					sed -i "${LIB_LA_SEDTRANS}"
-				tar cfp - --owner=0 --group=0 -C ${PACKAGES_PATH}/gcc-${object}_${GCC_VER} . | xz -T${NPROCS} - > ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}.tar.xz
+				#tar cfp - --owner=0 --group=0 -C ${PACKAGES_PATH}/gcc-${object}_${GCC_VER} . | xz -T${NPROCS} - > ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}.tar.xz
+				create_sfx_package ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}
 				rm -rf ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}
 			fi
 			### Install in BIN_PATH if requested via --install
-			if [ ${_param_install:-0} -eq 1 ]
+			if [ ${_param_install:-0} -eq 1 ] 
 			then
 				make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} DESTDIR="${BIN_PATH}" prefix=${BUILD_PREFIX} install-strip-target-${object}
+				if [ "${object}" == "libgcc" ] && [ ${_param_main_libgcc:-0} -eq 1 ]
+				then
+					find "${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" -mindepth 1 -name "libgcc_s.so*" -type f | xargs -r -I{} \
+						bash -x -c "ln -sfv ../gcc/${HARCH}/${GCC_MAJVER}/"'$(basename {})'" ${BIN_PATH}/lib${BUILD_LIBSUFFIX}/"'$(basename {})'
+				fi
 			fi
 		done
 
@@ -407,7 +413,7 @@ function setup_gcc () {
 		echo; \
 		return ${STATUS}' ERR
 
-	OPTS="--install" OPTS_WITH_VALUE="--targets" param2value "${@}"
+	OPTS="--install --main_libgcc" OPTS_WITH_VALUE="--targets" param2value "${@}"
 	[ ${_param_v:-0} -eq 1 ] && set -x || true
 
 	
@@ -1028,6 +1034,8 @@ function setup_python () {
 		set -x
 		${BUILD_PYTHONPIP} install crossenv
 		${BUILD_PYTHON} -m crossenv ${HOST_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH}
+		rmdir -v ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include
+		ln -sfv ${SYSROOT}${BUILD_INCLUDEDIR}/python${PYTHONBIN_VER} ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include
 		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate
 		build-python -m pip install --upgrade cython setuptools==60.10.0 wheel 2>&1
 		mkdir -p ${TOOLCHAIN_BLDPATH}/build_python_crossenv

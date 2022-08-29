@@ -1,0 +1,6 @@
+# strace_5.19
+PKG_URL="https://github.com/strace/strace/releases/download/v5.19/strace-5.19.tar.xz"
+BUILD_PROCESS=configmake
+PKG_OVERRIDELTO=0
+CONF_FLAGS="--enable-mpers=no"
+INST_CMD="install-strip"

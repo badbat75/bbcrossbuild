@@ -7,13 +7,7 @@ INST_CMD="install"
 PKG_TWOSTEPSBUILD=1
 PKG_PREBUILD="sed -e '/INSTALLKEYS_SH/s/)//' -e '260a\  )' -i contrib/ssh-copy-id
 	sed -i '/^STRIP_OPT/ s/-s$/\"-s --strip-program=\$STRIP\"/' configure.ac"
-PKG_POSTBUILD="cat <<-EOF >${USERDATA_PATH}/postinstall/${PKG_NAME}.task
-		# OpenSSH
-		install  -v -m700 -d /var/lib/sshd
-		groupadd -g 50 sshd
-		useradd  -c 'sshd PrivSep' -d /var/lib/sshd -g sshd -s /bin/false -u 50 sshd
-	EOF
-	mkdir -pv ${PKG_PKGPATH}/lib/systemd/system
+PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/lib/systemd/system
 	cat <<-EOF >${PKG_PKGPATH}/lib/systemd/system/sshd.service
 		[Unit]
 		Description=OpenSSH Daemon
@@ -48,3 +42,9 @@ PKG_POSTBUILD="cat <<-EOF >${USERDATA_PATH}/postinstall/${PKG_NAME}.task
 		StandardError=syslog
 	EOF
 	"
+
+PKG_POSTINSTALL="# create bluetooth group if not already present
+# OpenSSH
+install  -v -m700 -d /var/lib/sshd
+groupadd -g 50 sshd
+useradd  -c 'sshd PrivSep' -d /var/lib/sshd -g sshd -s /bin/false -u 50 sshd"

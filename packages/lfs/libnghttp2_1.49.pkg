@@ -1,0 +1,7 @@
+# libnghttp2_1.49
+PKG_URL="https://github.com/nghttp2/nghttp2/releases/download/v1.49.0/nghttp2-1.49.0.tar.xz"
+BUILD_PROCESS=cmakebuild
+VAR_INSTALL_LIBDIR=CMAKE_INSTALL_LIBDIR
+VAR_INSTALL_INCDIR=CMAKE_INSTALL_INCLUDEDIR
+CONF_FLAGS="-DPYTHON=$(which python3)"
+INST_CMD="install/strip"

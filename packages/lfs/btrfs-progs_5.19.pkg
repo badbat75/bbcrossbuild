@@ -4,7 +4,7 @@ PKG_DEPS="lfs/util-linux_2.38.1 lfs/e2fsprogs_1.46 lfs/zlib_1.2.12 lfs/lzo_2.10 
 PKG_COPYSRC=1
 
 BUILD_PROCESS=configmake
-CONF_FLAGS="--disable-python --disable-documentation"
+CONF_FLAGS="--disable-documentation"
 PKG_TWOSTEPSBUILD=1
 PKG_MAKEVARS="bindir=${BUILD_EXECPREFIX}/sbin"
 INST_CMD="install"

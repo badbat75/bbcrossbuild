@@ -1,0 +1,21 @@
+# curl_7.84.0
+PKG_URL="https://curl.haxx.se/download/curl-7.84.0.tar.xz"
+PKG_DEPS="lfs/openssl_3.0.5 lfs/make-ca_1.7"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--enable-threaded-resolver --with-openssl --with-ca-path=${BUILD_SYSCONFDIR}/ssl/certs"
+INST_CMD="install-strip"
+
+PKG_PREBUILD="cat <<EOF | patch -p1
+--- a/lib/easy_lock.h
++++ b/lib/easy_lock.h
+@@ -36,6 +36,9 @@
+
+ #elif defined (HAVE_ATOMIC)
+ #include <stdatomic.h>
++#if defined(HAVE_SCHED_YIELD)
++#include <sched.h>
++#endif
+
+ #define curl_simple_lock atomic_bool
+ #define CURL_SIMPLE_LOCK_INIT false
+ EOF"
