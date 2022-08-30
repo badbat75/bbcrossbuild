@@ -1,7 +1,6 @@
 # glibc
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${BS_GLIBC_VER}.tar.xz"
 PATCHES="http://www.linuxfromscratch.org/patches/lfs/development/glibc-${BS_GLIBC_VER}-fhs-1.patch"
-PKG_DEPS="lfs/libxcrypt"
 BUILD_PROCESS=configmake
 
 PKG_OVERRIDELTO=0
