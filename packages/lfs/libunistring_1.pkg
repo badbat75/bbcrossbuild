@@ -1,0 +1,11 @@
+# libunistring_1
+PKG_SUFFIX=.0
+PKG_URL="https://ftp.gnu.org/gnu/libunistring/libunistring-1${PKG_SUFFIX}.tar.xz"
+BUILD_PROCESS=configmake
+CONF_FLAGS=""
+AUTOCONF=1
+INST_CMD=install-strip
+MAKEVERBOSE=1
+
+# Dependencies:
+

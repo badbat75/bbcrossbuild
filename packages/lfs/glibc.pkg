@@ -1,6 +1,7 @@
 # glibc
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${BS_GLIBC_VER}.tar.xz"
 PATCHES="http://www.linuxfromscratch.org/patches/lfs/development/glibc-${BS_GLIBC_VER}-fhs-1.patch"
+PKG_DEPS="lfs/libxcrypt"
 BUILD_PROCESS=configmake
 
 PKG_OVERRIDELTO=0
@@ -12,7 +13,7 @@ complocaledir=${BUILD_LIBDIR}
 libc_cv_forced_unwind=yes
 libc_cv_c_cleanup=yes"
 CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}${BUILD_INCLUDEDIR} \
-	--disable-werror --disable-sanity-checks --disable-profile \
+	--disable-crypt --disable-werror --disable-sanity-checks --disable-profile \
 	--enable-stackguard-randomization --enable-stack-protector=strong \
 	--enable-pt_chown --enable-tunables --enable-bind-now --enable-kernel=5.0.0"
 PKG_MAKEVARS="cross-compiling=yes"
@@ -20,10 +21,6 @@ PKG_OVERRIDELD=bfd
 
 #PKG_PREBUILD=""
 
-if [ ${WITH_LIBXCRYPT:-0} -eq 1 ]
-then
-	CONF_FLAGS+=" --disable-crypt"
-fi
 INST_CMD="install"
 PKG_POSTBUILD="set -x"
 if [ ${BUILD_LIBDIR}${BUILD_LIBSUFFIX} != ${BUILD_LIBDIR} ]

@@ -64,7 +64,7 @@ build lfs/man-db_2.10.2
 build lfs/tar_1.34
 build lfs/vim_9.0.0228
 build lfs/systemd_251
-build lfs/D-Bus_1.13.22
+build lfs/D-Bus_1.14
 build lfs/procps-ng_4.0.0
 build lfs/util-linux_2.38.1
 build lfs/e2fsprogs_1.46

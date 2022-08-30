@@ -1,0 +1,20 @@
+# D-Bus_1.14
+PKG_SUFFIX=.0
+PKG_URL="https://dbus.freedesktop.org/releases/dbus/dbus-1.14${PKG_SUFFIX}.tar.xz"
+PKG_DEPS="lfs/expat_2.4.8"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--enable-user-session                \
+            --disable-doxygen-docs               \
+            --disable-xml-docs                   \
+            --disable-static                     \
+            --with-systemduserunitdir=no         \
+            --with-systemdsystemunitdir=no       \
+            --runstatedir=/run                   \
+            --with-system-socket=/run/dbus/system_bus_socket \
+            --with-console-auth-dir=/run/console \
+            --with-system-pid-file=/run/dbus/pid \
+            --with-system-socket=/run/dbus/system_bus_socket \
+            --docdir=/usr/share/doc/dbus-1.14${PKG_SUFFIX}"
+INST_CMD="install-strip"
+
+PKG_POSTBUILD="ln -sfv /etc/machine-id ${PKG_PKGPATH}/var/lib/dbus"

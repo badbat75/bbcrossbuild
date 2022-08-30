@@ -1,0 +1,12 @@
+# gnutls_3.7
+PKG_SUFFIX=.7
+PKG_URL="https://www.gnupg.org/ftp/gcrypt/gnutls/v3.7/gnutls-3.7${PKG_SUFFIX}.tar.xz"
+PKG_DEPS="lfs/nettle_3.8 lfs/make-ca_1.7 lfs/p11-kit_0.24.1 lfs/libtasn1_4.19.0 lfs/libunistring_1 \
+    lfs/net-tools_2.10 lfs/libidn2_2.3 lfs/libseccomp_2.5"
+BUILD_PROCESS=configmake
+AUTOCONF=1
+CONF_FLAGS=""
+INST_CMD=install-strip
+
+# Dependencies:
+

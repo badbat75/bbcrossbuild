@@ -393,7 +393,7 @@ function setup_gcc () {
 		done
 		if [ ${GCC_INSTALL_TARGETS} -eq 1 ] && [ ${GCC_IS_MAIN} -eq 1 ]
 		then
-			find "${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" -mindepth 1 \( -name "libgcc_s.so*" -o -name "libssp.so*" \) | xargs -r -I{} \
+			find "${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" -mindepth 1 \( -name "libgcc_s.so*" -o -name "libssp.so*" -o -name "libstdc++.so*" \) | xargs -r -I{} \
 				bash -x -c "ln -sfv ../gcc/${HARCH}/${GCC_MAJVER}/"'$(basename {})'" ${BIN_PATH}/lib${BUILD_LIBSUFFIX}/"'$(basename {})'
 		fi
 

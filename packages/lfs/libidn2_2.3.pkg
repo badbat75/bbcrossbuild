@@ -1,0 +1,11 @@
+# libidn2_2.3
+PKG_SUFFIX=.3
+PKG_URL="https://ftp.gnu.org/gnu/libidn/libidn2-2.3${PKG_SUFFIX}.tar.gz"
+PKG_DEPS="lfs/libunistring_1"
+BUILD_PROCESS=configmake
+CONF_FLAGS=""
+AUTOCONF=1
+INST_CMD=install-strip
+
+# Dependencies:
+

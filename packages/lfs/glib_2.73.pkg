@@ -1,7 +1,9 @@
 # glib_2.73
 PKG_URL="https://download.gnome.org/sources/glib/2.73/glib-2.73.3.tar.xz"
-PKG_DEPS="lfs/libxslt_1.1.36 lfs/pcre_8.45"
+PKG_DEPS="lfs/libxslt_1.1.36 lfs/pcre2_10.40 lfs/D-Bus-minimal_1.14"
+#PKG_DEPS+" lfs/gobject-introspection"
 BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Dman=true -Dtests=false"
+PKG_LD_LIBRARY_PATH=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 INST_CMD="install"
 # to copy glibconfig.h
