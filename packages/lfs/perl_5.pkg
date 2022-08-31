@@ -1,10 +1,11 @@
 # perl_5
-PKG_PERL_MAJVER=5.37
-PKG_PERL_SUBVER=3
-PKG_PERL_VER=${PKG_PERL_MAJVER}.${PKG_PERL_SUBVER}
+PKG_PERL_MIDVER=36
+PKG_PERL_SUBVER=0
+PKG_SUFFIX=.${PKG_PERL_MIDVER}.${PKG_PERL_SUBVER}
+PKG_PERL_LIBVER=5.${PKG_PERL_MIDVER}
 # perl-cross_1.4+f842531
 PKG_PERLCROSS_VER=f842531ca3198ac30dddfd36f881b947cbffebdd
-PKG_URL="https://www.cpan.org/src/5.0/perl-${PKG_PERL_VER}.tar.xz"
+PKG_URL="https://www.cpan.org/src/5.0/perl-5${PKG_SUFFIX}.tar.xz"
 PKG_DEPS="lfs/gdbm_1.23 lfs/expat_2.4.8"
 BUILD_PROCESS=downloadonly
 #PKG_MAKEVARS="-j1"
@@ -31,12 +32,12 @@ PKG_POSTBUILD="
 		-Dusethreads \
 		-Dmyhostname=localhost \
 		-Dperladmin=root@localhost \
-        -Dprivlib=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/perl5/${PKG_PERL_MAJVER}/core_perl      \
-        -Darchlib=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/perl5/${PKG_PERL_MAJVER}/core_perl      \
-        -Dsitelib=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/perl5/${PKG_PERL_MAJVER}/site_perl      \
-        -Dsitearch=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/perl5/${PKG_PERL_MAJVER}/site_perl     \
-        -Dvendorlib=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/perl5/${PKG_PERL_MAJVER}/vendor_perl  \
-        -Dvendorarch=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/perl5/${PKG_PERL_MAJVER}/vendor_perl
+        -Dprivlib=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/core_perl      \
+        -Darchlib=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/core_perl      \
+        -Dsitelib=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/site_perl      \
+        -Dsitearch=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/site_perl     \
+        -Dvendorlib=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/vendor_perl  \
+        -Dvendorarch=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/vendor_perl
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} crosspatch miniperl dynaloader perl cflags nonxs_ext utilities
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} -j1 extensions pods
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} install

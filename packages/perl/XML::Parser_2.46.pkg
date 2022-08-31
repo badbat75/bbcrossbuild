@@ -1,7 +1,8 @@
 # XML::Parser_2.46
 PKG_URL="https://cpan.metacpan.org/authors/id/T/TO/TODDR/XML-Parser-2.46.tar.gz"
-PKG_SRCDIR="perl/cpan/XML-Parser"
+PKG_SEPS="lfs/perl5"
 BUILD_PROCESS=downloadonly
+PKG_COPYSRC=1
 PKG_PREBUILD="cat <<-EOF | patch -s -p1 || true
 --- XML-Parser/Makefile.PL	2019-09-24 07:20:53.000000000 +0200
 +++ XML-Parser.patched/Makefile.PL	2021-02-17 15:23:04.852911700 +0100
