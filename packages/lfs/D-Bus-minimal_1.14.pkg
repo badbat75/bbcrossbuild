@@ -6,14 +6,11 @@ BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-user-session                \
             --disable-doxygen-docs               \
             --disable-xml-docs                   \
-            --disable-static                     \
-            --with-systemduserunitdir=no         \
-            --with-systemdsystemunitdir=no       \
             --runstatedir=/run                   \
             --with-system-socket=/run/dbus/system_bus_socket \
-            --with-console-auth-dir=/run/console \
-            --with-system-pid-file=/run/dbus/pid \
-            --with-system-socket=/run/dbus/system_bus_socket \
+            --with-systemduserunitdir=no         \
+            --with-systemdsystemunitdir=no       \
+            --with-session-socket-dir=/tmp       \
             --docdir=/usr/share/doc/dbus-1.14${PKG_SUFFIX}"
 INST_CMD="install-strip"
 

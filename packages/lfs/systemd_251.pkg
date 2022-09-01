@@ -5,10 +5,28 @@ PKG_DEPS="lfs/elfutils_0.187 lfs/glib_2.73 lfs/D-Bus-minimal_1.14 lfs/libcap_2.4
 	lfs/pcre2_10.40 lfs/libxcrypt lfs/libgcrypt_1.10 lfs/gnutls_3.7 lfs/openssl_3.0.5 lfs/libseccomp_2.5 \
 	lfs/zlib_1.2.12 lfs/xz_5.2.5 lfs/bzip2_1.0.8 lfs/zstd_1.5.2 lfs/lz4_1.9"
 BUILD_PROCESS=mesonninja
-CONF_FLAGS="-Drootlibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -Dblkid=true -Ddefault-dnssec=no -Dfirstboot=false -Dinstall-tests=false -Dldconfig=false \
-	-Dmount-path=/bin/mount -Dsplit-usr=true -Dsysusers=false -Drpmmacrosdir=no -Dhomed=false -Duserdb=false \
-	-Dman=true -Dmode=release"
+CONF_FLAGS="-Db_pie=true \
+	-Drootlibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+	-Ddbussystemservicedir=${BUILD_PREFIX}/share/dbus-1/system-services \
+	-Ddbussessionservicedir=${BUILD_PREFIX}/share/dbus-1/share/dbus-1/services \
+	-Ddbuspolicydir=${BUILD_PREFIX}/share/dbus-1/system.d \
+	-Dblkid=true \
+	-Ddefault-dnssec=no \
+	-Dfirstboot=false \
+	-Dinstall-tests=false \
+	-Dldconfig=false \
+	-Dman=auto \
+	-Dsysusers=false \
+	-Drpmmacrosdir=no \
+	-Dhomed=false \
+	-Duserdb=true \
+	-Dmode=release \
+	-Dsplit-usr=true \
+	-Dopenssl=true \
+	-Dcryptolib=openssl \
+	-Ddns-over-tls=openssl \
+	-Ddocdir=/usr/share/doc/systemd-251"
 INST_CMD="install"
 PKG_LD_LIBRARY_PATH=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
-PKG_POSTBUILD="systemd-machine-id-setup --root=${PKG_PKGPATH}
-	systemctl preset-all --root=${PKG_PKGPATH}"
+PKG_POSTINSTALL="systemd-machine-id-setup"
+PKG_POSTINSTALL_PRIO=10

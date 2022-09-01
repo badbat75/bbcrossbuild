@@ -7,14 +7,18 @@ CONF_FLAGS="--enable-user-session                \
             --enable-systemd                     \
             --disable-doxygen-docs               \
             --disable-xml-docs                   \
-            --disable-static                     \
+            --localstatedir=/var                 \
             --runstatedir=/run                   \
-            --with-system-socket=/run/dbus/system_bus_socket \
-            --with-console-auth-dir=/run/console \
-            --with-system-pid-file=/run/dbus/pid \
-            --with-system-socket=/run/dbus/system_bus_socket \
+            --with-system-socket=/run/dbus/system_bus_socket            \
+            --with-systemdsystemunitdir=/lib/systemd/system             \
+            --with-systemduserunitdir=${BUILD_PREFIX}/lib/systemd/user  \
+            --with-session-socket-dir=/tmp       \
             --docdir=/usr/share/doc/dbus-1.14${PKG_SUFFIX}"
 
 INST_CMD="install-strip"
 
 PKG_POSTBUILD="ln -sfv /etc/machine-id ${PKG_PKGPATH}/var/lib/dbus"
+
+PKG_POSTINSTALL="
+chown -v root:messagebus /usr/libexec/dbus-daemon-launch-helper
+chmod -v      4750       /usr/libexec/dbus-daemon-launch-helper"

@@ -98,11 +98,9 @@ case x${PLATFORM_NAME} in
 esac
 echo "net.ifnames=0 console=tty1 root=/dev/mmcblk0p2 fsck.repair=yes rootwait" >${BIN_PATH}/boot/cmdline.txt
 
-if [ ! -x ${LFS_HOSTNAME} ]
-then
-	echo Configuring Host Name
-	echo ${LFS_HOSTNAME} > ${BIN_PATH}${BUILD_SYSCONFDIR}/hostname
-fi
+echo Configuring Host Name
+echo ${LFS_HOSTNAME:-lfs} > ${BIN_PATH}${BUILD_SYSCONFDIR}/hostname
+
 if [ ! -x ${WLAN_SSID} ] && [ ! -x ${WLAN_PSK} ] && [ ! -x ${WLAN_DEV} ]
 then
 	echo Configuring WiFi
@@ -118,11 +116,12 @@ then
 	EOF
 	echo
 fi
-if [ x${ENABLE_SSH} != x ]
+if [ "${ENABLE_SSH:-1}" = "1" ]
 then
 	echo Enabling SSHd
 	ssh-keygen -A -f ${BIN_PATH}
 	systemctl --root=${BIN_PATH} enable sshd
+	generate_ssh_keys --install binaries
 	echo
 fi
 
@@ -134,7 +133,12 @@ function build_lfs_image () {
 	mount_tag lfs --mountlist "2:/ 1:/boot"
 	inject_into_mount_tag lfs binaries --remove_devfiles
 	run_postinstall_scripts lfs
+	run_on_root_dir lfs root "systemctl get-default && systemctl set-default multi-user.target"
+	run_on_root_dir lfs root "systemctl enable systemd-networkd"
+	run_on_root_dir lfs root "systemctl enable systemd-resolved"
+	run_on_root_dir lfs root "systemctl enable systemd-timesyncd"
 	run_on_root_dir lfs root "useradd -G wheel -m lfs"
+	run_on_root_dir lfs root "echo root:changeme | chpasswd"
 	run_on_root_dir lfs root "echo lfs:lfs | chpasswd"
 	run_on_root_dir lfs root "pwconv"
 	unmount_tag --finalize lfs
