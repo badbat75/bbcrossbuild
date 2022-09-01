@@ -16,6 +16,7 @@ setup_gcc --install --main_gcc
 
 build raspberrypi/rpi-firmware_1
 build firmwares/linux-firmware
+build firmwares/broadcom-bt-firmware-master
 build raspberrypi/rpi-kernel_5.15
 build lfs/glibc
 build lfs/tzdata_2022c
@@ -122,6 +123,7 @@ then
 	ssh-keygen -A -f ${BIN_PATH}
 	systemctl --root=${BIN_PATH} enable sshd
 	generate_ssh_keys --install binaries
+	systemctl --root=${BIN_PATH} disable regenerate_ssh_host_keys
 	echo
 fi
 

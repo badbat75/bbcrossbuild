@@ -14,4 +14,4 @@ LLVM_POLLY_FEATURES=all
 setup_sccache
 setup_gcc --install
 setup_llvm
-build raspberrypi/rpi-kernel_5.18
+build raspberrypi/rpi-kernel_5.15

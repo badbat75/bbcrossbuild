@@ -1,0 +1,13 @@
+# BerkeleyDB_5.3
+PKG_SUFFIX=.28
+PKG_URL="https://anduin.linuxfromscratch.org/BLFS/bdb/db-5.3${PKG_SUFFIX}.tar.gz"
+PKG_DEPS="lfs/sharutils_4.15"
+BUILD_PROCESS=configmake
+CONF_PATH=dist
+CONF_FLAGS="--enable-dbm --enable-cxx"
+INST_CMD="install"
+
+PKG_PREBUILD="
+    sed -i 's/AC_DEFINE(HAVE_SYSTEM_INCLUDE_FILES)/AC_DEFINE(HAVE_SYSTEM_INCLUDE_FILES, [], [Description])/' dist/configure.ac
+    sed -i 's/AC_DEFINE(DB_WIN32)/AC_DEFINE(DB_WIN32, [], [Description])/' dist/configure.ac
+    (cd dist && autoreconf -fi && ./s_config)"
