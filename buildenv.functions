@@ -720,10 +720,11 @@ function setup_llvm () {
 		[ -d ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} ] && rm -rf ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} || true
 		DESTDIR=${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}${BUILD_PREFIX} \
 			ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} install/strip
-		tar cfp - --owner=0 --group=0 -C ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} . | xz -T${NPROCS} - > ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}.tar.xz
+		#tar cfp - --owner=0 --group=0 -C ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} . | xz -T${NPROCS} - > ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}.tar.xz
+		create_sfx_package ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}
 		rm -rf ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}
 
-		if [ ${_param_install:-0} -eq 1 ]
+		if [ ${LLVM_BUILTINS_INSTALL} -eq 1 ]
 		then
 			DESTDIR=${BIN_PATH}${BUILD_PREFIX} \
 				ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} install/strip
@@ -749,6 +750,8 @@ function setup_llvm () {
 
 	OPTS="--install" OPTS_WITH_VALUE="--targets" param2value "${@}"
 	[ ${_param_v:-0} -eq 1 ] && set -x || true
+
+	local LLVM_BUILTINS_INSTALL=${_param_install:-0}
 
 	echo -n "Setting up clang-${LLVM_VER}... "
 	if [ ! -f ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang ] || [ ! -f ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/ld.lld ]

@@ -13,7 +13,7 @@ CONF_FLAGS="-Dalsa=enabled -Dbzip2=enabled -Dcdio_paranoia=enabled -Dcue=true -D
 CONF_FLAGS+=" -Dqobuz=disabled -Dshine=disabled -Dtest=false -Dtremor=disabled -Dtwolame=disabled"
 # Moode changes
 CONF_FLAGS+=" -Ddsd=true -Dneighbor=false -Dupnp=disabled -Dnfs=disabled -Dsmbclient=disabled -Dudisks=disabled -Dwebdav=disabled -Dadplug=disabled -Daudiofile=disabled -Dfluidsynth=disabled -Dgme=disabled -Dmikmod=disabled -Dmodplug=disabled -Dmpcdec=disabled -Dopenmpt=disabled -Dsidplay=disabled -Dsndfile=disabled -Dwildmidi=disabled -Dlibsamplerate=disabled -Dchromaprint=disabled -Dsndio=disabled -Djack=disabled -Dao=disabled -Doss=disabled -Dopenal=disabled -Dpipewire=disabled -Dpulse=disabled -Dsnapcast=false -Dsoundcloud=disabled -Dmms=disabled"
-PKG_DEPS="moode/boost_1.80.0 \
+PKG_DEPS="moode/boost_1 \
 	moode/alsa-lib_1.2 \
 	moode/faad2_2.10.0 \
 	moode/ffmpeg_5 \
