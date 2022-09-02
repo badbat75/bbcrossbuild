@@ -4,7 +4,7 @@ PKG_URL="https://www.lesbonscomptes.com/upmpdcli/downloads/libupnpp-bindings-0.2
 BUILD_PROCESS=configmake
 AUTOCONF=1
 PYTHONBIN_VER="$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)"
-CONF_FLAGS="PYTHON_VERSION=3 PYTHON_SITE_PKG=${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
+CONF_FLAGS="PYTHON_VERSION=3 PYTHON_SITE_PKG=${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages PYTHON_CPPFLAGS=-I${SYSROOT}${BUILD_INCLUDEDIR}/python${PYTHONBIN_VER}"
 INST_CMD=install-strip
 PKG_DEPS="moode/libupnpp_0.21"
 PKG_PREBUILD="rm -f ltmain.sh

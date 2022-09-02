@@ -1,6 +1,9 @@
 # ashuffle_3
 PKG_SUFFIX=.13.3
-PKG_URL=https://github.com/joshkunz/ashuffle/archive/refs/tags/v3{PKG_SUFFIX}.tar.gz
+GIT_URL=https://github.com/joshkunz/ashuffle
+GIT_COMMIT=v3${PKG_SUFFIX}
+### This project has sub-repositories
+#PKG_URL=https://github.com/joshkunz/ashuffle/archive/refs/tags/v3${PKG_SUFFIX}.tar.gz
 #PATCHES=
 PKG_DEPS="moode/yaml-cpp_0.7.0"
 BUILD_PROCESS=mesonninja

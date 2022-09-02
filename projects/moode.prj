@@ -125,7 +125,7 @@ unmount_tag distos
 
 if [ -z ${SKIP_FINAL_IMG} ]
 then
-	mount_tag final --url ${RASPBIAN_URL}${RASPBIAN_IMAGE}.zip --imgfile ${RASPBIAN_IMAGE}.img --mountlist "2:/ 1:/boot" --resize 2:3G
+	mount_tag final --url ${RASPBIAN_URL}${RASPBIAN_IMAGE}.${RASPBIAN_IMAGE_EXT} --imgfile ${RASPBIAN_IMAGE}.img --mountlist "2:/ 1:/boot" --resize 2:3G
 	if [ -z ${SKIP_APTS} ]
 	then
 		run_on_root_dir final root "apt-get -y purge --autoremove raspberrypi-kernel libraspberrypi-dev \

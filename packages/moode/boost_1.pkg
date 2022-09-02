@@ -1,5 +1,5 @@
 # boost_1
 PKG_SUFFIX=.80.0
-PKG_URL="https://boostorg.jfrog.io/artifactory/main/release/${PKG_SUFFIX}/source/boost_1$(echo ${PKG_SUFFIX} | sed 's/\\./_/'g).tar.gz"
+PKG_URL="https://boostorg.jfrog.io/artifactory/main/release/1${PKG_SUFFIX}/source/boost_1$(echo ${PKG_SUFFIX} | sed 's/\./_/'g).tar.gz"
 PKG_DEPS="raspbian/zstd_1.5.2+dfsg-1"
 BUILD_PROCESS=boostbuild
