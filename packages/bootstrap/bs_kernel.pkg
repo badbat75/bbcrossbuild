@@ -1,4 +1,5 @@
 # bs_kernel
-PKG_URL="https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${BS_KERNEL_VER}.tar.xz"
+PKG_SUFFIX=_${BS_KERNEL_VER}
+PKG_URL="https://cdn.kernel.org/pub/linux/kernel/v$( echo ${BS_KERNEL_VER} | cut -d'.' -f1 ).x/linux-${BS_KERNEL_VER}.tar.xz"
 BUILD_PROCESS=kernelbuild
 INST_CMD="INSTALL_MOD_STRIP=1"

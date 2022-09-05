@@ -1,4 +1,5 @@
 # bs_glibc
+PKG_SUFFIX=_${BS_GLIBC_VER}
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${BS_GLIBC_VER}.tar.xz"
 PATCHES="https://www.linuxfromscratch.org/patches/downloads/glibc/glibc-${BS_GLIBC_VER}-fhs-1.patch"
 BUILD_PROCESS=configmake
