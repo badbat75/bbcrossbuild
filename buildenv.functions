@@ -615,12 +615,12 @@ function setup_llvm () {
 			trap ERR; \
 			return ${STATUS};' ERR
 		set -x
-		local LLVM_SHLIBDIR=$(grep -E "install_symlink.*libLLVM-${LLVM_VER}.so" ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}/tools/llvm-shlib/cmake_install.cmake | head -n1 | grep -o "lib[36][24]")
+		local LLVM_SHLIBDIR=$(grep -E "install_symlink.*libLLVM-${LLVM_VER}.so" ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/tools/llvm-shlib/cmake_install.cmake | head -n1 | grep -o "lib[36][24]")
 		echo "Shared LLVM libdir: ${LLVM_SHLIBDIR}"
-		#pathadd LD_LIBRARY_PATH ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}
+		pathadd LD_LIBRARY_PATH ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}
 		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}
 		ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} install/strip
-		#pathremove LD_LIBRARY_PATH ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}
+		pathremove LD_LIBRARY_PATH ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}
 		popd
 		set +x
 		trap ERR
@@ -962,8 +962,8 @@ function setup_python () {
 
 		set -x
 		local PYTHONURL="https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PYTHON_VER}.tar.xz"
-		download_uncompress ${PYTHONURL} ${TOOLCHAIN_SRCPATH}/python-${PYTHON_VER} &&
-		curl -LsR -o ${TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py https://bootstrap.pypa.io/get-pip.py
+		download_uncompress ${PYTHONURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER} &&
+		curl -LsR -o ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py https://bootstrap.pypa.io/get-pip.py
 		set +x
 		trap ERR
 	}
@@ -975,12 +975,12 @@ function setup_python () {
 			return ${STATUS}' ERR
 
 		set -x
-		if [ -d ${TOOLCHAIN_BLDPATH}/python-${PYTHON_VER} ]
+		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER} ]
 		then
-			rm -rf ${TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
+			rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
 		fi
-		mkdir -p ${TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
-		cd ${TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
+		mkdir -p ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
+		cd ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
 		case ${TOOLCHAIN} in
 			gnu)
 				if which ${BARCH}-gcc-ar > /dev/null 2>&1
@@ -1019,15 +1019,15 @@ function setup_python () {
 				export LDFLAGS="-fuse-ld=lld -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS} ${OPTLINK_FLAGS}"
 				;;
 		esac
-		${TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configure --prefix=${TOOLCHAIN_PATH} --enable-shared --with-lto \
+		${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER} --enable-shared --with-lto \
 			--with-system-ffi ax_cv_c_float_words_bigendian=no
 		#--with-address-sanitizer --with-undefined-behavior-sanitizer
 		make
 		make install
-		${BUILD_PYTHON} ${TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py
+		${BUILD_PYTHON} ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py
 		cd ${START_PWD}
-		rm -rf ${TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
-		${TOOLCHAIN_PATH}/bin/pip -v install --upgrade setuptools pip meson ninja jinja2 docutils
+		rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
+		${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip -v install --upgrade setuptools pip meson ninja jinja2 docutils
 		set +x
 		trap ERR
 	}
@@ -1063,11 +1063,11 @@ function setup_python () {
 	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
-		if [ -f ${LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log ];
+		if [ -f ${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log ];
 		then \
-			echo "Log ${LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log:"; \
+			echo "Log ${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log:"; \
 			echo; \
-			tail -n24 ${LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log; \
+			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log; \
 		fi;
 		set +x; \
 		trap - ERR; \
@@ -1096,20 +1096,20 @@ function setup_python () {
 		echo -n "-${PYTHON_VER}... "
 	fi
 	PYTHONBIN_VER=$( echo ${PYTHON_VER} | cut -d'.' -f1,2)
-	BUILD_PYTHON=${TOOLCHAIN_PATH}/bin/python${PYTHONBIN_VER}
-	BUILD_PYTHONPIP=${TOOLCHAIN_PATH}/bin/pip${PYTHONBIN_VER}
+	BUILD_PYTHON=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/python${PYTHONBIN_VER}
+	BUILD_PYTHONPIP=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip${PYTHONBIN_VER}
 	HOST_PYTHON=${PYTHON_SEARCHPATH}/usr/bin/python${PYTHONBIN_VER}
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
-	pathadd PATH "${TOOLCHAIN_PATH}/bin"
-	pathadd LD_LIBRARY_PATH "${TOOLCHAIN_PATH}/lib"
+	pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin"
+	pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib"
 	if [ ! -x ${BUILD_PYTHON} ] || [ ! -x ${BUILD_PYTHONPIP} ]
 	then
 		echo -n "downloading... "
-		download_pyton > ${LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log 2>&1
+		download_pyton > ${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log 2>&1
 		echo -n "building... "
-		build_python >> ${LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log 2>&1
+		build_python >> ${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log 2>&1
 		echo "done."
-		rm -rf ${TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}
+		rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}
 	else
 		echo "already there."
 	fi
