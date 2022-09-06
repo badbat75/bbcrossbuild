@@ -369,6 +369,7 @@ function setup_gcc () {
 		done
 		make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER="${CCWRAPPER}" ${BUILD_OBJECTS}
 
+		setbuildenv
 		for object in $( echo ${OBJECTS} | tr ',' ' ' )
 		do
 			### Install in the toolchain dir
