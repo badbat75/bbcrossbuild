@@ -5,7 +5,7 @@ AUTOCONF=1
 AUTOCONF_PATH="source"
 CONF_CMD="source/configure"
 CONF_FLAGS="--with-data-packaging=files ac_cv_c_bigendian=no"
-CONF_FLAGS="--with-cross-build=\${PKG_BLDPATH}/host_build ${CONF_FLAGS}"
+CONF_FLAGS+=" --with-cross-build=\${PKG_BLDPATH}/host_build ${CONF_FLAGS}"
 INST_CMD="install"
 #PATCHDEB=""
 PKG_PREBUILD="sed -i 's| \$(ICUPKGDATA_DIR)| \$(DESTDIR)/\$(ICUPKGDATA_DIR)|g' source/data/Makefile.in
@@ -19,11 +19,12 @@ PKG_PREBUILD="sed -i 's| \$(ICUPKGDATA_DIR)| \$(DESTDIR)/\$(ICUPKGDATA_DIR)|g' s
     sed -i 's|\$(RBNF_TREE)|rbnf|' source/data/Makefile.in
     sed -i 's|\$(TRANSLIT_TREE)|translit|' source/data/Makefile.in
     if [ ! -d host_build ]; then
-        mkdir -pv \${PKG_BLDPATH}/host_build
-        pushd \${PKG_BLDPATH}/host_build
-        CC=\"${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc\" CXX=\"${CCWRAPPER:+${CCWRAPPER} }${BARCH}-g++\" \${PKG_SRCPATH}/source/configure --with-data-packaging=files
-        make
-        popd
-        pwd
+        (
+            mkdir -pv \${PKG_BLDPATH}/host_build
+            pushd \${PKG_BLDPATH}/host_build
+            unset LD_LIBRARY_PATH
+            CC=\"${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc\" CXX=\"${CCWRAPPER:+${CCWRAPPER} }${BARCH}-g++\" \${PKG_SRCPATH}/source/configure --with-data-packaging=files
+            make
+        )
     fi"
 PKG_POSTBUILD=""
