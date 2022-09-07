@@ -223,6 +223,8 @@ function setup_gcc () {
 			mv libiberty libiberty.gcc
 			ln -fs ../binutils-${BINUTILS_VER}/libiberty .
 		fi
+		### Disable multilib directory
+		grep -lR "^ *MULTILIB_OSDIRNAMES" gcc/config/* | xargs sed -si 's/^ *MULTILIB_OSDIRNAMES/__MULTILIB_OSDIRNAMES/g'
 		popd
 		set +x
 		trap ERR

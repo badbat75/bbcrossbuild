@@ -1,6 +1,7 @@
 BB_HOME=$(dirname $(realpath ${BASH_SOURCE}))
 NPROCS=$(nproc --ignore=1)
 
+ulimit -n 2048
 umask 0022
 
 if [ -f ${BB_HOME}/bbxb.conf ] ; then source ${BB_HOME}/bbxb.conf ; fi
