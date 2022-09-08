@@ -670,6 +670,14 @@ function setup_llvm () {
 			*) local COMPILER_RT_BUILD_BUILTINS=ON
 				;;
 		esac
+		case x${HM} in
+			xarm*)
+				if test_version ${LLVM_VER} -ge 15.0.0
+				then 
+					local WA_CXXFLAGS="-lgcc_s -Wno-unused-command-line-argument"
+				fi
+				;;
+		esac
 		cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/compiler-rt -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} -G Ninja \
 			\
 			-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \
@@ -679,10 +687,10 @@ function setup_llvm () {
 			-DCMAKE_AR=${LLVM_INSTALL_PATH}/bin/llvm-ar \
 			-DCMAKE_NM=${LLVM_INSTALL_PATH}/bin/llvm-nm \
 			-DCMAKE_RANLIB=${LLVM_INSTALL_PATH}/bin/llvm-ranlib \
-			-DCMAKE_C_FLAGS="--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS}" \
-			-DCMAKE_CXX_FLAGS="--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS}" \
+			-DCMAKE_C_FLAGS="--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS} ${WA_CFLAGS}" \
+			-DCMAKE_CXX_FLAGS="--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS} ${WA_CXXFLAGS}" \
 			-DCMAKE_ASM_FLAGS="--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS}" \
-			-DCMAKE_EXE_LINKER_FLAGS="--target=${LLVM_TARGET} -fuse-ld=lld" \
+			-DCMAKE_EXE_LINKER_FLAGS="--target=${LLVM_TARGET} -fuse-ld=lld ${WA_LDFLAGS}" \
 			-DCMAKE_C_COMPILER_TARGET="${LLVM_TARGET}" \
 			-DCMAKE_ASM_COMPILER_TARGET="${LLVM_TARGET}" \
 			\

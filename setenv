@@ -74,7 +74,7 @@ MPC_VER=${MPC_VER:-1.2.1}
 ISL_VER=${ISL_VER:-0.25}
 
 ### LLVN version
-LLVM_VER=${LLVM_VER:-14.0.6}
+LLVM_VER=${LLVM_VER:-15.0.0}
 
 ### Bootstrap libraries and headers versions
 BS_KERNEL_VER=${BS_KERNEL_VER:-5.15.65}
