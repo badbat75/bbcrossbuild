@@ -1,5 +1,5 @@
-# crda_4.14 (Deprecated)
-PKG_URL="https://git.kernel.org/pub/scm/linux/kernel/git/mcgrof/crda.git/snapshot/crda-4.14.tar.gz"
+# crda_4.15 (Deprecated)
+PKG_URL="https://git.kernel.org/pub/scm/linux/kernel/git/mcgrof/crda.git/snapshot/crda-4.15.tar.gz"
 PKG_CFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}/libnl3"
 PKG_LDFLAGS="-Wl,-rpath,/lib/crda"
 BUILD_PROCESS=simplemake
