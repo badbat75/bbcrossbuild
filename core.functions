@@ -59,12 +59,13 @@ download_uncompress () {
 	## ARCHIVEDIRS=<str>: Specify what directories to extract
 	## NODELETEDESTDIR=<num>: if 1 don't delete ${DEST_DIR}
 
+	set +x
+
 	trap 'STATUS=${?}; \
 		echo "Fail."; \
-		set +x; \
 		trap ERR; \
 		return ${STATUS};' ERR
-	set -x
+
 	local URL=${1}
 	local URL_HASH=$(echo -n "${URL}" | md5sum -t | awk '{print $1}')
 	local DEST_DIR=${2}
@@ -88,6 +89,7 @@ download_uncompress () {
 	# if download file does not exists in database download package
 	if [ -z "${HASH_ROW}" ]
 	then
+		echo "\$ curl -k -vLsI -o /dev/null \"${URL}\""
 		local DOWNLOAD_FILE="$(curl -k -vLsI -o /dev/null "${URL}" 2>&1 | egrep -i '^< content-disposition:' | tr -d "\n\r" | sed -e 's/^.*filename="\?//;s/".*//')"
 		if [ -z ${DOWNLOAD_FILE} ]
 		then
@@ -104,43 +106,48 @@ download_uncompress () {
 	# if download file does not exists in filesystem
 	if [ ! -f "${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}" ]
 	then
-		echo -n "downloading..."
+		echo "\$ curl -k -LsR -o ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${URL}"
 		curl -k -LsR -o ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${URL}
 	fi
 	if [ -d ${DEST_DIR} ] && [ ${NODELETEDESTDIR} -eq 0 ]
 	then
+		echo "\$ rm -rf ${DEST_DIR}"
 		rm -rf ${DEST_DIR}
 	fi
 	local FILE_ENCODING=$(file -iz ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE})
 	local DOWNLOAD_FILE_TYPE=$(echo ${FILE_ENCODING} | egrep -o "compressed-encoding=[^;]*" | sed 's/compressed-encoding=//')
 	local UNCOMPRESSED_FILE_TYPE=$(echo ${FILE_ENCODING} | awk '{print $2}' | sed 's/;$//')
 	if [ ! -d ${DEST_DIR} ] ; then mkdir -p ${DEST_DIR} ; fi
-	echo -n "uncompressing..."
 	case ${UNCOMPRESSED_FILE_TYPE} in
 		application/x-tar)
+			echo "\$ tar xf ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${TARFLAGS} -C ${DEST_DIR} ${ARCHIVE_DIRS}"
 			tar xf ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${TARFLAGS} -C ${DEST_DIR} ${ARCHIVE_DIRS}
 			;;
 		*)
 			case ${DOWNLOAD_FILE_TYPE} in
 				application/x-xz)
+					echo "\$ cp ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${DEST_DIR}/${DOWNLOAD_FILE}"
 					cp ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${DEST_DIR}/${DOWNLOAD_FILE}
+					echo "\$ xz --uncompress ${DEST_DIR}/${DOWNLOAD_FILE}"
 					xz --uncompress ${DEST_DIR}/${DOWNLOAD_FILE}
 					;;
 				application/zip)
 					if [ -z "${FILES2EXTRACT}" ]
 					then
+						echo "\$ unzip -n ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} -d ${DEST_DIR}"
 						unzip -n ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} -d ${DEST_DIR}
 					else
+						echo "\$ unzip -j -n ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} "${FILES2EXTRACT}" -d ${DEST_DIR}"
 						unzip -j -n ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} "${FILES2EXTRACT}" -d ${DEST_DIR}
 					fi
 					;;
 				*)
+					echo "\$ cp ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${DEST_DIR}/${DOWNLOAD_FILE}"
 					cp ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${DEST_DIR}/${DOWNLOAD_FILE}
 					;;
 			esac
 			;;
 	esac
-	set +x
 	trap ERR
 }
 

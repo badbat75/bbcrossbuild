@@ -1,6 +1,33 @@
 # glibc
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${BS_GLIBC_VER}.tar.xz"
-PATCHES="http://www.linuxfromscratch.org/patches/lfs/development/glibc-${BS_GLIBC_VER}-fhs-1.patch"
+
+case ${BS_GLIBC_VER} in
+	2.36)
+		PATCHES="https://sourceware.org/git?p=glibc.git;a=patch;h=c3fda489cfdb2260f9fec706e6fd7259858c4467 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=33f1b4c1452b33991e670f636ebe98b90a405e10 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=c74bb93cfdb04d49155b0e30983a3c866167bbca \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=ac47d8f6cf9744139adb12f540fb9cc610cac579 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=302bc33bc53c787da6e74162a7092e9c0fb964a8 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=e982657073c4db21459ffd9e17bc505b1d64b876 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=8b139cd4f1074ae0d95d9bff60db283a1ed72734 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=d13a7a6f100576b1e30dc044b2e0c4cbcb6196f6 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=5c62874f423af93e97b51bc9a57af228a546156f \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=0062e7dd1c3674ece2daca53a898badd28b60421 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=1cc5513114e76083669cba1b11252aad35525e69 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=4dad97e2a2e510c6b53a0add29a2188714fcf4ab \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=d48813227b63a0d92ea357ea0733229ed74e31ab \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=bb1e8b0ca99b5cbedfae3e6245528a87d95ff3e2 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=3bd3c612e98a53ce60ed972f5cd2b90628b3cba5 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=b0e7888d1fa2dbd2d9e1645ec8c796abf78880b9 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=924e4f3eaa502ce82fccf8537f021a796d158771 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=3c791f2031ca8f6b99e96b774ed1c505ceb93595 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=b3736d1a3c60a3ec9959bf3b38794958546bf6a2 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=645d94808aaa90fb1b20a25ff70bb50d9eb1d55b \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=b46412fb17e8bfc6c9e1f144bbcf833320c80f8a \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=c399271c10bd00714504e8d4dfbec8aebf996dd4 "
+		;;
+esac
+PATCHES+="http://www.linuxfromscratch.org/patches/lfs/development/glibc-${BS_GLIBC_VER}-fhs-1.patch"
 BUILD_PROCESS=configmake
 
 PKG_OVERRIDELTO=0
