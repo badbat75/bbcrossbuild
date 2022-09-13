@@ -1321,7 +1321,7 @@ function build () {(
 			--with-icu=${ICU_INCLUDEDIR} \
 			--with-python-version=${PYTHONBIN_VER} \
 			--with-toolset=${BBTC}
-		echo "\$ sed -i "s|using ${BBTC} ;|using ${BBTC} : : ${CXX_EXE} ;|" project-config.jam" >> ${LOG_PATH}/${PKG_NAME}.log
+		echo "\$ sed -i \"s|using ${BBTC} ;|using ${BBTC} : : ${CXX_EXE} ;|\" project-config.jam" >> ${LOG_PATH}/${PKG_NAME}.log
 		sed -i "s|using ${BBTC} ;|using ${BBTC} : : ${CXX_EXE} ;|" project-config.jam
 		echo "\$ ./b2 -j${NPROCS} -q \
 			architecture=${BOOST_ARCH} address-model=${BOOST_ADDRMOD} \
