@@ -38,7 +38,7 @@ function setbuildenv () {
 	PLATFORM_RUSTFLAGS="${HMCPU:+-C target-cpu=${HMCPU}}${HMARCH_RUST:+ -C target-feature=${HMARCH_RUST} }"
 
 	case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
-#		gnu) local SYSINCLUDE_OPT="-isystem";;
+		#gnu) local SYSINCLUDE_OPT="-isystem";;
 		llvm|*) local SYSINCLUDE_OPT="-I";;
 	esac
 
@@ -931,7 +931,6 @@ function build () {(
 			trap - ERR; \
 			return ${STATUS};' ERR
 
-
 		echo "\$ cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 
@@ -1070,11 +1069,10 @@ function build () {(
 
 	function pythonbuild () {
 		trap 'STATUS=${?}; \
-		set +x; \
 		trap - ERR; \
 		return ${STATUS};' ERR
 
-		set -x
+		echo "\$ cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
 		local PYTHONBIN_VER=$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)
@@ -1117,24 +1115,26 @@ function build () {(
 			fi
 			export PYTHONPATH
 		done
+		echo "\$ create_environment_source" >> ${LOG_PATH}/${PKG_NAME}.log
 		create_environment_source
+		echo "\$ source environment.source" >> ${LOG_PATH}/${PKG_NAME}.log
 		source environment.source
+		echo "\$ cross-python -m site" >> ${LOG_PATH}/${PKG_NAME}.log
 		cross-python -m site
+		echo "\$ ${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}" >> ${LOG_PATH}/${PKG_NAME}.log
 		eval '${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}'
-		eval '${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} \
-			${INSTALL_TARGET}'
+		echo "\$ ${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} ${INSTALL_TARGET}" >> ${LOG_PATH}/${PKG_NAME}.log
+		eval '${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} ${INSTALL_TARGET}'
 		cd ${BB_HOME}
-		set +x
 		trap - ERR
 	}
 
 	function pythonpip () {
 		trap 'STATUS=${?}; \
-		set +x; \
 		trap - ERR; \
 		return ${STATUS};' ERR
 
-		set -x
+		echo "\$ mkdir -pv ${PKG_BLDPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
 		mkdir -pv ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
 		local PYTHONBIN_VER=$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)
@@ -1178,21 +1178,25 @@ function build () {(
 		#PYTHONUSERBASE="${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
 		#export PYTHONUSERBASE
 		export PYTHONPATH
+		echo "\$ create_environment_source" >> ${LOG_PATH}/${PKG_NAME}.log
 		create_environment_source
+		echo "\$ source environment.source" >> ${LOG_PATH}/${PKG_NAME}.log
 		source environment.source
+		echo "\$ cross-python -m site" >> ${LOG_PATH}/${PKG_NAME}.log
 		cross-python -m site
 		if [ ${PKG_PYTHONBUILD:-1} -eq 1 ]
 		then
 			local PYTHONBUILD="--no-binary :all:"
 		fi
 		#build-python -m pip ${VERBOSE} install --upgrade ${PKG_NAME}
+		echo "\$ cross-python -m pip ${VERBOSE} install -I ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX} ${PKG_NAME}" >> ${LOG_PATH}/${PKG_NAME}.log
 		cross-python -m pip ${VERBOSE} install -I ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX} ${PKG_NAME}
 		if [ ${PYTHON_PKGDIR} == dist-packages ]
 		then
+			echo "\$ mv ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages" >> ${LOG_PATH}/${PKG_NAME}.log
 			mv ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages
 		fi
 		cd ${BB_HOME}
-		set +x
 		trap - ERR
 	}
 	
@@ -1203,6 +1207,7 @@ function build () {(
 		return ${STATUS};' ERR
 
 		set -x
+		echo "\$ cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
 		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 		cd ${PKG_BLDPATH}
 		if [ -d ${DISTOS_PATH}${BUILD_INCLUDEDIR} ]
@@ -1298,8 +1303,16 @@ function build () {(
 				local LTO=off
 				;;
 		esac
-#		create_environment_source
-#		source environment.source
+		#create_environment_source
+		#source environment.source
+		echo "\$ ./bootstrap.sh \
+			--prefix=${PKG_PKGPATH}${BUILD_PREFIX} \
+			--exec-prefix=${PKG_PKGPATH}${BUILD_EXECPREFIX} \
+			--libdir=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+			--includedir=${PKG_PKGPATH}${BUILD_INCLUDEDIR} \
+			--with-icu=${ICU_INCLUDEDIR} \
+			--with-python-version=${PYTHONBIN_VER} \
+			--with-toolset=${BBTC}" >> ${LOG_PATH}/${PKG_NAME}.log
 		./bootstrap.sh \
 			--prefix=${PKG_PKGPATH}${BUILD_PREFIX} \
 			--exec-prefix=${PKG_PKGPATH}${BUILD_EXECPREFIX} \
@@ -1308,7 +1321,17 @@ function build () {(
 			--with-icu=${ICU_INCLUDEDIR} \
 			--with-python-version=${PYTHONBIN_VER} \
 			--with-toolset=${BBTC}
-		sed -i "s|using ${BBTC} ;|using ${BBTC} : : ${CXX_EXE} ;|" project-config.jam &&
+		echo "\$ sed -i "s|using ${BBTC} ;|using ${BBTC} : : ${CXX_EXE} ;|" project-config.jam" >> ${LOG_PATH}/${PKG_NAME}.log
+		sed -i "s|using ${BBTC} ;|using ${BBTC} : : ${CXX_EXE} ;|" project-config.jam
+		echo "\$ ./b2 -j${NPROCS} -q \
+			architecture=${BOOST_ARCH} address-model=${BOOST_ADDRMOD} \
+			binary-format=${HMBINFMT} abi=${BOOST_ABI} target-os=${HOS} \
+			variant=release optimization=${OPTIMIZATION} lto=${LTO} lto-mode=${LTOMODE} threading=multi ${B2_FLAGS} \
+			toolset=${BBTC} \
+			cflags=\"${WORKAROUND}${SYSROOT_FLAGS} ${PLATFORM_CFLAGS} ${PKG_CFLAGS}\" \
+			cxxflags=\"${COMMON_CXXFLAGS} -fPIC ${PKG_CXXFLAGS}\" \
+			linkflags=\"${WORKAROUND}${SYSROOT_FLAGS} ${LINKER_FLAGS} ${COMMON_LDFLAGS} ${PKG_LDFLAGS}\" \
+			install" >> ${LOG_PATH}/${PKG_NAME}.log
 		./b2 -j${NPROCS} -q \
 			architecture=${BOOST_ARCH} address-model=${BOOST_ADDRMOD} \
 			binary-format=${HMBINFMT} abi=${BOOST_ABI} target-os=${HOS} \
@@ -1319,7 +1342,6 @@ function build () {(
 			linkflags="${WORKAROUND}${SYSROOT_FLAGS} ${LINKER_FLAGS} ${COMMON_LDFLAGS} ${PKG_LDFLAGS}" \
 			install
 		cd ${BB_HOME}
-		set +x
 		trap - ERR
 	}
 
@@ -1341,13 +1363,23 @@ function build () {(
 			*) local DEBARCH=${HM}
 			;;
 		esac
+		echo "\$ create_environment_source" >> ${LOG_PATH}/${PKG_NAME}.log
 		create_environment_source
+		echo "\$ source environment.source" >> ${LOG_PATH}/${PKG_NAME}.log
 		source environment.source
 		DPKG_ROOT=${DISTOS_PATH} \
 		CONFIG_SITE=${DISTOS_PATH}/etc/dpkg \
 		LD_LIBRARY_PATH+=:${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
 		DEB_BUILD_OPTIONS="nocheck noddebs" \
 		DH_OPTIONS="-v --dpkg-shlibdeps-params=--ignore-missing-info" \
+		echo "\$ dpkg-buildpackage \
+			--host-arch=${DEBARCH} \
+			--host-type=${HARCH} \
+			--target-arch=${DEBARCH} \
+			--target-type=${HARCH} \
+			-d -b -uc -us \
+			-Pcross,nocheck \
+			--admindir=${DISTOS_PATH}/var/lib/dpkg" >> ${LOG_PATH}/${PKG_NAME}.log
 		dpkg-buildpackage \
 			--host-arch=${DEBARCH} \
 			--host-type=${HARCH} \
@@ -1357,8 +1389,8 @@ function build () {(
 			-Pcross,nocheck \
 			--admindir=${DISTOS_PATH}/var/lib/dpkg
 		cd ..
+		echo "\$ cp -v *.deb ${PKG_PKGPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
 		cp -v *.deb ${PKG_PKGPATH}
-		set +x
 		echo "Done"
 		trap - ERR
 	}
@@ -1526,10 +1558,12 @@ function build () {(
 	#fi
 	if [ ! -d ${BLD_PATH} ]
 	then
+		echo "\$ mkdir -p ${BLD_PATH}" >> ${LOG_PATH}/${PKG_NAME}.log
 		mkdir -p ${BLD_PATH}
 	fi
 	if [ ! -d ${BIN_PATH} ]
 	then
+		echo "\$ mkdir -p ${BIN_PATH}" >> ${LOG_PATH}/${PKG_NAME}.log
 		mkdir -p ${BIN_PATH}
 	fi
 	echo "Pre build script:" >> ${LOG_PATH}/${PKG_NAME}.log
