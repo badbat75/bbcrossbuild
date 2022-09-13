@@ -483,7 +483,7 @@ function build () {(
 			find ${PKG_SRCPATH}/bbxb_patches -type f | xargs -I{} -d'\n' -n1 -P${NPROCS} bash -c "
 				PATCH=\"\$(basename {})\"
 				echo -n \"Applying \${PATCH} patch...\"
-				echo \"patch -p1 < {}\" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+				echo \"\$ patch -p1 < {}\" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 				patch -f -p1 < \"{}\" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 				echo "Done."
 			"
@@ -519,7 +519,6 @@ function build () {(
 		env | grep "^BUILD_"
 		if [ ${AUTOCONF:-0} -eq 1 ]
 		then
-			echo -n "${SPACES}AutoReconf ${PKG_NAME}..."
 			IFS=,
 			for cp in ${AUTOCONF_PATH:-.}
 			do
@@ -527,7 +526,7 @@ function build () {(
 				if [ ! -d m4 ]
 				then
 					echo "\$ mkdir m4" >> ${LOG_PATH}/${PKG_NAME}.log
-					mkdir m4
+					mkdir m4 >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 				fi
 				local ACINCLUDE="--include=m4"
 				#[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal"
@@ -536,7 +535,6 @@ function build () {(
 				eval autoreconf -f -i -v ${ACINCLUDE} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 			done
 			unset IFS
-			echo "Done." || echo "Fail."
 		fi
 		echo "\$ mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}" >> ${LOG_PATH}/${PKG_NAME}.log
 		mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}

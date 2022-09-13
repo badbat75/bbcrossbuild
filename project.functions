@@ -109,9 +109,9 @@ function create_sfx_package () {
 	local PKG_NAME="$(basename "${PKG_OBJ}")"
 	local PKG_PKGPATH="$(dirname "${PKG_OBJ}")"
 
-	echo -n "Creating self-extracting file ${PRJ_NAME}.sfx... "
 	if [ -d "${PKG_OBJ}" ]
 	then
+		echo "\$ tar cfp - --owner=0 --group=0 -C ${PKG_OBJ} . | xz -T${NPROCS} - > ${PKG_OBJ}.tar.xz"
 		tar cfp - --owner=0 --group=0 -C ${PKG_OBJ} . | xz -T${NPROCS} - > ${PKG_OBJ}.tar.xz 
 	fi
 	
@@ -170,11 +170,12 @@ function create_sfx_package () {
 
 		__ARCHIVE_BELOW__
 	EOF
+	echo "\$ cat ${PKG_OBJ}.tar.xz >> ${PKG_OBJ}.sfx"
 	cat ${PKG_OBJ}.tar.xz >> ${PKG_OBJ}.sfx
+	echo "\$ chmod +x ${PKG_OBJ}.sfx"
 	chmod +x ${PKG_OBJ}.sfx
+	echo "\$ rm ${PKG_OBJ}.tar.xz"
 	rm ${PKG_OBJ}.tar.xz
-
-	echo "done."
 	echo
 	trap ERR
 }
