@@ -83,20 +83,20 @@ function setbuildenv () {
 				esac			
 			fi
 		fi
-		# Build LDFLAGS search paths
-		#if [ -d ${DISTOS_PATH}/etc/ld.so.conf.d ]
-		#then
-		#	for entry in ${GCCSEARCHLIBS}
-		#	do
-		#		COMMON_LDFLAGS+=" -L$entry -Wl,-rpath-link,$entry"
-		#	done
-		#	for entry in $(cat ${DISTOS_PATH}/etc/ld.so.conf.d/* | grep -v '#' | sort)
-		#	do
-		#		COMMON_LDFLAGS+=" -L${DISTOS_PATH}$entry -Wl,-rpath-link,${DISTOS_PATH}$entry"
-		#	done
-		#fi
 		SYSROOT="${DISTOS_PATH}"
 	else
+		case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
+			gnu)
+				if ( [ -f ${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crtn.o ] && \
+						[ -f ${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crti.o ] && \
+						[ -f ${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crt1.o ] )
+				then
+					COMMON_CFLAGS+=" -B${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}"
+					COMMON_CXXFLAGS+=" -B${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}"
+					COMMON_LDFLAGS+=" -B${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}"
+				fi
+				;;
+		esac			
 		SYSROOT="${BIN_PATH}"
 	fi
 	SYSROOT_FLAGS="--sysroot=${SYSROOT}"
