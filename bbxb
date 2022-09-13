@@ -26,7 +26,7 @@ OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
 [ ${_param_v:-0} -eq 1 ] && set -x || true
 
 PRJ_NAME=${_param_1}
-PLATFORM_NAME=${_param_2}
+PLATFORM_NAME=${_param_2:-generic_x64}
 
 if [ -z "${PRJ_NAME}" ]
 then
