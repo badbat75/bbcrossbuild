@@ -298,6 +298,26 @@ pathremove () {
 	"
 }
 
+run_cmd () {
+	set -e
+	local LINENO=0
+	while IFS= read -r line; do
+		local LINE=$((LINE+1))
+		case ${LINE} in
+			1) echo -en '$ ' ;;
+			*) echo -en '> ' ;;
+		esac
+		eval echo "${line}"
+	done <<< "${@}"
+	eval "${@}"
+	echo
+	set +e
+}
+
+tab () {
+	echo -en '\t'
+}
+
 is_core_functions () {
 	return 0
 }

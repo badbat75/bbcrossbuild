@@ -1,6 +1,6 @@
 # wsl-kernel_5.15
 PKG_SUFFIX=.62.1
-PKG_URL="https://github.com/microsoft/WSL2-Linux-Kernel/archive/refs/tags/linux-msft-wsl-5.10${PKG_SUFFIX}.tar.gz"
+PKG_URL="https://github.com/microsoft/WSL2-Linux-Kernel/archive/refs/tags/linux-msft-wsl-5.15${PKG_SUFFIX}.tar.gz"
 BUILD_PROCESS=kernelbuild
 
 case ${WITH_EXTOPTS:-1} in
