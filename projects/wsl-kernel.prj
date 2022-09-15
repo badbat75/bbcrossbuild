@@ -13,3 +13,5 @@ setup_sccache
 setup_gcc --install
 #setup_llvm
 build microsoft/wsl-kernel_5.15
+
+cp -fv ${BIN_PATH}/boot/vmlinuz* ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}
