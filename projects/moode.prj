@@ -2,12 +2,12 @@
 
 case ${PLATFORM_NAME} in
 	rpi|rpi2|rpi3)
-		RASPBIAN_IMAGE=2022-04-04-raspios-bullseye-armhf-lite
-		RASPBIAN_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2022-04-07/
+		RASPBIAN_IMAGE=2022-09-06-raspios-bullseye-armhf-lite
+		RASPBIAN_URL=https://downloads.raspberrypi.org/raspios_lite_armhf/images/raspios_lite_armhf-2022-09-07/
 	;;
 	rpi3-aarch64)
-		RASPBIAN_IMAGE=2022-04-04-raspios-bullseye-arm64-lite
-		RASPBIAN_URL=https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2022-04-07/
+		RASPBIAN_IMAGE=2022-09-06-raspios-bullseye-arm64-lite
+		RASPBIAN_URL=https://downloads.raspberrypi.org/raspios_lite_arm64/images/raspios_lite_arm64-2022-09-07/
 	;;
 esac
 RASPBIAN_IMAGE_EXT=img.xz
