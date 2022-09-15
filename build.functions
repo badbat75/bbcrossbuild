@@ -1537,7 +1537,7 @@ function build () {(
 					cd ${PKG_SRCPATH}
 				fi
 				echo "Running pre build script..." >> ${LOG_PATH}/${PKG_NAME}.log
-				(eval "set -ex; ${PKG_PREBUILD}; set +ex") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+				(eval "set -ex; ${PKG_PREBUILD} 2>&1; set +ex") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 			fi
 			if [ ${PKG_COPYSRC:-0} -eq 1 ] 
 			then
@@ -1556,7 +1556,7 @@ function build () {(
 				fi
 				cd ${PKG_BLDPATH}
 				echo "Running post build script..." >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-				(eval "set -ex; ${PKG_POSTBUILD}; set +ex") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+				(eval "set -ex; ${PKG_POSTBUILD} 2>&1; set +ex") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 			fi
 			;;
 	esac

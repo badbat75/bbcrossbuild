@@ -1,8 +1,18 @@
 BUILD_PROCESS=none
-PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/{dev,proc,sys,run,etc,usr/bin,usr/lib,usr/sbin,var}
-	ln -sfv usr/bin ${PKG_PKGPATH}
-	ln -sfv usr/lib ${PKG_PKGPATH}
-	ln -sfv usr/sbin ${PKG_PKGPATH}
+PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/{dev,proc,sys,run,etc,var}
+	if [ ! -z "${BUILD_PREFIX}" ]
+	then
+		local PREFIX=$(echo ${BUILD_PREFIX} | sed 's|^/||')
+		mkdir -pv ${PKG_PKGPATH}/{\${PREFIX}/bin,\${PREFIX}/lib,\${PREFIX}/sbin}
+		ln -sfv \${PREFIX}/bin ${PKG_PKGPATH}
+		ln -sfv \${PREFIX}/lib ${PKG_PKGPATH}
+		ln -sfv \${PREFIX}/sbin ${PKG_PKGPATH}
+		if [[ "${BUILD_LIBSUFFIX}" == 64* ]]
+		then
+			mkdir -pv \${PREFIX}/lib64
+			ln -sfv \${PREFIX}/lib64 ${PKG_PKGPATH}
+		fi
+	fi
 	[ ! -f ${PKG_PKGPATH}/dev/console ] && sudo mknod -m 600 ${PKG_PKGPATH}/dev/console c 5 1 || true
 	[ ! -f ${PKG_PKGPATH}/dev/console ] && sudo mknod -m 666 ${PKG_PKGPATH}/dev/null c 1 3 || true
 	ln -snfv ../run ${PKG_PKGPATH}/var/run

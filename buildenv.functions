@@ -326,10 +326,10 @@ function setup_gcc () {
 		echo "Finalize the installation of the limits.h header"
 		run_cmd '${TOOLCHAIN_PATH}/libexec/gcc/${HARCH}/${GCC_MAJVER}/install-tools/mkheaders'
 
-		if [ ! -d ${GCC_SYSROOT}${BUILD_PREFIX}/lib/../lib${BUILD_LIBSUFFIX} ]
+		if [ ! -d ${GCC_SYSROOT}${BUILD_PREFIX}/lib ] && [[ "${BUILD_LIBSUFFIX}" == 64* ]]
 		then
-			echo "Workaround for ${GCC_SYSROOT}${BUILD_PREFIX}/lib/../lib${BUILD_LIBSUFFIX}"
-			run_cmd 'mkdir -pv "${GCC_SYSROOT}${BUILD_PREFIX}/lib/../lib${BUILD_LIBSUFFIX}"'
+			echo "Workaround for ${GCC_SYSROOT}${BUILD_PREFIX}/lib/../lib64"
+			run_cmd 'mkdir -pv "${GCC_SYSROOT}${BUILD_PREFIX}/lib"'
 		fi
 		trap ERR
 	}

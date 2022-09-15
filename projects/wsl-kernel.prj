@@ -9,6 +9,8 @@ KERNEL_LTOENABLE=0
 BUILD_LIBSHARED=1
 BUILD_LIBSTATIC=1
 
+build lfs/create-base-fs_1.0
+
 setup_sccache
 setup_gcc --install
 #setup_llvm
