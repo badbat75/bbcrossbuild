@@ -9,6 +9,7 @@ KERNEL_LTOENABLE=0
 BUILD_LIBSHARED=1
 BUILD_LIBSTATIC=1
 
+setup_sccache
 setup_gcc --install
 #setup_llvm
 build microsoft/wsl-kernel_5.15

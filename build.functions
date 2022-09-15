@@ -28,9 +28,11 @@ function setbuildenv () {
 	BUILD_USERSYSTEMDDIR="${BUILD_USERSYSTEMDDIR:-${BUILD_PREFIX}/lib/systemd/system}"
 	export BUILD_PREFIX BUILD_EXECPREFIX BUILD_INCLUDEDIR BUILD_LIBDIR BUILD_SYSCONFDIR BUILD_LOCALSTATEDIR
 	export QEMU_LD_PREFIX="${BIN_PATH}"
-	if [ ${MULTI_ARCH} -eq 1 ]
+	if [ ${MULTI_ARCH} -eq 1 ] && [ -z "${HARCH_LIB}" ]
 	then
 		BUILD_LIBSUFFIX="/${HARCH}"
+	else
+		BUILD_LIBSUFFIX="${HARCH_LIB}"
 	fi
 	BUILD_LIBSHARED=${BUILD_LIBSHARED:-1}
 	BUILD_LIBSTATIC=${BUILD_LIBSTATIC:-1}
@@ -393,7 +395,7 @@ function build () {(
 			trap - ERR SIGINT; \
 			return ${STATUS};' ERR	
 		trap 'trap - ERR SIGINT; \
-			[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH} || true;
+			[ -d ${PKG_SRCPATH} ] && run_cmd "rm -rf ${PKG_SRCPATH}" || true;
 			return 100' SIGINT
 
 		if [ ! -z "${PKG_URL}" ]
@@ -403,11 +405,9 @@ function build () {(
 			do
 				if [ ${MAKEDIR:-0} -eq 1 ]
 				then
-					echo "\$ NODELETEDESTDIR=1 STRIPCOMPONENTS=0 download_uncompress \"${url}\" \"${PKG_SRCPATH}\""
-					NODELETEDESTDIR=1 STRIPCOMPONENTS=0 download_uncompress "${url}" "${PKG_SRCPATH}"
+					run_cmd 'NODELETEDESTDIR=1 STRIPCOMPONENTS=0 download_uncompress "${url}" "${PKG_SRCPATH}"'
 				else
-					echo "\$ NODELETEDESTDIR=1 download_uncompress \"${url}\" \"${PKG_SRCPATH}\""
-					NODELETEDESTDIR=1 download_uncompress "${url}" "${PKG_SRCPATH}"
+					run_cmd 'NODELETEDESTDIR=1 download_uncompress "${url}" "${PKG_SRCPATH}"'
 				fi
 			done
 		else
@@ -415,12 +415,10 @@ function build () {(
 			then
 				if [ ! -d ${PKG_SRCPATH} ]
 				then
-					echo "\$ git clone --recursive \"${GIT_URL}\" \"${PKG_SRCPATH}\""
-					git clone --recursive "${GIT_URL}" "${PKG_SRCPATH}"
+					run_cmd 'git clone --recursive "${GIT_URL}" "${PKG_SRCPATH}"'
 					if  [ ! -z ${GIT_COMMIT} ]
 					then
-						echo "\$ git -C \"${PKG_SRCPATH}\" checkout \"${GIT_COMMIT}\""
-						git -C \"${PKG_SRCPATH}\" checkout "${GIT_COMMIT}"
+						run_cmd 'git -C "${PKG_SRCPATH}" checkout "${GIT_COMMIT}"'
 					fi
 				fi
 			fi
@@ -434,12 +432,12 @@ function build () {(
 			echo "Fail."; \
 			trap - ERR
 			trap - SIGINT; \
-			#[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH} || true; \
+			#[ -d ${PKG_SRCPATH} ] && run_cmd "rm -rf ${PKG_SRCPATH}" || true; \
 			return ${STATUS};' ERR
 
 		trap 'trap - ERR
-			trap - SIGINT; \
-			[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH} || true;
+			trap - SIGINT; \ 
+			[ -d ${PKG_SRCPATH} ] && run_cmd "rm -rf ${PKG_SRCPATH}" || true; \
 			return 100' SIGINT
 
 		cd ${PKG_SRCPATH}
@@ -447,8 +445,7 @@ function build () {(
 		then
 			echo -n "${SPACES}Retrieve DEB patch info..."
 			[ ! -d ${PKG_SRCPATH}/debian ] && mkdir -p ${PKG_SRCPATH}/debian
-			echo "\$ ARCHIVEDIRS=\"debian\" download_uncompress \"${PATCHDEB}\" ${PKG_SRCPATH}/debian" >> ${LOG_PATH}/${PKG_NAME}.log
-			ARCHIVEDIRS="debian" download_uncompress "${PATCHDEB}" ${PKG_SRCPATH}/debian >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			run_cmd 'ARCHIVEDIRS="debian" download_uncompress "${PATCHDEB}" ${PKG_SRCPATH}/debian'
 			echo "Done."
 			if [ -f ${PKG_SRCPATH}/debian/patches/series ]
 			then
@@ -460,8 +457,7 @@ function build () {(
 						if [ ! -z ${PATCHARRAY[0]} ]
 						then
 							echo -n "${SPACES}Applying ${PATCHARRAY[0]} patch..."
-							echo "\$ patch ${PATCHARRAY[1]:--p1} < ${PKG_SRCPATH}/debian/patches/${PATCHARRAY[0]}" >> ${LOG_PATH}/${PKG_NAME}.log
-							patch ${PATCHARRAY[1]:--p1} < ${PKG_SRCPATH}/debian/patches/${PATCHARRAY[0]} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+							run_cmd 'patch ${PATCHARRAY[1]:--p1} < ${PKG_SRCPATH}/debian/patches/${PATCHARRAY[0]}'
 							echo "Done."
 						fi
 					fi
@@ -475,23 +471,22 @@ function build () {(
 			if [[ ${scanpatch} =~ ^https?://|^ftp:// ]]
 			then
 				echo -n "${SPACES}Downloading patch[set]..."	
-				download_uncompress ${scanpatch} ${PKG_SRCPATH}/bbxb_patches >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+				run_cmd 'download_uncompress ${scanpatch} ${PKG_SRCPATH}/bbxb_patches'
 			else
 				echo -n "${SPACES}Copying $scanpatch patch..."
-				cp -v ${PATCH_PATH}/$scanpatch ${PKG_SRCPATH}/bbxb_patches >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+				run_cmd 'cp -v ${PATCH_PATH}/$scanpatch ${PKG_SRCPATH}/bbxb_patches'
 			fi
 			find ${PKG_SRCPATH}/bbxb_patches -type f | xargs -I{} -d'\n' -n1 -P${NPROCS} bash -c "
 				PATCH=\"\$(basename {})\"
 				echo -n \"Applying \${PATCH} patch...\"
-				echo \"\$ patch -p1 < {}\" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-				patch -f -p1 < \"{}\" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+				echo \"\$ patch -p1 < {}\"
+				patch -f -p1 < \"{}\" >> ${LOG_PATH}/${PKG_NAME}.log
 				echo "Done."
 			"
 		done
 		if [ -f "${PKG_SRCPATH}/${CONF_CMD}" ] && [ ! -x "${PKG_SRCPATH}/${CONF_CMD}" ]
 		then
-			echo "\$ chmod +x ${PKG_SRCPATH}/${CONF_CMD}" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-			chmod +x ${PKG_SRCPATH}/${CONF_CMD}
+			run_cmd 'chmod +x ${PKG_SRCPATH}/${CONF_CMD}' >> ${LOG_PATH}/${PKG_NAME}.log
 		fi
 		echo -n "${SPACES}"
 		cd ${BB_HOME}
@@ -503,9 +498,7 @@ function build () {(
 		if [ -d ${PKG_BLDPATH} ]
 		then
 			cd ${PKG_BLDPATH}
-			echo "\$ create_environment_source" >> ${LOG_PATH}/${PKG_NAME}.log
-			create_environment_source
-			echo "\$ source environment.source" >> ${LOG_PATH}/${PKG_NAME}.log
+			run_cmd 'create_environment_source'
 			source environment.source
 		fi
 	}
@@ -525,19 +518,16 @@ function build () {(
 				cd ${PKG_SRCPATH}/${cp}
 				if [ ! -d m4 ]
 				then
-					echo "\$ mkdir m4" >> ${LOG_PATH}/${PKG_NAME}.log
-					mkdir m4 >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+					run_cmd 'mkdir m4'
 				fi
 				local ACINCLUDE="--include=m4"
 				#[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal"
 				[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
-				echo "\$ autoreconf -f -i -v ${ACINCLUDE}" >> ${LOG_PATH}/${PKG_NAME}.log
-				eval autoreconf -f -i -v ${ACINCLUDE} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+				run_cmd 'autoreconf -f -i -v ${ACINCLUDE}'
 			done
 			unset IFS
 		fi
-		echo "\$ mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}" >> ${LOG_PATH}/${PKG_NAME}.log
-		mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
+		run_cmd 'mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}'
 		cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 		echo -e "${CONF_CONFIGPARMS}" > configparms
 		if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
@@ -558,29 +548,23 @@ function build () {(
 				CONF_FLAGS=" --disable-static ${CONF_FLAGS}"
 			fi
 		fi
-		echo "\$ create_environment_source" >> ${LOG_PATH}/${PKG_NAME}.log
-		create_environment_source
-		echo "\$ source environment.source" >> ${LOG_PATH}/${PKG_NAME}.log
+		run_cmd 'create_environment_source'
 		source environment.source
 
 		if [[ "${CONF_CMD}" =~ ^\./.* ]]
 		then
-			echo "\$ ${CONF_CMD} ${CONF_FLAGS}" >> ${LOG_PATH}/${PKG_NAME}.log
-			eval "${CONF_CMD} ${CONF_FLAGS}"
+			run_cmd '${CONF_CMD} ${CONF_FLAGS}'
 		else 
-			echo "\$ ${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS}" >> ${LOG_PATH}/${PKG_NAME}.log
-			eval "${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS}"
+			run_cmd '${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS}'
 		fi
 		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
 		then
 			for target in ${PKG_MAKETARGETS:-all}
 			do
-				echo "\$ make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}" >> ${LOG_PATH}/${PKG_NAME}.log
-				make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}
+				run_cmd 'make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}'
 			done
 		fi
-		echo "\$ make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${INST_CMD:-}" >> ${LOG_PATH}/${PKG_NAME}.log
-		make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${INST_CMD:-}
+		run_cmd 'make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${INST_CMD:-}'
 		cd ${BB_HOME}
 		trap - ERR
 	}
@@ -589,24 +573,19 @@ function build () {(
 		trap 'STATUS=${?}; \
 		trap - ERR; \
 		return ${STATUS};' ERR
-		echo "\$ cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
-		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+		run_cmd 'cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}'
 		cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
-		echo "\$ create_environment_source" >> ${LOG_PATH}/${PKG_NAME}.log
-		create_environment_source
-		echo "\$ source environment.source" >> ${LOG_PATH}/${PKG_NAME}.log
+		run_cmd 'create_environment_source'
 		source environment.source
 		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
 		then
 			for target in ${PKG_MAKETARGETS:-all}
 			do
 				echo "Making ${target}..."
-				echo "\$ make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}" >> ${LOG_PATH}/${PKG_NAME}.log
-				eval "make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}"
+				run_cmd 'make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}'
 			done
 		fi
-		echo "\$ make ${PKG_MAKEVARS} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}" >> ${LOG_PATH}/${PKG_NAME}.log
-		eval "make ${PKG_MAKEVARS} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}"
+		run_cmd 'make ${PKG_MAKEVARS} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}'
 		cd ${BB_HOME}
 		trap - ERR
 	}
@@ -616,8 +595,7 @@ function build () {(
 		trap - ERR; \
 		return ${STATUS};' ERR
 
-		echo "\$ mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}" >> ${LOG_PATH}/${PKG_NAME}.log
-		mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
+		run_cmd 'mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}'
 		cd ${PKG_BLDPATH}
 		if [ ${BUILD_LIBSHARED} -eq 1 ]
 		then
@@ -631,25 +609,9 @@ function build () {(
 		else
 			CONF_FLAGS+=" -DBUILD_STATIC_LIBS=OFF"
 		fi
-		echo "\$ CCWRAPPER=\"\" create_environment_source" >> ${LOG_PATH}/${PKG_NAME}.log
-		CCWRAPPER="" create_environment_source
-		echo "\$ source environment.source" >> ${LOG_PATH}/${PKG_NAME}.log
+		run_cmd 'CCWRAPPER="" create_environment_source'
 		source environment.source
-		echo "\$ cmake ${PKG_SRCPATH} \\
-			-G Ninja \
-			-DCMAKE_BUILD_TYPE=\"Release\" \\
-			-DTOOLCHAIN_PREFIX=${HARCH}- \\
-			-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \\
-			-DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \\
-			-DCMAKE_CROSSCOMPILING="TRUE" \\
-			-DCMAKE_INSTALL_PREFIX=${BUILD_PREFIX} \\
-			-D${VAR_INSTALL_LIBDIR:-"LIB_INSTALL_DIR"}=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \\
-			-D${VAR_INSTALL_LIBSUFFIX:-"LIB_SUFFIX"}=${BUILD_LIBSUFFIX} \\
-			-D${VAR_INSTALL_INCDIR:-"INCLUDE_INSTALL_DIR"}=${BUILD_INCLUDEDIR} \\
-			-D${VAR_INSTALL_CONFDIR:-"SYSCONF_INSTALL_DIR"}=${BUILD_SYSCONFDIR} \\
-			${CONF_FLAGS}" >> ${LOG_PATH}/${PKG_NAME}.log
-
-		cmake ${PKG_SRCPATH} \
+		run_cmd 'cmake ${PKG_SRCPATH} \
 			-G Ninja \
 			-DCMAKE_BUILD_TYPE="Release" \
 			-DTOOLCHAIN_PREFIX=${HARCH}- \
@@ -661,12 +623,10 @@ function build () {(
 			-D${VAR_INSTALL_LIBSUFFIX:-"LIB_SUFFIX"}=${BUILD_LIBSUFFIX} \
 			-D${VAR_INSTALL_INCDIR:-"INCLUDE_INSTALL_DIR"}=${BUILD_INCLUDEDIR} \
 			-D${VAR_INSTALL_CONFDIR:-"SYSCONF_INSTALL_DIR"}=${BUILD_SYSCONFDIR} \
-			${CONF_FLAGS}
+			${CONF_FLAGS}'
 		local NINJA_FLAGS="-j${NPROCS}$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v')"
-		echo "\$ ninja ${NINJA_FLAGS} ${PKG_MAKEVARS}" >> ${LOG_PATH}/${PKG_NAME}.log
-		ninja ${NINJA_FLAGS} ${PKG_MAKEVARS}
-		echo "\$ DESTDIR=${PKG_PKGPATH} ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} ${INST_CMD:-install}" >> ${LOG_PATH}/${PKG_NAME}.log
-		DESTDIR=${PKG_PKGPATH} ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} ${INST_CMD:-install}
+		run_cmd 'ninja ${NINJA_FLAGS} ${PKG_MAKEVARS}'
+		run_cmd 'DESTDIR=${PKG_PKGPATH} ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} ${INST_CMD:-install}'
 		cd ${BB_HOME}
 		trap - ERR
 	}
@@ -735,8 +695,7 @@ function build () {(
 				cpp_link_args = [${CPP_LINK_ARGS}]
 				fortran_link_args = [${FORTRAN_LINK_ARGS}]
 			EOF
-			echo "\$ cat cross-${PLATFORM_NAME}"
-			cat cross-${PLATFORM_NAME}
+			run_cmd 'cat cross-${PLATFORM_NAME}'
 		}
 
 		trap 'STATUS=${?}; \
@@ -745,22 +704,15 @@ function build () {(
 			echo; \
 			return ${STATUS}' ERR
 
-		echo "\$ mkdir -p ${PKG_BLDPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
-		mkdir -p ${PKG_BLDPATH}
+		run_cmd 'mkdir -p ${PKG_BLDPATH}'
 		cd ${PKG_BLDPATH}
-		echo "\$ create_environment_source" >> ${LOG_PATH}/${PKG_NAME}.log
-		create_environment_source
-		echo "\$ source environment.source" >> ${LOG_PATH}/${PKG_NAME}.log
+		run_cmd 'create_environment_source'
 		source environment.source
-		echo "\$ createmesoncross" >> ${LOG_PATH}/${PKG_NAME}.log
-		createmesoncross
-		echo "\$ meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS}" >> ${LOG_PATH}/${PKG_NAME}.log
-		meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS}
+		run_cmd 'createmesoncross'
+		run_cmd 'meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS}'
 		local NINJA_FLAGS="-j${NPROCS}$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v')"
-		echo "\$ ninja ${NINJA_FLAGS} ${PKG_MAKEVARS}" >> ${LOG_PATH}/${PKG_NAME}.log
-		ninja ${NINJA_FLAGS} ${PKG_MAKEVARS}
-		echo "\$ DESTDIR=${PKG_PKGPATH} ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} ${INST_CMD:-install}" >> ${LOG_PATH}/${PKG_NAME}.log
-		DESTDIR=${PKG_PKGPATH} ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} ${INST_CMD:-install}
+		run_cmd 'ninja ${NINJA_FLAGS} ${PKG_MAKEVARS}'
+		run_cmd 'DESTDIR=${PKG_PKGPATH} ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} ${INST_CMD:-install}'
 		cd ${BB_HOME}
 		trap - ERR
 	}
@@ -770,12 +722,9 @@ function build () {(
 		trap - ERR; \
 		return ${STATUS};' ERR
 	
-		echo "\$ cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
-		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+		run_cmd 'cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}'
 		cd ${PKG_BLDPATH}
-		echo "\$ create_environment_source" >> ${LOG_PATH}/${PKG_NAME}.log
-		create_environment_source
-		echo "\$ source environment.source" >> ${LOG_PATH}/${PKG_NAME}.log
+		run_cmd 'create_environment_source'
 		source environment.source
 		local CARGO_BIN=${CARGO_BIN:-${BUILD_EXECPREFIX}/bin}
 		local CARGO_LIB=${CARGO_LIB:-${BUILD_LIBDIR}${BUILD_LIBSUFFIX}}
@@ -793,26 +742,22 @@ function build () {(
 		done
 		export RUSTFLAGS+=" ${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}"
 		echo "RUSTFLAGS=${RUSTFLAGS}"
-		cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}
+		run_cmd 'cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}'
 		for file in ${CARGO_BINLIST}
 		do
 			if [ ! -d ${PKG_PKGPATH}${CARGO_BIN} ]
 			then
-				echo "\$ mkdir -p ${PKG_PKGPATH}${CARGO_BIN}" >> ${LOG_PATH}/${PKG_NAME}.log
-				mkdir -p ${PKG_PKGPATH}${CARGO_BIN}
+				run_cmd 'mkdir -p ${PKG_PKGPATH}${CARGO_BIN}'
 			fi
-			echo "\$ cp -p target/${CARGO_TARGET}/release/${file} ${PKG_PKGPATH}${CARGO_BIN}/${file}" >> ${LOG_PATH}/${PKG_NAME}.log
-			cp -p target/${CARGO_TARGET}/release/${file} ${PKG_PKGPATH}${CARGO_BIN}/${file}
+			run_cmd 'cp -p target/${CARGO_TARGET}/release/${file} ${PKG_PKGPATH}${CARGO_BIN}/${file}'
 		done
 		for file in ${CARGO_LIBLIST}
 		do
 			if [ ! -d ${PKG_PKGPATH}${CARGO_LIB} ]
 			then
-				echo "\$ mkdir -p ${PKG_PKGPATH}${CARGO_LIB}" >> ${LOG_PATH}/${PKG_NAME}.log
-				mkdir -p ${PKG_PKGPATH}${CARGO_LIB}
+				run_cmd 'mkdir -p ${PKG_PKGPATH}${CARGO_LIB}'
 			fi
-			echo "\$ cp -p target/${CARGO_TARGET}/release/${file} ${PKG_PKGPATH}${CARGO_LIB}/${file}" >> ${LOG_PATH}/${PKG_NAME}.log
-			cp -p target/${CARGO_TARGET}/release/${file} ${PKG_PKGPATH}${CARGO_LIB}/${file}
+			run_cmd 'cp -p target/${CARGO_TARGET}/release/${file} ${PKG_PKGPATH}${CARGO_LIB}/${file}'
 		done
 		cd ${BB_HOME}
 		trap - ERR
@@ -835,28 +780,22 @@ function build () {(
 				${PKG_KERNEL_MOD}-y:=
 			EOF
 		fi
-		echo "\$ cat ${PKG_BLDPATH}/Makefile" >> ${LOG_PATH}/${PKG_NAME}.log
-		cat ${PKG_BLDPATH}/Makefile >> ${LOG_PATH}/${PKG_NAME}.log
+		run_cmd 'cat ${PKG_BLDPATH}/Makefile'
 
 		if [ ${PKG_KERNEL_LOCALBUILD:-0} -eq 0 ]
 		then
 			local BUILD_OPTION="-C ${PKG_KERNEL_BLDPATH} "
 		fi
 
-		echo "\$ KCFLAGS=\"${PKG_CFLAGS}\" ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} modules" >> ${LOG_PATH}/${PKG_NAME}.log
-		eval KCFLAGS=\"${PKG_CFLAGS}\" ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} modules
-		echo "\$ ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} INSTALL_MOD_PATH=${PKG_PKGPATH} INSTALL_MOD_DIR=${PKG_KERNEL_MODPATH} ${INST_CMD:-modules_install}" >> ${LOG_PATH}/${PKG_NAME}.log
-		eval ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} INSTALL_MOD_PATH=${PKG_PKGPATH} INSTALL_MOD_DIR=${PKG_KERNEL_MODPATH} ${INST_CMD:-modules_install}
-		echo "\$ rm -f ${PKG_PKGPATH}/lib/modules/*/modules.*" >> ${LOG_PATH}/${PKG_NAME}.log
-		rm -f ${PKG_PKGPATH}/lib/modules/*/modules.*
+		run_cmd 'KCFLAGS=\"${PKG_CFLAGS}\" ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} modules'
+		run_cmd 'eval ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} INSTALL_MOD_PATH=${PKG_PKGPATH} INSTALL_MOD_DIR=${PKG_KERNEL_MODPATH} ${INST_CMD:-modules_install}'
+		run_cmd 'rm -f ${PKG_PKGPATH}/lib/modules/*/modules.*'
 
-		echo "\$ mkdir -pv ${PKG_PKGPATH}/postinst_scripts" >> ${LOG_PATH}/${PKG_NAME}.log
-		mkdir -pv ${PKG_PKGPATH}/postinst_scripts
+		run_cmd 'mkdir -pv ${PKG_PKGPATH}/postinst_scripts'
 		cat <<-EOF > ${PKG_PKGPATH}/postinst_scripts/49_kernmodpost
 			depmod -a ${PKG_KERNEL_VERSION}
 		EOF
-		echo "\$ cat ${PKG_PKGPATH}/postinst_scripts/49_kernmodpost" >> ${LOG_PATH}/${PKG_NAME}.log
-		cat ${PKG_PKGPATH}/postinst_scripts/49_kernmodpost >> ${LOG_PATH}/${PKG_NAME}.log
+		run_cmd 'cat ${PKG_PKGPATH}/postinst_scripts/49_kernmodpost'
 
 		cd -
 		trap - ERR
@@ -921,28 +860,23 @@ function build () {(
 					LOCALVERSION=${KERNEL_LOCALVERSION} \\
 					${EXTRA_PARMS} ${PKG_MAKEVARS} \${@}
 			EOF
-			echo "\$ cat make4kern.sh" >> ${LOG_PATH}/${PKG_NAME}.log
-			cat make4kern.sh >> ${LOG_PATH}/${PKG_NAME}.log
-			echo "\$ chmod +x make4kern.sh" >> ${LOG_PATH}/${PKG_NAME}.log
-			chmod +x make4kern.sh
+			run_cmd 'cat make4kern.sh'
+			run_cmd 'chmod +x make4kern.sh'
 		}
 
 		trap 'STATUS=${?}; \
 			trap - ERR; \
 			return ${STATUS};' ERR
 
-		echo "\$ cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
-		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+		run_cmd 'cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}'
 
 		cd ${PKG_BLDPATH}
-		echo "\$ make4kern" >> ${LOG_PATH}/${PKG_NAME}.log
-		make4kern
+		run_cmd 'make4kern'
 
 		echo "Build ${PKG_FILE} with extra modules ${PKG_KERNEL_BUILD_MODULES}"
 		echo "Kernel headers only: ${KERNEL_HDRS_ONLY:-1}"
 		# Install headers
-		echo "\$ ./make4kern.sh INSTALL_HDR_PATH=${PKG_PKGPATH}${BUILD_PREFIX} headers_install" >> ${LOG_PATH}/${PKG_NAME}.log
-		./make4kern.sh INSTALL_HDR_PATH=${PKG_PKGPATH}${BUILD_PREFIX} headers_install 
+		run_cmd './make4kern.sh INSTALL_HDR_PATH=${PKG_PKGPATH}${BUILD_PREFIX} headers_install'
 
 		# Break if only headers installation required
 		if [ ${KERNEL_HDRS_ONLY:-0} -eq 1 ]
@@ -953,34 +887,24 @@ function build () {(
 
 		if [ -f arch/${KERNEL_ARCH}/configs/${KERNEL_DEFCONFIG} ]
 		then
-			echo "\$ cp -v arch/${KERNEL_ARCH}/configs/${KERNEL_DEFCONFIG} .config" >> ${LOG_PATH}/${PKG_NAME}.log
-			cp -v arch/${KERNEL_ARCH}/configs/${KERNEL_DEFCONFIG} .config
+			run_cmd 'cp -v arch/${KERNEL_ARCH}/configs/${KERNEL_DEFCONFIG} .config'
 		else
-			echo "\$ cp -v ${KERNEL_DEFCONFIG} .config" >> ${LOG_PATH}/${PKG_NAME}.log
-			cp -v ${KERNEL_DEFCONFIG} .config
+			run_cmd 'cp -v ${KERNEL_DEFCONFIG} .config'
 		fi
 		# Config kernel build
 
 		case ${KERNEL_OPTLEVEL:-null} in
-			s|S)
-				echo "\$ scripts/config -e CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3" >> ${LOG_PATH}/${PKG_NAME}.log
-				scripts/config -e CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3
+			s|S)	run_cmd 'scripts/config -e CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3' ;;
+			2)		run_cmd 'scripts/config -d CC_OPTIMIZE_FOR_SIZE -e CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3' ;;
+			3)		# Patch kernel to build with -O3 flag
+					run_cmd 'sed -i "/depends on ARC$/d" init/Kconfig'
+					run_cmd 'scripts/config -d CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -e CC_OPTIMIZE_FOR_PERFORMANCE_O3'
 				;;
-			2)	echo "\$ scripts/config -d CC_OPTIMIZE_FOR_SIZE -e CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3" >> ${LOG_PATH}/${PKG_NAME}.log
-				scripts/config -d CC_OPTIMIZE_FOR_SIZE -e CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3
-				;;
-			3)	# Patch kernel to build with -O3 flag
-				echo "\$ sed -i '/depends on ARC\$/d' init/Kconfig" >> ${LOG_PATH}/${PKG_NAME}.log
-				sed -i '/depends on ARC$/d' init/Kconfig
-				echo "\$ scripts/config -d CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -e CC_OPTIMIZE_FOR_PERFORMANCE_O3" >> ${LOG_PATH}/${PKG_NAME}.log
-				scripts/config -d CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -e CC_OPTIMIZE_FOR_PERFORMANCE_O3
-			;;
 		esac
 
 		if [ "x${CONF_FLAGS}" != "x" ]
 		then
-			echo "\$ scripts/config ${CONF_FLAGS}" >> ${LOG_PATH}/${PKG_NAME}.log
-			scripts/config ${CONF_FLAGS}
+			run_cmd 'scripts/config ${CONF_FLAGS}'
 		fi
 
 		if [ ${PKG_TOOLCHAIN:-${TOOLCHAIN}} == llvm ]
@@ -988,68 +912,53 @@ function build () {(
 			echo "LTO type: ${KERNEL_LTOENABLE}"
 			case x${KERNEL_LTOENABLE} in
 				x1|xlto)
-					echo "\$ scripts/config -d FTRACE -d KASAN -d GCOV_KERNEL" >> ${LOG_PATH}/${PKG_NAME}.log
-					scripts/config -d FTRACE -d KASAN -d GCOV_KERNEL
-					echo "\$ scripts/config -e LTO_CLANG" >> ${LOG_PATH}/${PKG_NAME}.log
-					scripts/config -e LTO_CLANG
+					run_cmd 'scripts/config -d FTRACE -d KASAN -d GCOV_KERNEL'
+					run_cmd 'scripts/config -e LTO_CLANG'
 					;;
 				x2|xthin)
-					echo "\$ scripts/config -d FTRACE -d KASAN -d GCOV_KERNEL" >> ${LOG_PATH}/${PKG_NAME}.log
-					scripts/config -d FTRACE -d KASAN -d GCOV_KERNEL
-					echo "\$ scripts/config -e LTO_CLANG_THIN" >> ${LOG_PATH}/${PKG_NAME}.log
-					scripts/config -e LTO_CLANG_THIN
+					run_cmd 'scripts/config -d FTRACE -d KASAN -d GCOV_KERNEL'
+					run_cmd 'scripts/config -e LTO_CLANG_THIN'
 					;;
 			esac
 		fi
 
-		echo "\$ ./make4kern.sh olddefconfig" >> ${LOG_PATH}/${PKG_NAME}.log
-		./make4kern.sh olddefconfig
+		run_cmd './make4kern.sh olddefconfig'
 	
 		if [ ! -d ${PKG_PKGPATH}/boot ]
 		then
-			echo "\$ mkdir -p ${PKG_PKGPATH}/boot" >> ${LOG_PATH}/${PKG_NAME}.log
-			mkdir -p ${PKG_PKGPATH}/boot
+			run_cmd 'mkdir -p ${PKG_PKGPATH}/boot'
 		fi
 
 		# Build and install kernel
-		echo "\$ ./make4kern.sh ${KERNEL_IMAGE}" >> ${LOG_PATH}/${PKG_NAME}.log
-		./make4kern.sh ${KERNEL_IMAGE}
+		run_cmd './make4kern.sh ${KERNEL_IMAGE}'
 		case ${KERNEL_NAME}
 		in
 			kernel*)
-				echo "\$ cp arch/${KERNEL_ARCH}/boot/${KERNEL_IMAGE} ${PKG_PKGPATH}/boot/${KERNEL_NAME}" >> ${LOG_PATH}/${PKG_NAME}.log
-				cp arch/${KERNEL_ARCH}/boot/${KERNEL_IMAGE} ${PKG_PKGPATH}/boot/${KERNEL_NAME}
+				run_cmd 'cp arch/${KERNEL_ARCH}/boot/${KERNEL_IMAGE} ${PKG_PKGPATH}/boot/${KERNEL_NAME}'
 				local STATUS=${?}
 				;;
 			*)
 				[ ! -d ${PKG_PKGPATH}/boot ] && mkdir ${PKG_PKGPATH}/boot
-				echo "\$ make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_PATH=${PKG_PKGPATH}/boot ${INST_CMD} install" >> ${LOG_PATH}/${PKG_NAME}.log
-				make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_PATH=${PKG_PKGPATH}/boot ${INST_CMD} install
+				run_cmd 'make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_PATH=${PKG_PKGPATH}/boot ${INST_CMD} install'
 				;;
 		esac
 		
 		# Build and install modules
 
-		echo "\$ ./make4kern.sh modules" >> ${LOG_PATH}/${PKG_NAME}.log
-		./make4kern.sh modules
-		echo "\$ make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_MOD_PATH=${PKG_PKGPATH} ${INST_CMD} modules_install" >> ${LOG_PATH}/${PKG_NAME}.log
-		make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_MOD_PATH=${PKG_PKGPATH} ${INST_CMD} modules_install
+		run_cmd './make4kern.sh modules'
+		run_cmd 'make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_MOD_PATH=${PKG_PKGPATH} ${INST_CMD} modules_install'
 		local KERNELRELEASE=$(cat include/config/kernel.release)
-		echo "\$ rm ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/build ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/source" >> ${LOG_PATH}/${PKG_NAME}.log
-		rm ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/build ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/source
+		run_cmd 'rm ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/build ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/source'
 
 		# Build and install DTBS
 		if [ ${KERNEL_DTBS:-0} -eq 1 ] && [ ${STATUS} -eq 0 ]
 		then
 			if [ ! -d ${PKG_PKGPATH}/boot/overlays ]
 			then
-				echo "\$ mkdir -p ${PKG_PKGPATH}/boot/overlays" >> ${LOG_PATH}/${PKG_NAME}.log
-				mkdir -p ${PKG_PKGPATH}/boot/overlays
+				run_cmd 'mkdir -p ${PKG_PKGPATH}/boot/overlays'
 			fi
-			echo "\$ ./make4kern.sh dtbs" >> ${LOG_PATH}/${PKG_NAME}.log
-			./make4kern.sh dtbs
-			echo "\$ make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_DTBS_PATH=${PKG_PKGPATH}/boot ${INST_CMD} dtbs_install" >> ${LOG_PATH}/${PKG_NAME}.log
-			make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_DTBS_PATH=${PKG_PKGPATH}/boot ${INST_CMD} dtbs_install
+			run_cmd './make4kern.sh dtbs'
+			run_cmd 'make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_DTBS_PATH=${PKG_PKGPATH}/boot ${INST_CMD} dtbs_install'
 		fi
 
 		PKG_KERNEL_BLDPATH="${PWD}"
@@ -1058,7 +967,6 @@ function build () {(
 		IFS=,
 		for module in ${PKG_KERNEL_BUILD_MODULES}
 		do
-			echo "\$ build --force ${module}" >> ${LOG_PATH}/${PKG_NAME}.log
 			build --force ${module}
 		done
 		unset IFS
@@ -1072,8 +980,7 @@ function build () {(
 		trap - ERR; \
 		return ${STATUS};' ERR
 
-		echo "\$ cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
-		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+		run_cmd 'cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}'
 		cd ${PKG_BLDPATH}
 		local PYTHONBIN_VER=$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)
 		local PYTHONBIN_MAJVER=$(echo ${PYTHONBIN_VER} | cut -d'.' -f1,1)
@@ -1115,16 +1022,11 @@ function build () {(
 			fi
 			export PYTHONPATH
 		done
-		echo "\$ create_environment_source" >> ${LOG_PATH}/${PKG_NAME}.log
-		create_environment_source
-		echo "\$ source environment.source" >> ${LOG_PATH}/${PKG_NAME}.log
+		run_cmd 'create_environment_source'
 		source environment.source
-		echo "\$ cross-python -m site" >> ${LOG_PATH}/${PKG_NAME}.log
-		cross-python -m site
-		echo "\$ ${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}" >> ${LOG_PATH}/${PKG_NAME}.log
-		eval '${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}'
-		echo "\$ ${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} ${INSTALL_TARGET}" >> ${LOG_PATH}/${PKG_NAME}.log
-		eval '${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} ${INSTALL_TARGET}'
+		run_cmd 'cross-python -m site'
+		run_cmd '${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}'
+		run_cmd '${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} ${INSTALL_TARGET}'
 		cd ${BB_HOME}
 		trap - ERR
 	}
@@ -1134,8 +1036,7 @@ function build () {(
 		trap - ERR; \
 		return ${STATUS};' ERR
 
-		echo "\$ mkdir -pv ${PKG_BLDPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
-		mkdir -pv ${PKG_BLDPATH}
+		run_cmd 'mkdir -pv ${PKG_BLDPATH}'
 		cd ${PKG_BLDPATH}
 		local PYTHONBIN_VER=$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)
 		local PYTHONBIN_MAJVER=$(echo ${PYTHONBIN_VER} | cut -d'.' -f1,1)
@@ -1178,23 +1079,18 @@ function build () {(
 		#PYTHONUSERBASE="${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
 		#export PYTHONUSERBASE
 		export PYTHONPATH
-		echo "\$ create_environment_source" >> ${LOG_PATH}/${PKG_NAME}.log
-		create_environment_source
-		echo "\$ source environment.source" >> ${LOG_PATH}/${PKG_NAME}.log
+		run_cmd 'create_environment_source'
 		source environment.source
-		echo "\$ cross-python -m site" >> ${LOG_PATH}/${PKG_NAME}.log
-		cross-python -m site
+		run_cmd 'cross-python -m site'
 		if [ ${PKG_PYTHONBUILD:-1} -eq 1 ]
 		then
 			local PYTHONBUILD="--no-binary :all:"
 		fi
 		#build-python -m pip ${VERBOSE} install --upgrade ${PKG_NAME}
-		echo "\$ cross-python -m pip ${VERBOSE} install -I ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX} ${PKG_NAME}" >> ${LOG_PATH}/${PKG_NAME}.log
-		cross-python -m pip ${VERBOSE} install -I ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX} ${PKG_NAME}
+		run_cmd 'cross-python -m pip ${VERBOSE} install -I ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX} ${PKG_NAME}'
 		if [ ${PYTHON_PKGDIR} == dist-packages ]
 		then
-			echo "\$ mv ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages" >> ${LOG_PATH}/${PKG_NAME}.log
-			mv ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages
+			run_cmd 'mv ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages'
 		fi
 		cd ${BB_HOME}
 		trap - ERR
@@ -1202,13 +1098,10 @@ function build () {(
 	
 	function boostbuild () {
 		trap 'STATUS=${?}; \
-		set +x; \
 		trap - ERR; \
 		return ${STATUS};' ERR
 
-		set -x
-		echo "\$ cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
-		cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
+		run_cmd 'cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}'
 		cd ${PKG_BLDPATH}
 		if [ -d ${DISTOS_PATH}${BUILD_INCLUDEDIR} ]
 		then
@@ -1305,34 +1198,16 @@ function build () {(
 		esac
 		#create_environment_source
 		#source environment.source
-		echo "\$ ./bootstrap.sh \
+		run_cmd './bootstrap.sh \
 			--prefix=${PKG_PKGPATH}${BUILD_PREFIX} \
 			--exec-prefix=${PKG_PKGPATH}${BUILD_EXECPREFIX} \
 			--libdir=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
 			--includedir=${PKG_PKGPATH}${BUILD_INCLUDEDIR} \
 			--with-icu=${ICU_INCLUDEDIR} \
 			--with-python-version=${PYTHONBIN_VER} \
-			--with-toolset=${BBTC}" >> ${LOG_PATH}/${PKG_NAME}.log
-		./bootstrap.sh \
-			--prefix=${PKG_PKGPATH}${BUILD_PREFIX} \
-			--exec-prefix=${PKG_PKGPATH}${BUILD_EXECPREFIX} \
-			--libdir=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-			--includedir=${PKG_PKGPATH}${BUILD_INCLUDEDIR} \
-			--with-icu=${ICU_INCLUDEDIR} \
-			--with-python-version=${PYTHONBIN_VER} \
-			--with-toolset=${BBTC}
-		echo "\$ sed -i \"s|using ${BBTC} ;|using ${BBTC} : : ${CXX_EXE} ;|\" project-config.jam" >> ${LOG_PATH}/${PKG_NAME}.log
-		sed -i "s|using ${BBTC} ;|using ${BBTC} : : ${CXX_EXE} ;|" project-config.jam
-		echo "\$ ./b2 -j${NPROCS} -q \
-			architecture=${BOOST_ARCH} address-model=${BOOST_ADDRMOD} \
-			binary-format=${HMBINFMT} abi=${BOOST_ABI} target-os=${HOS} \
-			variant=release optimization=${OPTIMIZATION} lto=${LTO} lto-mode=${LTOMODE} threading=multi ${B2_FLAGS} \
-			toolset=${BBTC} \
-			cflags=\"${WORKAROUND}${SYSROOT_FLAGS} ${PLATFORM_CFLAGS} ${PKG_CFLAGS}\" \
-			cxxflags=\"${COMMON_CXXFLAGS} -fPIC ${PKG_CXXFLAGS}\" \
-			linkflags=\"${WORKAROUND}${SYSROOT_FLAGS} ${LINKER_FLAGS} ${COMMON_LDFLAGS} ${PKG_LDFLAGS}\" \
-			install" >> ${LOG_PATH}/${PKG_NAME}.log
-		./b2 -j${NPROCS} -q \
+			--with-toolset=${BBTC}'
+		run_cmd 'sed -i "s|using ${BBTC} ;|using ${BBTC} : : ${CXX_EXE} ;|" project-config.jam'
+		run_cmd './b2 -j${NPROCS} -q \
 			architecture=${BOOST_ARCH} address-model=${BOOST_ADDRMOD} \
 			binary-format=${HMBINFMT} abi=${BOOST_ABI} target-os=${HOS} \
 			variant=release optimization=${OPTIMIZATION} lto=${LTO} lto-mode=${LTOMODE} threading=multi ${B2_FLAGS} \
@@ -1340,14 +1215,13 @@ function build () {(
 			cflags="${WORKAROUND}${SYSROOT_FLAGS} ${PLATFORM_CFLAGS} ${PKG_CFLAGS}" \
 			cxxflags="${COMMON_CXXFLAGS} -fPIC ${PKG_CXXFLAGS}" \
 			linkflags="${WORKAROUND}${SYSROOT_FLAGS} ${LINKER_FLAGS} ${COMMON_LDFLAGS} ${PKG_LDFLAGS}" \
-			install
+			install'
 		cd ${BB_HOME}
 		trap - ERR
 	}
 
 	function builddebpkg () {
 		trap 'STATUS=${?}; \
-		set +x; \
 		trap - ERR; \
 		return ${STATUS};' ERR
 
@@ -1363,34 +1237,23 @@ function build () {(
 			*) local DEBARCH=${HM}
 			;;
 		esac
-		echo "\$ create_environment_source" >> ${LOG_PATH}/${PKG_NAME}.log
-		create_environment_source
-		echo "\$ source environment.source" >> ${LOG_PATH}/${PKG_NAME}.log
+		run_cmd 'create_environment_source'
 		source environment.source
 		DPKG_ROOT=${DISTOS_PATH} \
 		CONFIG_SITE=${DISTOS_PATH}/etc/dpkg \
 		LD_LIBRARY_PATH+=:${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
 		DEB_BUILD_OPTIONS="nocheck noddebs" \
 		DH_OPTIONS="-v --dpkg-shlibdeps-params=--ignore-missing-info" \
-		echo "\$ dpkg-buildpackage \
+		run_cmd 'dpkg-buildpackage \
 			--host-arch=${DEBARCH} \
 			--host-type=${HARCH} \
 			--target-arch=${DEBARCH} \
 			--target-type=${HARCH} \
 			-d -b -uc -us \
 			-Pcross,nocheck \
-			--admindir=${DISTOS_PATH}/var/lib/dpkg" >> ${LOG_PATH}/${PKG_NAME}.log
-		dpkg-buildpackage \
-			--host-arch=${DEBARCH} \
-			--host-type=${HARCH} \
-			--target-arch=${DEBARCH} \
-			--target-type=${HARCH} \
-			-d -b -uc -us \
-			-Pcross,nocheck \
-			--admindir=${DISTOS_PATH}/var/lib/dpkg
+			--admindir=${DISTOS_PATH}/var/lib/dpkg'
 		cd ..
-		echo "\$ cp -v *.deb ${PKG_PKGPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
-		cp -v *.deb ${PKG_PKGPATH}
+		run_cmd 'cp -v *.deb ${PKG_PKGPATH}'
 		echo "Done"
 		trap - ERR
 	}
@@ -1558,13 +1421,11 @@ function build () {(
 	#fi
 	if [ ! -d ${BLD_PATH} ]
 	then
-		echo "\$ mkdir -p ${BLD_PATH}" >> ${LOG_PATH}/${PKG_NAME}.log
-		mkdir -p ${BLD_PATH}
+		run_cmd 'mkdir -p ${BLD_PATH}' >> ${LOG_PATH}/${PKG_NAME}.log
 	fi
 	if [ ! -d ${BIN_PATH} ]
 	then
-		echo "\$ mkdir -p ${BIN_PATH}" >> ${LOG_PATH}/${PKG_NAME}.log
-		mkdir -p ${BIN_PATH}
+		run_cmd 'mkdir -p ${BIN_PATH}' >> ${LOG_PATH}/${PKG_NAME}.log
 	fi
 	echo "Pre build script:" >> ${LOG_PATH}/${PKG_NAME}.log
 	echo "==================" >> ${LOG_PATH}/${PKG_NAME}.log
@@ -1577,201 +1438,179 @@ function build () {(
 	echo "==================" >> ${LOG_PATH}/${PKG_NAME}.log
 	echo >> ${LOG_PATH}/${PKG_NAME}.log
 	case x${BUILD_PROCESS} in
-	xpythonpip)
-		if [ ! -z "${PKG_PREBUILD}" ]
-		then
-			echo "Running pre build script..." >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-			(eval "set -ex; ${PKG_PREBUILD} 2>&1; set +ex") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-		fi
-		if [ ! ${BUILD_PROCESS:-none} == none ]
-		then
+		xpythonpip)
+			if [ ! -z "${PKG_PREBUILD}" ]
+			then
+				echo "Running pre build script..." >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+				(eval "set -ex; ${PKG_PREBUILD} 2>&1; set +ex") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			fi
+			if [ ! ${BUILD_PROCESS:-none} == none ]
+			then
+				echo -n "Building ${PKG_NAME}..."
+				${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			fi
+			if [ ! -z "${PKG_POSTBUILD}" ]
+			then
+				echo "Running post build script..." >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+				(eval "set -ex; ${PKG_POSTBUILD} 2>&1; +ex") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			fi
+			;;
+		xbuilddebpkg)
+			if [ ! -d ${CACHE_PATH}/apt/state ]
+			then
+				run_cmd 'mkdir -pv ${CACHE_PATH}/apt/state' >> ${LOG_PATH}/${PKG_NAME}.log
+			fi
+			if [ ! -d ${CACHE_PATH}/dpkg ]
+			then
+				run_cmd 'mkdir -pv ${CACHE_PATH}/dpkg' >> ${LOG_PATH}/${PKG_NAME}.log
+			fi
+			if [ ! -f ${CACHE_PATH}/dpkg/status ]
+			then
+				run_cmd 'touch ${CACHE_PATH}/dpkg/status' >> ${LOG_PATH}/${PKG_NAME}.log
+			fi
+			if [ ! -d ${CACHE_PATH}/apt/conf ]
+			then
+				run_cmd 'mkdir -pv ${CACHE_PATH}/apt/conf' >> ${LOG_PATH}/${PKG_NAME}.log
+			fi
+			run_cmd 'mkdir -p ${PKG_SRCPATH}' >> ${LOG_PATH}/${PKG_NAME}.log
+			cd ${PKG_SRCPATH}
+			echo -n "Downloading ${PKG_NAME}..."
+			(
+			run_on_root_dir distos root "for file in $( find /etc/apt/sources.list.d -type f ) /etc/apt/sources.list; do \
+				sed -i 's/^#deb-src/deb-src/g' \${file}; done"
+			apt-get \
+				-o Dir::Etc="${DISTOS_PATH}/etc/apt" \
+				-o Dir::Cache="${CACHE_PATH}/apt" \
+				-o Dir::State="${CACHE_PATH}/apt/state" \
+				-o Dir::State::status="${CACHE_PATH}/dpkg/status" \
+				-o APT::Sandbox::User="$(whoami)" \
+				update
+			apt-get \
+				-o Dir::Etc="${DISTOS_PATH}/etc/apt" \
+				-o Dir::Cache="${CACHE_PATH}/apt" \
+				-o Dir::State="${CACHE_PATH}/apt/state" \
+				-o Dir::State::status="${CACHE_PATH}/dpkg/status" \
+				-o APT::Sandbox::User="$(whoami)" \
+				-o Binary::apt::APT::Keep-Downloaded-Packages="1" \
+				source ${PKG_NAME}
+			) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			run_cmd 'mkdir -pv ${PKG_PKGPATH}' >> ${LOG_PATH}/${PKG_NAME}.log
+			if [ ! -z "${PKG_PREBUILD}" ]
+			then
+				(
+				trap 'exit 1' ERR
+				set -x
+				cd $(find ${PKG_SRCPATH} -mindepth 1 -maxdepth 1 -type d)
+				eval "${PKG_PREBUILD}" 2>&1
+				set +x
+				) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			fi
+			if [ -d ${PKG_BLDPATH} ]
+			then
+				run_cmd 'rm -rf ${PKG_BLDPATH}' >> ${LOG_PATH}/${PKG_NAME}.log
+			fi
+			run_cmd 'cp -R ${PKG_SRCPATH} ${PKG_BLDPATH}' >> ${LOG_PATH}/${PKG_NAME}.log
 			echo -n "Building ${PKG_NAME}..."
 			${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-		fi
-		if [ ! -z "${PKG_POSTBUILD}" ]
-		then
-			echo "Running post build script..." >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-			(eval "set -ex; ${PKG_POSTBUILD} 2>&1; +ex") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-		fi
-		;;
-	xbuilddebpkg)
-		if [ ! -d ${CACHE_PATH}/apt/state ]
-		then
-			mkdir -pv ${CACHE_PATH}/apt/state
-		fi
-		if [ ! -d ${CACHE_PATH}/dpkg ]
-		then
-			mkdir -pv ${CACHE_PATH}/dpkg
-		fi
-		if [ ! -f ${CACHE_PATH}/dpkg/status ]
-		then
-			touch ${CACHE_PATH}/dpkg/status
-		fi
-		if [ ! -d ${CACHE_PATH}/apt/conf ]
-		then
-			mkdir -pv ${CACHE_PATH}/apt/conf
-		fi
-		mkdir -p ${PKG_SRCPATH}
-		cd ${PKG_SRCPATH}
-		echo -n "Downloading ${PKG_NAME}..."
-		(
-		run_on_root_dir distos root "for file in $( find /etc/apt/sources.list.d -type f ) /etc/apt/sources.list; do \
-			sed -i 's/^#deb-src/deb-src/g' \${file}; done"
-		apt-get \
-			-o Dir::Etc="${DISTOS_PATH}/etc/apt" \
-			-o Dir::Cache="${CACHE_PATH}/apt" \
-			-o Dir::State="${CACHE_PATH}/apt/state" \
-			-o Dir::State::status="${CACHE_PATH}/dpkg/status" \
-			-o APT::Sandbox::User="$(whoami)" \
-			update
-		apt-get \
-			-o Dir::Etc="${DISTOS_PATH}/etc/apt" \
-			-o Dir::Cache="${CACHE_PATH}/apt" \
-			-o Dir::State="${CACHE_PATH}/apt/state" \
-			-o Dir::State::status="${CACHE_PATH}/dpkg/status" \
-			-o APT::Sandbox::User="$(whoami)" \
-			-o Binary::apt::APT::Keep-Downloaded-Packages="1" \
-			source ${PKG_NAME}
-		) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-		mkdir -pv ${PKG_PKGPATH}
-		if [ ! -z "${PKG_PREBUILD}" ]
-		then
-			(
-			trap 'exit 1' ERR
-			set -x
-			cd $(find ${PKG_SRCPATH} -mindepth 1 -maxdepth 1 -type d)
-			eval "${PKG_PREBUILD}" 2>&1
-			set +x
-			) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-		fi
-		if [ -d ${PKG_BLDPATH} ]
-		then
-			rm -rf ${PKG_BLDPATH}
-		fi
-		cp -R ${PKG_SRCPATH} ${PKG_BLDPATH} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-		echo -n "Building ${PKG_NAME}..."
-		${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-		;;
-	x*)
-		if [ ! -z "${PKG_URL}" ] || [ ! -z "${GIT_URL}" ]
-		then
-			echo -n "Downloading ${PKG_NAME}..."
-			echo "\$ downloadsources" >> ${LOG_PATH}/${PKG_NAME}.log
-			downloadsources >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-			echo "Done."
-			echo "\$ preparesources" >> ${LOG_PATH}/${PKG_NAME}.log
-			preparesources
-		fi
-		if [ -d ${PKG_BLDPATH} ]
-		then
-			echo "\$ rm -rf ${PKG_BLDPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
-			rm -rf ${PKG_BLDPATH} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-		fi
-		if [ -d ${PKG_PKGPATH} ]
-		then
-			echo "\$ sudo rm -rf ${PKG_PKGPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
-			sudo rm -rf ${PKG_PKGPATH} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-		fi
-		mkdir -p ${PKG_PKGPATH}
-		if [ -n "${PKG_PREBUILD}" ]
-		then
-			if [ -d ${PKG_SRCPATH} ]
+			;;
+		x*)
+			if [ ! -z "${PKG_URL}" ] || [ ! -z "${GIT_URL}" ]
 			then
-				cd ${PKG_SRCPATH}
+				echo -n "Downloading ${PKG_NAME}..."
+				run_cmd 'downloadsources' >> ${LOG_PATH}/${PKG_NAME}.log
+				echo "Done."
+				run_cmd 'preparesources' >> ${LOG_PATH}/${PKG_NAME}.log
 			fi
-			echo "Running pre build script..." >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-			(eval "set -ex; ${PKG_PREBUILD} 2>&1; set +ex") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-		fi
-		if [ ${PKG_COPYSRC:-0} -eq 1 ] 
-		then
-			(
-				set -e
-				echo "\$ cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
-				cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH} 2>&1
-				set +e
-			) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-		fi
-		if [ ! ${BUILD_PROCESS:-none} == none ]
-		then
-			echo -n "Building ${PKG_NAME} [${BUILD_PROCESS}]..."
-			${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-		fi
-		if [ -n "${PKG_POSTBUILD}" ]
-		then
-			if [ ! -d ${PKG_BLDPATH} ]
+			if [ -d ${PKG_BLDPATH} ]
 			then
-				echo "\$ mkdir -p ${PKG_BLDPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
-				mkdir -p ${PKG_BLDPATH} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+				run_cmd 'rm -rf ${PKG_BLDPATH}' >> ${LOG_PATH}/${PKG_NAME}.log
 			fi
-			cd ${PKG_BLDPATH}
-			echo "Running post build script..." >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-			(eval "set -ex; ${PKG_POSTBUILD} 2>&1; set +ex") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-		fi
-		;;
+			if [ -d ${PKG_PKGPATH} ]
+			then
+				run_cmd 'sudo rm -rf ${PKG_PKGPATH}' >> ${LOG_PATH}/${PKG_NAME}.log
+			fi
+			run_cmd 'mkdir -p ${PKG_PKGPATH}' >> ${LOG_PATH}/${PKG_NAME}.log
+			if [ -n "${PKG_PREBUILD}" ]
+			then
+				if [ -d ${PKG_SRCPATH} ]
+				then
+					cd ${PKG_SRCPATH}
+				fi
+				echo "Running pre build script..." >> ${LOG_PATH}/${PKG_NAME}.log
+				(eval "set -ex; ${PKG_PREBUILD}; set +ex") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			fi
+			if [ ${PKG_COPYSRC:-0} -eq 1 ] 
+			then
+				run_cmd 'cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}' >> ${LOG_PATH}/${PKG_NAME}.log
+			fi
+			if [ ! ${BUILD_PROCESS:-none} == none ]
+			then
+				echo -n "Building ${PKG_NAME} [${BUILD_PROCESS}]..."
+				${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			fi
+			if [ -n "${PKG_POSTBUILD}" ]
+			then
+				if [ ! -d ${PKG_BLDPATH} ]
+				then
+					run_cmd 'mkdir -p ${PKG_BLDPATH}' >> ${LOG_PATH}/${PKG_NAME}.log
+				fi
+				cd ${PKG_BLDPATH}
+				echo "Running post build script..." >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+				(eval "set -ex; ${PKG_POSTBUILD}; set +ex") >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+			fi
+			;;
 	esac
-	#rm -rf ${PKG_SRCPATH} &&
+	#run_cmd 'rm -rf ${PKG_SRCPATH}'
 
 	if [ -n "${PKG_POSTINSTALL}" ]
 	then
-		echo "\$ mkdir -p ${PKG_PKGPATH}/postinst_scripts" >> ${LOG_PATH}/${PKG_NAME}.log
-		mkdir -p ${PKG_PKGPATH}/postinst_scripts
-		echo "${PKG_POSTINSTALL}" > ${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_NAME}
-		echo "\$ cat ${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_NAME}" >> ${LOG_PATH}/${PKG_NAME}.log
-		cat ${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_NAME} >> ${LOG_PATH}/${PKG_NAME}.log
+		run_cmd 'mkdir -p ${PKG_PKGPATH}/postinst_scripts'
+		run_cmd 'cat ${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_NAME}' >> ${LOG_PATH}/${PKG_NAME}.log
 	fi
 
 	##### Create package
 	case x${BUILD_PROCESS} in
-	xbuilddebpkg)
-			(
-				set -e
-				pwd
-				if [ ${NOSAVESTATUS} -eq 0 ]
+		xbuilddebpkg)
+				(
+					set -e
+					pwd
+					if [ ${NOSAVESTATUS} -eq 0 ]
+					then
+						create_sfx_package ${PKG_PKGPATH}
+					fi
+					run_cmd 'sudo rm -rf ${PKG_PKGPATH}'
+					set +e
+				) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+				if [ ${KEEPBUILDDIR} -eq 0 ]
 				then
-					echo "\$ create_sfx_package ${PKG_PKGPATH}"
-					create_sfx_package ${PKG_PKGPATH}
+					run_cmd 'rm -rf ${PKG_BLDPATH}' >> ${LOG_PATH}/${PKG_NAME}.log
 				fi
-				echo "\$ sudo rm -rf ${PKG_PKGPATH}"
-				sudo rm -rf ${PKG_PKGPATH}
-				set +e
-			) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-			if [ ${KEEPBUILDDIR} -eq 0 ]
-			then
-				echo "\$ rm -rf ${PKG_BLDPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
-				rm -rf ${PKG_BLDPATH} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
-			fi
-		;;
+			;;
 		*)
 			(
 				set -e
 				pwd
 				if [ ${NOSAVESTATUS} -eq 0 ]
 				then
-					echo "\$ create_sfx_package ${PKG_PKGPATH}"
 					create_sfx_package ${PKG_PKGPATH}
 				fi
-				echo "\$ rsync -aKv ${PKG_PKGPATH}/ ${BIN_PATH}"
-				rsync -aKv ${PKG_PKGPATH}/ ${BIN_PATH}
-				echo "\$ sudo rm -rf ${PKG_PKGPATH}"
-				sudo rm -rf ${PKG_PKGPATH}
+				run_cmd 'rsync -aKv ${PKG_PKGPATH}/ ${BIN_PATH}'
+				run_cmd 'sudo rm -rf ${PKG_PKGPATH}'
 				set +e
 			) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 			if [ ${KEEPBUILDDIR} -eq 0 ]
 			then
-				echo "\$ rm -rf ${PKG_BLDPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
-				rm -rf ${PKG_BLDPATH} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
+				run_cmd 'rm -rf ${PKG_BLDPATH}' >> ${LOG_PATH}/${PKG_NAME}.log
 			fi
 		;;
 	esac
 	### Save build status
 	if [ ! -d ${STATUS_PATH} ]
 	then
-		echo "\$ mkdir -p ${STATUS_PATH}" >> ${LOG_PATH}/${PKG_NAME}.log		
 		mkdir -p ${STATUS_PATH}
 	fi
 	if [ ${NOSAVESTATUS} -eq 0 ]
 	then
-		echo "\$ md5sum ${PKG_PATH}/${PKG_FILE}.pkg > ${STATUS_PATH}/${PKG_NAME} > ${STATUS_PATH}/${PKG_NAME}" >> ${LOG_PATH}/${PKG_NAME}.log		
 		md5sum ${PKG_PATH}/${PKG_FILE}.pkg > ${STATUS_PATH}/${PKG_NAME}
 	fi
 	set +x
