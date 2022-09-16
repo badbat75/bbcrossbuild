@@ -493,29 +493,24 @@ function setup_gcc () {
 function setup_llvm () {
 	function download_llvm () {
 		trap 'STATUS=${?}; \
-			set +x; \
 			trap ERR; \
 			return ${STATUS};' ERR
 
-		set -x
 		local GCCURL=https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VER}/llvm-project-${LLVM_VER}.src.tar.xz
 		download_uncompress ${GCCURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}
-		set +x
 		trap ERR
 	}
 
 	function configure_llvm () {
 		trap 'STATUS=${?}; \
-			set +x; \
 			trap ERR; \
 			return ${STATUS};' ERR
-		set -x
 
 		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER} ]
 		then
-			rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}
+			run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}'
 		fi
-		mkdir -p ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}
+		run_cmd 'mkdir -p ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}'
 
 		local PLATFORM_CFLAGS="-march=native"
 		# Determine maximum amount of parallel link given each link takes 10G currently
@@ -542,12 +537,12 @@ function setup_llvm () {
 				local LINKER=gold
 				local LINKER_FLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}"
 				local LTO=OFF
-				sed -i "s/-flto\"/-flto=auto\"/g" ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/AddLLVM.cmake
-				sed -i "s/-flto\"/-flto=auto\"/g" ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/HandleLLVMOptions.cmake
+				run_cmd 'sed -i "s/-flto\"/-flto=auto\"/g" ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/AddLLVM.cmake'
+				run_cmd 'sed -i "s/-flto\"/-flto=auto\"/g" ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/HandleLLVMOptions.cmake'
 			;;
 		esac
 
-		cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER} -G Ninja \
+		run_cmd 'cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER} -G Ninja \
 			-W no-dev \
 			-DLLVM_PARALLEL_COMPILE_JOBS=${NPROCS} \
 			-DLLVM_PARALLEL_LINK_JOBS=${PARALLEL_LINK_JOB} \
@@ -603,44 +598,39 @@ function setup_llvm () {
 			-DCLANG_DEFAULT_UNWINDLIB=libgcc \
 			\
 			-DCOMPILER_RT_INCLUDE_TESTS:BOOL=OFF \
-			-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON
+			-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON'
 
-		set +x
 		trap ERR
 	}
 
 	function build_llvm () {
 		trap 'STATUS=${?}; \
-			set +x; \
 			trap ERR; \
 			return ${STATUS};' ERR
-		set -x
 		local LLVM_SHLIBDIR=$(grep -E "install_symlink.*libLLVM-${LLVM_VER}.so" ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/tools/llvm-shlib/cmake_install.cmake | head -n1 | grep -o "lib[36][24]")
-		echo "Shared LLVM libdir: ${LLVM_SHLIBDIR}"
+		echo "### Shared LLVM libdir: ${LLVM_SHLIBDIR}"
 		pathadd LD_LIBRARY_PATH ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}
-		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}
-		ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} install/strip
+		run_cmd 'pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}'
+		run_cmd 'ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} install/strip'
 		pathremove LD_LIBRARY_PATH ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}
-		popd
-		set +x
+		run_cmd 'popd'
 		trap ERR
 	}
 
 	function configure_llvm_builtins () {
 		trap 'STATUS=${?}; \
-			set +x; \
 			trap ERR; \
 			return ${STATUS};' ERR
-		set -x
+
 		local LLVM_TARGET=${1}
 		# To be changed with: ${TOOLCHAIN_PATH}
 		local LLVM_INSTALL_PATH=$(llvm-config --prefix)
 
 		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} ]
 		then
-			rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}
+			run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}'
 		fi
-		mkdir -p ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}
+		run_cmd 'mkdir -p ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}'
 		if [ -d ${DISTOS_PATH} ]
 		then
 			if [ $(find ${DISTOS_PATH}/usr/lib ${DISTOS_PATH}/lib -type f -name crti.o -mindepth 1 2>/dev/null | wc -l) -ge 1 ]
@@ -658,7 +648,7 @@ function setup_llvm () {
 			xarmv*)
 					if [[ "${HMARCH}" < "armv7" && "${HMARCH}" != "armv6m" ]]
 					then
-						echo -n "${HMARCH} is not supported, RT Builtins disabled... "
+						echo -n "### ${HMARCH} is not supported, RT Builtins disabled... "
 						local COMPILER_RT_BUILD_BUILTINS=OFF
 					else
 						local COMPILER_RT_BUILD_BUILTINS=ON
@@ -675,7 +665,7 @@ function setup_llvm () {
 				fi
 				;;
 		esac
-		cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/compiler-rt -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} -G Ninja \
+		run_cmd 'cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/compiler-rt -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} -G Ninja \
 			\
 			-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \
 			-DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \
@@ -705,41 +695,38 @@ function setup_llvm () {
 			-DCOMPILER_RT_BUILD_SANITIZERS:BOOL=ON \
 			-DCOMPILER_RT_BUILD_XRAY:BOOL=ON \
 			-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON \
-			-DBUILD_SHARED_LIBS:BOOL:BOOL=OFF
+			-DBUILD_SHARED_LIBS:BOOL:BOOL=OFF'
 
-		set +x
 		trap ERR
 	}
 
 	function build_llvm_builtins () {
 		trap 'STATUS=${?}; \
-			set +x; \
 			trap ERR; \
 			return ${STATUS};' ERR
-		set -x
+
 		local LLVM_TARGET=${1}
 		# To be changed with: ${TOOLCHAIN_PATH}
 
-		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}
+		run_cmd 'pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}'
 
 		DESTDIR=${TOOLCHAIN_PATH} ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} install/strip
 
 		### Create rt_builtins package
-		[ -d ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} ] && rm -rf ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} || true
-		DESTDIR=${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}${BUILD_PREFIX} \
-			ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} install/strip
+		[ -d ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} ] && run_cmd 'rm -rf ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}' || true
+		run_cmd 'DESTDIR=${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}${BUILD_PREFIX} \
+			ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} install/strip'
 		#tar cfp - --owner=0 --group=0 -C ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} . | xz -T${NPROCS} - > ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}.tar.xz
-		create_sfx_package ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}
-		rm -rf ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}
+		run_cmd 'create_sfx_package ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}'
+		run_cmd 'rm -rf ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}'
 
 		if [ ${LLVM_BUILTINS_INSTALL} -eq 1 ]
 		then
-			DESTDIR=${BIN_PATH}${BUILD_PREFIX} \
-				ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} install/strip
+			run_cmd 'DESTDIR=${BIN_PATH}${BUILD_PREFIX} \
+				ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} install/strip'
 		fi
 
-		popd
-		set +x
+		run_cmd 'popd'
 		trap ERR
 	}
 
@@ -767,7 +754,7 @@ function setup_llvm () {
 		> ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 		if [ -d ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER} ]
 		then
-			rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}
+			run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}' >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 		fi
 		echo -n "downloading... "
 		download_llvm >> ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
@@ -806,14 +793,14 @@ function setup_llvm () {
 	fi
 	if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER} ]
 	then
-		rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}
+		run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}' >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 	fi
 	if [ -d ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER} ]
 	then
-		rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}
+		run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}' >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 	fi
-	setup_pkgconfig
-	setup_ldd
+	run_cmd 'setup_pkgconfig' >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
+	run_cmd 'setup_ldd' >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 	echo "done."
 
 	trap ERR
