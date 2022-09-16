@@ -376,10 +376,8 @@ function setup_gcc () {
 				fi
 				run_cmd 'make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} DESTDIR="${PACKAGES_PATH}/gcc-${object}_${GCC_VER}" prefix=${BUILD_PREFIX} install-strip-target-${object}'
 				echo "Adapting .la libraries to ${BIN_PATH}${BIN_PREFIX}"
-				find ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER} -mindepth 1 -name "*.la" -type f | xargs -r -I{} \
-					bash -c "
-						run_cmd 'sed -i \"${LIB_LA_SEDTRANS}\" {}'
-					"
+				find ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER} -mindepth 1 -name "*.la" -type f | xargs -r -I{} bash -c \
+					"run_cmd 'sed -i \"${LIB_LA_SEDTRANS}\" {}'"
 				run_cmd 'create_sfx_package ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}'
 				run_cmd 'rm -rf ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}'
 			fi
@@ -387,21 +385,19 @@ function setup_gcc () {
 			if [ ${GCC_INSTALL_TARGETS} -eq 1 ] 
 			then
 				run_cmd 'make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} DESTDIR="${BIN_PATH}" prefix=${BUILD_PREFIX} install-strip-target-${object}'
+				if [ ${GCC_IS_MAIN} -eq 1 ]
+				then
+					echo "Linking GCC target libraries in ${BUILD_PREFIX}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} from ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}"
+					find "${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" -type f,l \( -name "*.so*" -o -name "*.a*" -o -name "*.la*" \) | xargs -r -I{} bash -c \
+						"run_cmd 'ln -fsv \$(realpath --relative-to=${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} {}) ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/\$(basename {})'"
+					pause
+				fi
 			fi
 		done
-		#if [ ${GCC_INSTALL_TARGETS} -eq 1 ] && [ ${GCC_IS_MAIN} -eq 1 ]
-		#then
-		#	find "${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" -mindepth 1 \( -name "libgcc_s.so*" -o -name "libssp.so*" -o -name "libstdc++.so*" \) | xargs -r -I{} \
-		#		bash -c " 
-		#			run_cmd 'ln -sfv ../gcc/${HARCH}/${GCC_MAJVER}/$(basename {}) ${BIN_PATH}/lib${BUILD_LIBSUFFIX}/$(basename {})'
-		#		"
-		#fi
 
 		echo "Adapt .la libraries to ${BIN_PATH}${BIN_PREFIX}"
-		find ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER} $( [ ${GCC_INSTALL_TARGETS:-0} -eq 1 ] && echo "${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" || true ) -mindepth 1 -name "*.la" -type f | xargs -r -I{} \
-			bash -c "
-				run_cmd 'sed -i \"${LIB_LA_SEDTRANS}\" {}'
-			"
+		find ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER} $( [ ${GCC_INSTALL_TARGETS:-0} -eq 1 ] && echo "${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" || true ) -mindepth 1 -name "*.la" -type f | xargs -r -I{} bash -c \
+				"run_cmd 'sed -i \"${LIB_LA_SEDTRANS}\" {}'"
 
 		run_cmd 'make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER="${CCWRAPPER}" all-target-libsanitizer'
 		run_cmd 'make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} install-strip-target-libsanitizer'
