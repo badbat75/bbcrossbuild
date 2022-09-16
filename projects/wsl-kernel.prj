@@ -12,7 +12,7 @@ BUILD_LIBSTATIC=1
 build lfs/create-base-fs_1.0
 
 setup_sccache
-setup_gcc --install
+setup_gcc
 #setup_llvm
 build microsoft/wsl-kernel_5.15
 
