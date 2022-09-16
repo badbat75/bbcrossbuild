@@ -169,7 +169,7 @@ function create_sfx_package () {
 
 		__ARCHIVE_BELOW__
 	EOF
-	run_cmd 'cat ${PKG_OBJ}.tar.xz >> ${PKG_OBJ}.sfx'
+	cat ${PKG_OBJ}.tar.xz >> ${PKG_OBJ}.sfx
 	run_cmd 'chmod +x ${PKG_OBJ}.sfx'
 	run_cmd 'rm ${PKG_OBJ}.tar.xz'
 	echo

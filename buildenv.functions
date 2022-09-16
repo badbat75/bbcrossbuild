@@ -433,7 +433,7 @@ function setup_gcc () {
 		if [ ! -d ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER} ] || [ ! -d ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
 		then
 			echo -n "downloading... "
-			gcc_download >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
+			gcc_download >> ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log 2>&1
 		fi
 		echo -n "${ECHO_BOOTSTRAP}configuration... "
 		gcc_configuration >> ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log 2>&1
