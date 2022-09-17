@@ -4,9 +4,9 @@ BUILD_LIBSTATIC=0
 
 ## Enable LTO both for kernel and applications
 LTOENABLE=1
-KERNEL_LTOENABLE=0
+KERNEL_LTOENABLE=1
 
-BS_KERNEL_VER=5.15.68
+BS_KERNEL_VER=5.19.9
 
 build lfs/create-base-fs_1.0
 build lfs/create-base-config_1.0
@@ -20,8 +20,8 @@ setup_llvm
 build raspberrypi/rpi-firmware_1
 build firmwares/linux-firmware
 build firmwares/broadcom-bt-firmware-master
-build raspberrypi/rpi-kernel_$( echo ${BS_KERNEL_VER} | cut -d'.' -f1,2 )
-#build raspberrypi/rpi-kernel_6.0
+#build raspberrypi/rpi-kernel_$( echo ${BS_KERNEL_VER} | cut -d'.' -f1,2 )
+TOOLCHAIN=llvm build raspberrypi/rpi-kernel_6.0
 build lfs/glibc
 build lfs/tzdata_2022c
 build lfs/man-pages_5.13
