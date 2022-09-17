@@ -21,7 +21,7 @@ build raspberrypi/rpi-firmware_1
 build firmwares/linux-firmware
 build firmwares/broadcom-bt-firmware-master
 #build raspberrypi/rpi-kernel_$( echo ${BS_KERNEL_VER} | cut -d'.' -f1,2 )
-TOOLCHAIN=llvm build raspberrypi/rpi-kernel_6.0
+build raspberrypi/rpi-kernel_6.0
 build lfs/glibc
 build lfs/tzdata_2022c
 build lfs/man-pages_5.13
