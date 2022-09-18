@@ -558,14 +558,14 @@ function build () {(
 		fi
 		cat >runconfig.sh <<-EOF
 			#!/bin/bash
-			echo "\\\$ ${RUNCONFIG_CMD} \${@} \\\\"
+			echo "\\\$ ${RUNCONFIG_CMD} ${CONF_FLAGS} \\\\"
 			echo -e "\t${CONF_VARS}"
-			${RUNCONFIG_CMD} \${@} ${CONF_VARS}
+			${RUNCONFIG_CMD} ${CONF_FLAGS} ${CONF_VARS}
 		EOF
 		cat >runmake.sh <<-EOF
 			#!/bin/bash
-			echo "\\\$ make ${PKG_MAKEVARS} \${@}"
-			make ${PKG_MAKEVARS} \${@}
+			echo "\\\$ make V=${MAKEVERBOSE:-0} ${PKG_MAKEVARS} \${@}"
+			make V=${MAKEVERBOSE:-0} ${PKG_MAKEVARS} \${@}
 		EOF
 		run_cmd 'chmod +x runconfig.sh runmake.sh'
 
@@ -575,15 +575,15 @@ function build () {(
 		#else 
 		#	run_cmd '${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS}'
 		#fi
-		run_cmd './runconfig.sh ${CONF_FLAGS}'
+		run_cmd './runconfig.sh'
 		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
 		then
 			for target in ${PKG_MAKETARGETS:-all}
 			do
-				run_cmd './runmake.sh V=${MAKEVERBOSE:-0} ${target}'
+				run_cmd './runmake.sh ${target}'
 			done
 		fi
-		run_cmd './runmake.sh V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${INST_CMD:-}'
+		run_cmd './runmake.sh DESTDIR=${PKG_PKGPATH} ${INST_CMD:-}'
 		cd ${BB_HOME}
 		trap - ERR
 	}
@@ -598,8 +598,8 @@ function build () {(
 		source environment.source
 		cat >runmake.sh <<-EOF
 			#!/bin/bash
-			echo "\\\$ make ${PKG_MAKEVARS} \${@}"
-			make ${PKG_MAKEVARS} \${@}
+			echo "\\\$ make V=${MAKEVERBOSE:-0} ${PKG_MAKEVARS} \${@}"
+			make V=${MAKEVERBOSE:-0} ${PKG_MAKEVARS} \${@}
 		EOF
 		run_cmd 'chmod +x runmake.sh'
 		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
@@ -607,10 +607,10 @@ function build () {(
 			for target in ${PKG_MAKETARGETS:-all}
 			do
 				echo "Making ${target}..."
-				run_cmd './runmake.sh V=${MAKEVERBOSE:-0} ${target}'
+				run_cmd './runmake.sh ${target}'
 			done
 		fi
-		run_cmd './runmake.sh PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}'
+		run_cmd './runmake.sh PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} ${INST_CMD:-install}'
 		cd ${BB_HOME}
 		trap - ERR
 	}
