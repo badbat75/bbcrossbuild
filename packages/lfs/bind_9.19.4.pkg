@@ -2,7 +2,7 @@
 PKG_URL="https://downloads.isc.org/isc/bind9/9.19.4/bind-9.19.4.tar.xz"
 PKG_DEPS="lfs/ncurses_6.3+p20220820 lfs/readline_8.2 lfs/libuv_1.41.0 lfs/openssl_3.0.5 lfs/libnghttp2_1.49 lfs/krb5_1.20"
 BUILD_PROCESS=configmake
-CONF_FLAGS="BUILD_CC=\"${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc\""
+CONF_VARS="BUILD_CC='${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc'"
 #PKG_MAKETARGETS=""
 INST_CMD="install"
 PKG_PREBUILD="sed -i '/for lib in -lterminfo -ltermcap -lncurses -lcurses/ s/-ltermcap -lncurses/-ltermcap -lncursesw -lncurses/' configure.ac"

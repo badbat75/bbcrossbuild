@@ -550,21 +550,40 @@ function build () {(
 		fi
 		run_cmd 'create_environment_source'
 		source environment.source
-
 		if [[ "${CONF_CMD}" =~ ^\./.* ]]
 		then
-			run_cmd '${CONF_CMD} ${CONF_FLAGS}'
+			local RUNCONFIG_CMD="${CONF_CMD}"
 		else 
-			run_cmd '${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS}'
+			local RUNCONFIG_CMD="${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure}"
 		fi
+		cat >runconfig.sh <<-EOF
+			#!/bin/bash
+			echo "\\\$ ${RUNCONFIG_CMD} \${@} \\\\"
+			echo -e "\t${CONF_VARS}"
+			${RUNCONFIG_CMD} \${@} ${CONF_VARS}
+		EOF
+		cat >runmake.sh <<-EOF
+			#!/bin/bash
+			echo "\\\$ make ${PKG_MAKEVARS} \${@}"
+			make ${PKG_MAKEVARS} \${@}
+		EOF
+		run_cmd 'chmod +x runconfig.sh runmake.sh'
+
+		#if [[ "${CONF_CMD}" =~ ^\./.* ]]
+		#then
+		#	run_cmd '${CONF_CMD} ${CONF_FLAGS}'
+		#else 
+		#	run_cmd '${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS}'
+		#fi
+		run_cmd './runconfig.sh ${CONF_FLAGS}'
 		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
 		then
 			for target in ${PKG_MAKETARGETS:-all}
 			do
-				run_cmd 'make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}'
+				run_cmd './runmake.sh V=${MAKEVERBOSE:-0} ${target}'
 			done
 		fi
-		run_cmd 'make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${INST_CMD:-}'
+		run_cmd './runmake.sh V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${INST_CMD:-}'
 		cd ${BB_HOME}
 		trap - ERR
 	}
@@ -577,15 +596,21 @@ function build () {(
 		cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 		run_cmd 'create_environment_source'
 		source environment.source
+		cat >runmake.sh <<-EOF
+			#!/bin/bash
+			echo "\\\$ make ${PKG_MAKEVARS} \${@}"
+			make ${PKG_MAKEVARS} \${@}
+		EOF
+		run_cmd 'chmod +x runmake.sh'
 		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
 		then
 			for target in ${PKG_MAKETARGETS:-all}
 			do
 				echo "Making ${target}..."
-				run_cmd 'make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} ${target}'
+				run_cmd './runmake.sh V=${MAKEVERBOSE:-0} ${target}'
 			done
 		fi
-		run_cmd 'make ${PKG_MAKEVARS} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}'
+		run_cmd './runmake.sh PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} V=${MAKEVERBOSE:-0} ${INST_CMD:-install}'
 		cd ${BB_HOME}
 		trap - ERR
 	}
@@ -1290,6 +1315,7 @@ function build () {(
 		CONF_CMD \
 		CONF_FLAGS \
 		CONF_PATH \
+		CONF_VARS \
 		CONF_CONFIGPARMS \
 		GIT_URL \
 		GIT_COMMIT \
@@ -1545,7 +1571,7 @@ function build () {(
 			fi
 			if [ ! ${BUILD_PROCESS:-none} == none ]
 			then
-				echo -n "Building ${PKG_NAME} [${BUILD_PROCESS}]..."
+				echo -n "${SPACES}Building ${PKG_NAME} [${BUILD_PROCESS}]..."
 				${BUILD_PROCESS} >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 			fi
 			if [ -n "${PKG_POSTBUILD}" ]
@@ -1564,7 +1590,8 @@ function build () {(
 
 	if [ -n "${PKG_POSTINSTALL}" ]
 	then
-		run_cmd 'mkdir -p ${PKG_PKGPATH}/postinst_scripts'
+		run_cmd 'mkdir -p ${PKG_PKGPATH}/postinst_scripts' >> ${LOG_PATH}/${PKG_NAME}.log
+		echo "${PKG_POSTINSTALL}" > ${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_NAME}
 		run_cmd 'cat ${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_NAME}' >> ${LOG_PATH}/${PKG_NAME}.log
 	fi
 
