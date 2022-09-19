@@ -24,7 +24,25 @@ case ${BS_GLIBC_VER} in
 			https://sourceware.org/git?p=glibc.git;a=patch;h=b3736d1a3c60a3ec9959bf3b38794958546bf6a2 \
 			https://sourceware.org/git?p=glibc.git;a=patch;h=645d94808aaa90fb1b20a25ff70bb50d9eb1d55b \
 			https://sourceware.org/git?p=glibc.git;a=patch;h=b46412fb17e8bfc6c9e1f144bbcf833320c80f8a \
-			https://sourceware.org/git?p=glibc.git;a=patch;h=c399271c10bd00714504e8d4dfbec8aebf996dd4 "
+			https://sourceware.org/git?p=glibc.git;a=patch;h=c399271c10bd00714504e8d4dfbec8aebf996dd4 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=9d7eebde8f134ea25bdb9ab61bc74d5e71e41288 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=bffc33e90ed57a4786c676dda92d935e3613e031 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=3c9b4004e2dccc9ca2ace078a0106f9d682fd1a0 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=20ec40a51d3a8e9487f40dc9352d158def23ea8c \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=adb69f8ffe83db5d475868b42996bc70de8cff77 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=f0e9657067240b8b105c6d58d5da9dc926f2f0ed \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=b714ab7e3ce999b79401cdd22291128a7fd6d8ef \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=77f523c473878ec0051582ef15161c6982879095 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=5165080fec63a1f03aa1985b77bca300465bf570 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=78c8ef21fa54e994451d5b42ead6080d99a88a49 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=7a236dc44a22dc4252e803d1ee1d3b970ec43805 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=e2ec6a8db38a6b734bbdb41e498fdc9460f7566a \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=c5cdb39c20e96d9ac0d46fc7284b8276a537fd35 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=a7fa604f3050a1024dc8ec28ff28bad811f6151f \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=5d885617cec5713fdde42177398fe98acb66b7a2 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=df51334828f2af214105aad82042140ee3a6de0a \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=4b95b6e8bbb5a2b6856f707bf3bc3308ebef595a"
+			# elf: Fix hwcaps string size overestimation
 		;;
 esac
 PATCHES+="http://www.linuxfromscratch.org/patches/lfs/development/glibc-${BS_GLIBC_VER}-fhs-1.patch"
@@ -32,17 +50,17 @@ BUILD_PROCESS=configmake
 
 PKG_OVERRIDELTO=0
 PKG_TWOSTEPSBUILD=0
-CONF_CONFIGPARMS="
-slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
-rootsbindir=${BUILD_PREFIX}/sbin
-complocaledir=${BUILD_LIBDIR}
-libc_cv_forced_unwind=yes
-libc_cv_c_cleanup=yes"
+CONF_VARS="slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+	rootsbindir=${BUILD_PREFIX}/sbin \
+	complocaledir=${BUILD_LIBDIR} \
+	libc_cv_forced_unwind=yes \
+	libc_cv_c_cleanup=yes"
 CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}${BUILD_INCLUDEDIR} \
 	--disable-crypt --disable-werror --disable-sanity-checks --disable-profile \
 	--enable-stackguard-randomization --enable-stack-protector=strong \
 	--enable-pt_chown --enable-tunables --enable-bind-now --enable-kernel=5.0.0"
 PKG_MAKEVARS="cross-compiling=yes"
+PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd
 
 #PKG_PREBUILD=""

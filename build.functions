@@ -219,19 +219,25 @@ function settcenv () {
 	fi
 	case ${TOOLCHAIN} in
 		gnu)
-			TOOLCHAIN_CC=${HARCH}-gcc
-			TOOLCHAIN_CXX=${HARCH}-g++
-			TOOLCHAIN_CPP=${HARCH}-cpp
-			TOOLCHAIN_FC=${HARCH}-gfortran
-			TOOLCHAIN_F90=${HARCH}-gfortran
-			TOOLCHAIN_AR=${HARCH}-gcc-ar
-			TOOLCHAIN_AS=${HARCH}-as
-			TOOLCHAIN_NM=${HARCH}-gcc-nm
-			TOOLCHAIN_RANLIB=${HARCH}-gcc-ranlib
-			TOOLCHAIN_STRIP=${HARCH}-strip
-			TOOLCHAIN_OBJCOPY=${HARCH}-objcopy
-			TOOLCHAIN_OBJDUMP=${HARCH}-objdump
-			TOOLCHAIN_READELF=${HARCH}-readelf
+			TOOLCHAIN_CC=$(which ${HARCH}-gcc)
+			if ${HARCH}-g++ --version > /dev/null 2>&1
+			then
+				TOOLCHAIN_CXX=$(which ${HARCH}-g++)
+			fi
+			TOOLCHAIN_CPP=$(which ${HARCH}-cpp)
+			if ${HARCH}-gfortran --version > /dev/null 2>&1
+			then
+				TOOLCHAIN_FC=$(which ${HARCH}-gfortran)
+				TOOLCHAIN_F90=$(which ${HARCH}-gfortran)
+			fi
+			TOOLCHAIN_AR=$(which ${HARCH}-gcc-ar)
+			TOOLCHAIN_AS=$(which ${HARCH}-as)
+			TOOLCHAIN_NM=$(which ${HARCH}-gcc-nm)
+			TOOLCHAIN_RANLIB=$(which ${HARCH}-gcc-ranlib)
+			TOOLCHAIN_STRIP=$(which ${HARCH}-strip)
+			TOOLCHAIN_OBJCOPY=$(which ${HARCH}-objcopy)
+			TOOLCHAIN_OBJDUMP=$(which ${HARCH}-objdump)
+			TOOLCHAIN_READELF=$(which ${HARCH}-readelf)
 			TOOLCHAIN_LD=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
 			if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
 			then
@@ -251,19 +257,22 @@ function settcenv () {
 			esac
 			;;
 		llvm)
-			TOOLCHAIN_CC=clang
-			TOOLCHAIN_CXX=clang++
-			TOOLCHAIN_CPP="clang -E"
-			TOOLCHAIN_FC=flang
-			TOOLCHAIN_F90=flang
-			TOOLCHAIN_AR=llvm-ar
-			TOOLCHAIN_AS=llvm-as
-			TOOLCHAIN_NM=llvm-nm
-			TOOLCHAIN_RANLIB=llvm-ranlib
-			TOOLCHAIN_STRIP=llvm-strip
-			TOOLCHAIN_OBJCOPY=llvm-objcopy
-			TOOLCHAIN_OBJDUMP=llvm-objdump
-			TOOLCHAIN_READELF=llvm-readelf
+			TOOLCHAIN_CC=$(which clang)
+			TOOLCHAIN_CXX=$(which clang++)
+			TOOLCHAIN_CPP="$(which clang) -E"
+			if flang --version > /dev/null 2>&1
+			then
+				TOOLCHAIN_FC=$(which flang)
+				TOOLCHAIN_F90=$(which flang)
+			fi
+			TOOLCHAIN_AR=$(which llvm-ar)
+			TOOLCHAIN_AS=$(which llvm-as)
+			TOOLCHAIN_NM=$(which llvm-nm)
+			TOOLCHAIN_RANLIB=$(which llvm-ranlib)
+			TOOLCHAIN_STRIP=$(which llvm-strip)
+			TOOLCHAIN_OBJCOPY=$(which llvm-objcopy)
+			TOOLCHAIN_OBJDUMP=$(which llvm-objdump)
+			TOOLCHAIN_READELF=$(which llvm-readelf)
 			TOOLCHAIN_LD=${PKG_OVERRIDELD:-${LLVM_DEFAULT_LD:-lld}}
 			if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
 			then
@@ -313,10 +322,37 @@ function create_environment_source () {
 		#################################################################################
 
 		export CC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
-		export CXX='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+		export CFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}'
+
+	EOF
+	if [ ! -z "${TOOLCHAIN_CXX}" ]
+	then
+		cat <<-EOF >> environment.source
+			export CXX='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+			export CXXFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}'
+
+		EOF
+	fi
+	cat <<-EOF >> environment.source
 		export CPP='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CPP}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
-		export FC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_FC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
-		export F90='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_F90}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+		export CPPFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CPPFLAGS} ${PLATFORM_CFLAGS} ${PKG_CPPFLAGS}'
+
+	EOF
+	if [ ! -z "${TOOLCHAIN_FC}" ]
+	then
+		cat <<-EOF >> environment.source
+			export FC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_FC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+			export FFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
+
+			export F90='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_F90}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+			export F90FLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
+
+		EOF
+	fi
+	cat <<-EOF >> environment.source
+		#export LD='${TOOLCHAIN_LD}'
+		export LDFLAGS='${TOOLCHAIN_LINKERFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}'
+
 		export AR='${TOOLCHAIN_AR}'
 		export AS='${TOOLCHAIN_AS}'
 		export NM='${TOOLCHAIN_NM}'
@@ -325,21 +361,18 @@ function create_environment_source () {
 		export OBJCOPY='${TOOLCHAIN_OBJCOPY}'
 		export OBJDUMP='${TOOLCHAIN_OBJDUMP}'
 		export READELF='${TOOLCHAIN_READELF}'
-		#export LD='${TOOLCHAIN_LD}'
-		export CFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}'
-		export CXXFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}'
-		export CPPFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CPPFLAGS} ${PLATFORM_CFLAGS} ${PKG_CPPFLAGS}'
-		export FFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
-		export F90FLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
-		export LDFLAGS='${TOOLCHAIN_LINKERFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}'
+
 		export PKG_CONFIG='${HARCH}-pkg-config'
 		export PKG_CONFIG_LIBDIR='${COMMON_PKG_CONFIG_LIBDIR}'
 		export PKG_CONFIG_SYSROOT_DIR='${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}'
 		export PKG_CONFIG_ALLOW_CROSS='${PKG_CONFIG_ALLOW_CROSS}'
+
 		export LD_LIBRARY_PATH='${LD_LIBRARY_PATH}${PKG_LD_LIBRARY_PATH:+:${PKG_LD_LIBRARY_PATH}}'
 		export PATH='${PATH}'
+
 		export CARGO_HOME='${CARGO_HOME}'
 		export RUSTUP_HOME='${RUSTUP_HOME}'
+
 		export QEMU_LD_PREFIX='${SYSROOT}${BUILD_PREFIX}'
 	EOF
 	if [ "$(basename ${CCWRAPPER:-nope})" == "sccache" ]
@@ -528,8 +561,7 @@ function build () {(
 			unset IFS
 		fi
 		run_cmd 'mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}'
-		cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
-		echo -e "${CONF_CONFIGPARMS}" > configparms
+		run_cmd 'pushd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}'
 		if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 		then
 			CONF_FLAGS="--prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} \
@@ -584,7 +616,7 @@ function build () {(
 			done
 		fi
 		run_cmd './runmake.sh DESTDIR=${PKG_PKGPATH} ${INST_CMD:-}'
-		cd ${BB_HOME}
+		run_cmd 'popd'
 		trap - ERR
 	}
 
@@ -685,13 +717,16 @@ function build () {(
 			fi
 			local C=$(buildmesonargs "${CC}")
 			local C_ARGS=$(buildmesonargs "${CFLAGS}")
+			local C_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
 			local CPP=$(buildmesonargs "${CXX}")
 			local CPP_ARGS=$(buildmesonargs "${CXXFLAGS}")
-			local FORTRAN=$(buildmesonargs "${FC}")
-			local FORTRAN_ARGS=$(buildmesonargs "${FFLAGS}")
-			local C_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
 			local CPP_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
-			local FORTRAN_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
+			if [ ! -z "${FC}" ]
+			then
+				local FORTRAN=$(buildmesonargs "${FC}")
+				local FORTRAN_ARGS=$(buildmesonargs "${FFLAGS}")
+				local FORTRAN_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
+			fi
 			cat > cross-${PLATFORM_NAME} <<-EOF
 				[binaries]
 				c = [${C}]
@@ -832,23 +867,24 @@ function build () {(
 			settcenv
 			case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
 				gnu)
-					local HOSTCC=gcc
-					local HOSTCXX=g++
-					local HOSTAR=gcc-ar
-					local HOSTLD=ld.bfd
+					local HOSTCC=$(which gcc)
+					local HOSTCXX=$(which g++)
+					local HOSTAR=$(which gcc-ar)
+					local HOSTLD=$(which ld.bfd)
 					;;
 				llvm)
 					if clang -v 2>&1 > /dev/null && ld.lld -v 2>&1
 					then
-						local HOSTCC=clang
-						local HOSTCXX=clang++
-						local HOSTAR=llvm-ar
-						local HOSTLD=ld.lld
+						local HOSTCC=$(which clang)
+						local HOSTCXX=$(which clang++)
+						local HOSTAR=$(which llvm-ar)
+						local HOSTLD=$(which ld.lld)
+						#local LLVM_IAS="LLVM_IAS=1"
 					else
-						local HOSTCC=gcc
-						local HOSTCXX=g++
-						local HOSTAR=gcc-ar
-						local HOSTLD=ld.bfd
+						local HOSTCC=$(which gcc)
+						local HOSTCXX=$(which g++)
+						local HOSTAR=$(which gcc-ar)
+						local HOSTLD=$(which ld.bfd)
 					fi
 					;;
 			esac
@@ -861,8 +897,8 @@ function build () {(
 					CC="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}" \\
 					LD="$(
 						case ${TOOLCHAIN_LD} in
-							gold|bfd) echo ${HARCH}-ld.bfd;;
-							lld) echo ld.lld;;
+							gold|bfd) echo $(which ${HARCH}-ld.bfd);;
+							lld) echo $(which ld.lld);;
 						esac
 						)" \\
 					AS="${TOOLCHAIN_AS}" \\
@@ -878,9 +914,9 @@ function build () {(
 					CROSS_COMPILE=${HARCH}- \\
 					HOSTCC="${CCWRAPPER:+${CCWRAPPER} }${HOSTCC}" \\
 					HOSTCXX="${CCWRAPPER:+${CCWRAPPER} }${HOSTCXX}" \\
-					HOSTAR=${HOSTAR} \\
-					HOSTLD=${HOSTLD} \\
-					LLVM_IAS=0 \\
+					HOSTAR="${HOSTAR}" \\
+					HOSTLD="${HOSTLD}" \\
+					${LLVM_IAS} \\
 					EXTRAVERSION=${KERNEL_EXTRAVERSION} \\
 					LOCALVERSION=${KERNEL_LOCALVERSION} \\
 					${EXTRA_PARMS} ${PKG_MAKEVARS} \${@}
@@ -919,10 +955,15 @@ function build () {(
 		# Config kernel build
 
 		case ${KERNEL_OPTLEVEL:-null} in
-			s|S)	run_cmd 'scripts/config -e CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3' ;;
-			2)		run_cmd 'scripts/config -d CC_OPTIMIZE_FOR_SIZE -e CC_OPTIMIZE_FOR_PERFORMANCE -d CC_OPTIMIZE_FOR_PERFORMANCE_O3' ;;
+			s|S)	run_cmd 'scripts/config -e CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE' ;;
+			2)		run_cmd 'scripts/config -d CC_OPTIMIZE_FOR_SIZE -e CC_OPTIMIZE_FOR_PERFORMANCE' ;;
 			3)		# Patch kernel to build with -O3 flag
-					run_cmd 'sed -i "/depends on ARC$/d" init/Kconfig'
+					run_cmd 'sed -i -e "/^ifdef CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE/i ifdef CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE_O3\nKBUILD_CFLAGS += -O3" \
+						-e "s/^ifdef CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE/else ifdef CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE/" Makefile'
+					run_cmd 'sed -i -e \
+						"/^config CC_OPTIMIZE_FOR_PERFORMANCE/i config CC_OPTIMIZE_FOR_PERFORMANCE_O3\n\tbool \"Optimize for performance (-O3)\"\n\thelp\n\t  This is the default optimization level for the kernel, building\n\t  with the "-O2" compiler flag for maximum performance.\n" \
+						init/Kconfig'
+					#run_cmd 'sed -i "/depends on ARC$/d" init/Kconfig'
 					run_cmd 'scripts/config -d CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -e CC_OPTIMIZE_FOR_PERFORMANCE_O3'
 				;;
 		esac
@@ -1316,7 +1357,6 @@ function build () {(
 		CONF_FLAGS \
 		CONF_PATH \
 		CONF_VARS \
-		CONF_CONFIGPARMS \
 		GIT_URL \
 		GIT_COMMIT \
 		INST_CMD \

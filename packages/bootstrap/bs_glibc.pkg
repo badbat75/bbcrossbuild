@@ -1,15 +1,56 @@
 # bs_glibc
 PKG_SUFFIX=_${BS_GLIBC_VER}
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${BS_GLIBC_VER}.tar.xz"
-PATCHES="https://www.linuxfromscratch.org/patches/downloads/glibc/glibc-${BS_GLIBC_VER}-fhs-1.patch"
+case ${BS_GLIBC_VER} in
+	2.36)
+		PATCHES="https://sourceware.org/git?p=glibc.git;a=patch;h=c3fda489cfdb2260f9fec706e6fd7259858c4467 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=33f1b4c1452b33991e670f636ebe98b90a405e10 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=c74bb93cfdb04d49155b0e30983a3c866167bbca \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=ac47d8f6cf9744139adb12f540fb9cc610cac579 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=302bc33bc53c787da6e74162a7092e9c0fb964a8 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=e982657073c4db21459ffd9e17bc505b1d64b876 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=8b139cd4f1074ae0d95d9bff60db283a1ed72734 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=d13a7a6f100576b1e30dc044b2e0c4cbcb6196f6 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=5c62874f423af93e97b51bc9a57af228a546156f \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=0062e7dd1c3674ece2daca53a898badd28b60421 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=1cc5513114e76083669cba1b11252aad35525e69 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=4dad97e2a2e510c6b53a0add29a2188714fcf4ab \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=d48813227b63a0d92ea357ea0733229ed74e31ab \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=bb1e8b0ca99b5cbedfae3e6245528a87d95ff3e2 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=3bd3c612e98a53ce60ed972f5cd2b90628b3cba5 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=b0e7888d1fa2dbd2d9e1645ec8c796abf78880b9 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=924e4f3eaa502ce82fccf8537f021a796d158771 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=3c791f2031ca8f6b99e96b774ed1c505ceb93595 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=b3736d1a3c60a3ec9959bf3b38794958546bf6a2 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=645d94808aaa90fb1b20a25ff70bb50d9eb1d55b \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=b46412fb17e8bfc6c9e1f144bbcf833320c80f8a \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=c399271c10bd00714504e8d4dfbec8aebf996dd4 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=9d7eebde8f134ea25bdb9ab61bc74d5e71e41288 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=bffc33e90ed57a4786c676dda92d935e3613e031 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=3c9b4004e2dccc9ca2ace078a0106f9d682fd1a0 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=20ec40a51d3a8e9487f40dc9352d158def23ea8c \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=adb69f8ffe83db5d475868b42996bc70de8cff77 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=f0e9657067240b8b105c6d58d5da9dc926f2f0ed \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=b714ab7e3ce999b79401cdd22291128a7fd6d8ef \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=77f523c473878ec0051582ef15161c6982879095 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=5165080fec63a1f03aa1985b77bca300465bf570 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=78c8ef21fa54e994451d5b42ead6080d99a88a49 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=7a236dc44a22dc4252e803d1ee1d3b970ec43805 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=e2ec6a8db38a6b734bbdb41e498fdc9460f7566a \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=c5cdb39c20e96d9ac0d46fc7284b8276a537fd35 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=a7fa604f3050a1024dc8ec28ff28bad811f6151f \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=5d885617cec5713fdde42177398fe98acb66b7a2 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=df51334828f2af214105aad82042140ee3a6de0a \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=4b95b6e8bbb5a2b6856f707bf3bc3308ebef595a"
+			# elf: Fix hwcaps string size overestimation
+		;;
+esac
+PATCHES+="http://www.linuxfromscratch.org/patches/lfs/development/glibc-${BS_GLIBC_VER}-fhs-1.patch"
 BUILD_PROCESS=configmake
 
 PKG_OVERRIDELTO=0
 PKG_TWOSTEPSBUILD=1
-CONF_CONFIGPARMS="
-slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
-rootsbindir=${BUILD_PREFIX}/sbin
-"
+CONF_VARS="slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} rootsbindir=${BUILD_PREFIX}/sbin"
 CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}\${BUILD_INCLUDEDIR} --enable-kernel=4.4 --disable-werror \
 	--disable-sanity-checks --enable-hacker-mode --enable-stackguard-randomization \
 	--enable-stack-protector=strong --enable-pt_chown"
@@ -22,4 +63,5 @@ PKG_POSTBUILD="if [ ! -f ${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h ];
 	then touch ${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h; \
 	fi" \
 
+PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd

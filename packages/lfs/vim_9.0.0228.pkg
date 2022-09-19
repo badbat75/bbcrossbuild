@@ -4,8 +4,8 @@ PKG_DEPS="lfs/ncurses_6.3+p20220820 lfs/elfutils_0.187"
 BUILD_PROCESS=configmake
 
 PKG_COPYSRC=1
-CONF_FLAGS="--with-tlib=ncursesw --disable-option-checking \
-	vim_cv_toupper_broken=no vim_cv_terminfo=no vim_cv_tgetent=zero vim_cv_getcwd_broken=no \
+CONF_FLAGS="--with-tlib=ncursesw --disable-option-checking"
+CONF_VARS="vim_cv_toupper_broken=no vim_cv_terminfo=no vim_cv_tgetent=zero vim_cv_getcwd_broken=no \
 	vim_cv_stat_ignores_slash=no vim_cv_memmove_handles_overlap=no vim_cv_bcopy_handles_overlap=no \
 	vim_cv_memcpy_handles_overlap=no"
 INST_CMD="install"

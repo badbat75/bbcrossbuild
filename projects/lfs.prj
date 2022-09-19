@@ -3,9 +3,10 @@ BUILD_LIBSHARED=1
 BUILD_LIBSTATIC=0
 
 ## Enable LTO both for kernel and applications
-LTOENABLE=1
-KERNEL_LTOENABLE=1
+LTOENABLE=thin
+KERNEL_LTOENABLE=thin
 
+TOOLCHAIN=llvm
 BS_KERNEL_VER=5.19.9
 
 build lfs/create-base-fs_1.0
