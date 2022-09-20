@@ -50,16 +50,14 @@ BUILD_PROCESS=configmake
 
 PKG_OVERRIDELTO=0
 PKG_TWOSTEPSBUILD=0
-CONF_VARS="slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-	rootsbindir=${BUILD_PREFIX}/sbin \
-	complocaledir=${BUILD_LIBDIR} \
-	libc_cv_forced_unwind=yes \
+CONF_VARS="libc_cv_forced_unwind=yes \
 	libc_cv_c_cleanup=yes"
 CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}${BUILD_INCLUDEDIR} \
 	--disable-crypt --disable-werror --disable-sanity-checks --disable-profile \
 	--enable-stackguard-randomization --enable-stack-protector=strong \
 	--enable-pt_chown --enable-tunables --enable-bind-now --enable-kernel=5.0.0"
-PKG_MAKEVARS="cross-compiling=yes"
+PKG_MAKEVARS="slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} rootsbindir=${BUILD_PREFIX}/sbin \
+	complocaledir=${BUILD_LIBDIR} cross-compiling=yes"
 PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd
 
