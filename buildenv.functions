@@ -251,10 +251,12 @@ function setup_gcc () {
 		if [ ../binutils-${BINUTILS_VER}/libiberty/cp-demangle.c -nt libiberty/cp-demangle.c ]
 		then
 			echo "### binutils-${BINUTILS_VER}/libiberty newer than gcc-${GCC_VER}/libiberty... "
-			run_cmd 'mv include/demangle.h include/demangle.h.gcc'
-			run_cmd 'ln -fs ../binutils-${BINUTILS_VER}/include/demangle.h include/'
 			run_cmd 'mv libiberty libiberty.gcc'
 			run_cmd 'ln -fs ../binutils-${BINUTILS_VER}/libiberty .'
+			run_cmd 'mv include/demangle.h include/demangle.h.gcc'
+			run_cmd 'ln -fs ../binutils-${BINUTILS_VER}/include/demangle.h include/'
+			run_cmd 'mv include/hashtab.h include/hashtab.h.gcc'
+			run_cmd 'ln -fs ../binutils-${BINUTILS_VER}/include/hashtab.h include/'
 		fi
 		#echo "Disabling multilib directory"
 		#grep -lR "^ *MULTILIB_OSDIRNAMES" gcc/config/* | xargs -I{} bash -c 'run_cmd "sed -si \"s/^ *MULTILIB_OSDIRNAMES/__MULTILIB_OSDIRNAMES/g\" {}"'
