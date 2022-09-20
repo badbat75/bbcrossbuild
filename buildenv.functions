@@ -242,12 +242,16 @@ function setup_gcc () {
 			echo "### GCC version older than 10 and BINUTILS 2.34 or earlier... "
 			run_cmd 'ln -fs ../binutils-${BINUTILS_VER}/config/debuginfod.m4 config/debuginfod.m4'
 		fi
-		#if test_version ${GCC_VER} -lt 12.0.0 && test_version ${BINUTILS_VER} -ge 2.37
-		#then
-		#	echo "### GCC version is less than 12.0.0 and BINUTILS 2.37 or earlier... "
-		#	run_cmd 'mv libiberty libiberty.gcc'
-		#	run_cmd 'ln -fs ../binutils-${BINUTILS_VER}/libiberty .'
-		#fi
+		if test_version ${GCC_VER} -lt 12.0.0 && test_version ${BINUTILS_VER} -ge 2.37
+		then
+			echo "### GCC version is less than 12.0.0 and BINUTILS 2.37 or earlier... "
+			run_cmd 'mv libiberty libiberty.gcc'
+			run_cmd 'ln -fs ../binutils-${BINUTILS_VER}/libiberty .'
+			run_cmd 'mv include/demangle.h include/demangle.h.gcc'
+			run_cmd 'ln -fs ../binutils-${BINUTILS_VER}/include/demangle.h include/'
+			#run_cmd 'mv include/hashtab.h include/hashtab.h.gcc'
+			#run_cmd 'ln -fs ../binutils-${BINUTILS_VER}/include/hashtab.h include/'
+		fi
 		if [ ../binutils-${BINUTILS_VER}/libiberty/cp-demangle.c -nt libiberty/cp-demangle.c ]
 		then
 			echo "### binutils-${BINUTILS_VER}/libiberty newer than gcc-${GCC_VER}/libiberty... "
@@ -255,8 +259,8 @@ function setup_gcc () {
 			run_cmd 'ln -fs ../binutils-${BINUTILS_VER}/libiberty .'
 			run_cmd 'mv include/demangle.h include/demangle.h.gcc'
 			run_cmd 'ln -fs ../binutils-${BINUTILS_VER}/include/demangle.h include/'
-			run_cmd 'mv include/hashtab.h include/hashtab.h.gcc'
-			run_cmd 'ln -fs ../binutils-${BINUTILS_VER}/include/hashtab.h include/'
+			#run_cmd 'mv include/hashtab.h include/hashtab.h.gcc'
+			#run_cmd 'ln -fs ../binutils-${BINUTILS_VER}/include/hashtab.h include/'
 		fi
 		#echo "Disabling multilib directory"
 		#grep -lR "^ *MULTILIB_OSDIRNAMES" gcc/config/* | xargs -I{} bash -c 'run_cmd "sed -si \"s/^ *MULTILIB_OSDIRNAMES/__MULTILIB_OSDIRNAMES/g\" {}"'

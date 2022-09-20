@@ -9,15 +9,13 @@ KERNEL_LTOENABLE=thin
 TOOLCHAIN=llvm
 BS_KERNEL_VER=5.19.9
 
-build lfs/create-base-fs_1.0
-build lfs/create-base-config_1.0
-
-mkdir -p ${USERDATA_PATH}/postinstall
+build --no_save_status lfs/create-base-fs_1.0
 
 setup_sccache
 setup_gcc --install --main_gcc
 setup_llvm
 
+build lfs/create-base-config_1.0
 build raspberrypi/rpi-firmware_1
 build firmwares/linux-firmware
 build firmwares/broadcom-bt-firmware-master
