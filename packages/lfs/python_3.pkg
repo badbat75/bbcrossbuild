@@ -1,12 +1,12 @@
 # python_3
-PYTHON_VER=3.10.6
+PYTHON_VER=${PYTHON_VER:-3.10.6}
 PKG_URL="https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PYTHON_VER}.tar.xz"
-PKG_DEPS="lfs/lfs/ncurses_6.3+p20220820 lfs/zlib_1.2.12 lfs/zlib_1.2.12 lfs/bzip2_1.0.8 lfs/expat_2.4.8 lfs/libffi_3.3 lfs/gdbm_1.23 lfs/readline_8.2 lfs/openssl_3.0.5"
+PKG_DEPS="lfs/ncurses_6.3+p20220820 lfs/zlib_1.2.12 lfs/zlib_1.2.12 lfs/bzip2_1.0.8 lfs/expat_2.4.8 lfs/libffi_3.3 lfs/gdbm_1.23 lfs/readline_8.2 lfs/openssl_3.0.5"
 BUILD_PROCESS=configmake
 PKG_TWOSTEPSBUILD=1
-CONF_FLAGS="--with-system-expat --with-system-ffi --enable-ipv6 --with-ensurepip=yes \
-	CROSS_COMPILE=${HARCH}- CROSS_COMPILE_TARGET=yes \
+CONF_FLAGS="--with-platlibdir=lib --with-system-expat --with-system-ffi --enable-ipv6 --with-ensurepip=yes"
+CONF_VARS="CROSS_COMPILE=${HARCH}- CROSS_COMPILE_TARGET=yes \
 	ax_cv_c_float_words_bigendian=$([ ${HMENDIAN} != little ] && echo yes || echo no) \
 	ac_cv_file__dev_ptmx=yes ac_cv_file__dev_ptc=no"
-INST_CMD="install BINLIBDEST=${BUILD_PREFIX}/lib/python\\\$(VERSION)"
-PKG_PREBUILD="SKIP_PYTHONVENV=1 setup_python ${PYTHON_VER}"
+INST_CMD="install"
+PKG_FAULTYCFLAGS=1

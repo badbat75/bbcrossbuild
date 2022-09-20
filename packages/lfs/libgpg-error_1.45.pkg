@@ -6,7 +6,7 @@ AUTOCONF=1
 CONF_FLAGS="--disable-rpath"
 INST_CMD=install-strip
 PKG_DEPS=
-#PKG_PREBUILD="sed -i 's/\`echo -n\`/\"\`echo -n\`\"/' src/gen-lock-obj.sh"
+PKG_TOOLCHAIN=gnu
 
 # Dependencies:
 

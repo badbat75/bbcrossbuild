@@ -1,10 +1,11 @@
-# procps-ng_4.0.0
-PKG_URL="https://sourceforge.net/projects/procps-ng/files/Production/procps-ng-4.0.0.tar.xz"
+# procps-ng_4
+PKG_SUFFIX=.0.1rc1
+PKG_URL="https://gitlab.com/procps-ng/procps/-/archive/v4.0.1rc1/procps-v4${PKG_SUFFIX}.tar.bz2"
 PKG_DEPS="lfs/ncurses_6.3+p20220820 lfs/systemd_251"
 BUILD_PROCESS=configmake
-AUTOCONF=1
-CONF_FLAGS="--disable-kill --with-systemd \
-     NCURSES_LIBS=-ltinfo ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes"
+#AUTOCONF=1
+CONF_FLAGS="--disable-kill --with-systemd"
+CONF_VARS="ac_cv_func_malloc_0_nonnull=yes ac_cv_func_realloc_0_nonnull=yes"
 INST_CMD="install-strip"
 PKG_PREBUILD='cat <<EOF | patch -s -p0 || true
 --- configure.ac.orig   2021-02-05 17:12:40.834208000 +0100
@@ -30,4 +31,5 @@ PKG_PREBUILD='cat <<EOF | patch -s -p0 || true
    AM_CONDITIONAL(WITH_NCURSES, true)
    if test "\$enable_watch8bit" = yes; then
 EOF
+     ./autogen.sh
 '

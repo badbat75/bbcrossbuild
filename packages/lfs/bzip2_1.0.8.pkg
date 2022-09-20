@@ -21,8 +21,8 @@ PKG_PREBUILD="cat <<EOF | patch -s -p1 || true
 EOF
 
 	[ ! -f Makefile-libbz2_a ] && mv Makefile Makefile-libbz2_a || true
-	sed -i 's/CC=/CC?=/g' Makefile-libbz2_*
-	sed -i 's/CFLAGS=/CFLAGS?=/g' Makefile-libbz2_*
+	sed -i -e 's/^CC=/CC?=/' -e 's/^AR=/AR?=/' -e 's/^RANLIB=/RANLIB?=/' Makefile-libbz2_*
+	sed -i -e 's/^CFLAGS=/CFLAGS?=/' -e 's/^LDFLAGS=/LDFLAGS?=/' Makefile-libbz2_*
 	sed -i 's/\\\$(CC) -shared/\\\$(CC) \\\$(CFLAGS) -shared/g' Makefile-libbz2_so
 	sed -i '/all:/ s/ test$//' Makefile-libbz2_a
 

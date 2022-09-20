@@ -55,7 +55,10 @@ build lfs/kmod_30
 build lfs/elfutils_0.187
 build lfs/libffi_3.3
 build lfs/openssl_3.0.5
-build lfs/python_3 && setup_python
+PYTHON_VER="3.10.6"
+SKIP_PYTHONVENV=1 setup_python "${PYTHON_VER}"
+build lfs/python_3
+setup_python
 build lfs/coreutils_9.1
 build lfs/diffutils_3.8
 build lfs/gawk_5.1.1
@@ -71,7 +74,7 @@ build lfs/tar_1.34
 build lfs/vim_9.0.0228
 build lfs/systemd_251
 build lfs/D-Bus_1.14
-build lfs/procps-ng_4.0.0
+build lfs/procps-ng_4
 build lfs/util-linux_2.38.1
 build lfs/e2fsprogs_1.46
 build lfs/btrfs-progs_5.19

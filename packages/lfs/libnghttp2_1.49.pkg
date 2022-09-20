@@ -3,5 +3,5 @@ PKG_URL="https://github.com/nghttp2/nghttp2/releases/download/v1.49.0/nghttp2-1.
 BUILD_PROCESS=cmakebuild
 VAR_INSTALL_LIBDIR=CMAKE_INSTALL_LIBDIR
 VAR_INSTALL_INCDIR=CMAKE_INSTALL_INCLUDEDIR
-CONF_FLAGS="-DPYTHON=$(which python3)"
+CONF_FLAGS="-DPYTHON_EXECUTABLE:FILEPATH=$(which python3) -DPYTHON_LIBRARY:FILEPATH=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib/libpython3.so"
 INST_CMD="install/strip"
