@@ -7,6 +7,12 @@ BUILD_PROCESS=configmake
 CONF_FLAGS="--without-bash-malloc --with-installed-readline"
 INST_CMD="STRIP=${HARCH}-strip install-strip"
 
+case ${TOOLCHAIN} in
+    llvm)
+        PKG_CFLAGS="-Wno-deprecated-non-prototype -Wno-parentheses"
+        ;;
+esac
+
 PKG_PREBUILD="cat <<EOF | patch -s -p1 || true
 --- a/configure      2021-02-04 11:30:29.730000000 +0100
 +++ b/configure   2021-02-04 11:21:13.000000000 +0100

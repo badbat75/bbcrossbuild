@@ -6,7 +6,7 @@ BUILD_LIBSTATIC=0
 LTOENABLE=thin
 KERNEL_LTOENABLE=thin
 
-TOOLCHAIN=llvm
+TOOLCHAIN=gnu
 BS_KERNEL_VER=5.19.9
 
 build --no_save_status lfs/create-base-fs_1.0

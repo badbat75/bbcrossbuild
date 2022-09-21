@@ -4,7 +4,7 @@ BUILD_PROCESS=configmake
 AUTOCONF=1
 AUTOCONF_PATH="source"
 CONF_CMD="source/configure"
-CONF_FLAGS=" --with-cross-build=$(eval echo ${PKG_BLDPATH}/host_build)"
+CONF_FLAGS="--enable-icu-config --disable-tests --disable-samples --with-cross-build=$(eval echo ${PKG_BLDPATH}/host_build)"
 case ${TOOLCHAIN} in
     gnu)
         CONF_FLAGS+=" --with-data-packaging=files"
@@ -28,7 +28,11 @@ PKG_PREBUILD="sed -i 's| \$(ICUPKGDATA_DIR)| \$(DESTDIR)/\$(ICUPKGDATA_DIR)|g' s
             mkdir -pv \${PKG_BLDPATH}/host_build
             pushd \${PKG_BLDPATH}/host_build
             unset LD_LIBRARY_PATH
-            CC=\"${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc\" CXX=\"${CCWRAPPER:+${CCWRAPPER} }${BARCH}-g++\" \${PKG_SRCPATH}/source/configure
+            CC=\"${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc\" \
+            CXX=\"${CCWRAPPER:+${CCWRAPPER} }${BARCH}-g++\" \
+            CFLAGS=\"-march=native -O3\" \
+            CXXFLAGS=\"-march=native -O3\" \
+               \${PKG_SRCPATH}/source/configure --disable-extras --disable-tests --disable-samples
             make
         )
     fi"
