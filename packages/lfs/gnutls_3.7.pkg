@@ -5,7 +5,14 @@ PKG_DEPS="lfs/nettle_3.8 lfs/make-ca_1.7 lfs/p11-kit_0.24.1 lfs/libtasn1_4.19.0 
     lfs/net-tools_2.10 lfs/libidn2_2.3 lfs/libseccomp_2.5 lfs/zlib_1.2.12"
 BUILD_PROCESS=configmake
 AUTOCONF=1
-CONF_FLAGS=""
+CONF_FLAGS="--without-libiconv-prefix \
+    --without-libintl-prefix \
+    --without-libseccomp-prefix \
+    --without-libcrypto-prefix \
+    --without-librt-prefix \
+    --without-libpthread-prefix \
+    --without-libdl-prefix \
+    --without-libz-prefix"
 INST_CMD=install-strip
 
 # Dependencies:
