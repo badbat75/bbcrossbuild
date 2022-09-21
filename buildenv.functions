@@ -139,13 +139,13 @@ function setup_gcc () {
 				[ -f ${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crti.o ] && \
 				[ -f ${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crt1.o ] )
 		then
-			GCC_SYSROOT=${BIN_PATH}
+			GLIBC_SYSROOT=${BIN_PATH}
 		else
 			if [ -f ${DISTOS_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crtn.o ] && \
 				[ -f ${DISTOS_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crti.o ] && \
 				[ -f ${DISTOS_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crt1.o ]
 			then
-				GCC_SYSROOT=${DISTOS_PATH}
+				GLIBC_SYSROOT=${DISTOS_PATH}
 			else
 				ECHO_BOOTSTRAP="bootstrap "
 				LOG_BOOTSTRAP="bs-"
@@ -154,7 +154,7 @@ function setup_gcc () {
 
 		GCC_CONFIG="--enable-checking=release --enable-multiarch --disable-multilib --enable-version-specific-runtime-libs --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --with-system-zlib --with-glibc-version=2.11 --with-gcc-major-version-only --enable-linker-build-id --disable-option-checking ${SILENTCONFIG}"
 
-		if [ -n "${GCC_SYSROOT}" ]
+		if [ -n "${GLIBC_SYSROOT}" ]
 		then
 			GCC_CONFIG+=" --enable-lto --enable-threads=posix --enable-languages=${GCC_LANGUAGES:-c,c++} --enable-shared --enable-plugin --enable-clocale=gnu --enable-nls --enable-__cxa_atexit --with-default-libstdcxx-abi=new --enable-gcov --enable-libmudflap --enable-libgomp --enable-libssp --enable-libsanitizer --enable-install-libiberty --disable-libitm --disable-libmpx"
 			if [ "$(echo ${GCC_LANGUAGES} | grep -o fortran)" == "fortran" ]
@@ -168,14 +168,14 @@ function setup_gcc () {
 		fi
 		COMPFLAGS="${GNU_EXTRACOMPFLAGS}"
 		LINKERFLAGS="${GNU_EXTRALDFLAGS}"
-		if [ ${GCC_LTOENABLE:-0} -eq 1 ] && [ -n "${GCC_SYSROOT}" ]
+		if [ ${GCC_LTOENABLE:-0} -eq 1 ] && [ -n "${GLIBC_SYSROOT}" ]
 		then
 			LTO_COMPFLAGS=" -flto=${NPROCS}"
 			LTO_LINKERFLAGS=" -fuse-linker-plugin"
 		fi
-		if [ -n "${GCC_SYSROOT}" ]
+		if [ -n "${GLIBC_SYSROOT}" ]
 		then
-			GCC_SYSROOT_FLAGS=" --with-sysroot=${GCC_SYSROOT}"
+			GCC_SYSROOT_FLAGS=" --with-sysroot=${GLIBC_SYSROOT}"
 		fi
 		### Create sccache_wrapper to work around an issue of not supporting correctly the
 		### -B parameter. It is not able to find the local cc1 executable running xgcc
@@ -300,9 +300,9 @@ function setup_gcc () {
 				CFLAGS="${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}" \
 				CXXFLAGS="${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_LINKERFLAGS}" \
 				LDFLAGS="${LINKERFLAGS}" \
-				CFLAGS_FOR_TARGET="${GCC_SYSROOT_CCLDFLAGS}${COMPFLAGS} ${OPTCOMP_FLAGS}" \
-				CXXFLAGS_FOR_TARGET="${GCC_SYSROOT_CCLDFLAGS}${COMPFLAGS} ${OPTCOMP_FLAGS}" \
-				LDFLAGS_FOR_TARGET="${GCC_SYSROOT_CCLDFLAGS}${LINKERFLAGS} ${OPTLINK_FLAGS}" \
+				CFLAGS_FOR_TARGET="${COMPFLAGS} ${OPTCOMP_FLAGS}" \
+				CXXFLAGS_FOR_TARGET="${COMPFLAGS} ${OPTCOMP_FLAGS}" \
+				LDFLAGS_FOR_TARGET="${LINKERFLAGS} ${OPTLINK_FLAGS}" \
 				${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure \
 					${CONFIG_ARCH_PARAMS} ${GCC_SYSROOT_FLAGS} ${PLATFORM_ARCHFLAGS} \
 					${BINUTILS_CONFIG} ${GCC_CONFIG} \
@@ -311,7 +311,7 @@ function setup_gcc () {
 					host_configargs="${host_configargs}" \
 					target_configargs="${target_configargs}"'
 		run_cmd 'popd'
-		if [ -n "${GCC_SYSROOT}" ]
+		if [ -n "${GLIBC_SYSROOT}" ]
 		then
 			run_cmd 'mkdir -p ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${HARCH}/libgcc'
 			echo "### Create a symlink that allows libgcc to be built with posix threads support"
@@ -334,10 +334,10 @@ function setup_gcc () {
 		echo "### Finalize the installation of the limits.h header"
 		run_cmd '${TOOLCHAIN_PATH}/libexec/gcc/${HARCH}/${GCC_MAJVER}/install-tools/mkheaders'
 
-		if [ ! -d ${GCC_SYSROOT}${BUILD_PREFIX}/lib ] && [[ "${BUILD_LIBSUFFIX}" == 64* ]]
+		if [ ! -d ${GLIBC_SYSROOT}${BUILD_PREFIX}/lib ] && [[ "${BUILD_LIBSUFFIX}" == 64* ]]
 		then
-			echo "### Workaround for ${GCC_SYSROOT}${BUILD_PREFIX}/lib/../lib64"
-			run_cmd 'mkdir -pv "${GCC_SYSROOT}${BUILD_PREFIX}/lib"'
+			echo "### Workaround for ${GLIBC_SYSROOT}${BUILD_PREFIX}/lib/../lib64"
+			run_cmd 'mkdir -pv "${GLIBC_SYSROOT}${BUILD_PREFIX}/lib"'
 		fi
 		trap ERR
 	}
@@ -377,7 +377,7 @@ function setup_gcc () {
 			echo "### Installing in the toolchain dir"
 			run_cmd 'make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} install-strip-target-${object}'
 			###  Create package if it is not bootstrapping
-			if [ -n "${GCC_SYSROOT}" ]
+			if [ -n "${GLIBC_SYSROOT}" ]
 			then
 				echo "### Creating package for ${object}"
 				if [ -d ${PACKAGES_PATH}/gcc-libs-${GCC_VER} ]
@@ -448,18 +448,15 @@ function setup_gcc () {
 		echo -n "${ECHO_BOOTSTRAP}building host binaries... "
 		gcc_make_host ${HARCH} >> ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log 2>&1
 		### Check if bootstrap sysroot before building target libraries
-		if [ -n "${GCC_SYSROOT}" ]
+		if [ -z "${GLIBC_SYSROOT}" ]
 		then
-			echo -n "building target libraries... "
-			gcc_make_target_libs > ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log 2>&1
-		else
 			### Bootstrapping sysroot
 			echo "done."
 			echo "Bootstrapping foundation libraries in ${BIN_PATH}... "
 			local SPACES="   "
 			echo -n "${SPACES}"
 			echo -n "building bootstrap libgcc... "
-			run_cmd 'GCC_TARGETS="libgcc" GCC_INSTALL_TARGETS=0 gcc_make_target_libs' > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}target-gcclibs-${GCC_VER}.log
+			GCC_TARGETS="libgcc" GCC_INSTALL_TARGETS=0 gcc_make_target_libs > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}target-gcclibs-${GCC_VER}.log
 			echo "done."
 			### Build & install kernel headers
 			echo -n "${SPACES}"
@@ -474,11 +471,45 @@ function setup_gcc () {
 			echo -n "Rebuild final gcc... "
 			gcc_buildenv >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 			echo -n "configuration... "
-			run_cmd 'gcc_configuration' >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
+			gcc_configuration >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 			echo -n "building for host... "
-			run_cmd 'gcc_make_host ${HARCH}' >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
+			gcc_make_host ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 			echo -n "building target libraries... "
-			run_cmd 'gcc_make_target_libs' >> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log
+			gcc_make_target_libs >> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log
+		fi
+	else
+		# If gcc and g++ are in toolchain but some target libraries are not
+		if [ ! -e ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/*/libgcc.a ] && \
+			[ ${GCC_INSTALL_TARGETS} == 1 ]
+		then
+			echo "exists in the toolchain but not all the foundation libraries are found."
+			gcc_buildenv > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log
+			echo "Building foundation libraries in ${BIN_PATH}... "
+			local SPACES="   "
+			if [ -z "${GLIBC_SYSROOT}" ]
+			then
+				### Build & install kernel headers
+				echo -n "${SPACES}"
+				NUMSPACES=1 KERNEL_HDRS_ONLY=1 build --no_gcc_check --no_save_status ${BS_KERNEL:-bootstrap/bs_kernel}
+				### Build & install glibc
+				echo -n "${SPACES}"
+				NUMSPACES=1 WITH_LIBXCRYPT=1 build --toolchain gnu --no_save_status bootstrap/bs_glibc			
+			fi
+			if [ ! -e ${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/libcrypt.so ] && [ "${GLIBC_SYSROOT}" != "${DISTOS_PATH}" ]
+			then
+				### Build & install libxcrypt
+				echo -n "${SPACES}"
+				NUMSPACES=1 build --toolchain gnu --no_save_status bootstrap/bs_libxcrypt
+			fi
+			if [ ! -d ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER} ] || [ ! -d ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
+			then
+				echo -n "downloading... "
+				gcc_download >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
+			fi
+			echo -n "configuration... "
+			gcc_configuration >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
+			echo -n "building target libraries... "
+			gcc_make_target_libs > ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log 2>&1
 		fi
 	fi
 
@@ -491,8 +522,8 @@ function setup_gcc () {
 		run_cmd 'rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}' >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 		run_cmd 'rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${BINUTILS_VER}' >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	fi
-	run_cmd 'setup_pkgconfig' >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
-	run_cmd 'setup_ldd' >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
+	setup_pkgconfig >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
+	setup_ldd >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	echo "done."
 
 	trap - ERR
@@ -807,8 +838,8 @@ function setup_llvm () {
 	then
 		run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}' >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 	fi
-	run_cmd 'setup_pkgconfig' >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
-	run_cmd 'setup_ldd' >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
+	setup_pkgconfig >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
+	setup_ldd >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 	echo "done."
 
 	trap ERR
