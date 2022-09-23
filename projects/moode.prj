@@ -81,7 +81,7 @@ build raspberrypi/raspi-config
 build raspberrypi/raspberrypi-sys-mods
 build raspberrypi/raspberrypi-net-mods
 build moode/alsa-utils_1.2
-build raspbian/iw_5.19-1
+build raspbian/iw_5.19
 build firmwares/wireless-regdb
 build raspbian/hostapd_2.9.0
 build raspbian/wpa_supplicant_2.9.0

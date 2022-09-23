@@ -220,6 +220,7 @@ function setup_gcc () {
 		local MPCURL=https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VER}.tar.gz
 		local ISLURL=https://libisl.sourceforge.io/isl-${ISL_VER}.tar.xz
 		local BINUTILSURL=https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz
+		#local BINUTILSURL=https://github.com/RTEMS/sourceware-mirror-binutils-gdb/archive/refs/tags/binutils-${BINUTILS_VER}.tar.gz
 		#local GCCURL=https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.xz
 		local GCCURL=https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz
 

@@ -6,4 +6,4 @@ BUILD_PROCESS=kernelmodbuild
 PKG_PREBUILD="sed -i 's/\$(MODDESTDIR)/\$(INSTALL_MOD_PATH)\$(MODDESTDIR)/g;s/^install:/modules_install:/;s#/sbin/depmod -a#/sbin/depmod -b \$(INSTALL_MOD_PATH) -a#g' Makefile
 	sed -i '/^modules_install/a\\\tmkdir -p \$(INSTALL_MOD_PATH)\$(MODDESTDIR)' Makefile
     sed -i 's/^extern __inline int is_broadcast_mac_addr/static inline int is_broadcast_mac_addr/' include/ieee80211.h"
-PKG_MAKEVARS="KSRC=\${PKG_KERNEL_BLDPATH} KVER=\${PKG_KERNEL_VERSION}"
+PKG_MAKEVARS="KSRC=${PKG_KERNEL_BLDPATH} KVER=${PKG_KERNEL_VERSION}"

@@ -879,7 +879,6 @@ function build () {(
 						local HOSTCXX=$(which clang++)
 						local HOSTAR=$(which llvm-ar)
 						local HOSTLD=$(which ld.lld)
-						#local LLVM_IAS="LLVM_IAS=1"
 					else
 						local HOSTCC=$(which gcc)
 						local HOSTCXX=$(which g++)
@@ -901,7 +900,7 @@ function build () {(
 							lld) echo $(which ld.lld);;
 						esac
 						)" \\
-					AS="${TOOLCHAIN_AS}" \\
+					AS="${TOOLCHAIN_CC}" \\
 					NM="${TOOLCHAIN_NM}" \\
 					AR="${TOOLCHAIN_AR}" \\
 					OBJCOPY="${TOOLCHAIN_OBJCOPY}" \\
@@ -916,7 +915,6 @@ function build () {(
 					HOSTCXX="${CCWRAPPER:+${CCWRAPPER} }${HOSTCXX}" \\
 					HOSTAR="${HOSTAR}" \\
 					HOSTLD="${HOSTLD}" \\
-					${LLVM_IAS} \\
 					EXTRAVERSION=${KERNEL_EXTRAVERSION} \\
 					LOCALVERSION=${KERNEL_LOCALVERSION} \\
 					${EXTRA_PARMS} ${PKG_MAKEVARS} \${@}
@@ -975,14 +973,17 @@ function build () {(
 
 		if [ ${PKG_TOOLCHAIN:-${TOOLCHAIN}} == llvm ]
 		then
-			echo "LTO type: ${KERNEL_LTOENABLE}"
-			case x${KERNEL_LTOENABLE} in
+			echo "LTO type: ${PKG_OVERRIDELTO:-${KERNEL_LTOENABLE:-0}}"
+			case ${PKG_OVERRIDELTO:-${KERNEL_LTOENABLE:-0}} in
+				x0)
+					run_cmd 'scripts/config -d LTO_CLANG -d LTO_CLANG_THIN'
+					;;
 				x1|xlto)
-					run_cmd 'scripts/config -d FTRACE -d KASAN -d GCOV_KERNEL'
+					run_cmd 'scripts/config -d FTRACE -d FTRACE_MCOUNT_USE_RECORDMCOUNT -d KASAN -d GCOV_KERNEL'
 					run_cmd 'scripts/config -e LTO_CLANG'
 					;;
 				x2|xthin)
-					run_cmd 'scripts/config -d FTRACE -d KASAN -d GCOV_KERNEL'
+					run_cmd 'scripts/config -d FTRACE -d FTRACE_MCOUNT_USE_RECORDMCOUNT -d KASAN -d GCOV_KERNEL'
 					run_cmd 'scripts/config -e LTO_CLANG_THIN'
 					;;
 			esac

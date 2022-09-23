@@ -1,12 +1,13 @@
-# iw_5.19-1
+# iw_5.19-3
+PKG_SUFFIX=-3
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/i/iw/iw_5.19.orig.tar.xz"
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/i/iw/iw_5.19-1.debian.tar.xz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/i/iw/iw_5.19${PKG_SUFFIX}.debian.tar.xz"
 PKG_CFLAGS='-DNETNS_RUN_DIR=\"/run/netns\"'
 PKG_LDFLAGS=
 
 BUILD_PROCESS=simplemake
 INST_CMD=install
-PKG_DEPS="raspbian/libnl3_3.7.0-0.2"
+PKG_DEPS="raspbian/libnl3_3.7.0"
 PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} SBINDIR=/sbin"
 
 # Note: Build-Depends: libnl-3-dev (>= 3.2.3-2~), libnl-genl-3-dev (>= 3.2.3-2~), pkg-config
