@@ -50,7 +50,7 @@ BUILD_PROCESS=configmake
 
 PKG_OVERRIDELTO=0
 PKG_TWOSTEPSBUILD=1
-CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}\${BUILD_INCLUDEDIR} --enable-kernel=4.4 --disable-werror \
+CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}\${BUILD_INCLUDEDIR} --disable-werror \
 	--disable-sanity-checks --enable-hacker-mode --enable-stackguard-randomization \
 	--enable-stack-protector=strong --enable-pt_chown"
 PKG_MAKEVARS="slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} rootsbindir=${BUILD_PREFIX}/sbin \
