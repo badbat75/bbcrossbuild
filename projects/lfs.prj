@@ -97,7 +97,7 @@ build lfs/usb-utils_014
 #build lfs/pciutils_5.7.0
 build lfs/lsof_4.95
 ### Network
-#build lfs/dhcp_4.4.3
+build lfs/dhcp_4.4.3
 build firmwares/wireless-regdb
 build lfs/wpa_supplicant_2.9.0
 build lfs/iw_5.9
