@@ -62,7 +62,7 @@ PKG_CXXFLAGS="-I${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/dbus-1.0/include
 case ${TOOLCHAIN} in
 	llvm) PKG_CFLAGS+=" -Wno-zero-length-array" 
 		PKG_CXXFLAGS+=" -Wno-c99-extensions -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-const-variable -Wno-macro-redefined \
-						-Wno-zero-length-array -Wno-deprecated-builtins -Wno-unused-but-set-variable -Wno-invalid-utf8"
+						-Wno-zero-length-array -Wno-deprecated-builtins -Wno-unused-but-set-variable -Wno-invalid-utf8 -Wno-reorder-ctor"
 						;;
 	gnu) PKG_CXXFLAGS+=" -Wno-shadow";;
 esac

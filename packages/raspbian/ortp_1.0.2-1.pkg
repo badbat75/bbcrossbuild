@@ -4,5 +4,9 @@ PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/o/ortp/ortp_1.0.2-1.deb
 PKG_DEPS="raspbian/bctoolbox_4.4.13-2"
 BUILD_PROCESS=configmake
 AUTOCONF=1
-[ ${TOOLCHAIN} = llvm ] && PKG_CFLAGS="-Wno-error=implicit-const-int-float-conversion"
+
+case ${TOOLCHAIN} in
+	llvm) PKG_CFLAGS+=" -Wno-error=strict-prototypes -Wno-error=implicit-const-int-float-conversion" ;;
+esac
+
 INST_CMD=install-strip

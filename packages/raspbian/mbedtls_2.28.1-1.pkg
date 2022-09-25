@@ -7,5 +7,9 @@ CONF_FLAGS="-DUSE_SHARED_MBEDTLS_LIBRARY=ON"
 PKG_CFLAGS="-Wno-error=unreachable-code"
 INST_CMD=install/strip
 
+case ${TOOLCHAIN} in
+	llvm) PKG_CFLAGS+=" -Wno-error=documentation -Wno-error=unused-but-set-variable" ;;
+esac
+
 # Note:
 # Dependencies: cmake, doxygen, python
