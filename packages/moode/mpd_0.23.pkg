@@ -34,15 +34,10 @@ PKG_DEPS="moode/boost_1 \
 	raspbian/libid3tag_0.15.1b-14 \
 	raspbian/libpcre++_0.9.5-6 \
 	raspbian/libsoxr_0.1.3-1 \
-	raspbian/liburing_2.1-2 \
+	raspbian/liburing_2.2-2 \
 	raspbian/zziplib_0.13.72+dfsg.1-1.1 \
 	moode/libwavpack_5.4.0 \
 	moode/moode-pkgbuild_8"
-
-# Disabled by moode
-#PKG_DEPS+=" moode/libsndfile_1.0.31 \
-#	raspbian/libmms_0.6.4-3 \
-#	raspbian/libsndfile_1.0.27"
 
 PKG_PREBUILD="patch -p1 < ${SRC_PATH}/moode-pkgbuild_8/packages/mpd/mpd_0.23.xx_selective_resample_mode.patch
 	cat <<EOF | patch -p1
@@ -64,7 +59,13 @@ Forwarded: not-needed
  # systemd.service(5).  This is disabled by default because it causes
 EOF"
 PKG_CXXFLAGS="-I${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/dbus-1.0/include"
-PKG_CXXFLAGS+=" -Wno-shadow"
+case ${TOOLCHAIN} in
+	llvm) PKG_CFLAGS+=" -Wno-zero-length-array" 
+		PKG_CXXFLAGS+=" -Wno-c99-extensions -Wno-gnu-anonymous-struct -Wno-nested-anon-types -Wno-unused-const-variable -Wno-macro-redefined \
+						-Wno-zero-length-array -Wno-deprecated-builtins -Wno-unused-but-set-variable -Wno-invalid-utf8"
+						;;
+	gnu) PKG_CXXFLAGS+=" -Wno-shadow";;
+esac
 INST_CMD=install
 PKG_POSTBUILD="
 mkdir -p ${PKG_PKGPATH}{/etc/default,/var/lib/mpd/{music,playlists},/var/log/mpd,/run/mpd}

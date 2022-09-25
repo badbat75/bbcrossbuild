@@ -9,4 +9,7 @@ PKG_PREBUILD="mkdir -p build-scripts
     touch NEWS README doc/html/doxygen.png"
 PKG_COPYSRC=1
 
-[ ${TOOLCHAIN} == llvm ] && PKG_CFLAGS="-Wno-gnu-include-next"
+case ${TOOLCHAIN} in
+    llvm) PKG_CFLAGS+=" -Wno-gnu-include-next -Wno-implicit-function-declaration -Wno-unused-but-set-variable \
+        -Wno-deprecated-non-prototype -Wno-strict-prototypes" ;;
+esac

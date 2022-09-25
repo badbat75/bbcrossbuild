@@ -1,6 +1,6 @@
-# liburing_2.1-2
-PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libu/liburing/liburing_2.1.orig.tar.gz"
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libu/liburing/liburing_2.1-2.debian.tar.xz"
+# liburing_2.2-2
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libu/liburing/liburing_2.2.orig.tar.gz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libu/liburing/liburing_2.2-2.debian.tar.xz"
 PKG_COPYSRC=1
 BUILD_PROCESS=configmake
 STD_CONF_FLAGS=0

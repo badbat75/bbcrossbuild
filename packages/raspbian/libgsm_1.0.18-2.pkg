@@ -19,3 +19,7 @@ PKG_PREBUILD="
     "
 PKG_POSTBUILD="
     cp -Pv lib/libgsm.so* ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
+
+case ${TOOLCHAIN} in
+    llvm) PKG_CFLAGS+=" -Wno-int-conversion -Wno-implicit-function-declaration" ;;
+esac
