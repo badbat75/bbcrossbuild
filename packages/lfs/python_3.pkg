@@ -1,7 +1,7 @@
 # python_3
 PYTHON_VER=${PYTHON_VER:-3.10.6}
 PKG_URL="https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PYTHON_VER}.tar.xz"
-PKG_DEPS="lfs/ncurses_6.3+p20220820 lfs/zlib_1.2.12 lfs/zlib_1.2.12 lfs/bzip2_1.0.8 lfs/expat_2.4.8 lfs/libffi_3.3 lfs/gdbm_1.23 lfs/readline_8.2 lfs/openssl_3.0.5"
+PKG_DEPS="lfs/ncurses_6 lfs/zlib_1.2.12 lfs/zlib_1.2.12 lfs/bzip2_1.0.8 lfs/expat_2.4.8 lfs/libffi_3.3 lfs/gdbm_1.23 lfs/readline_8.2 lfs/openssl_3.0.5"
 BUILD_PROCESS=configmake
 PKG_TWOSTEPSBUILD=1
 CONF_FLAGS="--with-platlibdir=lib --with-system-expat --with-system-ffi --enable-ipv6 --with-ensurepip=yes"

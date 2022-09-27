@@ -1,6 +1,6 @@
 # bash_5.1+p16
 PKG_URL="https://git.savannah.gnu.org/cgit/bash.git/snapshot/bash-9439ce094c9aa7557a9d53ac7b412a23aa66e36b.tar.gz"
-PKG_DEPS="lfs/ncurses_6.3+p20220820 lfs/readline_8.2"
+PKG_DEPS="lfs/ncurses_6 lfs/readline_8.2"
 
 BUILD_PROCESS=configmake
 #PKG_OVERRIDELTO=0
@@ -13,21 +13,7 @@ case ${TOOLCHAIN} in
         ;;
 esac
 
-PKG_PREBUILD="cat <<EOF | patch -s -p1 || true
---- a/configure      2021-02-04 11:30:29.730000000 +0100
-+++ b/configure   2021-02-04 11:21:13.000000000 +0100
-@@ -20266,6 +20266,9 @@
- elif test \\\$bash_cv_termcap_lib = libncurses; then
- TERMCAP_LIB=-lncurses
- TERMCAP_DEP=
-+elif test \\\$bash_cv_termcap_lib = libncursesw; then
-+TERMCAP_LIB=-lncursesw
-+TERMCAP_DEP=
- elif test \\\$bash_cv_termcap_lib = libc; then
- TERMCAP_LIB=
- TERMCAP_DEP=
-EOF
-sed -i 's/(INSTALL_PROGRAM) -s/(INSTALL_PROGRAM) --strip-program=\\\${STRIP} -s/' Makefile.in"
+PKG_PREBUILD="sed -i 's/(INSTALL_PROGRAM) -s/(INSTALL_PROGRAM) --strip-program=\\\${STRIP} -s/' Makefile.in"
 
 PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}${BUILD_SYSCONFDIR} ${PKG_PKGPATH}/root
 ln -sfv bash ${PKG_PKGPATH}${BUILD_PREFIX}/bin/sh

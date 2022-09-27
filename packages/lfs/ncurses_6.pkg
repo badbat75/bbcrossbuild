@@ -1,5 +1,6 @@
-# ncurses_6.3+p20220820
-PKG_URL="https://github.com/mirror/ncurses/archive/00351a08b43e8b1c62e2c2d79b62ddca8531cfba.tar.gz"
+# ncurses_6
+PKG_SUFFIX=.3+p20220924
+PKG_URL="https://github.com/mirror/ncurses/archive/b5d80765d2da2bcc9d9f71cafd081ad4453cd365.tar.gz"
 #GIT_URL="https://github.com/mirror/ncurses.git"
 #GIT_COMMIT=
 
@@ -14,3 +15,4 @@ then
 fi
 INST_CMD="install"
 PKG_PREBUILD="sed -i '/INSTALL_OPT_S=\"-s\"/ s/-s/--strip-program \${STRIP} -s/' configure"
+PKG_POSTBUILD="echo \"INPUT(-lncursesw)\" > ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libncurses.so"

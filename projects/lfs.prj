@@ -50,7 +50,7 @@ build lfs/shadow_4.12.3
 build lfs/sed_4.8
 build lfs/psmisc_23.5
 build lfs/grep_3.6
-build lfs/ncurses_6.3+p20220820
+build lfs/ncurses_6
 build lfs/bash_5.1+p16
 build lfs/gdbm_1.23
 build lfs/expat_2.4.8
@@ -99,7 +99,8 @@ build lfs/lsof_4.95
 ### Network
 build lfs/dhcp_4.4.3
 build firmwares/wireless-regdb
-build lfs/wpa_supplicant_2.9.0
+build lfs/wpa_supplicant_2
+build lfs/hostapd_2
 build lfs/iw_5.9
 build lfs/wireless-tools_29
 build lfs/bind_9.19.4

@@ -1,0 +1,5 @@
+# wpa_2
+PKG_SUFFIX=".10"
+PKG_URL="https://w1.fi/cgit/hostap/snapshot/hostap_2$(echo ${PKG_SUFFIX} | sed 's/./_/').tar.gz"
+BUILD_PROCESS=downloadonly
+

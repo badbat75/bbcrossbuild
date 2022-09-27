@@ -1,19 +1,17 @@
 # vim_9.0.0228
 PKG_URL="https://anduin.linuxfromscratch.org/LFS/vim-9.0.0228.tar.gz"
-PKG_DEPS="lfs/ncurses_6.3+p20220820 lfs/elfutils_0.187"
+PKG_DEPS="lfs/ncurses_6 lfs/elfutils_0.187"
 BUILD_PROCESS=configmake
 
 PKG_COPYSRC=1
-CONF_FLAGS="--with-tlib=ncursesw --disable-option-checking"
-CONF_VARS="vim_cv_toupper_broken=no vim_cv_terminfo=no vim_cv_tgetent=zero vim_cv_getcwd_broken=no \
-	vim_cv_stat_ignores_slash=no vim_cv_memmove_handles_overlap=no vim_cv_bcopy_handles_overlap=no \
-	vim_cv_memcpy_handles_overlap=no"
+CONF_FLAGS="--with-tlib=ncursesw --with-features=huge --disable-option-checking"
+CONF_VARS="vim_cv_toupper_broken=no vim_cv_terminfo=yes vim_cv_tgetent=non-zero vim_cv_getcwd_broken=no \
+	vim_cv_timer_create=yes vim_cv_stat_ignores_slash=no vim_cv_timer_create=yes \
+	vim_cv_memmove_handles_overlap=yes vim_cv_bcopy_handles_overlap=yes vim_cv_memcpy_handles_overlap=yes"
 INST_CMD="install"
 
 PKG_PREBUILD="sed -i 's/ln -s/ln -fsv/g' src/Makefile
 	echo '#define SYS_VIMRC_FILE \"/etc/vimrc\"' >> src/feature.h
-	sed -i 's/ncurses curses/ncurses ncursesw curses/' src/auto/configure
-	sed -i 's/ncurses termlib/ncurses ncursesw termlib/' src/auto/configure"
 PKG_POSTBUILD="
 	mkdir -pv ${PKG_PKGPATH}${BUILD_SYSCONFDIR}
 	ln -sfv vim ${PKG_PKGPATH}${BUILD_PREFIX}/bin/vi

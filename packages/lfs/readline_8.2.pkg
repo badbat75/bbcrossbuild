@@ -1,9 +1,11 @@
 # readline_8.2
-PKG_URL="https://ftp.gnu.org/gnu/readline/readline-8.2-rc2.tar.gz"
-PKG_DEPS="lfs/ncurses_6.3+p20220820"
+PKG_URL="https://ftp.gnu.org/gnu/readline/readline-8.2.tar.gz"
+PKG_DEPS="lfs/ncurses_6"
 #PATCHES=
 
 BUILD_PROCESS=configmake
-CONF_FLAGS="--disable-option-checking --with-curses"
+CONF_FLAGS="--disable-option-checking --with-curses --docdir=/usr/share/doc/readline-8.2.0"
 PKG_MAKEVARS="SHLIB_LIBS=-lncursesw"
 INST_CMD="install"
+
+PKG_POSTBUILD="install -v -m644 \${PKG_SRCPATH}/doc/*.{ps,pdf,html,dvi} ${PKG_PKGPATH}/usr/share/doc/readline-8.2.0"

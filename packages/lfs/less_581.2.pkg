@@ -1,6 +1,6 @@
 # less_581.2
 PKG_URL="http://www.greenwoodsoftware.com/less/less-581.2.tar.gz"
-PKG_DEPS="lfs/ncurses_6.3+p20220820"
+PKG_DEPS="lfs/ncurses_6"
 BUILD_PROCESS=configmake
 INST_CMD="install-strip"
 
