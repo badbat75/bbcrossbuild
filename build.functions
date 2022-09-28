@@ -980,14 +980,14 @@ function build () {(
 		then
 			echo "LTO type: ${PKG_OVERRIDELTO:-${KERNEL_LTOENABLE:-0}}"
 			case ${PKG_OVERRIDELTO:-${KERNEL_LTOENABLE:-0}} in
-				x0)
+				0)
 					run_cmd 'scripts/config -d LTO_CLANG -d LTO_CLANG_THIN'
 					;;
-				x1|xlto)
+				1|lto)
 					run_cmd 'scripts/config -d FTRACE -d FTRACE_MCOUNT_USE_RECORDMCOUNT -d KASAN -d GCOV_KERNEL'
 					run_cmd 'scripts/config -e LTO_CLANG'
 					;;
-				x2|xthin)
+				2|thin)
 					run_cmd 'scripts/config -d FTRACE -d FTRACE_MCOUNT_USE_RECORDMCOUNT -d KASAN -d GCOV_KERNEL'
 					run_cmd 'scripts/config -e LTO_CLANG_THIN'
 					;;
