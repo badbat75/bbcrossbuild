@@ -31,7 +31,7 @@ PKG_PREBUILD="sed -i 's| \$(ICUPKGDATA_DIR)| \$(DESTDIR)/\$(ICUPKGDATA_DIR)|g' s
             CC=\"${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc\" \
             CXX=\"${CCWRAPPER:+${CCWRAPPER} }${BARCH}-g++\" \
             CFLAGS=\"-march=native -O3\" \
-            CXXFLAGS=\"-march=native -O3\" \
+            CPPFLAGS=\"-march=native -O3\" \
             LDFLAGS=\"-fuse-ld=gold\" \
             PKG_CONFIG_LIBDIR=\"\" \
                \${PKG_SRCPATH}/source/configure --disable-extras --disable-tests --disable-samples

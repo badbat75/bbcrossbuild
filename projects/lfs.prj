@@ -13,8 +13,8 @@ TOOLCHAIN=gnu
 #MPFR_VER=4.1.0
 #MPC_VER=1.2.1
 #ISL_VER=0.24
-BS_KERNEL_VER=5.19.11
-#BS_GLIBC_VER=2.35
+#BS_KERNEL_VER=6.0
+#BS_GLIBC_VER=2.36
 #BS_LIBXCRYPT_VER=4.4.28
 
 
@@ -28,8 +28,7 @@ build lfs/create-base-config_1.0
 build raspberrypi/rpi-firmware_1
 build firmwares/linux-firmware
 build firmwares/broadcom-bt-firmware-master
-#build raspberrypi/rpi-kernel_$( echo ${BS_KERNEL_VER} | cut -d'.' -f1,2 )
-build raspberrypi/rpi-kernel_6.0
+build raspberrypi/rpi-kernel_$( echo ${BS_KERNEL_VER} | cut -d'.' -f1,2 )
 build lfs/glibc
 build lfs/tzdata_2022c
 build lfs/man-pages_5.13
