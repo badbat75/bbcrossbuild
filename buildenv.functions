@@ -403,8 +403,11 @@ function setup_gcc () {
 		if [ ${GCC_IS_MAIN} -eq 1 ]
 		then
 			echo "### Linking GCC target libraries in ${BUILD_PREFIX}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} from ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}"
-			find ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH} -type f,l \( -name "*.so*" -a ! -name "*.so*.py" -o -name "*.a*" -o -name "*.la*" \) | xargs -r -I{} bash -c \
-				"run_cmd 'ln -fsv \$(realpath --relative-to=${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} {}) ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/\$(basename {})'"
+			if [ -d ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH} ]
+			then
+				find ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH} -type f,l \( -name "*.so*" -a ! -name "*.so*.py" -o -name "*.a*" -o -name "*.la*" \) | xargs -r -I{} bash -c \
+					"run_cmd 'ln -fsv \$(realpath --relative-to=${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} {}) ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/\$(basename {})'"
+			fi
 		fi
 
 		echo "### Adapting .la libraries to ${BIN_PATH}${BIN_PREFIX}"
