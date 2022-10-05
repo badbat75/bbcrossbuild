@@ -241,7 +241,7 @@ function settcenv () {
 			then
 				TOOLCHAIN_CXX=$(which ${HARCH}-g++)
 			fi
-			TOOLCHAIN_CPP=$(which ${HARCH}-cpp)
+			TOOLCHAIN_CPP="$(which ${HARCH}-gcc) -E"
 			if ${HARCH}-gfortran --version > /dev/null 2>&1
 			then
 				TOOLCHAIN_FC=$(which ${HARCH}-gfortran)
@@ -272,20 +272,21 @@ function settcenv () {
 			then
 				TOOLCHAIN_BUILD_CXX=$(which ${BARCH}-g++)
 			fi
-			TOOLCHAIN_BUILD_CPP=$(which ${BARCH}-cpp)
+			TOOLCHAIN_BUILD_CPP="$(which ${BARCH}-gcc) -E"
 			if ${BARCH}-gfortran --version > /dev/null 2>&1
 			then
 				TOOLCHAIN_BUILD_FC=$(which ${BARCH}-gfortran)
 				TOOLCHAIN_BUILD_F90=$(which ${BARCH}-gfortran)
 			fi
-			TOOLCHAIN_BUILD_AR=$(which ${BARCH}-gcc-ar)
-			TOOLCHAIN_BUILD_AS=$(which ${BARCH}-as)
-			TOOLCHAIN_BUILD_NM=$(which ${BARCH}-gcc-nm)
-			TOOLCHAIN_BUILD_RANLIB=$(which ${BARCH}-gcc-ranlib)
-			TOOLCHAIN_BUILD_STRIP=$(which ${BARCH}-strip)
-			TOOLCHAIN_BUILD_OBJCOPY=$(which ${BARCH}-objcopy)
-			TOOLCHAIN_BUILD_OBJDUMP=$(which ${BARCH}-objdump)
-			TOOLCHAIN_BUILD_READELF=$(which ${BARCH}-readelf)
+			### To implement to check wheter ${BARCH}-gcc* exists
+			TOOLCHAIN_BUILD_AR=$(which gcc-ar)
+			TOOLCHAIN_BUILD_AS=$(which as)
+			TOOLCHAIN_BUILD_NM=$(which gcc-nm)
+			TOOLCHAIN_BUILD_RANLIB=$(which gcc-ranlib)
+			TOOLCHAIN_BUILD_STRIP=$(which strip)
+			TOOLCHAIN_BUILD_OBJCOPY=$(which objcopy)
+			TOOLCHAIN_BUILD_OBJDUMP=$(which objdump)
+			TOOLCHAIN_BUILD_READELF=$(which readelf)
 			TOOLCHAIN_BUILD_LD=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
 			TOOLCHAIN_BUILD_LINKERFLAGS="-fuse-ld=${TOOLCHAIN_BUILD_LD}"
 
@@ -387,36 +388,30 @@ function create_environment_source () {
 
 		export BUILD_CC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_BUILD_CC}'
 		export BUILD_CFLAGS='-march=native -O3'
-
 	EOF
 	if [ ! -z "${TOOLCHAIN_BUILD_CXX}" ]
 	then
 		cat <<-EOF >> environment.source
 			export BUILD_CXX='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_BUILD_CXX}'
 			export BUILD_CXXFLAGS='-march=native -O3'
-
 		EOF
 	fi
 	cat <<-EOF >> environment.source
 		export BUILD_CPP='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_BUILD_CPP}'
 		export BUILD_CPPFLAGS='-march=native -O3'
-
 	EOF
 	if [ ! -z "${TOOLCHAIN_BUILD_FC}" ]
 	then
 		cat <<-EOF >> environment.source
 			export BUILD_FC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_BUILD_FC}'
 			export BUILD_FFLAGS='-march=native -O3'
-
 			export BUILD_F90='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_BUILD_F90}'
 			export BUILD_F90FLAGS='-march=native -O3'
-
 		EOF
 	fi
 	cat <<-EOF >> environment.source
 		#export BUILD_LD='${TOOLCHAIN_BUILD_LD}'
 		export BUILD_LDFLAGS='${TOOLCHAIN_BUILD_LINKERFLAGS}'
-
 		export BUILD_AR='${TOOLCHAIN_BUILD_AR}'
 		export BUILD_AS='${TOOLCHAIN_BUILD_AS}'
 		export BUILD_NM='${TOOLCHAIN_BUILD_NM}'
@@ -426,32 +421,29 @@ function create_environment_source () {
 		export BUILD_OBJDUMP='${TOOLCHAIN_BUILD_OBJDUMP}'
 		export BUILD_READELF='${TOOLCHAIN_BUILD_READELF}'
 
+	EOF
+	cat <<-EOF >> environment.source
 		export CC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 		export CFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}'
-
 	EOF
 	if [ ! -z "${TOOLCHAIN_CXX}" ]
 	then
 		cat <<-EOF >> environment.source
 			export CXX='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 			export CXXFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}'
-
 		EOF
 	fi
 	cat <<-EOF >> environment.source
 		export CPP='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CPP}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 		export CPPFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CPPFLAGS} ${PLATFORM_CFLAGS} ${PKG_CPPFLAGS}'
-
 	EOF
 	if [ ! -z "${TOOLCHAIN_FC}" ]
 	then
 		cat <<-EOF >> environment.source
 			export FC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_FC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 			export FFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
-
 			export F90='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_F90}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 			export F90FLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
-
 		EOF
 	fi
 	cat <<-EOF >> environment.source
@@ -467,6 +459,9 @@ function create_environment_source () {
 		export OBJDUMP='${TOOLCHAIN_OBJDUMP}'
 		export READELF='${TOOLCHAIN_READELF}'
 
+	EOF
+
+	cat <<-EOF >> environment.source
 		export PKG_CONFIG='${HARCH}-pkg-config'
 		export PKG_CONFIG_LIBDIR='${COMMON_PKG_CONFIG_LIBDIR}'
 		export PKG_CONFIG_SYSROOT_DIR='${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}'
@@ -479,6 +474,8 @@ function create_environment_source () {
 		export RUSTUP_HOME='${RUSTUP_HOME}'
 
 		export QEMU_LD_PREFIX='${SYSROOT}'
+
+		export ENVIRONMENT_SOURCE_PATH='${PWD}'
 	EOF
 	if [ "$(basename ${CCWRAPPER:-nope})" == "sccache" ]
 	then

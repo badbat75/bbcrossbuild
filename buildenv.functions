@@ -528,6 +528,7 @@ function setup_gcc () {
 	fi
 	setup_pkgconfig >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	setup_ldd >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
+	setup_toolchain_wrapper >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	echo "done."
 
 	trap - ERR
@@ -844,6 +845,7 @@ function setup_llvm () {
 	fi
 	setup_pkgconfig >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 	setup_ldd >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
+	setup_toolchain_wrapper >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	echo "done."
 
 	trap ERR
@@ -1186,6 +1188,29 @@ function setup_ldd () {
 			chmod +x ${TOOLCHAIN_PATH}/bin/ldd
 		fi
 	fi
+}
+
+function setup_toolchain_wrapper () {
+	if [ ! -d ${TOOLCHAIN_PATH}/bin ]
+	then
+		mkdir ${TOOLCHAIN_PATH}/bin
+	fi
+	for tool in cc cxx cpp fc f90 ar as nm ranlib strip objcopy objdump readelf
+	do
+	cat <<-EOF > ${TOOLCHAIN_PATH}/bin/toolchain_wrapper
+		#!/bin/sh -e
+		(
+			source \${ENVIRONMENT_SOURCE_PATH}/environment.source
+			CMD_NAME=\$(basename \${0})
+			TOOL=\$(echo \${CMD_NAME^^} | cut -d'_' -f2,3)
+			eval echo \\\${\${TOOL}} '\${@}' >> \${CMD_NAME}.log
+			eval \\\${\${TOOL}} '\${@}'
+		)
+	EOF
+	chmod -v +x ${TOOLCHAIN_PATH}/bin/toolchain_wrapper
+		ln -sfv toolchain_wrapper ${TOOLCHAIN_PATH}/bin/toolchain_build_${tool}
+		ln -sfv toolchain_wrapper ${TOOLCHAIN_PATH}/bin/toolchain_${tool}
+	done
 }
 
 export MAKEFLAGS="-j${NPROCS} ${MAKEFLAGS:+ ${MAKEFLAGS}}"

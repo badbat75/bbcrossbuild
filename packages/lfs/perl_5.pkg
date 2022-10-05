@@ -16,39 +16,16 @@ PKG_POSTBUILD="
 	[ -d ${SRC_PATH}/perl ] && cp -frpv ${SRC_PATH}/perl/* . || true
 	echo OPTCOMP_FLAGS: \${OPTCOMP_FLAGS}
 	echo OPTLINK_FLAGS: \${OPTLINK_FLAGS}
-	cat >host-cc_wrapper <<-EOF
-		#!/bin/sh
-		\${BUILD_CC} \\\${@}
-	EOF
-	cat >host-cpp_wrapper <<-EOF
-		#!/bin/sh
-		\${BUILD_CPP} \\\${@}
-	EOF
-	cat >host-ranlib_wrapper <<-EOF
-		#!/bin/sh
-		\${BUILD_RANLIB} \\\${@}
-	EOF
-	cat >cc_wrapper <<-EOF
-		#!/bin/sh
-		\${CC} \\\${@}
-	EOF
-	cat >cpp_wrapper <<-EOF
-		#!/bin/sh
-		\${CPP} \\\${@}
-	EOF
-	cat >ranlib_wrapper <<-EOF
-		#!/bin/sh
-		\${RANLIB} \\\${@}
-	EOF
-	chmod -v +x host-cc_wrapper host-cpp_wrapper host-ranlib_wrapper cc_wrapper cpp_wrapper ranlib_wrapper
+	create_environment_source
+	source environment.source
 	\${PKG_SRCPATH}/configure \
 		--prefix=/usr --target=${HARCH} --sysroot=${BIN_PATH} \
-		--host-cc=\${PWD}/host-cc_wrapper \
-		--host-cpp=\${PWD}/host-cpp_wrapper \
-		--host-ranlib=\${PWD}/host-ranlib_wrapper \
-		--with-cc=\${PWD}/cc_wrapper \
-		--with-cpp=\${PWD}/cpp_wrapper \
-		--with-ranlib=\${PWD}/ranlib_wrapper \
+		--host-cc=${TOOLCHAIN_PATH}/bin/toolchain_build_cc \
+		--host-cpp=${TOOLCHAIN_PATH}/bin/toolchain_build_cxx \
+		--host-ranlib=${TOOLCHAIN_PATH}/bin/toolchain_build_ranlib \
+		--with-cc=${TOOLCHAIN_PATH}/bin/toolchain_cc \
+		--with-cpp=${TOOLCHAIN_PATH}/bin/toolchain_cpp \
+		--with-ranlib=${TOOLCHAIN_PATH}/bin/toolchain_ranlib \
 		-Dccflags=\"\${PLATFORM_CFLAGS}\"\ \
 		-Doptimize=\"\${OPTCOMP_FLAGS}\" \
 		-Dldflags=\"\${OPTLINK_FLAGS}\" \
