@@ -13,8 +13,8 @@ CONF_FLAGS="--with-randomdev= \
     --with-srv6-lease-file=/var/lib/dhcpd/dhcpd6.leases \
     --with-cli-lease-file=/var/lib/dhclient/dhclient.leases \
     --with-cli6-lease-file=/var/lib/dhclient/dhclient6.leases"
-CONF_VARS="BUILD_CC='${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc'"
-PKG_MAKEVARS="-j1 AR='${HARCH}-gcc-ar'"
+CONF_VARS="BUILD_CC=\"\${BUILD_CC}\""
+PKG_MAKEVARS="-j1 AR=\"\${BUILD_AR}\""
 INST_CMD="-C client install-strip"
 PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/sbin ${PKG_PKGPATH}/var/lib/dhclient
     install -v -m755 \${PKG_SRCPATH}/client/scripts/linux ${PKG_PKGPATH}/sbin/dhclient-script

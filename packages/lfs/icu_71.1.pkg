@@ -30,13 +30,13 @@ PKG_PREBUILD="sed -i 's| \$(ICUPKGDATA_DIR)| \$(DESTDIR)/\$(ICUPKGDATA_DIR)|g' s
             #unset LD_LIBRARY_PATH
 			create_environment_source
 			source environment.source
-            CC=\"\${HOST_CC}\" \
-            CXX=\"\${HOST_CXX}\" \
-            CPP=\"\${HOST_CPP}\" \
-            CFLAGS=\"\${HOST_CFLAGS}\" \
-            CXXFLAGS=\"\${HOST_CXXFLAGS}\" \
-            CPPFLAGS=\"\${HOST_CPPFLAGS}\" \
-            LDFLAGS=\"\${HOST_LDFLAGS}\" \
+            CC=\"\${BUILD_CC}\" \
+            CXX=\"\${BUILD_CXX}\" \
+            CPP=\"\${BUILD_CPP}\" \
+            CFLAGS=\"\${BUILD_CFLAGS}\" \
+            CXXFLAGS=\"\${BUILD_CXXFLAGS}\" \
+            CPPFLAGS=\"\${BUILD_CPPFLAGS}\" \
+            LDFLAGS=\"\${BUILD_LDFLAGS}\" \
             PKG_CONFIG_LIBDIR=\"\" \
                \${PKG_SRCPATH}/source/configure --disable-extras --disable-tests --disable-samples
             make

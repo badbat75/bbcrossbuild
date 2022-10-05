@@ -18,15 +18,15 @@ PKG_POSTBUILD="
 	echo OPTLINK_FLAGS: \${OPTLINK_FLAGS}
 	cat >host-cc_wrapper <<-EOF
 		#!/bin/sh
-		\${HOST_CC} \\\${@}
+		\${BUILD_CC} \\\${@}
 	EOF
 	cat >host-cpp_wrapper <<-EOF
 		#!/bin/sh
-		\${HOST_CPP} \\\${@}
+		\${BUILD_CPP} \\\${@}
 	EOF
 	cat >host-ranlib_wrapper <<-EOF
 		#!/bin/sh
-		\${HOST_RANLIB} \\\${@}
+		\${BUILD_RANLIB} \\\${@}
 	EOF
 	cat >cc_wrapper <<-EOF
 		#!/bin/sh
