@@ -27,12 +27,16 @@ PKG_PREBUILD="sed -i 's| \$(ICUPKGDATA_DIR)| \$(DESTDIR)/\$(ICUPKGDATA_DIR)|g' s
         (
             mkdir -pv \${PKG_BLDPATH}/host_build
             pushd \${PKG_BLDPATH}/host_build
-            unset LD_LIBRARY_PATH
-            CC=\"${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc\" \
-            CXX=\"${CCWRAPPER:+${CCWRAPPER} }${BARCH}-g++\" \
-            CFLAGS=\"-march=native -O3\" \
-            CPPFLAGS=\"-march=native -O3\" \
-            LDFLAGS=\"-fuse-ld=gold\" \
+            #unset LD_LIBRARY_PATH
+			create_environment_source
+			source environment.source
+            CC=\"\${HOST_CC}\" \
+            CXX=\"\${HOST_CXX}\" \
+            CPP=\"\${HOST_CPP}\" \
+            CFLAGS=\"\${HOST_CFLAGS}\" \
+            CXXFLAGS=\"\${HOST_CXXFLAGS}\" \
+            CPPFLAGS=\"\${HOST_CPPFLAGS}\" \
+            LDFLAGS=\"\${HOST_LDFLAGS}\" \
             PKG_CONFIG_LIBDIR=\"\" \
                \${PKG_SRCPATH}/source/configure --disable-extras --disable-tests --disable-samples
             make

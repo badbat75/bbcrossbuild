@@ -202,11 +202,25 @@ function settcenv () {
 		TOOLCHAIN_OBJDUMP \
 		TOOLCHAIN_READELF \
 		TOOLCHAIN_LD \
+		TOOLCHAIN_HOST_CC \
+		TOOLCHAIN_HOST_CXX \
+		TOOLCHAIN_HOST_CPP \
+		TOOLCHAIN_HOST_FC \
+		TOOLCHAIN_HOST_F90 \
+		TOOLCHAIN_HOST_AR \
+		TOOLCHAIN_HOST_AS \
+		TOOLCHAIN_HOST_NM \
+		TOOLCHAIN_HOST_RANLIB \
+		TOOLCHAIN_HOST_STRIP \
+		TOOLCHAIN_HOST_OBJCOPY \
+		TOOLCHAIN_HOST_OBJDUMP \
+		TOOLCHAIN_HOST_READELF \
+		TOOLCHAIN_HOST_LD \
 		TOOLCHAIN_LINKERFLAGS \
 		TOOLCHAIN_COMPFLAGS \
 		TOOLCHAIN_EXTRA_C_CMD \
 		OPTCOMP_FLAGS \
-		OPTLINK_FLAGS
+		OPTLINK_FLAGS \
 
 	local TOOLCHAIN=${PKG_TOOLCHAIN:-${TOOLCHAIN}}
 	echo Toolchain: ${TOOLCHAIN}
@@ -252,12 +266,36 @@ function settcenv () {
 				TOOLCHAIN_EXTRA_C_CMD=""
 			fi
 			TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LD} ${GNU_EXTRALDFLAGS}"
+
+			TOOLCHAIN_HOST_CC=$(which ${BARCH}-gcc)
+			if ${BARCH}-g++ --version > /dev/null 2>&1
+			then
+				TOOLCHAIN_HOST_CXX=$(which ${BARCH}-g++)
+			fi
+			TOOLCHAIN_HOST_CPP=$(which ${BARCH}-cpp)
+			if ${BARCH}-gfortran --version > /dev/null 2>&1
+			then
+				TOOLCHAIN_HOST_FC=$(which ${BARCH}-gfortran)
+				TOOLCHAIN_HOST_F90=$(which ${BARCH}-gfortran)
+			fi
+			TOOLCHAIN_HOST_AR=$(which ${BARCH}-gcc-ar)
+			TOOLCHAIN_HOST_AS=$(which ${BARCH}-as)
+			TOOLCHAIN_HOST_NM=$(which ${BARCH}-gcc-nm)
+			TOOLCHAIN_HOST_RANLIB=$(which ${BARCH}-gcc-ranlib)
+			TOOLCHAIN_HOST_STRIP=$(which ${BARCH}-strip)
+			TOOLCHAIN_HOST_OBJCOPY=$(which ${BARCH}-objcopy)
+			TOOLCHAIN_HOST_OBJDUMP=$(which ${BARCH}-objdump)
+			TOOLCHAIN_HOST_READELF=$(which ${BARCH}-readelf)
+			TOOLCHAIN_HOST_LD=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
+			TOOLCHAIN_HOST_LINKERFLAGS="-fuse-ld=${TOOLCHAIN_HOST_LD}"
+
 			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 				1|2|fat|thin)
 					OPTCOMP_FLAGS+=" -flto=${NPROCS}"
 					OPTLINK_FLAGS+=" -fuse-linker-plugin"
 					;;
 			esac
+
 			;;
 		llvm)
 			TOOLCHAIN_CC=$(which clang)
@@ -286,6 +324,26 @@ function settcenv () {
 				TOOLCHAIN_EXTRA_C_CMD="--target=${HARCH}"
 			fi
 			TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LD} -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
+
+			TOOLCHAIN_HOST_CC=$(which clang)
+			TOOLCHAIN_HOST_CXX=$(which clang++)
+			TOOLCHAIN_HOST_CPP="$(which clang) -E"
+			if flang --version > /dev/null 2>&1
+			then
+				TOOLCHAIN_HOST_FC=$(which flang)
+				TOOLCHAIN_HOST_F90=$(which flang)
+			fi
+			TOOLCHAIN_HOST_AR=$(which llvm-ar)
+			TOOLCHAIN_HOST_AS=$(which llvm-as)
+			TOOLCHAIN_HOST_NM=$(which llvm-nm)
+			TOOLCHAIN_HOST_RANLIB=$(which llvm-ranlib)
+			TOOLCHAIN_HOST_STRIP=$(which llvm-strip)
+			TOOLCHAIN_HOST_OBJCOPY=$(which llvm-objcopy)
+			TOOLCHAIN_HOST_OBJDUMP=$(which llvm-objdump)
+			TOOLCHAIN_HOST_READELF=$(which llvm-readelf)
+			TOOLCHAIN_HOST_LD=${PKG_OVERRIDELD:-${LLVM_DEFAULT_LD:-lld}}
+			TOOLCHAIN_HOST_LINKERFLAGS="-fuse-ld=${TOOLCHAIN_LD} -Wl,--threads=${NPROCS}"
+
 			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 				1|fat)
 					TOOLCHAIN_COMPFLAGS+=" -flto=full"
@@ -294,14 +352,17 @@ function settcenv () {
 					TOOLCHAIN_COMPFLAGS+=" -flto=thin"
 					;;
 			esac
+
 			;;
 	esac
 	case ${TOOLCHAIN_LD} in
 		gold)
 			TOOLCHAIN_LINKERFLAGS+=" -fuse-linker-plugin -Wl,--threads -Wl,--thread-count,${NPROCS}"
+			TOOLCHAIN_HOST_LINKERFLAGS+=" -fuse-linker-plugin -Wl,--threads -Wl,--thread-count,${NPROCS}"
 			;;
 		lld)
 			TOOLCHAIN_LINKERFLAGS+=" -Wl,--thinlto-jobs=${NPROCS}"
+			TOOLCHAIN_HOST_LINKERFLAGS+=" -Wl,--thinlto-jobs=${NPROCS}"
 			;;
 	esac
 			
@@ -323,6 +384,47 @@ function create_environment_source () {
 		### PKG_SRCDIR=${PKG_SRCDIR}
 		### PKG_BLDDIR=${PKG_BLDDIR}
 		#################################################################################
+
+		export HOST_CC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_HOST_CC}'
+		export HOST_CFLAGS='-march=native -O3'
+
+	EOF
+	if [ ! -z "${TOOLCHAIN_HOST_CXX}" ]
+	then
+		cat <<-EOF >> environment.source
+			export HOST_CXX='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_HOST_CXX}'
+			export HOST_CXXFLAGS='-march=native -O3'
+
+		EOF
+	fi
+	cat <<-EOF >> environment.source
+		export HOST_CPP='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_HOST_CPP}'
+		export HOST_CPPFLAGS='-march=native -O3'
+
+	EOF
+	if [ ! -z "${TOOLCHAIN_HOST_FC}" ]
+	then
+		cat <<-EOF >> environment.source
+			export HOST_FC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_HOST_FC}'
+			export HOST_FFLAGS='-march=native -O3'
+
+			export HOST_F90='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_HOST_F90}'
+			export HOST_F90FLAGS='-march=native -O3'
+
+		EOF
+	fi
+	cat <<-EOF >> environment.source
+		#export HOST_LD='${TOOLCHAIN_HOST_LD}'
+		export HOST_LDFLAGS='${TOOLCHAIN_HOST_LINKERFLAGS}'
+
+		export HOST_AR='${TOOLCHAIN_HOST_AR}'
+		export HOST_AS='${TOOLCHAIN_HOST_AS}'
+		export HOST_NM='${TOOLCHAIN_HOST_NM}'
+		export HOST_RANLIB='${TOOLCHAIN_HOST_RANLIB}'
+		export HOST_STRIP='${TOOLCHAIN_HOST_STRIP}'
+		export HOST_OBJCOPY='${TOOLCHAIN_HOST_OBJCOPY}'
+		export HOST_OBJDUMP='${TOOLCHAIN_HOST_OBJDUMP}'
+		export HOST_READELF='${TOOLCHAIN_HOST_READELF}'
 
 		export CC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 		export CFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}'

@@ -8,23 +8,48 @@ PKG_PERLCROSS_VER=f842531ca3198ac30dddfd36f881b947cbffebdd
 PKG_URL="https://www.cpan.org/src/5.0/perl-5${PKG_SUFFIX}.tar.xz"
 PKG_DEPS="lfs/gdbm_1.23 lfs/expat_2.4.8"
 BUILD_PROCESS=downloadonly
-#PKG_MAKEVARS="-j1"
 PKG_COPYSRC=1
+PKG_FAULTYCFLAGS=1
 PKG_PREBUILD="NODELETEDESTDIR=1 download_uncompress https://github.com/arsv/perl-cross/archive/${PKG_PERLCROSS_VER}.tar.gz \${PKG_SRCPATH}"
 PKG_POSTBUILD="
 	set -x
 	[ -d ${SRC_PATH}/perl ] && cp -frpv ${SRC_PATH}/perl/* . || true
 	echo OPTCOMP_FLAGS: \${OPTCOMP_FLAGS}
 	echo OPTLINK_FLAGS: \${OPTLINK_FLAGS}
+	cat >host-cc_wrapper <<-EOF
+		#!/bin/sh
+		\${HOST_CC} \\\${@}
+	EOF
+	cat >host-cpp_wrapper <<-EOF
+		#!/bin/sh
+		\${HOST_CPP} \\\${@}
+	EOF
+	cat >host-ranlib_wrapper <<-EOF
+		#!/bin/sh
+		\${HOST_RANLIB} \\\${@}
+	EOF
+	cat >cc_wrapper <<-EOF
+		#!/bin/sh
+		\${CC} \\\${@}
+	EOF
+	cat >cpp_wrapper <<-EOF
+		#!/bin/sh
+		\${CPP} \\\${@}
+	EOF
+	cat >ranlib_wrapper <<-EOF
+		#!/bin/sh
+		\${RANLIB} \\\${@}
+	EOF
+	chmod -v +x host-cc_wrapper host-cpp_wrapper host-ranlib_wrapper cc_wrapper cpp_wrapper ranlib_wrapper
 	\${PKG_SRCPATH}/configure \
 		--prefix=/usr --target=${HARCH} --sysroot=${BIN_PATH} \
-		--host-cc=${BARCH}-gcc \
-		--host-cpp=${BARCH}-cpp \
-		--host-ranlib=${BARCH}-gcc-ranlib \
-		--with-cc='${CCWRAPPER:+${CCWRAPPER} }${HARCH}-gcc' \
-		--with-cpp='${CCWRAPPER:+${CCWRAPPER} }${HARCH}-cpp' \
-		--with-ranlib=${HARCH}-gcc-ranlib \
-		-Dccflags='${PLATFORM_CFLAGS}' \
+		--host-cc=\${PWD}/host-cc_wrapper \
+		--host-cpp=\${PWD}/host-cpp_wrapper \
+		--host-ranlib=\${PWD}/host-ranlib_wrapper \
+		--with-cc=\${PWD}/cc_wrapper \
+		--with-cpp=\${PWD}/cpp_wrapper \
+		--with-ranlib=\${PWD}/ranlib_wrapper \
+		-Dccflags=\"\${PLATFORM_CFLAGS}\"\ \
 		-Doptimize=\"\${OPTCOMP_FLAGS}\" \
 		-Dldflags=\"\${OPTLINK_FLAGS}\" \
 		-Dpager='${BUILD_PREFIX}/bin/less -isR' \
