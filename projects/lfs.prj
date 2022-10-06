@@ -106,6 +106,7 @@ build lfs/bind_9.19.4
 build lfs/curl_7.84.0
 ### Development
 build lfs/strace_5.19
+build lfs/gdb_12
 
 ### Final configurations ###
 case x${PLATFORM_NAME} in

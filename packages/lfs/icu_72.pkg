@@ -1,0 +1,42 @@
+# icu_72
+PKG_SUFFIX=-rc
+PKG_URL="https://github.com/unicode-org/icu/archive/refs/tags/release-72${PKG_SUFFIX}.tar.gz"
+BUILD_PROCESS=configmake
+AUTOCONF=1
+AUTOCONF_PATH="icu4c/source"
+CONF_CMD="icu4c/source/configure"
+CONF_FLAGS="--enable-icu-config --disable-tests --disable-samples --with-data-packaging=files --with-cross-build=$(eval echo ${PKG_BLDPATH}/host_build)"
+CONF_VARS="ac_cv_c_bigendian=no"
+PKG_CPPFLAGS="-DICU_DATA_DIR=\\\"/usr/share/icu/72.1\\\""
+INST_CMD="install"
+#PATCHDEB=""
+PKG_PREBUILD="sed -i 's| \$(ICUPKGDATA_DIR)| \$(DESTDIR)/\$(ICUPKGDATA_DIR)|g' icu4c/source/data/Makefile.in
+    sed -i 's|\$(CURR_TREE)|curr|' icu4c/source/data/Makefile.in
+    sed -i 's|\$(LANG_TREE)|lang|' icu4c/source/data/Makefile.in
+    sed -i 's|\$(REGION_TREE)|region|' icu4c/source/data/Makefile.in
+    sed -i 's|\$(ZONE_TREE)|zone|' icu4c/source/data/Makefile.in
+    sed -i 's|\$(UNIT_TREE)|unit|' icu4c/source/data/Makefile.in
+    sed -i 's|\$(BREAK_TREE)|brkitr|' icu4c/source/data/Makefile.in
+    sed -i 's|\$(COLLATION_TREE)|coll|' icu4c/source/data/Makefile.in
+    sed -i 's|\$(RBNF_TREE)|rbnf|' icu4c/source/data/Makefile.in
+    sed -i 's|\$(TRANSLIT_TREE)|translit|' icu4c/source/data/Makefile.in
+    if [ ! -d host_build ]; then
+        (
+            mkdir -pv \${PKG_BLDPATH}/host_build
+            pushd \${PKG_BLDPATH}/host_build
+            #unset LD_LIBRARY_PATH
+			create_environment_source
+			source environment.source
+            CC=\"\${BUILD_CC}\" \
+            CXX=\"\${BUILD_CXX}\" \
+            CPP=\"\${BUILD_CPP}\" \
+            CFLAGS=\"\${BUILD_CFLAGS}\" \
+            CXXFLAGS=\"\${BUILD_CXXFLAGS}\" \
+            CPPFLAGS=\"\${BUILD_CPPFLAGS}\" \
+            LDFLAGS=\"\${BUILD_LDFLAGS}\" \
+            PKG_CONFIG_LIBDIR=\"\" \
+               \${PKG_SRCPATH}/icu4c/source/configure --disable-extras --disable-tests --disable-samples
+            make
+        )
+    fi"
+PKG_POSTBUILD=""
