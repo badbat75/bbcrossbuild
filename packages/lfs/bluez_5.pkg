@@ -1,13 +1,20 @@
 # bluez_5
 PKG_SUFFIX=.65
 PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-5${PKG_SUFFIX}.tar.xz"
-PKG_DEPS="lfs/readline_8.2 lfs/glib_2.73 lfs/libical_3.0.14 lfs/ell_0.52"
+PKG_DEPS="lfs/readline_8.2 lfs/glib_2.73 lfs/libical_3.0.14 lfs/ell_0.52 lfs/json-c_0"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--with-dbusconfdir=${BUILD_SYSCONFDIR} \
 	--with-dbussystembusdir=${BUILD_PREFIX}/share/dbus-1/system-services \
 	--with-dbussessionbusdir=${BUILD_PREFIX}/share/dbus-1/services \
 	--with-udevdir=${BUILD_LIBDIR}/udev \
-	--enable-library --enable-deprecated --enable-tools --enable-threads --enable-backtrace --enable-nfc --enable-sap --enable-monitor --enable-udev --enable-obex --enable-client --enable-systemd --enable-sixaxis --enable-health --enable-hid2hci --enable-experimental --enable-external-ell"
+	--enable-library --enable-pie --enable-deprecated --enable-tools --enable-threads --enable-backtrace --enable-nfc --enable-sap --enable-monitor --enable-udev \
+  --enable-obex --enable-client --enable-systemd --enable-sixaxis --enable-health --enable-mesh --enable-hid2hci --enable-experimental \
+  --enable-btpclient --enable-external-ell"
+if [ ${ENABLE_MIDI:-0} -eq 1]
+then
+  PKG_DEPS+=" lfs/alsa-lib_1.2"
+  CONF_FLAGS+=" --enable-midi"
+fi
 INST_CMD="install-strip"
 #PATCHDEB=""
 # Moode directory location search for bluetoothd and obexd

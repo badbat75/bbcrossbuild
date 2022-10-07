@@ -50,7 +50,7 @@ build lfs/sed_4.8
 build lfs/psmisc_23.5
 build lfs/grep_3.6
 build lfs/ncurses_6
-build lfs/bash_5.1+p16
+build lfs/bash_5
 build lfs/gdbm_1.23
 build lfs/expat_2.4.8
 build lfs/inetutils_2.3
@@ -89,6 +89,8 @@ build lfs/dosfstools_4.2
 build lfs/sudo_1.9
 build lfs/net-tools_2.10
 build lfs/openssh_9.0p1
+### Multimedia
+build lfs/alsa-utils_1.2
 ### System Utilities
 build raspberrypi/pi-bluetooth_0
 build lfs/bluez_5
