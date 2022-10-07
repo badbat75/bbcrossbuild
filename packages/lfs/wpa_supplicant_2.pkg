@@ -13,7 +13,8 @@ case ${TOOLCHAIN} in
 	llvm) ;;
 esac
 
-PKG_PREBUILD="cat > wpa_supplicant/.config <<-EOF
+PKG_PREBUILD="sed -i 's/sys-subsystem-net-devices-%i/sys-class-net-%I/g' wpa_supplicant/systemd/*
+	cat > wpa_supplicant/.config <<-EOF
 		CONFIG_DRIVER_WEXT=y
 		CONFIG_DRIVER_NL80211=y
 		CONFIG_DRIVER_NL80211_QCA=y
