@@ -1,6 +1,6 @@
 # curl_7.84.0
 PKG_URL="https://curl.haxx.se/download/curl-7.84.0.tar.xz"
-PKG_DEPS="lfs/openssl_3.0.5 lfs/make-ca_1.7"
+PKG_DEPS="lfs/openssl_3.0.5 lfs/make-ca_1"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-threaded-resolver --with-openssl --with-ca-path=${BUILD_SYSCONFDIR}/ssl/certs"
 INST_CMD="install-strip"

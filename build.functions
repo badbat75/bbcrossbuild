@@ -367,6 +367,12 @@ function settcenv () {
 			;;
 	esac
 			
+	if [ ${PKG_DEBUG:-${DEBUG:-0}} -eq 1 ]
+	then
+		OPTLEVEL=2
+		OPTCOMP_FLAGS+="-g"
+	fi
+	
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 }
 
@@ -644,7 +650,7 @@ function build () {(
 			echo; \
 			trap - ERR; \
 			return ${STATUS}' ERR
-		env | grep "^BUILD_"
+
 		if [ ${AUTOCONF:-0} -eq 1 ]
 		then
 			IFS=,
@@ -1541,15 +1547,6 @@ function build () {(
 	eval local PKG_PKGPATH=${PKG_PKGPATH}
 	
 	echo "Package ${PKG_NAME}"
-
-	if [ ${DEBUG:-0} -gt 0 ]
-	then
-		echo
-		echo "PKG_SRCPATH: ${PKG_SRCPATH}"
-		echo "PKG_BLDPATH: ${PKG_BLDPATH}"
-		echo "PKG_PKGPATH: ${PKG_PKGPATH}"
-		echo
-	fi
 
 	for deps in ${PKG_DEPS}
 	do

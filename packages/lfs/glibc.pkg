@@ -41,8 +41,26 @@ case ${BS_GLIBC_VER} in
 			https://sourceware.org/git?p=glibc.git;a=patch;h=a7fa604f3050a1024dc8ec28ff28bad811f6151f \
 			https://sourceware.org/git?p=glibc.git;a=patch;h=5d885617cec5713fdde42177398fe98acb66b7a2 \
 			https://sourceware.org/git?p=glibc.git;a=patch;h=df51334828f2af214105aad82042140ee3a6de0a \
-			https://sourceware.org/git?p=glibc.git;a=patch;h=4b95b6e8bbb5a2b6856f707bf3bc3308ebef595a"
-			# elf: Fix hwcaps string size overestimation
+			https://sourceware.org/git?p=glibc.git;a=patch;h=4b95b6e8bbb5a2b6856f707bf3bc3308ebef595a \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=7a3f8c8a7aeb41d4bbfeec07d0be1e92c3019919 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=d1241cf00139733de069c84933cd576dc1a1f45e \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=da5f134f6d59701a3a6119309ae91c93c3fa5b51 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=52c037f3574eb9062b111d78a4cbeb79681d07d3 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=2628500f5dff1dd99c49a09b418b3b1ea3a6b5d3 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=227c9035872fc9e9e2cf56ec8f89219747ee19bc \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=76e05613ee28f4ac4a0ab97effc32e0e78e37a56 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=d1d8379bff34f02f86f82db2cef5bf66746d3560 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=cdc496eb55e30f8f2461bedb0a7381c0a7a3d3ae \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=18bec23cbb4d530a2a8ce95353770661fabcd55f \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=46479e5d10ed87825aa277da158d6a687974518b \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=7afbd1e56acb721031bffd876f275dcb1af7e530 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=29c577e0f54fe6e70ceacb3659179781c5569903 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=d8bf4388df679fa5a3ae7889a649e573e3124530 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=d9196d4f3fa9997388655813ddd236426a16dd92 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=923c3f3c373f499e62160e00831dda576443317b \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=2d8ef784bd6a784496a6fd460de6b6f57c70a501"
+		;;
+	2.35)
 		;;
 esac
 PATCHES+="http://www.linuxfromscratch.org/patches/lfs/development/glibc-${BS_GLIBC_VER}-fhs-1.patch"

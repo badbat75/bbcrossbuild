@@ -2,6 +2,7 @@
 PKG_URL="https://github.com/shadow-maint/shadow/releases/download/4.12.3/shadow-4.12.3.tar.xz"
 #PKG_DEPS="lfs/cracklib_2.9.7"
 BUILD_PROCESS=configmake
+AUTOCONF=1
 CONF_FLAGS="--with-group-name-max-length=32"
 INST_CMD="install-strip"
 

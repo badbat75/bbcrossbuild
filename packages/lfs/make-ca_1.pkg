@@ -1,5 +1,6 @@
-# make-ca_1.7
-PKG_URL="https://github.com/djlucas/make-ca/releases/download/v1.7/make-ca-1.7.tar.xz"
+# make-ca_1
+PKG_SUFFIX=.8.1
+PKG_URL="https://github.com/djlucas/make-ca/archive/refs/tags/v1${PKG_SUFFIX}.tar.gz"
 PKG_DEPS="lfs/p11-kit_0.24.1"
 BUILD_PROCESS=simplemake
 PKG_TWOSTEPSBUILD=0

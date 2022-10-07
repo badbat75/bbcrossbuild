@@ -2,8 +2,8 @@
 PKG_SUFFIX=.1
 PKG_URL="http://ftp.gnu.org/gnu/gdb/gdb-12${PKG_SUFFIX}.tar.xz"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--with-system-zlib"
-#--with-system-readline --with-python=\$(which python3)
+CONF_FLAGS="--with-sysroot=/ --with-system-zlib --with-system-readline"
+# --with-python=\$(which python3)
 INST_CMD="install"
 local AUTOCONF_VER="$(autoconf -V | head -n1 | awk '{print $4}')"
 PKG_PREBUILD="sed -i '/^  [m4_define(\[_GCC_AUTOCONF_VERSION\]/ s/2.69/${AUTOCONF_VER}/' config/override.m4
@@ -12,6 +12,7 @@ PKG_PREBUILD="sed -i '/^  [m4_define(\[_GCC_AUTOCONF_VERSION\]/ s/2.69/${AUTOCON
     sed -i '/^COMMON_OBJS/ s/common_libcommon_a-/libcommon_a-/' sim/common/Make-common.in
     sed -i '/^AC_CONFIG_MACRO_DIR/d' libctf/configure.ac
     sed -i '/^AC_CONFIG_SRCDIR/a AC_CONFIG_MACRO_DIRS([.. ../config ../bfd])' libctf/configure.ac
+    sed -i '/return/s/rl.*characters/(char *) &/' gdb/completer.c
     rm -fv ltmain.sh
     autoreconf -fiv libbacktrace gnulib bfd opcodes sim libctf ."
 

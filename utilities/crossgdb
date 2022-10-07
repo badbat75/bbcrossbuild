@@ -1,0 +1,37 @@
+#!/bin/sh
+DBG_ARCH=${DBG_ARCH:-aarch64}
+DBG_PORT=${DBG_PORT:-10101}
+DBG_EXEC=${1}
+SYSROOT=${2}
+
+if [ -z ${DBG_EXEC} ] || [ -z ${SYSROOT} ]
+then
+	echo "Usage:"
+	echo
+	echo "$(basename ${0}) <chroot_cmd> <sysroot_path>"
+	echo
+	exit 1
+fi
+
+export QEMU_LD_PREFIX=${SYSROOT}
+
+echo "Command to debug: ${DBG_EXEC}"
+echo "System root: ${SYSROOT}"
+echo "Target architecture: ${DBG_ARCH}"
+echo
+echo -n "Running command in debug mode..."
+nohup qemu-${DBG_ARCH}-static -g ${DBG_PORT} ${SYSROOT}${DBG_EXEC} &
+echo " ok."
+
+cat >/tmp/batch.gdb <<-EOF
+	set debuginfod enabled on
+	set architecture ${DBG_ARCH}
+	set sysroot ${SYSROOT}
+	exec-file ${SYSROOT}${DBG_EXEC}
+	target remote :${DBG_PORT}
+	continue
+	backtrace
+	quit
+EOF
+gdb --batch --command=/tmp/batch.gdb
+rm nohup.out /tmp/batch.gdb
