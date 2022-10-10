@@ -73,8 +73,13 @@ MPFR_VER=${MPFR_VER:-4.1.0}
 MPC_VER=${MPC_VER:-1.2.1}
 ISL_VER=${ISL_VER:-0.25}
 
-### LLVN version
+### LLVM version
 LLVM_VER=${LLVM_VER:-15.0.2}
+
+### Auto tools versions
+AUTOCONF_VER=${AUTOCONF_VER:-2.71}
+AUTOMAKE_VER=${AUTOMAKE_VER:-1.16.5}
+LIBTOOL_VER=${LIBTOOL_VER:-2.4.7}
 
 ### Bootstrap libraries and headers versions
 BS_KERNEL_VER=${BS_KERNEL_VER:-6.0}

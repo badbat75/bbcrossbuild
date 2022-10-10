@@ -946,16 +946,9 @@ function setup_autotools () {
 			trap ERR; \
 			return ${STATUS};' ERR
 
-		case ${AUTOCONF_VER} in
-			2.69)
-				### Commit for 2.69e
-				local AUTOCONF_COMMIT=d7b0636850624927a41dc801748d40c38513f0ab
-				;;
-		esac
-		local AUTOCONF_URL="http://git.savannah.gnu.org/gitweb/?p=autoconf.git;a=snapshot;h=${AUTOCONF_COMMIT};sf=tgz"
+		local AUTOCONF_URL="https://ftp.gnu.org/gnu/autoconf/autoconf-${AUTOCONF_VER}.tar.gz"
 		local AUTOMAKE_URL="https://ftp.gnu.org/gnu/automake/automake-${AUTOMAKE_VER}.tar.gz"
 		local LIBTOOL_URL="https://ftp.gnu.org/gnu/libtool/libtool-${LIBTOOL_VER}.tar.gz"
-		set -x
 		download_uncompress "${AUTOCONF_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}
 		echo ${AUTOCONF_VER} > ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}/.tarball-version
 		if [ ! -z ${AUTOMAKE_VER} ]
@@ -966,7 +959,6 @@ function setup_autotools () {
 		then
 			download_uncompress "${LIBTOOL_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}
 		fi
-		set +x
 		trap ERR
 	}
 
@@ -983,19 +975,22 @@ function setup_autotools () {
 		trap - ERR; \
 		return ${STATUS}' ERR
 
-	local AUTOCONF_VER=${1}
-	local AUTOMAKE_VER=${2}
-	local LIBTOOL_VER=${3}
+	OPTS="--default" OPTS_WITH_VALUE="" param2value "${@}"
+	[ ${_param_v:-0} -eq 1 ] && set -x || true
+
+	local AUTOCONF_VER=${_param_1:-${AUTOCONF_VER}}
+	local AUTOMAKE_VER=${_param_2:-${AUTOMAKE_VER}}
+	local LIBTOOL_VER=${_param_3:-${LIBTOOL_VER}}
 
 	AUTOTOOLS_PATH=${GLOBAL_TOOLCHAIN_PATH}/autotools-${AUTOCONF_VER}${AUTOMAKE_VER:+-${AUTOMAKE_VER}}${LIBTOOL_VER:+-${LIBTOOL_VER}}
 
 	echo -n "Setting up autoconf-${AUTOCONF_VER}... "
-	if ! ${AUTOTOOLS_PATH}/bin/autoconf -V 2>&1 ||
-		! ${AUTOTOOLS_PATH}/bin/automake --version 2>&1 ||
-		! ${AUTOTOOLS_PATH}/bin/libtoolize --version 2>&1
+	if ! ${AUTOTOOLS_PATH}/bin/autoconf -V > ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log 2>&1 ||
+		! ${AUTOTOOLS_PATH}/bin/automake --version > ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log 2>&1 ||
+		! ${AUTOTOOLS_PATH}/bin/libtoolize --version > ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log 2>&1
 	then
 		#### Download all auto tools
-		download_autotools > ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log 2>&1
+		download_autotools
 		#### Build autoconf
 		pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER} >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log 2>&1
 		run_cmd "autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
@@ -1023,10 +1018,11 @@ function setup_autotools () {
 		if [ ! -z ${LIBTOOL_VER} ]
 		then
 			echo -n "Setting up libtool-${LIBTOOL_VER}... "
-			pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER} > ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log 2>&1
-			run_cmd "sed -i '/^      -64|-mips\[0-9\]/ i## BBXB change ##' libltdl/config/ltmain.sh"
-			run_cmd "sed -i '/^      -64|-mips\[0-9\]/,/*)\$/d' libltdl/config/ltmain.sh"
-			run_cmd "sed -i '/^## BBXB change ##/a\\       -64|-mips[0-9]|-r[0-9][0-9]*|-xarch=*|-xtarget=*|+DA*|+DD*|-q*|-m*|-t[45]*|-txscale*|-p|-pg|--coverage|-fprofile-*|-F*|@*|-tp=*|--sysroot=*-O*|-g*|-flto*|-fwhopr*|-fuse-linker-plugin|-fstack-protector*|-stdlib=*|-specs=*|-fsanitize=*|-fuse-ld=*|-Wa,*|--target=*|-B*)' libltdl/config/ltmain.sh"
+			pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER} >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log 2>&1
+			local FILETOPATCH="$(find -name ltmain.sh)"
+			run_cmd "sed -i '/^      -64|-mips\[0-9\]/ i## BBXB change ##' ${FILETOPATCH}"
+			run_cmd "sed -i '/^      -64|-mips\[0-9\]/,/*)\$/d' ${FILETOPATCH}"
+			run_cmd "sed -i '/^## BBXB change ##/a\\       -64|-mips[0-9]|-r[0-9][0-9]*|-xarch=*|-xtarget=*|+DA*|+DD*|-q*|-m*|-t[45]*|-txscale*|-p|-pg|--coverage|-fprofile-*|-F*|@*|-tp=*|--sysroot=*-O*|-g*|-flto*|-fwhopr*|-fuse-linker-plugin|-fstack-protector*|-stdlib=*|-specs=*|-fsanitize=*|-fuse-ld=*|-Wa,*|--target=*|-B*)' ${FILETOPATCH}"
 			#run_cmd "AUTOCONF=${AUTOTOOLS_PATH}/bin/autoconf ${AUTOTOOLS_PATH}/bin/autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
 			popd >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log 2>&1
 			if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER} ]
@@ -1061,7 +1057,7 @@ function setup_autotools () {
 		if [ ! -z ${AUTOMAKE_VER} ]
 		then
 			echo -n "Setting up automake-${AUTOMAKE_VER}... "
-			pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER} > ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log 2>&1
+			pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER} >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log 2>&1
 			run_cmd "AUTOCONF=${AUTOTOOLS_PATH}/bin/autoconf LIBTOOLIZE=${AUTOTOOLS_PATH}/bin/libtoolize ${AUTOTOOLS_PATH}/bin/autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
 			popd >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log 2>&1
 			if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER} ]
@@ -1094,6 +1090,11 @@ function setup_autotools () {
 		echo "done."
 	else
 		echo "already there."
+	fi
+	if [ ${_param_default:-0} -eq 1 ]
+	then
+		pathadd PATH "${AUTOTOOLS_PATH}/bin"
+		pathadd LD_LIBRARY_PATH "${AUTOTOOLS_PATH}/lib"
 	fi
 	trap ERR
 }

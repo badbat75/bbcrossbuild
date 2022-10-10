@@ -7,22 +7,13 @@ LTOENABLE=thin
 KERNEL_LTOENABLE=thin
 
 TOOLCHAIN=llvm
-#GCC_VER=12.2
-#BINUTILS_VER=2.38
-#GMP_VER=6.2.1
-#MPFR_VER=4.1.0
-#MPC_VER=1.2.1
-#ISL_VER=0.24
-#BS_KERNEL_VER=6.0
-#BS_GLIBC_VER=2.36
-#BS_LIBXCRYPT_VER=4.4.28
-
 
 build --no_save_status lfs/create-base-fs_1.0
 
 setup_sccache
 setup_gcc --install --main_gcc
 setup_llvm
+setup_autotools --default
 
 build lfs/create-base-config_1.0
 build raspberrypi/rpi-firmware_1

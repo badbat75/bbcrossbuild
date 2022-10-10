@@ -24,4 +24,4 @@ esac
 AUTOCONF_PATH=".,bfd,opcodes,libctf,binutils,gas,gold,gprof,gprofng,ld"
 
 PKG_PREBUILD="sed -i '/^AC_CONFIG_MACRO_DIR/d' libctf/configure.ac
-    sed -i '/^AC_CONFIG_SRCDIR/a AC_CONFIG_MACRO_DIRS([.. ../config ../bfd])' libctf/configure.ac
+    sed -i '/^AC_CONFIG_SRCDIR/a AC_CONFIG_MACRO_DIRS([.. ../config ../bfd])' libctf/configure.ac"
