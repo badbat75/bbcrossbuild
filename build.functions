@@ -671,7 +671,7 @@ function build () {(
 						local AUTOCONF_CMD="LIBTOOLIZE=${AUTOTOOLS_PATH}/bin/libtoolize "
 					fi
 					local AUTOCONF_CMD+="${AUTOTOOLS_PATH}/bin/autoreconf"					
-					[ -d ${AUTOTOOLS_PATH}/share/autoconf ] && local ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/aclocal"
+					[ -d ${AUTOTOOLS_PATH}/share/autoconf ] && local ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/aclocal --include=${AUTOTOOLS_PATH}/share/aclocal-${AUTOMAKE_VER}"
 				;;
 			esac
 			IFS=,
