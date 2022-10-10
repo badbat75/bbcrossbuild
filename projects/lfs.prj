@@ -20,7 +20,6 @@ build raspberrypi/rpi-firmware_1
 build firmwares/linux-firmware
 #build firmwares/broadcom-bt-firmware-master
 build raspberrypi/rpi-kernel_$( echo ${BS_KERNEL_VER} | cut -d'.' -f1,2 )
-build lfs/binutils
 build lfs/glibc
 build lfs/tzdata_2022c
 build lfs/man-pages_5.13
@@ -99,6 +98,7 @@ build lfs/wireless-tools_29
 build lfs/bind_9.19.4
 build lfs/curl_7.84.0
 ### Development
+build lfs/binutils
 build lfs/strace_5.19
 build lfs/gdb_12
 
