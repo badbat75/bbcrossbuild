@@ -231,7 +231,7 @@ function setup_gcc () {
 		run_cmd 'download_uncompress ${MPCURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpc'
 		run_cmd 'download_uncompress ${ISLURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/isl'
 		run_cmd 'pushd ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}'
-		find ../binutils-${BINUTILS_VER} -maxdepth 1 -type d -exec bash -c 'run_cmd "ln -fs {} ."' \;
+		find ../binutils-${BINUTILS_VER} -maxdepth 1 -type d ! -path ../binutils-${BINUTILS_VER} -exec bash -c 'run_cmd "ln -fs {} ."' \;
 		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 9 && test_version ${BINUTILS_VER} -ge 2.33
 		then
 			echo "### GCC version older than 10 and BINUTILS 2.33 or earlier... "
