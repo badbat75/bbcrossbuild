@@ -1,0 +1,27 @@
+# binutils
+PKG_SUFFIX=_${BINUTILS_VER}
+PKG_URL="https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--with-sysroot=/ --enable-gold --enable-plugins --enable-64-bit-bfd --enable-install-libbfd --with-system-zlib --enable-linker-build-id"
+INST_CMD="install"
+
+case ${TOOLCHAIN} in
+    llvm)   PKG_CFLAGS="-Wno-constant-logical-operand -Wno-format-nonliteral -Wno-self-assign -Wno-unused-function -Wno-unused-but-set-variable";;
+esac
+local BUILD_LIBSTATIC=1
+
+PKG_TOOLCHAIN=gnu
+
+case ${BINUTILS_VER} in
+    *)
+        PKG_AUTOCONF=2.69
+        PKG_AUTOMAKE=1.15.1
+        PKG_LIBTOOL=2.2.6a
+        CONF_FLAGS+=" --disable-dependency-tracking"
+    ;;
+esac
+
+AUTOCONF_PATH=".,bfd,opcodes,libctf,binutils,gas,gold,gprof,gprofng,ld"
+
+PKG_PREBUILD="sed -i '/^AC_CONFIG_MACRO_DIR/d' libctf/configure.ac
+    sed -i '/^AC_CONFIG_SRCDIR/a AC_CONFIG_MACRO_DIRS([.. ../config ../bfd])' libctf/configure.ac

@@ -5,7 +5,7 @@ CONF_FLAGS='CPPFLAGS= BUILD_CFLAGS=-O3'
 INST_CMD=install-strip
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/liba/libatasmart/libatasmart_0.19-5.debian.tar.xz"
 PATCHES="libatasmart_crosscompile.patch"
-AUTOCONF=1
+PKG_AUTOCONF=1
 
 PKG_TOOLCHAIN=gnu
 

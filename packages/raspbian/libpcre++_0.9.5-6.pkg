@@ -3,7 +3,7 @@ PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libp/libpcre%2B%2B/libpc
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libp/libpcre%2B%2B/libpcre%2B%2B_0.9.5-6.debian.tar.gz"
 PKG_PREBUILD="sed -i 's|-I/include||g;s|-I/usr/include||g;s|-I/usr/local/include||g;s|-I$prefix/include||g' configure.in
     sed -i '/^SUBDIRS/ s/ examples test//' Makefile.am"
-AUTOCONF=1
+PKG_AUTOCONF=1
 #PKG_PREBUILD="NOCONFIGURE=true ./autogen.sh"
 PKG_COPYSRC=1
 BUILD_PROCESS=configmake

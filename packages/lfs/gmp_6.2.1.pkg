@@ -4,7 +4,7 @@ PKG_DEPS="lfs/ncurses_6 lfs/readline_8.2"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-cxx"
 INST_CMD="install-strip"
-AUTOCONF=1
+PKG_AUTOCONF=1
 PKG_OVERRIDELTO=0
 
 PKG_PREBUILD="cp -v configfsf.guess config.guess

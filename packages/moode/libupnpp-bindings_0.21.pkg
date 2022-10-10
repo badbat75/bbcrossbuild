@@ -2,7 +2,7 @@
 PKG_SUFFIX=.0
 PKG_URL="https://www.lesbonscomptes.com/upmpdcli/downloads/libupnpp-bindings-0.21${PKG_SUFFIX}.tar.gz"
 BUILD_PROCESS=configmake
-AUTOCONF=1
+PKG_AUTOCONF=1
 PYTHONBIN_VER="$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)"
 CONF_FLAGS="PYTHON_VERSION=3 PYTHON_SITE_PKG=${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages PYTHON_CPPFLAGS=-I${SYSROOT}${BUILD_INCLUDEDIR}/python${PYTHONBIN_VER}"
 INST_CMD=install-strip

@@ -2,7 +2,7 @@
 PKG_URL="https://ftp.gnu.org/gnu/bc/bc-1.07.tar.gz"
 PKG_DEPS="lfs/ncurses_6 lfs/readline_8.2"
 BUILD_PROCESS=configmake
-AUTOCONF=1
+PKG_AUTOCONF=1
 CONF_FLAGS="--with-readline"
 PKG_MAKEVARS=""
 INST_CMD="install-strip"

@@ -2,7 +2,7 @@
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/s/sox/sox_14.4.2%2Bgit20190427.orig.tar.bz2"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/s/sox/sox_14.4.2%2Bgit20190427-2.debian.tar.xz"
 BUILD_PROCESS=configmake
-AUTOCONF=1
+PKG_AUTOCONF=1
 CONF_FLAGS="--with-dyn-default"
 PKG_CFLAGS="-I${DISTOS_PATH}/${BUILD_INCLUDEDIR}/opus"
 INST_CMD=install-strip

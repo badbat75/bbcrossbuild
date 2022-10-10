@@ -1,7 +1,7 @@
 #faad2_2.10.0
 PKG_URL="https://github.com/knik0/faad2/archive/refs/tags/2_10_0.tar.gz"
 BUILD_PROCESS=configmake
-AUTOCONF=1
+PKG_AUTOCONF=1
 PKG_DEPS=""
 CONF_FLAGS=""
 PKG_PREBUILD="patch -p1 <<EOF

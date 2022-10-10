@@ -2,6 +2,6 @@
 PKG_URL="http://ftp.gnu.org/gnu/gawk/gawk-5.1.1.tar.xz"
 PKG_DEPS="lfs/readline_8.2 lfs/ncurses_6 lfs/gmp_6.2.1 lfs/mpfr_4.1.0"
 BUILD_PROCESS=configmake
-AUTOCONF=1
+PKG_AUTOCONF=1
 CONF_FLAGS=""
 INST_CMD="install-strip"

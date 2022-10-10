@@ -22,7 +22,7 @@ PATCHES="patch1.patch patch2.patch"
 
 ### AUTOCONF:
 # By default "autoreconf -fi" is applied before configure process (1). 0 to disable
-AUTOCONF=0|1
+PKG_AUTOCONF=0|1
 
 ### AUTOCONF_PATH:
 # Specify source subdirectory where to run autoreconf

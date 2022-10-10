@@ -1,8 +1,7 @@
 # libnl_3.7.0
 PKG_URL="https://github.com/thom311/libnl/releases/download/libnl3_7_0/libnl-3.7.0.tar.gz"
 BUILD_PROCESS=configmake
-AUTOCONF=1
+PKG_AUTOCONF=1
 CONF_FLAGS="--disable-debug --disable-cli"
 PKG_MAKEVARS=""
 INST_CMD=install-strip
-PKG_TOOLCHAIN=gnu

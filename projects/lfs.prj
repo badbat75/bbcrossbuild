@@ -27,8 +27,9 @@ setup_llvm
 build lfs/create-base-config_1.0
 build raspberrypi/rpi-firmware_1
 build firmwares/linux-firmware
-build firmwares/broadcom-bt-firmware-master
+#build firmwares/broadcom-bt-firmware-master
 build raspberrypi/rpi-kernel_$( echo ${BS_KERNEL_VER} | cut -d'.' -f1,2 )
+build lfs/binutils
 build lfs/glibc
 build lfs/tzdata_2022c
 build lfs/man-pages_5.13

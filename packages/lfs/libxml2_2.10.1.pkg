@@ -3,7 +3,7 @@ PKG_URL="https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.10.1/libxml2-v2.10.
 #PATCHES="http://www.linuxfromscratch.org/patches/blfs/svn/libxml2-2.9.10-security_fixes-1.patch"
 PKG_DEPS="lfs/ncurses_6 lfs/readline_8.2 lfs/icu_72"
 BUILD_PROCESS=configmake
-AUTOCONF=1
+PKG_AUTOCONF=1
 CONF_FLAGS="--with-history --with-icu --with-threads PYTHON=$(which python3)"
 INST_CMD="install-strip"
 PKG_PREBUILD="sed -i '/if Py/{s/Py/(Py/;s/)/))/}' python/{types.c,libxml.c}
