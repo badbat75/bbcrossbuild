@@ -994,7 +994,7 @@ function setup_autotools () {
 		#### Build autoconf
 		echo -n "autoconf-${AUTOCONF_VER}... "
 		pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER} >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log 2>&1
-		run_cmd "autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+		#run_cmd "autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
 		popd >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log 2>&1
 		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER} ]
 		then
@@ -1057,7 +1057,7 @@ function setup_autotools () {
 		then
 			echo -n "automake-${AUTOMAKE_VER}... "
 			pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER} >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log 2>&1
-			run_cmd "AUTOCONF=${AUTOTOOLS_PATH}/bin/autoconf LIBTOOLIZE=${AUTOTOOLS_PATH}/bin/libtoolize ${AUTOTOOLS_PATH}/bin/autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
+			#run_cmd "AUTOCONF=${AUTOTOOLS_PATH}/bin/autoconf LIBTOOLIZE=${AUTOTOOLS_PATH}/bin/libtoolize ${AUTOTOOLS_PATH}/bin/autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
 			popd >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log 2>&1
 			if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER} ]
 			then
