@@ -678,6 +678,7 @@ function build () {(
 				fi
 				local ACINCLUDE="--include=m4"
 				#[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal"
+				[ -d ${AUTOTOOLS_PATH}/share/autoconf ] && local ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/autoconf"
 				[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
 				run_cmd "${AUTOCONF_CMD} -f -i -v ${ACINCLUDE}"
 			done
