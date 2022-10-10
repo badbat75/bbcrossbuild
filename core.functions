@@ -305,7 +305,7 @@ run_cmd () {
 			1) echo -en '$ ' ;;
 			*) echo -en '> ' ;;
 		esac
-		eval "echo \"${line}\""
+		echo "${line}"
 	done <<< "${@}"
 	eval "${@}" 2>&1
 	echo

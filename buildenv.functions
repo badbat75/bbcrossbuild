@@ -285,32 +285,32 @@ function setup_gcc () {
 		local PLATFORM_ARCHFLAGS="--enable-targets=${HM}-${HOS}-${HLIBC} --with-arch-directory=${HM} ${HMARCH:+ --with-arch=${HMARCH}}${PLATFORM_ARCHFLAGS}"
 		echo "### GCC_BUILD_PATH: ${TOOLCHAIN_PATH}/gcc-${GCC_VER}"
 		run_cmd 'pushd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}'
-		run_cmd 'CC_FOR_BUILD="${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc)" \
-				CXX_FOR_BUILD="${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-g++)" \
-				AR_FOR_BUILD="$(which ${BARCH}-gcc-ar 2>/dev/null)" \
-				NM_FOR_BUILD="$(which ${BARCH}-gcc-nm 2>/dev/null)" \
-				RANLIB_FOR_BUILD="$(which ${BARCH}-gcc-ranlib 2>/dev/null)" \
-				CFLAGS_FOR_BUILD="${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}" \
-				CXXFLAGS_FOR_BUILD="${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}" \
-				LDFLAGS_FOR_BUILD="${LINKERFLAGS}" \
-				CC="${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)" \
-				CXX="${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-g++ 2>/dev/null)" \
-				AR="$(which ${BARCH}-gcc-ar 2>/dev/null)" \
-				NM="$(which ${BARCH}-gcc-nm 2>/dev/null)" \
-				RANLIB="$(which ${BARCH}-gcc-ranlib 2>/dev/null)" \
-				CFLAGS="${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}" \
-				CXXFLAGS="${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_LINKERFLAGS}" \
-				LDFLAGS="${LINKERFLAGS}" \
-				CFLAGS_FOR_TARGET="${COMPFLAGS} ${OPTCOMP_FLAGS}" \
-				CXXFLAGS_FOR_TARGET="${COMPFLAGS} ${OPTCOMP_FLAGS}" \
-				LDFLAGS_FOR_TARGET="${LINKERFLAGS} ${OPTLINK_FLAGS}" \
-				${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure \
-					${CONFIG_ARCH_PARAMS} ${GCC_SYSROOT_FLAGS} ${PLATFORM_ARCHFLAGS} \
-					${BINUTILS_CONFIG} ${GCC_CONFIG} \
-					--prefix="${TOOLCHAIN_PATH}" \
-					build_configargs="${build_configargs}" \
-					host_configargs="${host_configargs}" \
-					target_configargs="${target_configargs}"'
+		run_cmd "CC_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc)\" \\
+				CXX_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-g++)\" \\
+				AR_FOR_BUILD=\"$(which ${BARCH}-gcc-ar 2>/dev/null)\" \\
+				NM_FOR_BUILD=\"$(which ${BARCH}-gcc-nm 2>/dev/null)\" \\
+				RANLIB_FOR_BUILD=\"$(which ${BARCH}-gcc-ranlib 2>/dev/null)\" \\
+				CFLAGS_FOR_BUILD=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}\" \\
+				CXXFLAGS_FOR_BUILD=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}\" \\
+				LDFLAGS_FOR_BUILD=\"${LINKERFLAGS}\" \\
+				CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \\
+				CXX=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-g++ 2>/dev/null)\" \\
+				AR=\"$(which ${BARCH}-gcc-ar 2>/dev/null)\" \\
+				NM=\"$(which ${BARCH}-gcc-nm 2>/dev/null)\" \\
+				RANLIB=\"$(which ${BARCH}-gcc-ranlib 2>/dev/null)\" \\
+				CFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}\" \\
+				CXXFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_LINKERFLAGS}\" \\
+				LDFLAGS=\"${LINKERFLAGS}\" \\
+				CFLAGS_FOR_TARGET=\"${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
+				CXXFLAGS_FOR_TARGET=\"${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
+				LDFLAGS_FOR_TARGET=\"${LINKERFLAGS} ${OPTLINK_FLAGS}\" \\
+				${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure \\
+					${CONFIG_ARCH_PARAMS} ${GCC_SYSROOT_FLAGS} ${PLATFORM_ARCHFLAGS} \\
+					${BINUTILS_CONFIG} ${GCC_CONFIG} \\
+					--prefix=\"${TOOLCHAIN_PATH}\" \\
+					build_configargs='${build_configargs}' \\
+					host_configargs='${host_configargs}' \\
+					target_configargs='${target_configargs}'"
 		run_cmd 'popd'
 		if [ -n "${GLIBC_SYSROOT}" ]
 		then
@@ -1313,8 +1313,8 @@ function setup_pkgconfig () {
 	cat > ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config <<-EOF
 		#!/bin/sh
 		set -o pipefail
-		echo "PKG_CONFIG_LIBDIR=\${PKG_CONFIG_LIBDIR} \\\\" >> pkg-config.log
-		echo "PKG_CONFIG_SYSROOT_DIR=\${PKG_CONFIG_SYSROOT_DIR} \\\\" >> pkg-config.log
+		echo "PKG_CONFIG_LIBDIR=\${PKG_CONFIG_LIBDIR} \\\" >> pkg-config.log
+		echo "PKG_CONFIG_SYSROOT_DIR=\${PKG_CONFIG_SYSROOT_DIR} \\\" >> pkg-config.log
 		echo $(which pkg-config) \$@ >> pkg-config.log
 		$(which pkg-config) \$@ | tee -a pkg-config.log
 		STATUS=\$?

@@ -653,9 +653,14 @@ function build () {(
 
 		if [ "${PKG_AUTOCONF:-0}" != "0" ]
 		then
+			local ACINCLUDE="--include=m4"
 			case ${PKG_AUTOCONF} in
-				1) local AUTOCONF_CMD=autoreconf ;;
-				*) setup_autotools ${PKG_AUTOCONF} ${PKG_AUTOMAKE} ${PKG_LIBTOOL}
+				1)
+					local AUTOCONF_CMD=autoreconf
+					[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
+				;;
+				*) 
+					setup_autotools ${PKG_AUTOCONF} ${PKG_AUTOMAKE} ${PKG_LIBTOOL}
 					local AUTOCONF_CMD="AUTOCONF=${AUTOTOOLS_PATH}/bin/autoconf"
 					if [ ! -z ${PKG_AUTOMAKE} ]
 					then
@@ -666,6 +671,7 @@ function build () {(
 						local AUTOCONF_CMD="LIBTOOLIZE=${AUTOTOOLS_PATH}/bin/libtoolize "
 					fi
 					local AUTOCONF_CMD+="${AUTOTOOLS_PATH}/bin/autoreconf"					
+					[ -d ${AUTOTOOLS_PATH}/share/autoconf ] && local ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/aclocal"
 				;;
 			esac
 			IFS=,
@@ -676,10 +682,7 @@ function build () {(
 				then
 					run_cmd 'mkdir m4'
 				fi
-				local ACINCLUDE="--include=m4"
 				#[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal"
-				[ -d ${AUTOTOOLS_PATH}/share/autoconf ] && local ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/autoconf"
-				[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
 				run_cmd "${AUTOCONF_CMD} -f -i -v ${ACINCLUDE}"
 			done
 			unset IFS

@@ -6,13 +6,13 @@ BUILD_LIBSTATIC=0
 LTOENABLE=thin
 KERNEL_LTOENABLE=thin
 
-TOOLCHAIN=llvm
+#TOOLCHAIN=llvm
 
 build --no_save_status lfs/create-base-fs_1.0
 
 setup_sccache
 setup_gcc --install --main_gcc
-setup_llvm
+#setup_llvm
 setup_autotools --default
 
 build lfs/create-base-config_1.0
