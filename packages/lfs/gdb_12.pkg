@@ -13,9 +13,7 @@ CONF_FLAGS="--with-sysroot=/ --with-system-zlib --with-system-readline \
 # --with-python=\$(which python3)
 INST_CMD="install"
 PKG_PREBUILD="sed -i '/multilib.am/d' libbacktrace/Makefile.am
-#    sed -i '/^COMMON_OBJS/ s/common_libcommon_a-/libcommon_a-/' sim/common/Make-common.in
     sed -i '/^AC_CONFIG_MACRO_DIR/d' libctf/configure.ac
-#    sed -i '/^AC_CONFIG_SRCDIR/a AC_CONFIG_MACRO_DIRS([.. ../config ../bfd])' libctf/configure.ac
     sed -i '/return/s/rl.*characters/(char *) &/' gdb/completer.c
     rm -fv libbacktrace/{aclocal.m4,config.h.in}
     sed '/AC_DISABLE_OPTION_CHECKING/a LT_INIT' -i configure.ac"
