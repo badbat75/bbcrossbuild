@@ -2,19 +2,23 @@
 PKG_SUFFIX=.1
 PKG_URL="http://ftp.gnu.org/gnu/gdb/gdb-12${PKG_SUFFIX}.tar.xz"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--with-sysroot=/ --with-system-zlib --with-system-readline"
+PKG_AUTOCONF=1
+AUTOCONF_PATH=".,libbacktrace,gnulib,bfd,opcodes,sim,libctf"
+PKG_AUTOCONF=2.69
+PKG_AUTOMAKE=1.15.1
+PKG_LIBTOOL=2.2.6a
+CONF_FLAGS="--with-sysroot=/ --with-system-zlib --with-system-readline \
+    --with-gmp-include=${BIN_PATH}\${BUILD_INCLUDEDIR} --with-gmp-lib=${BIN_PATH}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX} \
+    --with-mpfr-include=${BIN_PATH}\${BUILD_INCLUDEDIR} --with-mpfr-lib=${BIN_PATH}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX}"
 # --with-python=\$(which python3)
 INST_CMD="install"
-local AUTOCONF_VER="$(autoconf -V | head -n1 | awk '{print $4}')"
-PKG_PREBUILD="sed -i '/^  [m4_define(\[_GCC_AUTOCONF_VERSION\]/ s/2.69/${AUTOCONF_VER}/' config/override.m4
-    sed -i '/multilib.am/d' libbacktrace/Makefile.am
-    sed -i '/m4_version_prereq(\[2.70\]/d' sim/m4/sim_ac_toolchain.m4
-    sed -i '/^COMMON_OBJS/ s/common_libcommon_a-/libcommon_a-/' sim/common/Make-common.in
+PKG_PREBUILD="sed -i '/multilib.am/d' libbacktrace/Makefile.am
+#    sed -i '/^COMMON_OBJS/ s/common_libcommon_a-/libcommon_a-/' sim/common/Make-common.in
     sed -i '/^AC_CONFIG_MACRO_DIR/d' libctf/configure.ac
-    sed -i '/^AC_CONFIG_SRCDIR/a AC_CONFIG_MACRO_DIRS([.. ../config ../bfd])' libctf/configure.ac
+#    sed -i '/^AC_CONFIG_SRCDIR/a AC_CONFIG_MACRO_DIRS([.. ../config ../bfd])' libctf/configure.ac
     sed -i '/return/s/rl.*characters/(char *) &/' gdb/completer.c
-    rm -fv ltmain.sh
-    autoreconf -fiv libbacktrace gnulib bfd opcodes sim libctf ."
+    rm -fv libbacktrace/{aclocal.m4,config.h.in}
+    sed '/AC_DISABLE_OPTION_CHECKING/a LT_INIT' -i configure.ac"
 
 case ${TOOLCHAIN} in
     llvm)   PKG_CFLAGS="-Wno-constant-logical-operand -Wno-format-nonliteral -Wno-self-assign -Wno-unused-function -Wno-unused-but-set-variable";;
