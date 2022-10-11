@@ -1,6 +1,8 @@
 # libuv_1.41.0
 PKG_URL="https://dist.libuv.org/dist/v1.41.0/libuv-v1.41.0.tar.gz"
-
 BUILD_PROCESS=configmake
+PKG_AUTOCONF=1
 INST_CMD="install-strip"
-PKG_PREBUILD="./autogen.sh"
+
+PKG_PREBUILD="echo \"m4_define([UV_EXTRA_AUTOMAKE_FLAGS], [\$UV_EXTRA_AUTOMAKE_FLAGS])\" \
+    > m4/libuv-extra-automake-flags.m4"

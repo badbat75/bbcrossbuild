@@ -1,9 +1,8 @@
 # util-linux_2.38.1
 PKG_URL="https://github.com/util-linux/util-linux/archive/refs/tags/v2.38.1.tar.gz"
 PKG_DEPS="lfs/zlib_1.2.12 lfs/bzip2_1.0.8 lfs/ncurses_6 lfs/readline_8.2"
-
 BUILD_PROCESS=configmake
-#AUTOCONF=1
+PKG_AUTOCONF=1
 CONF_FLAGS="ADJTIME_PATH=/var/lib/hwclock/adjtime \
             --disable-chfn-chsh \
             --disable-login \
@@ -13,12 +12,10 @@ CONF_FLAGS="ADJTIME_PATH=/var/lib/hwclock/adjtime \
             --disable-runuser \
             --disable-pylibmount \
             --disable-makeinstall-chown \
-            --without-tinfo \
-            runstatedir=/run"
+            --without-tinfo"
+CONF_VARS="ADJTIME_PATH=/var/lib/hwclock/adjtime runstatedir=/run"
 INST_CMD="install-strip"
-#PKG_MAKEVARS="NCURSES_LIBS=\"-Wl,-Bsymbolic-functions -lncursesw\""
-PKG_MAKEVARS="NCURSES_LIBS=-lncursesw"
-PKG_PREBUILD="./autogen.sh"
+PKG_MAKEVARS="NCURSES_LIBS=-lncurses"
 
 case ${TOOLCHAIN} in
     llvm)

@@ -111,7 +111,7 @@ function create_sfx_package () {
 
 	if [ -d "${PKG_OBJ}" ]
 	then
-		run_cmd 'tar cfp - --owner=0 --group=0 -C ${PKG_OBJ} . | xz -T${NPROCS} - > ${PKG_OBJ}.tar.xz'
+		run_cmd "tar cfp - --owner=0 --group=0 -C ${PKG_OBJ} . | xz -T${NPROCS} - > ${PKG_OBJ}.tar.xz"
 	fi
 	
 	cat >${PKG_OBJ}.sfx <<-EOF
@@ -170,8 +170,8 @@ function create_sfx_package () {
 		__ARCHIVE_BELOW__
 	EOF
 	cat ${PKG_OBJ}.tar.xz >> ${PKG_OBJ}.sfx
-	run_cmd 'chmod +x ${PKG_OBJ}.sfx'
-	run_cmd 'rm ${PKG_OBJ}.tar.xz'
+	run_cmd "chmod +x ${PKG_OBJ}.sfx"
+	run_cmd "rm ${PKG_OBJ}.tar.xz"
 	echo
 	trap ERR
 }

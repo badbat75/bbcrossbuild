@@ -1,9 +1,13 @@
 # dhcp_4.4.3
 PKG_URL="https://downloads.isc.org/isc/dhcp/4.4.3/dhcp-4.4.3.tar.gz"
+PKG_AUTOCONF=1
 BUILD_PROCESS=configmake
 PKG_TWOSTEPSBUILD=1
 PKG_PREBUILD="sed -i '/o.*dhcp_type/d' server/mdb.c
-    sed -r '/u.*(local|remote)_port/d' -i client/dhclient.c relay/dhcrelay.c"
+    sed -r '/u.*(local|remote)_port/d' -i client/dhclient.c relay/dhcrelay.c
+    #sed '/! -f \"\$use_libbind\/lib\/libisc.a\" -a/d; s|use_libbind/lib/libisc.la\" \\\\)|use_libbind\$libdir/libisc.la\"|' -i configure.ac configure.ac+lt
+    sed 's|\$use_libbind/lib|\$use_libbind\$libdir|' -i configure.ac configure.ac+lt
+    sed 's|use_libbind/include|use_libbind\$includedir|g' -i configure.ac configure.ac+lt"
 PKG_CFLAGS="-Wall -fno-strict-aliasing \
     -D_PATH_DHCLIENT_SCRIPT='\''\"/sbin/dhclient-script\"'\'' \
     -D_PATH_DHCPD_CONF='\''\"/etc/dhcp/dhcpd.conf\"'\'' \
@@ -13,9 +17,11 @@ CONF_FLAGS="--with-randomdev= \
     --with-srv6-lease-file=/var/lib/dhcpd/dhcpd6.leases \
     --with-cli-lease-file=/var/lib/dhclient/dhclient.leases \
     --with-cli6-lease-file=/var/lib/dhclient/dhclient6.leases"
+#PKG_DEPS="lfs/bind_9.19.4"
+#CONF_FLAGS+=" --enable-libtool --with-libbind=${BIN_PATH}"
 CONF_VARS="BUILD_CC=\"\${BUILD_CC}\""
 PKG_MAKEVARS="-j1 AR=\"\${BUILD_AR}\""
-INST_CMD="-C client install-strip"
+INST_CMD="install-strip"
 PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/sbin ${PKG_PKGPATH}/var/lib/dhclient
     install -v -m755 \${PKG_SRCPATH}/client/scripts/linux ${PKG_PKGPATH}/sbin/dhclient-script
     install -vdm755 ${PKG_PKGPATH}/etc/dhcp

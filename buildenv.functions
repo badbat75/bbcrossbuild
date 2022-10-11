@@ -530,6 +530,7 @@ function setup_gcc () {
 		run_cmd "rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 		run_cmd "rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${BINUTILS_VER}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	fi
+	setup_autotools --default >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	setup_pkgconfig >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	setup_ldd >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	setup_toolchain_wrapper >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
@@ -850,6 +851,7 @@ function setup_llvm () {
 	then
 		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}" >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 	fi
+	setup_autotools --default >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 	setup_pkgconfig >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 	setup_ldd >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 	setup_toolchain_wrapper >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
