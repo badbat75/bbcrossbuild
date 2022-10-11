@@ -3,6 +3,6 @@ PKG_SUFFIX=.7
 PKG_URL="https://github.com/alsa-project/alsa-utils/archive/refs/tags/v1.2${PKG_SUFFIX}.tar.gz"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
-PKG_DEPS="lfs/alsa-lib_1.2 lfs/alsa-topology-conf_1.2"
+PKG_DEPS="lfs/ncurses_6 lfs/alsa-lib_1.2 lfs/alsa-topology-conf_1.2"
 CONF_FLAGS=""
 INST_CMD=install-strip

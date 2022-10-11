@@ -6,13 +6,13 @@ BUILD_LIBSTATIC=0
 LTOENABLE=thin
 KERNEL_LTOENABLE=thin
 
-#TOOLCHAIN=llvm
+TOOLCHAIN=llvm
 
 build --no_save_status lfs/create-base-fs_1.0
 
 setup_sccache
 setup_gcc --install --main_gcc
-#setup_llvm
+setup_llvm
 setup_autotools --default
 
 build lfs/create-base-config_1.0
@@ -110,12 +110,12 @@ esac
 echo "net.ifnames=0 console=tty1 root=/dev/mmcblk0p2 fsck.repair=yes rootwait" >${BIN_PATH}/boot/cmdline.txt
 
 echo Configuring Host Name
-echo ${LFS_HOSTNAME:-lfs} > ${BIN_PATH}${BUILD_SYSCONFDIR}/hostname
+echo ${LFS_HOSTNAME:-lfs} > ${BIN_PATH}/etc/hostname
 
 if [ ! -x ${WLAN_SSID} ] && [ ! -x ${WLAN_PSK} ] && [ ! -x ${WLAN_DEV} ]
 then
 	echo Configuring WiFi
-	wpa_passphrase ${WLAN_SSID} ${WLAN_PSK} > ${BIN_PATH}${BUILD_SYSCONFDIR}/wpa_supplicant/wpa_supplicant-${WLAN_DEV}.conf
+	wpa_passphrase ${WLAN_SSID} ${WLAN_PSK} > ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant-${WLAN_DEV}.conf
 	systemctl --root=${BIN_PATH} enable wpa_supplicant@${WLAN_DEV}
 	cat > ${BIN_PATH}/etc/systemd/network/${WLAN_DEV}.network <<-EOF
 		[Match]

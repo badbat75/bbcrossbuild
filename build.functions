@@ -653,27 +653,36 @@ function build () {(
 
 		if [ "${PKG_AUTOCONF:-0}" != "0" ]
 		then
-			local ACINCLUDE="--include=m4"
-			case ${PKG_AUTOCONF} in
-				1)
-					local AUTOCONF_CMD=autoreconf
-					[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
-				;;
-				*) 
+			local AUTOCONF_CMD=
+			local ACINCLUDE=
+			### If PATH include a AUTOTOOLS build or PKG_AUTOCONF is a particular version
+			if [[ ${PATH} == *"${AUTOTOOLS_PATH}/bin"* ]] || [ ${PKG_AUTOCONF} != 1 ]
+			then
+				if [ ${PKG_AUTOCONF} != 1 ]
+				then
 					setup_autotools ${PKG_AUTOCONF} ${PKG_AUTOMAKE} ${PKG_LIBTOOL}
-					local AUTOCONF_CMD="AUTOCONF=${AUTOTOOLS_PATH}/bin/autoconf"
-					if [ ! -z ${PKG_AUTOMAKE} ]
-					then
-						local AUTOCONF_CMD="AUTOM4TE=${AUTOTOOLS_PATH}/bin/autom4te AUTOMAKE=${AUTOTOOLS_PATH}/bin/automake ACLOCAL=${AUTOTOOLS_PATH}/bin/aclocal "
-					fi
-					if [ ! -z ${PKG_LIBTOOL} ]
-					then
-						local AUTOCONF_CMD="LIBTOOLIZE=${AUTOTOOLS_PATH}/bin/libtoolize "
-					fi
-					local AUTOCONF_CMD+="${AUTOTOOLS_PATH}/bin/autoreconf"					
-					[ -d ${AUTOTOOLS_PATH}/share/autoconf ] && local ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/aclocal --include=${AUTOTOOLS_PATH}/share/aclocal-${AUTOMAKE_VER}"
-				;;
-			esac
+				fi
+				if [ -f ${AUTOTOOLS_PATH}/bin/autoconf ]
+				then
+					local AUTOCONF_CMD+="AUTOCONF=${AUTOTOOLS_PATH}/bin/autoconf "
+					local ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/autoconf"
+				fi
+				if [ -f ${AUTOTOOLS_PATH}/bin/automake ]
+				then
+					local AUTOMAKE_MAJVER=$(echo ${AUTOMAKE_VER} | cut -d'.' -f 1,2)
+					local AUTOCONF_CMD+="AUTOM4TE=${AUTOTOOLS_PATH}/bin/autom4te AUTOMAKE=${AUTOTOOLS_PATH}/bin/automake ACLOCAL=${AUTOTOOLS_PATH}/bin/aclocal "
+					local ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/aclocal --include=${AUTOTOOLS_PATH}/share/aclocal-${AUTOMAKE_MAJVER}"
+				fi
+				if [ ! -z ${AUTOTOOLS_PATH}/bin/libtoolize ]
+				then
+					local AUTOCONF_CMD+="LIBTOOLIZE=${AUTOTOOLS_PATH}/bin/libtoolize "
+				fi
+				local AUTOCONF_CMD+="${AUTOTOOLS_PATH}/bin/autoreconf"					
+			else
+				local AUTOCONF_CMD=autoreconf
+			fi
+			[ -d ${GLOBAL_TOOLCHAIN_PATH}/share/aclocal ] && local ACINCLUDE+=" --include=${GLOBAL_TOOLCHAIN_PATH}/share/aclocal"
+			[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
 			IFS=,
 			for cp in ${AUTOCONF_PATH:-.}
 			do

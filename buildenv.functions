@@ -947,9 +947,11 @@ function setup_autotools () {
 			return ${STATUS};' ERR
 
 		local AUTOCONF_URL="https://ftp.gnu.org/gnu/autoconf/autoconf-${AUTOCONF_VER}.tar.gz"
+		local AUTOCONFARCHIVE_URL="http://mirror.kumi.systems/gnu/autoconf-archive/autoconf-archive-${AUTOCONFARCHIVE_VER}.tar.xz"
 		local AUTOMAKE_URL="https://ftp.gnu.org/gnu/automake/automake-${AUTOMAKE_VER}.tar.gz"
 		local LIBTOOL_URL="https://ftp.gnu.org/gnu/libtool/libtool-${LIBTOOL_VER}.tar.gz"
 		download_uncompress "${AUTOCONF_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER} >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+		download_uncompress "${AUTOCONFARCHIVE_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER} >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
 		#echo ${AUTOCONF_VER} > ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}/.tarball-version
 		if [ ! -z ${AUTOMAKE_VER} ]
 		then
@@ -985,35 +987,10 @@ function setup_autotools () {
 	AUTOTOOLS_PATH=${GLOBAL_TOOLCHAIN_PATH}/autotools-${AUTOCONF_VER}${AUTOMAKE_VER:+-${AUTOMAKE_VER}}${LIBTOOL_VER:+-${LIBTOOL_VER}}
 
 	echo -n "Setting up autotools... "
-	if ! ${AUTOTOOLS_PATH}/bin/autoconf -V > ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log 2>&1 ||
-		! ${AUTOTOOLS_PATH}/bin/automake --version > ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log 2>&1 ||
-		! ${AUTOTOOLS_PATH}/bin/libtoolize --version > ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log 2>&1
+	if [ ! -f ${AUTOTOOLS_PATH}/bin/autoconf ] || [ ! ${AUTOTOOLS_PATH}/bin/automake ] || [ ! ${AUTOTOOLS_PATH}/bin/libtoolize ]
 	then
 		#### Download all auto tools
 		download_autotools
-		#### Build autoconf
-		echo -n "autoconf-${AUTOCONF_VER}... "
-		pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER} >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log 2>&1
-		#run_cmd "autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		popd >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log 2>&1
-		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER} ]
-		then
-			run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		fi
-		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER} >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log 2>&1
-		run_cmd "${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}/configure --prefix=${AUTOTOOLS_PATH}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		popd >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log 2>&1
-		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER} ]
-		then
-			run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}' >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		fi
-		if [ -d ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER} ]
-		then
-			run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}' >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		fi
 		#### Build libtool
 		if [ ! -z ${LIBTOOL_VER} ]
 		then
@@ -1043,15 +1020,38 @@ function setup_autotools () {
 			run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
 			run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
 			popd >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log 2>&1
-			if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER} ]
-			then
-				run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}' >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
-			fi
-			if [ -d ${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER} ]
-			then
-				run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}' >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
-			fi
+			run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}' >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
+			run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}' >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
 		fi
+		#### Build autoconf
+		echo -n "autoconf-${AUTOCONF_VER}... "
+		pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER} >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log 2>&1
+		#run_cmd "autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+		popd >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log 2>&1
+		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER} ]
+		then
+			run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+		fi
+		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER} >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log 2>&1
+		run_cmd "${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}/configure --prefix=${AUTOTOOLS_PATH}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+		popd >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log 2>&1
+		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER} ]
+		then
+			run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+		fi
+		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER} >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log 2>&1
+		run_cmd "${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}/configure --prefix=${AUTOTOOLS_PATH}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+		popd >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log 2>&1		
+		run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}' >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+		run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}' >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+		run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}' >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+		run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}' >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
 		#### Build automake
 		if [ ! -z ${AUTOMAKE_VER} ]
 		then
@@ -1077,14 +1077,8 @@ function setup_autotools () {
 			run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
 			run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
 			popd >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log 2>&1
-			if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER} ]
-			then
-				run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}' >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
-			fi
-			if [ -d ${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER} ]
-			then
-				run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}' >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
-			fi
+			run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}' >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
+			run_cmd 'rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}' >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
 		fi
 		echo "done."
 	else
@@ -1305,24 +1299,71 @@ function setup_python () {
 }
 
 function setup_pkgconfig () {
-	if [ ! -d ${TOOLCHAIN_PATH}/bin ]
+	trap 'local STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log ];
+		then \
+			echo "Log ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log:"; \
+			echo; \
+			tail -n24 ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log; \
+		fi;
+		set +x; \
+		trap - ERR; \
+		return ${STATUS}' ERR
+
+	echo -n "Setting up pkg-config... "
+
+	if [ ! -f ${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config ]
 	then
-		mkdir ${TOOLCHAIN_PATH}/bin
+		local PKGCONFIG_URL="https://pkgconfig.freedesktop.org/releases/pkg-config-${PKGCONFIG_VER}.tar.gz"
+		download_uncompress "${PKGCONFIG_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER} >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		echo -n "building... "
+		pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER} >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
+		#run_cmd "autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		popd >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
+		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER} ]
+		then
+			run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		fi
+		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER} >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
+		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \\
+				CFLAGS=\"-march=native -O3 -flto\" \\
+				LDFLAGS=\"-fuse-ld=gold -fuse-linker-plugin\" \\
+					${GLOBAL_TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		popd >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
+		run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
 	fi
-	setbuildenv
-	cat > ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config <<-EOF
-		#!/bin/sh
-		set -o pipefail
-		echo "PKG_CONFIG_LIBDIR=\${PKG_CONFIG_LIBDIR} \\\" >> pkg-config.log
-		echo "PKG_CONFIG_SYSROOT_DIR=\${PKG_CONFIG_SYSROOT_DIR} \\\" >> pkg-config.log
-		echo $(which pkg-config) \$@ >> pkg-config.log
-		$(which pkg-config) \$@ | tee -a pkg-config.log
-		STATUS=\$?
-		echo >> pkg-config.log
-		set +o pipefail
-		exit \${STATUS}
-	EOF
-	chmod +x ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config
+
+	if  [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config ]
+	then
+		echo -n "creating ${ARCH} specific script... "
+		if [ ! -d ${TOOLCHAIN_PATH}/bin ]
+		then
+			mkdir ${TOOLCHAIN_PATH}/bin
+		fi
+		setbuildenv
+		cat > ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config <<-EOF
+			#!/bin/sh
+			set -o pipefail
+			echo "PKG_CONFIG_LIBDIR=\${PKG_CONFIG_LIBDIR} \\\" >> pkg-config.log
+			echo "PKG_CONFIG_SYSROOT_DIR=\${PKG_CONFIG_SYSROOT_DIR} \\\" >> pkg-config.log
+			echo ${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config \$@ >> pkg-config.log
+			${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config \$@ | tee -a pkg-config.log
+			STATUS=\$?
+			echo >> pkg-config.log
+			set +o pipefail
+			exit \${STATUS}
+		EOF
+		chmod +x ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config
+	fi
+
+	echo "done."
+	trap ERR
 }
 
 function setup_ldd () {
