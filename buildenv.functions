@@ -133,7 +133,7 @@ function setup_gcc () {
 			target_configargs="${SILENTCONFIG}"
 		fi
 
-		unset GCC_SYSROOT ECHO_BOOTSTRAP
+		unset GLIBC_SYSROOT ECHO_BOOTSTRAP
 		# Check where glibc is installed
 		if ( [ -f ${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crtn.o ] && \
 				[ -f ${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crti.o ] && \
@@ -370,7 +370,7 @@ function setup_gcc () {
 			local BUILD_OBJECTS+=" all-target-${object}"
 		done
 		echo "### Making target libraries."
-		run_cmd "make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER="${GCC_CCWRAPPER}" ${BUILD_OBJECTS}"
+		run_cmd "make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" ${BUILD_OBJECTS}"
 
 		setbuildenv
 		for object in $( echo ${OBJECTS} | tr ',' ' ' )
@@ -478,6 +478,10 @@ function setup_gcc () {
 			gcc_configuration >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 			echo -n "building for host... "
 			gcc_make_host ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
+			echo -n "building target libraries... "
+			gcc_make_target_libs >> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log
+		else
+			# if gcc is not bootstrapping
 			echo -n "building target libraries... "
 			gcc_make_target_libs >> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log
 		fi
