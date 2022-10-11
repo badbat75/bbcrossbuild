@@ -118,30 +118,24 @@ download_uncompress () {
 	if [ ! -d ${DEST_DIR} ] ; then mkdir -p ${DEST_DIR} ; fi
 	case ${UNCOMPRESSED_FILE_TYPE} in
 		application/x-tar)
-			echo "\$ tar xf ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${TARFLAGS} -C ${DEST_DIR} ${ARCHIVE_DIRS}"
-			tar xf ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${TARFLAGS} -C ${DEST_DIR} ${ARCHIVE_DIRS}
+			run_cmd "tar xf ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${TARFLAGS} -C ${DEST_DIR} ${ARCHIVE_DIRS}"
 			;;
 		*)
 			case ${DOWNLOAD_FILE_TYPE} in
 				application/x-xz)
-					echo "\$ cp ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${DEST_DIR}/${DOWNLOAD_FILE}"
-					cp ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${DEST_DIR}/${DOWNLOAD_FILE}
-					echo "\$ xz --uncompress ${DEST_DIR}/${DOWNLOAD_FILE}"
-					xz --uncompress ${DEST_DIR}/${DOWNLOAD_FILE}
+					run_cmd "cp ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${DEST_DIR}/${DOWNLOAD_FILE}"
+					run_cmd "xz --uncompress ${DEST_DIR}/${DOWNLOAD_FILE}"
 					;;
 				application/zip)
 					if [ -z "${FILES2EXTRACT}" ]
 					then
-						echo "\$ unzip -n ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} -d ${DEST_DIR}"
-						unzip -n ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} -d ${DEST_DIR}
+						run_cmd "unzip -n ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} -d ${DEST_DIR}"
 					else
-						echo "\$ unzip -j -n ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} "${FILES2EXTRACT}" -d ${DEST_DIR}"
-						unzip -j -n ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} "${FILES2EXTRACT}" -d ${DEST_DIR}
+						run_cmd "unzip -j -n ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} "${FILES2EXTRACT}" -d ${DEST_DIR}"
 					fi
 					;;
 				*)
-					echo "\$ cp ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${DEST_DIR}/${DOWNLOAD_FILE}"
-					cp ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${DEST_DIR}/${DOWNLOAD_FILE}
+					run_cmd "cp ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${DEST_DIR}/${DOWNLOAD_FILE}"
 					;;
 			esac
 			;;
