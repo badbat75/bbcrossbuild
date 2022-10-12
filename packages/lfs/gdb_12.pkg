@@ -1,24 +1,29 @@
 # gdb_12
 PKG_SUFFIX=.1
 PKG_URL="http://ftp.gnu.org/gnu/gdb/gdb-12${PKG_SUFFIX}.tar.xz"
+PKG_DEPS="lfs/gmp_6.2.1 lfs/mpfr_4.1.0 lfs/mpc_1.2.1"
 BUILD_PROCESS=configmake
-PKG_AUTOCONF=1
-AUTOCONF_PATH=".,libbacktrace,gnulib,bfd,opcodes,sim,libctf"
 PKG_AUTOCONF=2.69
 PKG_AUTOMAKE=1.15.1
 PKG_LIBTOOL=2.2.6a
-CONF_FLAGS="--with-sysroot=/ --with-system-zlib --with-system-readline \
-    --with-gmp-include=${BIN_PATH}\${BUILD_INCLUDEDIR} --with-gmp-lib=${BIN_PATH}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX} \
-    --with-mpfr-include=${BIN_PATH}\${BUILD_INCLUDEDIR} --with-mpfr-lib=${BIN_PATH}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX}"
+AUTOCONF_PATH=".,libbacktrace,gdbserver,gdbsupport,gnulib,bfd,opcodes,sim,libctf"
+CONF_FLAGS="--with-sysroot=/ --with-build-sysroot=\${SYSROOT} \
+    --with-system-zlib --with-system-readline --disable-install-libbfd \
+    --with-mpc-include=\${SYSROOT}\${BUILD_INCLUDEDIR} --with-mpc-lib=\${SYSROOT}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX} \
+    --with-mpfr-include=\${SYSROOT}\${BUILD_INCLUDEDIR} --with-mpfr-lib=\${SYSROOT}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX} \
+    --with-gmp-include=\${SYSROOT}\${BUILD_INCLUDEDIR} --with-gmp-lib=\${SYSROOT}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX} \
+    --enable-static"
 # --with-python=\$(which python3)
-INST_CMD="install"
+INST_CMD="-C gdb install-strip"
+
 PKG_PREBUILD="sed -i '/multilib.am/d' libbacktrace/Makefile.am
     sed -i '/^AC_CONFIG_MACRO_DIR/d' libctf/configure.ac
     sed -i '/return/s/rl.*characters/(char *) &/' gdb/completer.c
     rm -fv libbacktrace/{aclocal.m4,config.h.in}
-    sed '/AC_DISABLE_OPTION_CHECKING/a LT_INIT' -i configure.ac"
+    sed '/AC_DISABLE_OPTION_CHECKING/a LT_INIT' -i configure.ac
+    "
+PKG_POSTBUILD="./runmake.sh DESTDIR=\${PKG_PKGPATH} -C gdbserver install-strip"
 
 case ${TOOLCHAIN} in
     llvm)   PKG_CFLAGS="-Wno-constant-logical-operand -Wno-format-nonliteral -Wno-self-assign -Wno-unused-function -Wno-unused-but-set-variable";;
 esac
-local BUILD_LIBSTATIC=1

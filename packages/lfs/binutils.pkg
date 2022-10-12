@@ -1,15 +1,15 @@
 # binutils
 PKG_SUFFIX=_${BINUTILS_VER}
 PKG_URL="https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz"
+PKG_DEPS="lfs/gmp_6.2.1 lfs/mpfr_4.1.0 lfs/mpc_1.2.1"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--with-sysroot=/ --enable-gold --enable-plugins --enable-64-bit-bfd --enable-install-libbfd --with-system-zlib --enable-linker-build-id"
-INST_CMD="install"
-
-case ${TOOLCHAIN} in
-    llvm)   PKG_CFLAGS="-Wno-constant-logical-operand -Wno-format-nonliteral -Wno-self-assign -Wno-unused-function -Wno-unused-but-set-variable";;
-esac
-local BUILD_LIBSTATIC=1
-
+AUTOCONF_PATH=".,bfd,opcodes,libctf,binutils,gas,gold,gprof,gprofng,ld"
+CONF_FLAGS="--with-sysroot=/ --with-build-sysroot=\${SYSROOT} \
+    --enable-gold --enable-plugins --enable-lto --enable-64-bit-bfd --enable-install-libbfd --with-system-zlib --enable-linker-build-id \
+    --with-mpc-include=\${SYSROOT}\${BUILD_INCLUDEDIR} --with-mpc-lib=\${SYSROOT}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX} \
+    --with-mpfr-include=\${SYSROOT}\${BUILD_INCLUDEDIR} --with-mpfr-lib=\${SYSROOT}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX} \
+    --with-gmp-include=\${SYSROOT}\${BUILD_INCLUDEDIR} --with-gmp-lib=\${SYSROOT}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX}"
+INST_CMD="-j1 install-strip"
 PKG_TOOLCHAIN=gnu
 
 case ${BINUTILS_VER} in
@@ -20,8 +20,6 @@ case ${BINUTILS_VER} in
         CONF_FLAGS+=" --disable-dependency-tracking"
     ;;
 esac
-
-AUTOCONF_PATH=".,bfd,opcodes,libctf,binutils,gas,gold,gprof,gprofng,ld"
 
 PKG_PREBUILD="sed -i '/^AC_CONFIG_MACRO_DIR/d' libctf/configure.ac
     sed -i '/^AC_CONFIG_SRCDIR/a AC_CONFIG_MACRO_DIRS([.. ../config ../bfd])' libctf/configure.ac"
