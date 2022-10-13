@@ -1,0 +1,33 @@
+# binutils
+PKG_SUFFIX=_${GCC_VER}
+PKG_URL="https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz"
+PKG_DEPS="lfs/gmp_6.2.1 lfs/mpfr_4.1.0 lfs/mpc_1.2.1"
+BUILD_PROCESS=configmake
+AUTOCONF_PATH=autoscan
+CONF_FLAGS="--with-sysroot=/ --with-build-sysroot=${SYSROOT} \
+    --enable-targets=${HARCH} --with-arch-directory=${HM} --with-arch=${HMARCH}  \
+    --enable-checking=release --enable-multiarch --disable-multilib \
+    --enable-version-specific-runtime-libs --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --with-system-zlib --with-glibc-version=2.11 \
+    --with-gcc-major-version-only --enable-linker-build-id --enable-lto --enable-threads=posix --enable-languages=c,c++ \
+    --enable-clocale=gnu --enable-nls --enable-__cxa_atexit --with-default-libstdcxx-abi=new --enable-gcov --enable-libmudflap --enable-libgomp --enable-libssp --enable-libsanitizer \
+    --enable-install-libiberty --disable-libitm --disable-libmpx \
+    --with-mpc-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpc-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+    --with-mpfr-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpfr-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+    --with-gmp-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-gmp-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
+CONF_VARS="build_configargs='CFLAGS=\"${BUILD_CFLAGS}\"'"
+INST_CMD="install-strip"
+PKG_MAKEVARS="STAGE_CC_WRAPPER=${CCWRPAPER}
+PKG_TOOLCHAIN=gnu
+
+case ${BINUTILS_VER} in
+    *)
+        PKG_AUTOCONF=2.69
+        PKG_AUTOMAKE=1.15.1
+        PKG_LIBTOOL=2.2.6a
+        PKG_GETTEXT=0.14.5
+        #CONF_FLAGS+=" --disable-dependency-tracking"
+    ;;
+esac
+
+PKG_PREBUILD="sed '/^AC_INIT/a AC_CONFIG_MACRO_DIR([../config])' \
+    -i gcc/configure.ac libgcc/configure.ac libobjc/configure.ac libiberty/configure.ac"
