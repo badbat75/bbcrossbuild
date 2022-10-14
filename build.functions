@@ -210,6 +210,7 @@ function settcenv () {
 	unset TOOLCHAIN_CC \
 		TOOLCHAIN_CXX \
 		TOOLCHAIN_CPP \
+		TOOLCHAIN_CXXCPP \
 		TOOLCHAIN_FC \
 		TOOLCHAIN_F90 \
 		TOOLCHAIN_AR \
@@ -221,20 +222,20 @@ function settcenv () {
 		TOOLCHAIN_OBJDUMP \
 		TOOLCHAIN_READELF \
 		TOOLCHAIN_LD \
-		TOOLCHAIN_BUILD_CC \
-		TOOLCHAIN_BUILD_CXX \
-		TOOLCHAIN_BUILD_CPP \
-		TOOLCHAIN_BUILD_FC \
-		TOOLCHAIN_BUILD_F90 \
-		TOOLCHAIN_BUILD_AR \
-		TOOLCHAIN_BUILD_AS \
-		TOOLCHAIN_BUILD_NM \
-		TOOLCHAIN_BUILD_RANLIB \
-		TOOLCHAIN_BUILD_STRIP \
-		TOOLCHAIN_BUILD_OBJCOPY \
-		TOOLCHAIN_BUILD_OBJDUMP \
-		TOOLCHAIN_BUILD_READELF \
-		TOOLCHAIN_BUILD_LD \
+		TOOLCHAIN_CC_FOR_BUILD \
+		TOOLCHAIN_CXX_FOR_BUILD \
+		TOOLCHAIN_CPP_FOR_BUILD \
+		TOOLCHAIN_FC_FOR_BUILD \
+		TOOLCHAIN_F90_FOR_BUILD \
+		TOOLCHAIN_AR_FOR_BUILD \
+		TOOLCHAIN_AS_FOR_BUILD \
+		TOOLCHAIN_NM_FOR_BUILD \
+		TOOLCHAIN_RANLIB_FOR_BUILD \
+		TOOLCHAIN_STRIP_FOR_BUILD \
+		TOOLCHAIN_OBJCOPY_FOR_BUILD \
+		TOOLCHAIN_OBJDUMP_FOR_BUILD \
+		TOOLCHAIN_READELF_FOR_BUILD \
+		TOOLCHAIN_LD_FOR_BUILD \
 		TOOLCHAIN_LINKERFLAGS \
 		TOOLCHAIN_COMPFLAGS \
 		TOOLCHAIN_EXTRA_C_CMD \
@@ -256,11 +257,12 @@ function settcenv () {
 	case ${TOOLCHAIN} in
 		gnu)
 			TOOLCHAIN_CC=$(which ${HARCH}-gcc)
+			TOOLCHAIN_CPP="$(which ${HARCH}-gcc) -E"
 			if ${HARCH}-g++ --version > /dev/null 2>&1
 			then
 				TOOLCHAIN_CXX=$(which ${HARCH}-g++)
+				TOOLCHAIN_CXXCPP="$(which ${HARCH}-g++) -E"
 			fi
-			TOOLCHAIN_CPP="$(which ${HARCH}-gcc) -E"
 			if ${HARCH}-gfortran --version > /dev/null 2>&1
 			then
 				TOOLCHAIN_FC=$(which ${HARCH}-gfortran)
@@ -286,28 +288,29 @@ function settcenv () {
 			fi
 			TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LD} ${GNU_EXTRALDFLAGS}"
 
-			TOOLCHAIN_BUILD_CC=$(which ${BARCH}-gcc)
+			TOOLCHAIN_CC_FOR_BUILD=$(which ${BARCH}-gcc)
+			TOOLCHAIN_CPP_FOR_BUILD="$(which ${BARCH}-gcc) -E"
 			if ${BARCH}-g++ --version > /dev/null 2>&1
 			then
-				TOOLCHAIN_BUILD_CXX=$(which ${BARCH}-g++)
+				TOOLCHAIN_CXX_FOR_BUILD=$(which ${BARCH}-g++)
+				TOOLCHAIN_CXXCPP_FOR_BUILD="$(which ${BARCH}-g++) -E"
 			fi
-			TOOLCHAIN_BUILD_CPP="$(which ${BARCH}-gcc) -E"
 			if ${BARCH}-gfortran --version > /dev/null 2>&1
 			then
-				TOOLCHAIN_BUILD_FC=$(which ${BARCH}-gfortran)
-				TOOLCHAIN_BUILD_F90=$(which ${BARCH}-gfortran)
+				TOOLCHAIN_FC_FOR_BUILD=$(which ${BARCH}-gfortran)
+				TOOLCHAIN_F90_FOR_BUILD=$(which ${BARCH}-gfortran)
 			fi
 			### To implement to check wheter ${BARCH}-gcc* exists
-			TOOLCHAIN_BUILD_AR=$(which gcc-ar)
-			TOOLCHAIN_BUILD_AS=$(which as)
-			TOOLCHAIN_BUILD_NM=$(which gcc-nm)
-			TOOLCHAIN_BUILD_RANLIB=$(which gcc-ranlib)
-			TOOLCHAIN_BUILD_STRIP=$(which strip)
-			TOOLCHAIN_BUILD_OBJCOPY=$(which objcopy)
-			TOOLCHAIN_BUILD_OBJDUMP=$(which objdump)
-			TOOLCHAIN_BUILD_READELF=$(which readelf)
-			TOOLCHAIN_BUILD_LD=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
-			TOOLCHAIN_BUILD_LINKERFLAGS="-fuse-ld=${TOOLCHAIN_BUILD_LD}"
+			TOOLCHAIN_AR_FOR_BUILD=$(which gcc-ar)
+			TOOLCHAIN_AS_FOR_BUILD=$(which as)
+			TOOLCHAIN_NM_FOR_BUILD=$(which gcc-nm)
+			TOOLCHAIN_RANLIB_FOR_BUILD=$(which gcc-ranlib)
+			TOOLCHAIN_STRIP_FOR_BUILD=$(which strip)
+			TOOLCHAIN_OBJCOPY_FOR_BUILD=$(which objcopy)
+			TOOLCHAIN_OBJDUMP_FOR_BUILD=$(which objdump)
+			TOOLCHAIN_READELF_FOR_BUILD=$(which readelf)
+			TOOLCHAIN_LD_FOR_BUILD=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
+			TOOLCHAIN_LINKERFLAGS_FOR_BUILD="-fuse-ld=${TOOLCHAIN_LD_FOR_BUILD}"
 
 			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 				1|2|fat|thin)
@@ -319,8 +322,9 @@ function settcenv () {
 			;;
 		llvm)
 			TOOLCHAIN_CC=$(which clang)
-			TOOLCHAIN_CXX=$(which clang++)
 			TOOLCHAIN_CPP="$(which clang) -E"
+			TOOLCHAIN_CXX=$(which clang++)
+			TOOLCHAIN_CXXCPP="$(which clang++) -E"
 			if flang --version > /dev/null 2>&1
 			then
 				TOOLCHAIN_FC=$(which flang)
@@ -345,24 +349,24 @@ function settcenv () {
 			fi
 			TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LD} -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
 
-			TOOLCHAIN_BUILD_CC=$(which clang)
-			TOOLCHAIN_BUILD_CXX=$(which clang++)
-			TOOLCHAIN_BUILD_CPP="$(which clang) -E"
+			TOOLCHAIN_CC_FOR_BUILD=$(which clang)
+			TOOLCHAIN_CXX_FOR_BUILD=$(which clang++)
+			TOOLCHAIN_CPP_FOR_BUILD="$(which clang) -E"
 			if flang --version > /dev/null 2>&1
 			then
-				TOOLCHAIN_BUILD_FC=$(which flang)
-				TOOLCHAIN_BUILD_F90=$(which flang)
+				TOOLCHAIN_FC_FOR_BUILD=$(which flang)
+				TOOLCHAIN_F90_FOR_BUILD=$(which flang)
 			fi
-			TOOLCHAIN_BUILD_AR=$(which llvm-ar)
-			TOOLCHAIN_BUILD_AS=$(which llvm-as)
-			TOOLCHAIN_BUILD_NM=$(which llvm-nm)
-			TOOLCHAIN_BUILD_RANLIB=$(which llvm-ranlib)
-			TOOLCHAIN_BUILD_STRIP=$(which llvm-strip)
-			TOOLCHAIN_BUILD_OBJCOPY=$(which llvm-objcopy)
-			TOOLCHAIN_BUILD_OBJDUMP=$(which llvm-objdump)
-			TOOLCHAIN_BUILD_READELF=$(which llvm-readelf)
-			TOOLCHAIN_BUILD_LD=${PKG_OVERRIDELD:-${LLVM_DEFAULT_LD:-lld}}
-			TOOLCHAIN_BUILD_LINKERFLAGS="-fuse-ld=${TOOLCHAIN_LD} -Wl,--threads=${NPROCS}"
+			TOOLCHAIN_AR_FOR_BUILD=$(which llvm-ar)
+			TOOLCHAIN_AS_FOR_BUILD=$(which llvm-as)
+			TOOLCHAIN_NM_FOR_BUILD=$(which llvm-nm)
+			TOOLCHAIN_RANLIB_FOR_BUILD=$(which llvm-ranlib)
+			TOOLCHAIN_STRIP_FOR_BUILD=$(which llvm-strip)
+			TOOLCHAIN_OBJCOPY_FOR_BUILD=$(which llvm-objcopy)
+			TOOLCHAIN_OBJDUMP_FOR_BUILD=$(which llvm-objdump)
+			TOOLCHAIN_READELF_FOR_BUILD=$(which llvm-readelf)
+			TOOLCHAIN_LD_FOR_BUILD=${PKG_OVERRIDELD:-${LLVM_DEFAULT_LD:-lld}}
+			TOOLCHAIN_LINKERFLAGS_FOR_BUILD="-fuse-ld=${TOOLCHAIN_LD} -Wl,--threads=${NPROCS}"
 
 			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 				1|fat)
@@ -378,11 +382,11 @@ function settcenv () {
 	case ${TOOLCHAIN_LD} in
 		gold)
 			TOOLCHAIN_LINKERFLAGS+=" -fuse-linker-plugin -Wl,--threads -Wl,--thread-count,${NPROCS}"
-			TOOLCHAIN_BUILD_LINKERFLAGS+=" -fuse-linker-plugin -Wl,--threads -Wl,--thread-count,${NPROCS}"
+			TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -fuse-linker-plugin -Wl,--threads -Wl,--thread-count,${NPROCS}"
 			;;
 		lld)
 			TOOLCHAIN_LINKERFLAGS+=" -Wl,--thinlto-jobs=${NPROCS}"
-			TOOLCHAIN_BUILD_LINKERFLAGS+=" -Wl,--thinlto-jobs=${NPROCS}"
+			TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--thinlto-jobs=${NPROCS}"
 			;;
 	esac
 			
@@ -411,57 +415,57 @@ function create_environment_source () {
 		### PKG_BLDDIR=${PKG_BLDDIR}
 		#################################################################################
 
-		export BUILD_CC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_BUILD_CC}'
-		export BUILD_CFLAGS='-march=native -O3'
+		export CC_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC_FOR_BUILD}'
+		export CFLAGS_FOR_BUILD='-march=native -O3'
+		export CPP_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CPP_FOR_BUILD}'
+		export CPPFLAGS_FOR_BUILD='-march=native -O3'
 	EOF
-	if [ ! -z "${TOOLCHAIN_BUILD_CXX}" ]
+	if [ ! -z "${TOOLCHAIN_CXX_FOR_BUILD}" ]
 	then
 		cat <<-EOF >> environment.source
-			export BUILD_CXX='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_BUILD_CXX}'
-			export BUILD_CXXFLAGS='-march=native -O3'
+			export CXX_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX_FOR_BUILD}'
+			export CXXFLAGS_FOR_BUILD='-march=native -O3'
+			export CXXCPP_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXXCPP_FOR_BUILD}'
+			export CXXCPPFLAGS_FOR_BUILD='-march=native -O3'
+		EOF
+	fi
+	if [ ! -z "${TOOLCHAIN_FC_FOR_BUILD}" ]
+	then
+		cat <<-EOF >> environment.source
+			export FC_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_FC_FOR_BUILD}'
+			export FFLAGS_FOR_BUILD='-march=native -O3'
+			export F90_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_F90_FOR_BUILD}'
+			export F90FLAGS_FOR_BUILD='-march=native -O3'
 		EOF
 	fi
 	cat <<-EOF >> environment.source
-		export BUILD_CPP='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_BUILD_CPP}'
-		export BUILD_CPPFLAGS='-march=native -O3'
-	EOF
-	if [ ! -z "${TOOLCHAIN_BUILD_FC}" ]
-	then
-		cat <<-EOF >> environment.source
-			export BUILD_FC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_BUILD_FC}'
-			export BUILD_FFLAGS='-march=native -O3'
-			export BUILD_F90='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_BUILD_F90}'
-			export BUILD_F90FLAGS='-march=native -O3'
-		EOF
-	fi
-	cat <<-EOF >> environment.source
-		#export BUILD_LD='${TOOLCHAIN_BUILD_LD}'
-		export BUILD_LDFLAGS='${TOOLCHAIN_BUILD_LINKERFLAGS}'
-		export BUILD_AR='${TOOLCHAIN_BUILD_AR}'
-		export BUILD_AS='${TOOLCHAIN_BUILD_AS}'
-		export BUILD_NM='${TOOLCHAIN_BUILD_NM}'
-		export BUILD_RANLIB='${TOOLCHAIN_BUILD_RANLIB}'
-		export BUILD_STRIP='${TOOLCHAIN_BUILD_STRIP}'
-		export BUILD_OBJCOPY='${TOOLCHAIN_BUILD_OBJCOPY}'
-		export BUILD_OBJDUMP='${TOOLCHAIN_BUILD_OBJDUMP}'
-		export BUILD_READELF='${TOOLCHAIN_BUILD_READELF}'
+		#export LD_FOR_BUILD='${TOOLCHAIN_LD_FOR_BUILD}'
+		export LDFLAGS_FOR_BUILD='${TOOLCHAIN_LINKERFLAGS_FOR_BUILD}'
+		export AR_FOR_BUILD='${TOOLCHAIN_AR_FOR_BUILD}'
+		export AS_FOR_BUILD='${TOOLCHAIN_AS_FOR_BUILD}'
+		export NM_FOR_BUILD='${TOOLCHAIN_NM_FOR_BUILD}'
+		export RANLIB_FOR_BUILD='${TOOLCHAIN_RANLIB_FOR_BUILD}'
+		export STRIP_FOR_BUILD='${TOOLCHAIN_STRIP_FOR_BUILD}'
+		export OBJCOPY_FOR_BUILD='${TOOLCHAIN_OBJCOPY_FOR_BUILD}'
+		export OBJDUMP_FOR_BUILD='${TOOLCHAIN_OBJDUMP_FOR_BUILD}'
+		export READELF_FOR_BUILD='${TOOLCHAIN_READELF_FOR_BUILD}'
 
 	EOF
 	cat <<-EOF >> environment.source
 		export CC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 		export CFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}'
+		export CPP='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CPP}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+		export CPPFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CPPFLAGS} ${PLATFORM_CFLAGS} ${PKG_CPPFLAGS}'
 	EOF
 	if [ ! -z "${TOOLCHAIN_CXX}" ]
 	then
 		cat <<-EOF >> environment.source
 			export CXX='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 			export CXXFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}'
+			export CXXCPP='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXXCPP}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+			export CXXCPPFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CXXCPPFLAGS} ${PLATFORM_CFLAGS} ${PKG_CPPFLAGS}'
 		EOF
 	fi
-	cat <<-EOF >> environment.source
-		export CPP='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CPP}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
-		export CPPFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CPPFLAGS} ${PLATFORM_CFLAGS} ${PKG_CPPFLAGS}'
-	EOF
 	if [ ! -z "${TOOLCHAIN_FC}" ]
 	then
 		cat <<-EOF >> environment.source
@@ -755,9 +759,10 @@ function build () {(
 		fi
 		cat >runconfig.sh <<-EOF
 			#!/bin/bash
-			echo "\\\$ ${RUNCONFIG_CMD} ${CONF_FLAGS} \\\\"
-			echo -e "\t${CONF_VARS}"
-			${RUNCONFIG_CMD} ${CONF_FLAGS} ${CONF_VARS}
+			echo "\\\$ ${CONF_ENV} \\\\"
+			echo -e "\t${RUNCONFIG_CMD} ${CONF_FLAGS} \\\\"
+			echo -e "\t\t${CONF_VARS}"
+			${CONF_ENV} ${RUNCONFIG_CMD} ${CONF_FLAGS} ${CONF_VARS} \${@}
 		EOF
 		eval local "PKG_MAKEVARS='${PKG_MAKEVARS}'"
 		cat >runmake.sh <<-EOF
@@ -1524,6 +1529,7 @@ function build () {(
 		CARGO_BINLIST \
 		CARGO_LIBLIST \
 		CONF_CMD \
+		CONF_ENV \
 		CONF_FLAGS \
 		CONF_PATH \
 		CONF_VARS \

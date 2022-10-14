@@ -14,6 +14,7 @@ setup_sccache
 setup_gcc --install --main_gcc
 #setup_llvm
 
+build lfs/gcc
 build lfs/create-base-config_1.0
 build raspberrypi/rpi-firmware_1
 build firmwares/linux-firmware
@@ -98,7 +99,6 @@ build lfs/bind_9.19.4
 build lfs/curl_7.84.0
 ### Development
 build lfs/binutils
-build lfs/gcc
 build lfs/strace_5.19
 build lfs/gdb_12
 

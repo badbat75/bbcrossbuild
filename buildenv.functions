@@ -437,6 +437,7 @@ function setup_gcc () {
 	local GCC_INSTALL_TARGETS=${_param_install:-0}
 	local GCC_IS_MAIN=${_param_main_gcc:-0}
 
+	setup_autotools --default >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	pathadd PATH "${TOOLCHAIN_PATH}/bin"
 	if [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc ] && [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ ]
 	then
@@ -530,7 +531,6 @@ function setup_gcc () {
 		run_cmd "rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 		run_cmd "rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${BINUTILS_VER}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	fi
-	setup_autotools --default >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	setup_pkgconfig >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	setup_ldd >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	setup_toolchain_wrapper >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
@@ -801,6 +801,7 @@ function setup_llvm () {
 	local LLVM_BUILTINS_INSTALL=${_param_install:-0}
 
 	echo -n "Setting up clang-${LLVM_VER}... "
+	setup_autotools --default >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 	if [ ! -f ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang ] || [ ! -f ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/ld.lld ]
 	then
 		> ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
@@ -851,7 +852,6 @@ function setup_llvm () {
 	then
 		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}" >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 	fi
-	setup_autotools --default >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 	setup_pkgconfig >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 	setup_ldd >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 	setup_toolchain_wrapper >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
@@ -960,7 +960,6 @@ function setup_autotools () {
 		local LIBTOOL_URL="https://ftp.gnu.org/gnu/libtool/libtool-${LIBTOOL_VER}.tar.gz"
 		local GETTEXT_URL="https://ftp.gnu.org/pub/gnu/gettext/gettext-${GETTEXT_VER}.tar.gz"
 		download_uncompress "${AUTOCONF_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER} >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		#echo ${AUTOCONF_VER} > ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}/.tarball-version
 		download_uncompress "${AUTOMAKE_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER} >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
 		download_uncompress "${LIBTOOL_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER} >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
 		download_uncompress "${GETTEXT_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER} >> ${GLOBAL_LOG_PATH}/gettext-${GETTEXT_VER}.log
@@ -973,7 +972,7 @@ function setup_autotools () {
 			return ${STATUS};' ERR
 
 		local AUTOCONFARCHIVE_URL="http://mirror.kumi.systems/gnu/autoconf-archive/autoconf-archive-${AUTOCONFARCHIVE_VER}.tar.xz"
-		download_uncompress "${AUTOCONFARCHIVE_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER} >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+		download_uncompress "${AUTOCONFARCHIVE_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER} >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONFARCHIVE_VER}.log
 		trap ERR
 	}
 
@@ -1108,7 +1107,7 @@ function setup_autotools () {
 	fi
 
 	echo -n "checking support tools... "
-	if true
+	if [ ! -f ${GLOBAL_TOOLCHAIN_PATH}/share/info/autoconf-archive.info ]
 	then
 		#### Download all auto tools support tools
 		download_autotools_support
@@ -1116,16 +1115,16 @@ function setup_autotools () {
 		echo -n "autoconf-archive-${AUTOCONFARCHIVE_VER}... "
 		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER} ]
 		then
-			run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONF_VER}.log
+			run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}.log
 		fi
-		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONF_VER}.log
-		run_cmd "pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONF_VER}.log
-		run_cmd "${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONF_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONF_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONF_VER}.log
-		run_cmd "popd" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONF_VER}.log
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONF_VER}.log
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONF_VER}.log
+		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}.log
+		run_cmd "pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}.log
+		run_cmd "${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}.log
+		run_cmd "popd" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}.log
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}.log
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}.log
 		echo -n "done."
 	else
 		echo -n "already there."
