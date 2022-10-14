@@ -22,7 +22,8 @@ CONF_ENV="CC_FOR_BUILD=\"\${CC}\" \
     CXXCPPFLAGS_FOR_TARGET=\"\${CXXCPPFLAGS}\" \
     AR_FOR_TARGET=\"\${AR}\" \
 	NM_FOR_TARGET=\"\${NM}\" \
-	RANLIB_FOR_TARGET=\"\${RANLIB}\" \"
+	RANLIB_FOR_TARGET=\"\${RANLIB}\" \
+"
 CONF_FLAGS="--with-sysroot=/ --with-build-sysroot=${SYSROOT} \
     --enable-targets=${HARCH} --with-arch-directory=${HM} --with-arch=${HMARCH}  \
     --enable-checking=release --enable-multiarch --disable-multilib \
