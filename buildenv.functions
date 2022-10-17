@@ -959,10 +959,10 @@ function setup_autotools () {
 		local AUTOMAKE_URL="https://ftp.gnu.org/gnu/automake/automake-${AUTOMAKE_VER}.tar.gz"
 		local LIBTOOL_URL="https://ftp.gnu.org/gnu/libtool/libtool-${LIBTOOL_VER}.tar.gz"
 		local GETTEXT_URL="https://ftp.gnu.org/pub/gnu/gettext/gettext-${GETTEXT_VER}.tar.gz"
-		download_uncompress "${AUTOCONF_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER} >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		download_uncompress "${AUTOMAKE_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER} >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
-		download_uncompress "${LIBTOOL_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER} >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
-		download_uncompress "${GETTEXT_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER} >> ${GLOBAL_LOG_PATH}/gettext-${GETTEXT_VER}.log
+		download_uncompress "${AUTOCONF_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER} >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		download_uncompress "${AUTOMAKE_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER} >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		download_uncompress "${LIBTOOL_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER} >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		download_uncompress "${GETTEXT_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER} >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
 		trap ERR
 	}
 
@@ -979,11 +979,11 @@ function setup_autotools () {
 	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log ];
+		if [ -f ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log ];
 		then \
-			echo "Log ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log:"; \
+			echo "Log ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log:"; \
 			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log; \
+			tail -n24 ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log; \
 		fi;
 		set +x; \
 		trap - ERR; \
@@ -997,7 +997,8 @@ function setup_autotools () {
 	local LIBTOOL_VER=${_param_3:-${LIBTOOL_VER}}
 	local GETTEXT_VER=${_param_4:-${GETTEXT_VER}}
 
-	AUTOTOOLS_PATH=${GLOBAL_TOOLCHAIN_PATH}/autotools-${AUTOCONF_VER}${AUTOMAKE_VER:+-${AUTOMAKE_VER}}${LIBTOOL_VER:+-${LIBTOOL_VER}}${GETTEXT_VER:+-${GETTEXT_VER}}
+	AUTOTOOLS_VER=${AUTOCONF_VER}${AUTOMAKE_VER:+-${AUTOMAKE_VER}}${LIBTOOL_VER:+-${LIBTOOL_VER}}${GETTEXT_VER:+-${GETTEXT_VER}}
+	AUTOTOOLS_PATH=${GLOBAL_TOOLCHAIN_PATH}/autotools-${AUTOTOOLS_VER}
 
 	echo -n "Setting up autotools... "
 	if [ ! -f ${AUTOTOOLS_PATH}/bin/autoconf ] || [ ! ${AUTOTOOLS_PATH}/bin/automake ] || [ ! ${AUTOTOOLS_PATH}/bin/libtoolize ]
@@ -1006,19 +1007,19 @@ function setup_autotools () {
 		download_autotools
 		#### Build libtool
 		echo -n "libtool-${LIBTOOL_VER}... "
-		run_cmd "pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}" >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
+		run_cmd "pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
 		local FILETOPATCH="$(find -name ltmain.sh)"
-		run_cmd "sed -i '/^      -64|-mips\[0-9\]/ i## BBXB change ##' ${FILETOPATCH}" >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
-		run_cmd "sed -i '/^      -64|-mips\[0-9\]/,/*)\$/d' ${FILETOPATCH}" >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
-		run_cmd "sed -i '/^## BBXB change ##/a\\       -64|-mips[0-9]|-r[0-9][0-9]*|-xarch=*|-xtarget=*|+DA*|+DD*|-q*|-m*|-t[45]*|-txscale*|-p|-pg|--coverage|-fprofile-*|-F*|@*|-tp=*|--sysroot=*|-O*|-g*|-flto*|-fwhopr*|-fuse-linker-plugin|-fstack-protector*|-stdlib=*|-specs=*|-fsanitize=*|-fuse-ld=*|-Wa,*|--target=*|-B*)' ${FILETOPATCH}" >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
-		#run_cmd "AUTOCONF=${AUTOTOOLS_PATH}/bin/autoconf ${AUTOTOOLS_PATH}/bin/autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
-		run_cmd "popd" >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
+		run_cmd "sed -i '/^      -64|-mips\[0-9\]/ i## BBXB change ##' ${FILETOPATCH}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "sed -i '/^      -64|-mips\[0-9\]/,/*)\$/d' ${FILETOPATCH}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "sed -i '/^## BBXB change ##/a\\       -64|-mips[0-9]|-r[0-9][0-9]*|-xarch=*|-xtarget=*|+DA*|+DD*|-q*|-m*|-t[45]*|-txscale*|-p|-pg|--coverage|-fprofile-*|-F*|@*|-tp=*|--sysroot=*|-O*|-g*|-flto*|-fwhopr*|-fuse-linker-plugin|-fstack-protector*|-stdlib=*|-specs=*|-fsanitize=*|-fuse-ld=*|-Wa,*|--target=*|-B*)' ${FILETOPATCH}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		#run_cmd "AUTOCONF=${AUTOTOOLS_PATH}/bin/autoconf ${AUTOTOOLS_PATH}/bin/autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "popd" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
 		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER} ]
 		then
-			run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}" >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
+			run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
 		fi
-		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}" >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
-		run_cmd "pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}" >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
+		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
 		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \
 			CXX=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-g++ 2>/dev/null)\" \
 			AR=\"$(which ${BARCH}-gcc-ar 2>/dev/null)\" \
@@ -1027,40 +1028,40 @@ function setup_autotools () {
 			CFLAGS=\"-march=native -O3 -flto\" \
 			CXXFLAGS=\"-march=native -O3 -flto\" \
 			LDFLAGS=\"-fuse-ld=gold -fuse-linker-plugin\" \
-				${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}/configure --prefix=${AUTOTOOLS_PATH}" >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
-		run_cmd "popd >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log"
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}" >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}" >> ${GLOBAL_LOG_PATH}/libtool-${LIBTOOL_VER}.log
+				${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}/configure --prefix=${AUTOTOOLS_PATH}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "popd >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log"
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
 		#### Build autoconf
 		echo -n "autoconf-${AUTOCONF_VER}... "
-		run_cmd "pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		#run_cmd "autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		run_cmd "popd" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log 2>&1
+		run_cmd "pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		#run_cmd "autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "popd" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log 2>&1
 		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER} ]
 		then
-			run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+			run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
 		fi
-		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		run_cmd "pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		run_cmd "${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}/configure --prefix=${AUTOTOOLS_PATH}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		run_cmd "popd">> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-${AUTOCONF_VER}.log
+		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}/configure --prefix=${AUTOTOOLS_PATH}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "popd">> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
 		#### Build automake
 		echo -n "automake-${AUTOMAKE_VER}... "
-		run_cmd "pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}" >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log 2>&1
-		#run_cmd "AUTOCONF=${AUTOTOOLS_PATH}/bin/autoconf LIBTOOLIZE=${AUTOTOOLS_PATH}/bin/libtoolize ${AUTOTOOLS_PATH}/bin/autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
-		popd >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log 2>&1
+		run_cmd "pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log 2>&1
+		#run_cmd "AUTOCONF=${AUTOTOOLS_PATH}/bin/autoconf LIBTOOLIZE=${AUTOTOOLS_PATH}/bin/libtoolize ${AUTOTOOLS_PATH}/bin/autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		popd >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log 2>&1
 		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER} ]
 		then
-			run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}" >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
+			run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
 		fi
-		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}" >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
-		run_cmd "pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}" >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
+		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
 		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \\
 			CXX=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-g++ 2>/dev/null)\" \\
 			AR=\"$(which ${BARCH}-gcc-ar 2>/dev/null)\" \\
@@ -1069,24 +1070,24 @@ function setup_autotools () {
 			CFLAGS=\"-march=native -O3 -flto\" \\
 			CXXFLAGS=\"-march=native -O3 -flto\" \\
 			LDFLAGS=\"-fuse-ld=gold -fuse-linker-plugin\" \\
-				${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}/configure --prefix=${AUTOTOOLS_PATH}" >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
-		run_cmd "popd" >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}" >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}" >> ${GLOBAL_LOG_PATH}/automake-${AUTOMAKE_VER}.log
+				${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}/configure --prefix=${AUTOTOOLS_PATH}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "popd" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
 		#### Build gettext
 		echo -n "gettext-${GETTEXT_VER}... "
-		run_cmd "pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}" >> ${GLOBAL_LOG_PATH}/gettext-${GETTEXT_VER}.log 2>&1
+		run_cmd "pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log 2>&1
 		#run_cmd "AUTOCONF=${AUTOTOOLS_PATH}/bin/autoconf AUTOCONF=${AUTOTOOLS_PATH}/bin/automake LIBTOOLIZE=${AUTOTOOLS_PATH}/bin/libtoolize \\
-		#	${AUTOTOOLS_PATH}/bin/autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/gettext-${GETTEXT_VER}.log
-		popd >> ${GLOBAL_LOG_PATH}/gettext-${GETTEXT_VER}.log 2>&1
+		#	${AUTOTOOLS_PATH}/bin/autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		popd >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log 2>&1
 		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER} ]
 		then
-			run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}" >> ${GLOBAL_LOG_PATH}/gettext-${GETTEXT_VER}.log
+			run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
 		fi
-		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}" >> ${GLOBAL_LOG_PATH}/gettext-${GETTEXT_VER}.log
-		run_cmd "pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}" >> ${GLOBAL_LOG_PATH}/gettext-${GETTEXT_VER}.log
+		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
 		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \\
 			CXX=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-g++ 2>/dev/null)\" \\
 			AR=\"$(which ${BARCH}-gcc-ar 2>/dev/null)\" \\
@@ -1095,12 +1096,12 @@ function setup_autotools () {
 			CFLAGS=\"-march=native -O3 -flto\" \\
 			CXXFLAGS=\"-march=native -O3 -flto\" \\
 			LDFLAGS=\"-fuse-ld=gold -fuse-linker-plugin\" \\
-				${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}/configure --prefix=${AUTOTOOLS_PATH}" >> ${GLOBAL_LOG_PATH}/gettext-${GETTEXT_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/gettext-${GETTEXT_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/gettext-${GETTEXT_VER}.log
-		run_cmd "popd" >> ${GLOBAL_LOG_PATH}/gettext-${GETTEXT_VER}.log
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}" >> ${GLOBAL_LOG_PATH}/gettext-${GETTEXT_VER}.log
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}" >> ${GLOBAL_LOG_PATH}/gettext-${GETTEXT_VER}.log
+				${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}/configure --prefix=${AUTOTOOLS_PATH}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "popd" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
 		echo -n "done. "
 	else
 		echo -n "already there. "
