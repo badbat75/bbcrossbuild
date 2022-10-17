@@ -210,7 +210,6 @@ function settcenv () {
 	unset TOOLCHAIN_CC \
 		TOOLCHAIN_CXX \
 		TOOLCHAIN_CPP \
-		TOOLCHAIN_CXXCPP \
 		TOOLCHAIN_FC \
 		TOOLCHAIN_F90 \
 		TOOLCHAIN_AR \
@@ -261,7 +260,6 @@ function settcenv () {
 			if ${HARCH}-g++ --version > /dev/null 2>&1
 			then
 				TOOLCHAIN_CXX=$(which ${HARCH}-g++)
-				TOOLCHAIN_CXXCPP="$(which ${HARCH}-g++) -E"
 			fi
 			if ${HARCH}-gfortran --version > /dev/null 2>&1
 			then
@@ -324,7 +322,6 @@ function settcenv () {
 			TOOLCHAIN_CC=$(which clang)
 			TOOLCHAIN_CPP="$(which clang) -E"
 			TOOLCHAIN_CXX=$(which clang++)
-			TOOLCHAIN_CXXCPP="$(which clang++) -E"
 			if flang --version > /dev/null 2>&1
 			then
 				TOOLCHAIN_FC=$(which flang)
@@ -425,8 +422,6 @@ function create_environment_source () {
 		cat <<-EOF >> environment.source
 			export CXX_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX_FOR_BUILD}'
 			export CXXFLAGS_FOR_BUILD='-march=native -O3'
-			export CXXCPP_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXXCPP_FOR_BUILD}'
-			export CXXCPPFLAGS_FOR_BUILD='-march=native -O3'
 		EOF
 	fi
 	if [ ! -z "${TOOLCHAIN_FC_FOR_BUILD}" ]
@@ -462,8 +457,6 @@ function create_environment_source () {
 		cat <<-EOF >> environment.source
 			export CXX='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 			export CXXFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}'
-			export CXXCPP='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXXCPP}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
-			export CXXCPPFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CXXCPPFLAGS} ${PLATFORM_CFLAGS} ${PKG_CPPFLAGS}'
 		EOF
 	fi
 	if [ ! -z "${TOOLCHAIN_FC}" ]

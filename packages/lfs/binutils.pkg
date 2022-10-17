@@ -3,35 +3,22 @@ PKG_SUFFIX=_${BINUTILS_VER}
 PKG_URL="https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz"
 PKG_DEPS="lfs/gmp_6.2.1 lfs/mpfr_4.1.0 lfs/mpc_1.2.1"
 BUILD_PROCESS=configmake
-AUTOCONF_PATH="autoscan"
-CONF_ENV="CC_FOR_BUILD=\"\${CC}\" \
-    CFLAGS_FOR_BUILD=\"\${CFLAGS}\" \
-    CPP_FOR_BUILD=\"\${CPP}\" \
-    CPPFLAGS_FOR_BUILD=\"\${CPPFLAGS}\"
-    CXX_FOR_BUILD=\"\${CXX}\" \
-    CXXFLAGS_FOR_BUILD=\"\${CXXFLAGS}\" \
-    CXXCPP_FOR_BUILD=\"\${CXXCPP}\" \
-    CXXCPPFLAGS_FOR_BUILD=\"\${CXXCPPFLAGS}\" \
+AUTOCONF_PATH="bfd,binutils,gas,gold,gprof,gprofng,intl,ld,libctf,libiberty,opcodes"
+CONF_ENV="CC_FOR_TARGET=\"\${CC}\" \
+    CFLAGS_FOR_TARGET=\"\${CFLAGS}\" \
+    CXX_FOR_TARGET=\"\${CXX}\" \
+    CXXFLAGS_FOR_TARGET=\"\${CXXFLAGS}\" \
+    AR_FOR_TARGET=\"\${AR}\" \
+	NM_FOR_TARGET=\"\${NM}\" \
+	RANLIB_FOR_TARGET=\"\${RANLIB}\" \
     "
-CONF_FLAGS="--with-sysroot=/ --with-build-sysroot=\${SYSROOT} \
+CONF_FLAGS="--target=${HARCH} \
+    --enable-targets=${HARCH} --with-arch-directory=${HM} --with-arch=${HMARCH}  \
     --enable-gold --enable-plugins --enable-lto --enable-64-bit-bfd --enable-install-libbfd --with-system-zlib --enable-linker-build-id \
     --with-mpc-include=\${SYSROOT}\${BUILD_INCLUDEDIR} --with-mpc-lib=\${SYSROOT}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX} \
     --with-mpfr-include=\${SYSROOT}\${BUILD_INCLUDEDIR} --with-mpfr-lib=\${SYSROOT}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX} \
     --with-gmp-include=\${SYSROOT}\${BUILD_INCLUDEDIR} --with-gmp-lib=\${SYSROOT}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX}"
 INST_CMD="-j1 install-strip"
-PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
-    CC_FOR_TARGET=\"\${CC}\" \
-    CFLAGS_FOR_TARGET=\"\${CFLAGS}\" \
-    CPP_FOR_TARGET=\"\${CPP}\" \
-    CPPFLAGS_FOR_TARGET=\"\${CPPFLAGS}\" \
-    CXX_FOR_TARGET=\"\${CXX}\" \
-    CXXFLAGS_FOR_TARGET=\"\${CXXFLAGS}\" \
-    CXXCPP_FOR_TARGET=\"\${CXXCPP}\" \
-    CXXCPPFLAGS_FOR_TARGET=\"\${CXXCPPFLAGS}\" \
-    AR_FOR_TARGET=\"\${AR}\" \
-	NM_FOR_TARGET=\"\${NM}\" \
-	RANLIB_FOR_TARGET=\"\${RANLIB}\" \
-"
 PKG_TOOLCHAIN=gnu
 
 case ${BINUTILS_VER} in
