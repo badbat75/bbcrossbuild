@@ -1078,8 +1078,8 @@ function setup_autotools () {
 		#### Build gettext
 		echo -n "gettext-${GETTEXT_VER}... "
 		run_cmd "pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}" >> ${GLOBAL_LOG_PATH}/gettext-${GETTEXT_VER}.log 2>&1
-		run_cmd "AUTOCONF=${AUTOTOOLS_PATH}/bin/autoconf AUTOCONF=${AUTOTOOLS_PATH}/bin/automake LIBTOOLIZE=${AUTOTOOLS_PATH}/bin/libtoolize \\
-			${AUTOTOOLS_PATH}/bin/autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/gettext-${GETTEXT_VER}.log
+		#run_cmd "AUTOCONF=${AUTOTOOLS_PATH}/bin/autoconf AUTOCONF=${AUTOTOOLS_PATH}/bin/automake LIBTOOLIZE=${AUTOTOOLS_PATH}/bin/libtoolize \\
+		#	${AUTOTOOLS_PATH}/bin/autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/gettext-${GETTEXT_VER}.log
 		popd >> ${GLOBAL_LOG_PATH}/gettext-${GETTEXT_VER}.log 2>&1
 		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER} ]
 		then

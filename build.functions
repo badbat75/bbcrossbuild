@@ -1094,7 +1094,7 @@ function build () {(
 		run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
 
 		cd ${PKG_BLDPATH}
-		run_cmd "./make4kern"
+		make4kern
 
 		echo "Build ${PKG_FILE} with extra modules ${PKG_KERNEL_BUILD_MODULES}"
 		echo "Kernel headers only: ${KERNEL_HDRS_ONLY:-1}"
