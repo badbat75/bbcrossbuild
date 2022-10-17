@@ -760,8 +760,8 @@ function build () {(
 		eval local "PKG_MAKEVARS='${PKG_MAKEVARS}'"
 		cat >runmake.sh <<-EOF
 			#!/bin/bash
-			echo "\\\$ make V=${MAKEVERBOSE:-0} ${PKG_MAKEVARS} \${@}"
-			make V=${MAKEVERBOSE:-0} ${PKG_MAKEVARS} \${@}
+			echo "\\\$ ${PKG_MAKEENV} make V=${MAKEVERBOSE:-0} ${PKG_MAKEVARS} \${@}"
+			${PKG_MAKEENV} make V=${MAKEVERBOSE:-0} ${PKG_MAKEVARS} \${@}
 		EOF
 		run_cmd "chmod +x runconfig.sh runmake.sh"
 
@@ -1547,6 +1547,7 @@ function build () {(
 		PKG_LD_LIBRARY_PATH \
 		PKG_RUSTFLAGS \
 		PKG_LLVMPOLLYFEATURES \
+		PKG_MAKEENV \
 		PKG_MAKETARGETS \
 		PKG_MAKEVARS \
 		PKG_OVERRIDELD \

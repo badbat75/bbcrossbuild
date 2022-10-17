@@ -4,14 +4,16 @@ PKG_URL="https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.g
 PKG_DEPS="lfs/gmp_6.2.1 lfs/mpfr_4.1.0 lfs/mpc_1.2.1"
 BUILD_PROCESS=configmake
 AUTOCONF_PATH=autoscan
-CONF_ENV="CC_FOR_TARGET=\"\${CC}\" \
+CONF_ENV="
+    env -u CPP -u CPPFLAGS \
+    CC_FOR_TARGET=\"\${CC}\" \
     CFLAGS_FOR_TARGET=\"\${CFLAGS}\" \
     CXX_FOR_TARGET=\"\${CXX}\" \
     CXXFLAGS_FOR_TARGET=\"\${CXXFLAGS}\" \
     AR_FOR_TARGET=\"\${AR}\" \
 	NM_FOR_TARGET=\"\${NM}\" \
 	RANLIB_FOR_TARGET=\"\${RANLIB}\" \
-"
+    "
 CONF_FLAGS="--target=${HARCH} \
     --enable-targets=${HARCH} --with-arch-directory=${HM} --with-arch=${HMARCH}  \
     --enable-checking=release --enable-multiarch --disable-multilib \
@@ -23,8 +25,8 @@ CONF_FLAGS="--target=${HARCH} \
     --with-mpfr-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpfr-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
     --with-gmp-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-gmp-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
 INST_CMD="install-strip"
+PKG_MAKEENV="env -u CPP -u CPPFLAGS"
 PKG_TOOLCHAIN=gnu
-PKG_OVERRIDELTO=0
 
 case ${GCC_VER} in
 #    12.2.0)  PKG_AUTOCONF=2.69
