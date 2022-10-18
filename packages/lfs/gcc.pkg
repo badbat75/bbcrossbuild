@@ -22,7 +22,6 @@ then
     # CONF_FLAGS+" --enable-symvers=no"
     PKG_PREBUILD="sed '/^  __asm/d;/^# define omp_lock_symver(fn) /a\  extern __typeof (g##fn##_30) _##fn##_30 __attribute__((__symver__ (#fn \"@@OMP_3.0\"))); \\\\\\n  extern __typeof (g##fn##_25) _##fn##_25 __attribute__((__symver__ (#fn \"@OMP_1.0\")));' -i libgomp/libgomp.h;"
 fi
-INST_CMD="install-strip"
 PKG_MAKEENV="env -u CPP -u CPPFLAGS"
 PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
     CFLAGS_FOR_TARGET=\"\${CFLAGS}\" \
@@ -72,6 +71,7 @@ case "${GCC_TARGETS:-all}" in
     ;;
 esac
 PKG_MAKETARGETS=
+INST_CMD=
 for object in $( echo ${OBJECTS} | tr ',' ' ' )
 do
     PKG_MAKETARGETS+=" all-${object}"
