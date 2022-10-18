@@ -1155,7 +1155,7 @@ function build () {(
 					run_cmd "sed -i -e '/^ifdef CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE/i ifdef CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE_O3\nKBUILD_CFLAGS += -O3' \
 						-e 's/^ifdef CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE/else ifdef CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE/' Makefile"
 					run_cmd "sed -i -e \
-						n'/^config CC_OPTIMIZE_FOR_PERFORMANCE/i config CC_OPTIMIZE_FOR_PERFORMANCE_O3\n\tbool \"Optimize for performance (-O3)\"\n\thelp\n\t  This is the default optimization level for the kernel, building\n\t  with the \"-O2\" compiler flag for maximum performance.\n' \
+						'/^config CC_OPTIMIZE_FOR_PERFORMANCE/i config CC_OPTIMIZE_FOR_PERFORMANCE_O3\n\tbool \"Optimize for performance (-O3)\"\n\thelp\n\t  This is the default optimization level for the kernel, building\n\t  with the \"-O2\" compiler flag for maximum performance.\n' \
 						init/Kconfig"
 					#run_cmd "sed -i "/depends on ARC$/d" init/Kconfig"
 					run_cmd "scripts/config -d CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE -e CC_OPTIMIZE_FOR_PERFORMANCE_O3"
