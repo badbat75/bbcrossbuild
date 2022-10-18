@@ -1,7 +1,7 @@
 # gdb_12
 PKG_SUFFIX=.1
 PKG_URL="http://ftp.gnu.org/gnu/gdb/gdb-12${PKG_SUFFIX}.tar.xz"
-PKG_DEPS="lfs/gmp_6.2.1 lfs/mpfr_4.1.0 lfs/mpc_1.2.1"
+PKG_DEPS="lfs/gmp lfs/mpfr lfs/mpc"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=2.69
 PKG_AUTOMAKE=1.15.1

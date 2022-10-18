@@ -1,6 +1,0 @@
-# mpc_1.2.1
-PKG_URL="https://ftp.gnu.org/gnu/mpc/mpc-1.2.1.tar.gz"
-BUILD_PROCESS=configmake
-PKG_AUTOCONF=1
-CONF_FLAGS="--docdir=/usr/share/doc/mpc-1.2.1"
-INST_CMD="install-strip"

@@ -1,24 +1,26 @@
 # binutils
 PKG_SUFFIX=_${BINUTILS_VER}
 PKG_URL="https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz"
-PKG_DEPS="lfs/gmp_6.2.1 lfs/mpfr_4.1.0 lfs/mpc_1.2.1"
+PKG_DEPS="lfs/gmp lfs/mpfr lfs/mpc"
 BUILD_PROCESS=configmake
 AUTOCONF_PATH="bfd,binutils,gas,gold,gprof,gprofng,intl,ld,libctf,libiberty,opcodes"
-CONF_ENV="CC_FOR_TARGET=\"\${CC}\" \
-    CFLAGS_FOR_TARGET=\"\${CFLAGS}\" \
-    CXX_FOR_TARGET=\"\${CXX}\" \
-    CXXFLAGS_FOR_TARGET=\"\${CXXFLAGS}\" \
-    AR_FOR_TARGET=\"\${AR}\" \
-	NM_FOR_TARGET=\"\${NM}\" \
-	RANLIB_FOR_TARGET=\"\${RANLIB}\" \
-    "
-CONF_FLAGS="--target=${HARCH} \
+CONF_ENV="env -u CPP -u CPPFLAGS"
+CONF_FLAGS="--target=${HARCH} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
     --enable-targets=${HARCH} --with-arch-directory=${HM} --with-arch=${HMARCH}  \
     --enable-gold --enable-plugins --enable-lto --enable-64-bit-bfd --enable-install-libbfd --with-system-zlib --enable-linker-build-id \
     --with-mpc-include=\${SYSROOT}\${BUILD_INCLUDEDIR} --with-mpc-lib=\${SYSROOT}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX} \
     --with-mpfr-include=\${SYSROOT}\${BUILD_INCLUDEDIR} --with-mpfr-lib=\${SYSROOT}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX} \
     --with-gmp-include=\${SYSROOT}\${BUILD_INCLUDEDIR} --with-gmp-lib=\${SYSROOT}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX}"
 INST_CMD="-j1 install-strip"
+PKG_MAKEENV="env -u CPP -u CPPFLAGS"
+PKG_MAKEVARS="CC_FOR_TARGET=\"\${CC}\" \
+    CFLAGS_FOR_TARGET=\"\${CFLAGS}\" \
+    CXX_FOR_TARGET=\"\${CXX}\" \
+    CXXFLAGS_FOR_TARGET=\"\${CXXFLAGS}\" \
+    AR_FOR_TARGET=\"\${AR}\" \
+	NM_FOR_TARGET=\"\${NM}\" \
+	RANLIB_FOR_TARGET=\"\${RANLIB}\" \
+"
 PKG_TOOLCHAIN=gnu
 
 case ${BINUTILS_VER} in

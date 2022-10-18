@@ -1,5 +1,6 @@
-# gmp_6.2.1
-PKG_URL="http://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.xz"
+# gmp
+PKG_SUFFIX=-${GMP_VER}
+PKG_URL="http://ftp.gnu.org/gnu/gmp/gmp-${GMP_VER}.tar.xz"
 PKG_DEPS="lfs/ncurses_6 lfs/readline_8.2"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-cxx"

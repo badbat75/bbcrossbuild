@@ -11,8 +11,11 @@ TOOLCHAIN=gnu
 build --no_save_status lfs/create-base-fs_1.0
 
 setup_sccache
-setup_gcc --install --main_gcc
+setup_gcc
 #setup_llvm
+
+
+GCC_TARGETS="target-libraries" build lfs/gcc
 
 build lfs/create-base-config_1.0
 build raspberrypi/rpi-firmware_1
@@ -30,8 +33,6 @@ build lfs/zstd_1.5.2
 build lfs/file_5
 build lfs/readline_8.2
 build lfs/bc_1.0.7
-build lfs/gmp_6.2.1
-build lfs/mpfr_4.1.0
 build lfs/attr_2.4.48
 build lfs/acl_2.2.53
 build lfs/libcap_2.47

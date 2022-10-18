@@ -79,7 +79,7 @@ function setbuildenv () {
 				#echo "PKG_TOOLCHAIN: ${PKG_TOOLCHAIN}"
 				case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
 					gnu)
-						local GCC_BINS="$(${HARCH}-gcc -print-search-dirs | grep "^programs" | cut -d '=' -f2 | cut -d ':' -f1)"
+						local GCC_BINS="$(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -print-search-dirs | grep "^programs" | cut -d '=' -f2 | cut -d ':' -f1)"
 						#echo "GCC_BINS: ${GCC_BINS}"
 						COMMON_CFLAGS+=" -B${GCC_BINS} -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
 						COMMON_CXXFLAGS+=" -B${GCC_BINS} -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
@@ -119,10 +119,29 @@ function setbuildenv () {
 					COMMON_CXXFLAGS+=" -B${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}"
 					COMMON_LDFLAGS+=" -B${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}"
 				fi
+				### If ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++ is not present use the one in BIN_PATH, this is a workaround
+				if [ ! -f ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/libgcc_s.so ]
+				then
+					local GCC_LIBS="$(realpath -m $(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -print-search-dirs | grep "^libraries" | cut -d '=' -f2 | cut -d ':' -f1))"
+					#echo "GCC_LIBS: ${GCC_LIBS}"
+					COMMON_CFLAGS+=" -B${GCC_LIBS}"
+					COMMON_CXXFLAGS+=" -B${GCC_LIBS}"
+					COMMON_LDFLAGS+=" -B${GCC_LIBS}"
+					if [ -d ${GCC_LIBS}/../lib64 ]
+					then
+						COMMON_CFLAGS+=" -B${GCC_LIBS}/../lib64"
+						COMMON_CXXFLAGS+=" -B${GCC_LIBS}/../lib64"
+						COMMON_LDFLAGS+=" -B${GCC_LIBS}/../lib64"
+					fi
+				fi
 				;;
 		esac			
 		SYSROOT="${BIN_PATH}"
 	fi
+	case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
+		gnu)
+		;;
+	esac
 	SYSROOT_FLAGS="--sysroot=${SYSROOT}"
 }
 
@@ -706,6 +725,19 @@ function build () {(
 				echo "Scanned AUTOCONF_PATH: ${AUTOCONF_PATH}"
 				run_cmd "popd"
 			fi 
+			#### Implement multi process autoreconf to test
+			# echo $AUTOCONF_PATH | xargs -P${NPROCS} -n1 -d' ' -I{} bash -c '
+			#	run_cmd "pushd ${PKG_SRCPATH}/{}"
+			#	if [ ! -d m4 ]
+			#	then
+			#		run_cmd "mkdir m4"
+			#	fi
+			#	#[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal"
+			#	[ -f po/update-potfiles ] && run_cmd "./po/update-potfiles" || true
+			#	[ -d autom4te.cache ] && run_cmd "rm -rfv autom4te.cache" || true
+			#	run_cmd "${AUTOCONF_CMD} -f -i -v ${ACINCLUDE}"
+			#	run_cmd "popd"
+			#'
 			IFS=,
 			for cp in ${AUTOCONF_PATH:-.}
 			do
