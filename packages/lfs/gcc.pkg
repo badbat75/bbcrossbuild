@@ -75,6 +75,6 @@ PKG_MAKETARGETS=
 for object in $( echo ${OBJECTS} | tr ',' ' ' )
 do
     PKG_MAKETARGETS+=" all-${object}"
-    INST_CMD="install-strip-${object}"
+    INST_CMD+=" install-strip-${object}"
 done
 ######################################################################
