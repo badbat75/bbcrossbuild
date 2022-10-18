@@ -52,7 +52,7 @@ PKG_PREBUILD+="sed '/^AC_INIT/a AC_CONFIG_MACRO_DIR([../config])' \
     sed '/all-build-libcpp/,/TARGET-build-libcpp/ s/\\\$(BASE_FLAGS_TO_PASS) //' -i Makefile.in
 "
 
-PKG_POSTBUILD="find ${PKG_PKGPATH}}${BUILD_PREFIX}/lib/gcc/${HARCH} -type f,l \\( -name "*.so*" -a ! -name "*.so*.py" -o -name "*.a*" -o -name "*.la*" -o -name "crt*.o" \\) \
+PKG_POSTBUILD="find ${PKG_PKGPATH}}${BUILD_PREFIX}/lib/gcc/${HARCH} -type f,l \\( -name \"*.so*\" -a ! -name \"*.so*.py\" -o -name \"*.a*\" -o -name \"*.la*\" -o -name \"crt*.o\" \\) \
     | xargs -r -I{} bash -c ln -fsv \$(realpath --relative-to=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} {}) ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/\$(basename {})'"
 
 ##################### Package dedicated code #########################
