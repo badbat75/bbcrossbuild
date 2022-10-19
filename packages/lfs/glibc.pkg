@@ -59,7 +59,12 @@ case ${BS_GLIBC_VER} in
 			https://sourceware.org/git?p=glibc.git;a=patch;h=d8bf4388df679fa5a3ae7889a649e573e3124530 \
 			https://sourceware.org/git?p=glibc.git;a=patch;h=d9196d4f3fa9997388655813ddd236426a16dd92 \
 			https://sourceware.org/git?p=glibc.git;a=patch;h=923c3f3c373f499e62160e00831dda576443317b \
-			https://sourceware.org/git?p=glibc.git;a=patch;h=2d8ef784bd6a784496a6fd460de6b6f57c70a501"
+			https://sourceware.org/git?p=glibc.git;a=patch;h=2d8ef784bd6a784496a6fd460de6b6f57c70a501 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=2bd815d8347851212b9a91dbdca8053f4dbdac87 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=3e279192749cfcae4ceebb1f21a3275e677d0561 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=700d3281f9e57b53c27bc991394b22d467432626 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=2681d38cafaceafeb330bc0536fa710b75ed5947 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=908454129d21126bf7fc58f2a520b1f304dc5f02"
 		;;
 	2.35)
 		;;
