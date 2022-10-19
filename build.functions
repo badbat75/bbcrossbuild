@@ -119,7 +119,8 @@ function setbuildenv () {
 					COMMON_CXXFLAGS+=" -B${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}"
 					COMMON_LDFLAGS+=" -B${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}"
 				fi
-				### If ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++ is not present use the one in BIN_PATH, this is a workaround
+				### If ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++ is not present then it uses
+				### the one in BIN_PATH, this is a workaround
 				if [ ! -f ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/libgcc_s.so ]
 				then
 					local GCC_LIBS="$(realpath -m $(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -print-search-dirs | grep "^libraries" | cut -d '=' -f2 | cut -d ':' -f1))"

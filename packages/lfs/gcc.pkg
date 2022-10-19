@@ -23,8 +23,7 @@ CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR} --with-sysroot=/ -
 if [ "${LTOENABLE:-0}" != "0" ]
 then
     # CONF_FLAGS+" --enable-symvers=no"
-    PKG_PREBUILD="sed '/^  __asm/d;/^# define omp_lock_symver(fn) /a\  extern __typeof (g##fn##_30) _##fn##_30 __attribute__((__symver__ (#fn \"@@OMP_3.0\"))); \\\\\\n  extern __typeof (g##fn##_25) _##fn##_25 __attribute__((__symver__ (#fn \"@OMP_1.0\")));' -i libgomp/libgomp.h
-        sed 's/^_Bool __aarch64_have_lse_atomics/_Bool __aarch64_have_lse_atomics;/;s/^  __attribute__((visibility(\"hidden\"), nocommon));/\/\/__attribute__((visibility(\"hidden\"), nocommon));/' -i libgcc/config/aarch64/lse-init.c;"
+    PKG_PREBUILD="sed '/^  __asm/d;/^# define omp_lock_symver(fn) /a\  extern __typeof (g##fn##_30) _##fn##_30 __attribute__((__symver__ (#fn \"@@OMP_3.0\"))); \\\\\\n  extern __typeof (g##fn##_25) _##fn##_25 __attribute__((__symver__ (#fn \"@OMP_1.0\")));' -i libgomp/libgomp.h;"
 fi
 PKG_MAKEENV="env -u CPP -u CPPFLAGS"
 PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
@@ -33,6 +32,7 @@ PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
     AR_FOR_TARGET=\"\${AR}\" \
 	NM_FOR_TARGET=\"\${NM}\" \
 	RANLIB_FOR_TARGET=\"\${RANLIB}\" \
+    STRIP_FOR_TARGET=\"\${STRIP}\" \
 "
 PKG_TOOLCHAIN=gnu
 
@@ -54,14 +54,18 @@ PKG_PREBUILD+="sed '/^AC_INIT/a AC_CONFIG_MACRO_DIR([../config])' \
 
 PKG_POSTBUILD="eval export PKG_PKGPATH=${PKG_PKGPATH}
     mkdir -pv \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
-    find \${PKG_PKGPATH}${BUILD_PREFIX}/lib/gcc/${HARCH} -type f,l \\( -name \"*.so*\" -a ! -name \"*.so*.py\" -o -name \"*.a*\" -o -name \"*.la*\" -o -name \"crt*.o\" \\) \
+    find \${PKG_PKGPATH}${BUILD_PREFIX}/lib/gcc/${HARCH} -type f,l \\( -name \"*.so*\" -o -name \"*.a*\" -o -name \"*.la*\" -o -name \"crt*.o\" \\) \
     | xargs -r -I{} bash -c 'ln -fsv \$(realpath --relative-to=\${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} {}) \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/\$(basename {})'"
 
 ##################### Package dedicated code #########################
+PKG_MAKETARGETS=
+INST_CMD="-j1"
 case "${GCC_TARGETS:-all}" in
     all)
         PKG_SUFFIX="-all${PKG_SUFFIX}"
-        local OBJECTS="host target"
+        local OBJECTS=
+        PKG_MAKETARGETS="all"
+        INST_CMD+=" install-strip"
     ;;
     binaries)
         PKG_SUFFIX="-binaries${PKG_SUFFIX}"
@@ -71,21 +75,11 @@ case "${GCC_TARGETS:-all}" in
         PKG_SUFFIX="-libraries${PKG_SUFFIX}"
         local OBJECTS="target"
     ;;
-    target-libraries)
-        PKG_SUFFIX="-libraries${PKG_SUFFIX}"
-        local OBJECTS="target-libgcc target-libstdc++-v3 target-libgomp target-libssp target-libatomic"
-        if [ "$(echo ${GCC_LANGUAGES} | grep -o fortran)" == "fortran" ]
-        then
-            OBJECTS+=" target-libquadmath"
-        fi
-    ;;
     *) 
         PKG_SUFFIX="-custom${PKG_SUFFIX}"
         local OBJECTS="${GCC_TARGETS}"
     ;;
 esac
-PKG_MAKETARGETS=
-INST_CMD=
 for object in $( echo ${OBJECTS} | tr ',' ' ' )
 do
     PKG_MAKETARGETS+=" all-${object}"
