@@ -1,6 +1,6 @@
 # glibc
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${BS_GLIBC_VER}.tar.xz"
-PKG_SUFFIX=-${BS_GLIBC_VER}
+PKG_SUFFIX=_${BS_GLIBC_VER}
 
 case ${BS_GLIBC_VER} in
 	2.36)
