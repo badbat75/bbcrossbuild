@@ -4,8 +4,11 @@ PKG_URL="https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.g
 PKG_DEPS="lfs/gmp lfs/mpfr lfs/mpc lfs/isl lfs/zlib_1.2.12"
 BUILD_PROCESS=configmake
 AUTOCONF_PATH=autoscan
+STD_CONF_FLAGS=0
 CONF_ENV="env -u CPP -u CPPFLAGS"
-CONF_FLAGS="--target=${HARCH} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
+CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
+    --build=${BARCH} --host=${HARCH} --target=${HARCH} \
+    --enable-shared --enable-static \
     --with-mpc-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpc-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
     --with-mpfr-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpfr-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
     --with-isl-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-isl-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
@@ -35,14 +38,11 @@ PKG_TOOLCHAIN=gnu
 PKG_CXXFLAGS="-Wno-stringop-overflow -Wno-maybe-uninitialized"
 
 case ${GCC_VER} in
-#    12.2.0)  PKG_AUTOCONF=2.69
-#    ;;
     *)
         PKG_AUTOCONF=2.69
         PKG_AUTOMAKE=1.15.1
         PKG_LIBTOOL=2.2.6a
         PKG_GETTEXT=0.14.5
-        #CONF_FLAGS+=" --disable-dependency-tracking"
     ;;
 esac
 
@@ -51,15 +51,27 @@ PKG_PREBUILD+="sed '/^AC_INIT/a AC_CONFIG_MACRO_DIR([../config])' \
     sed '/all-build-libcpp/,/TARGET-build-libcpp/ s/\\\$(BASE_FLAGS_TO_PASS) //' -i Makefile.in
 "
 
-PKG_POSTBUILD="find ${PKG_PKGPATH}}${BUILD_PREFIX}/lib/gcc/${HARCH} -type f,l \\( -name \"*.so*\" -a ! -name \"*.so*.py\" -o -name \"*.a*\" -o -name \"*.la*\" -o -name \"crt*.o\" \\) \
-    | xargs -r -I{} bash -c 'ln -fsv \$(realpath --relative-to=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} {}) ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/\$(basename {})'"
+PKG_POSTBUILD="eval export PKG_PKGPATH=${PKG_PKGPATH}
+    mkdir -pv \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
+    find \${PKG_PKGPATH}${BUILD_PREFIX}/lib/gcc/${HARCH} -type f,l \\( -name \"*.so*\" -a ! -name \"*.so*.py\" -o -name \"*.a*\" -o -name \"*.la*\" -o -name \"crt*.o\" \\) \
+    | xargs -r -I{} bash -c 'ln -fsv \$(realpath --relative-to=\${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} {}) \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/\$(basename {})'"
 
 ##################### Package dedicated code #########################
 case "${GCC_TARGETS:-all}" in
     all)
+        PKG_SUFFIX="-all${PKG_SUFFIX}"
         local OBJECTS="host target"
     ;;
+    binaries)
+        PKG_SUFFIX="-binaries${PKG_SUFFIX}"
+        local OBJECTS="host"
+    ;;
+    libraries)
+        PKG_SUFFIX="-libraries${PKG_SUFFIX}"
+        local OBJECTS="target"
+    ;;
     target-libraries)
+        PKG_SUFFIX="-libraries${PKG_SUFFIX}"
         local OBJECTS="target-libgcc target-libstdc++-v3 target-libgomp target-libssp target-libatomic"
         if [ "$(echo ${GCC_LANGUAGES} | grep -o fortran)" == "fortran" ]
         then
@@ -67,6 +79,7 @@ case "${GCC_TARGETS:-all}" in
         fi
     ;;
     *) 
+        PKG_SUFFIX="-custom${PKG_SUFFIX}"
         local OBJECTS="${GCC_TARGETS}"
     ;;
 esac

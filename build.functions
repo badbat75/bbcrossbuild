@@ -647,7 +647,7 @@ function build () {(
 			if [[ ${scanpatch} =~ ^https?://|^ftp:// ]]
 			then
 				echo -n "${SPACES}Downloading patch[set]..."	
-				run_cmd "download_uncompress ${scanpatch} ${PKG_SRCPATH}/bbxb_patches"
+				download_uncompress ${scanpatch} ${PKG_SRCPATH}/bbxb_patches
 			else
 				echo -n "${SPACES}Copying $scanpatch patch..."
 				run_cmd "cp -v ${PATCH_PATH}/$scanpatch ${PKG_SRCPATH}/bbxb_patches"
@@ -656,7 +656,7 @@ function build () {(
 				PATCH=\"\$(basename {})\"
 				echo -n \"Applying \${PATCH} patch...\"
 				echo \"\$ patch -p1 < {}\"
-				patch -f -p1 < \"{}\" >> ${LOG_PATH}/${PKG_NAME}.log
+				patch -f -p1 < \"{}\" >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 				echo "Done."
 			"
 		done
@@ -721,13 +721,28 @@ function build () {(
 			if [ "${AUTOCONF_PATH}" == "autoscan" ]
 			then
 				run_cmd "pushd ${PKG_SRCPATH}"
-				AUTOCONF_PATH=$(find . -name "configure.ac" | xargs dirname | tr '\n' ',')
+				AUTOCONF_PATH=$(find . -name "configure.ac" | xargs dirname | sort -r | tr '\n' ',')
 				echo "Scanned AUTOCONF_PATH: ${AUTOCONF_PATH}"
 				run_cmd "popd"
-			fi 
-			#### Implement multi process autoreconf to test
-			# echo $AUTOCONF_PATH | xargs -P${NPROCS} -n1 -d' ' -I{} bash -c '
-			#	run_cmd "pushd ${PKG_SRCPATH}/{}"
+			fi
+			#### Multi process autoreconf (more than 4 processes fails on gcc)
+			echo "$AUTOCONF_PATH" | xargs -P4 -d',' -I{} bash -c "
+				AUTOCONF_RUNDIR=${PKG_SRCPATH}/{}
+				run_cmd \"cd ${PKG_SRCPATH}/{}\"
+				if [ ! -d m4 ]
+				then
+					run_cmd \"mkdir m4\"
+				fi
+				#[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=\" --include=${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal\"
+				[ -f po/update-potfiles ] && run_cmd \"./po/update-potfiles\" || true
+				[ -d autom4te.cache ] && run_cmd \"rm -rfv autom4te.cache\" || true
+				run_cmd \"${AUTOCONF_CMD} -f -i ${ACINCLUDE}\"
+			"
+			#### Serial process autoreconf.
+			#IFS=,
+			#for cp in ${AUTOCONF_PATH:-.}
+			#do
+			#	run_cmd "pushd ${PKG_SRCPATH}/${cp}"
 			#	if [ ! -d m4 ]
 			#	then
 			#		run_cmd "mkdir m4"
@@ -737,22 +752,8 @@ function build () {(
 			#	[ -d autom4te.cache ] && run_cmd "rm -rfv autom4te.cache" || true
 			#	run_cmd "${AUTOCONF_CMD} -f -i -v ${ACINCLUDE}"
 			#	run_cmd "popd"
-			#'
-			IFS=,
-			for cp in ${AUTOCONF_PATH:-.}
-			do
-				run_cmd "pushd ${PKG_SRCPATH}/${cp}"
-				if [ ! -d m4 ]
-				then
-					run_cmd "mkdir m4"
-				fi
-				#[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal"
-				[ -f po/update-potfiles ] && run_cmd "./po/update-potfiles" || true
-				[ -d autom4te.cache ] && run_cmd "rm -rfv autom4te.cache" || true
-				run_cmd "${AUTOCONF_CMD} -f -i -v ${ACINCLUDE}"
-				run_cmd "popd"
-			done
-			unset IFS
+			#done
+			#unset IFS
 		fi
 		run_cmd "mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 		run_cmd "pushd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
