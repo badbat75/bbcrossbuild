@@ -18,12 +18,13 @@ CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR} --with-sysroot=/ -
     --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --with-system-zlib --with-glibc-version=2.11 \
     --with-gcc-major-version-only --enable-linker-build-id --enable-lto --enable-threads=posix --enable-languages=${GCC_LANGUAGES:-c,c++} \
     --enable-clocale=gnu --enable-nls --enable-__cxa_atexit --with-default-libstdcxx-abi=new \
-    --enable-gcov --enable-libmudflap --enable-libgomp --enable-libssp --enable-libsanitizer --enable-install-libiberty \
+    --enable-gcov --enable-libmudflap --enable-libgomp --enable-libssp --enable-install-libiberty \
     --disable-libitm --disable-libmpx"
 if [ "${LTOENABLE:-0}" != "0" ]
 then
     # CONF_FLAGS+" --enable-symvers=no"
-    PKG_PREBUILD="sed '/^  __asm/d;/^# define omp_lock_symver(fn) /a\  extern __typeof (g##fn##_30) _##fn##_30 __attribute__((__symver__ (#fn \"@@OMP_3.0\"))); \\\\\\n  extern __typeof (g##fn##_25) _##fn##_25 __attribute__((__symver__ (#fn \"@OMP_1.0\")));' -i libgomp/libgomp.h;"
+    PKG_PREBUILD="sed '/^  __asm/d;/^# define omp_lock_symver(fn) /a\  extern __typeof (g##fn##_30) _##fn##_30 __attribute__((__symver__ (#fn \"@@OMP_3.0\"))); \\\\\\n  extern __typeof (g##fn##_25) _##fn##_25 __attribute__((__symver__ (#fn \"@OMP_1.0\")));' -i libgomp/libgomp.h
+        sed 's/^_Bool __aarch64_have_lse_atomics/_Bool __aarch64_have_lse_atomics;/;s/^  __attribute__((visibility(\"hidden\"), nocommon));/\/\/__attribute__((visibility(\"hidden\"), nocommon));/' -i libgcc/config/aarch64/lse-init.c;"
 fi
 PKG_MAKEENV="env -u CPP -u CPPFLAGS"
 PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
