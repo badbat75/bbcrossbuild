@@ -1448,7 +1448,8 @@ function setup_toolchain_wrapper () {
 		(
 			source \${ENVIRONMENT_SOURCE_PATH}/environment.source
 			CMD_NAME=\$(basename \${0})
-			TOOL=\$(echo \${CMD_NAME^^} | cut -d'_' -f2,3)
+			PREFIX=\$(echo \${CMD_NAME^^} | cut -d'_' -f3)
+			TOOL=\${PREFIX:+\${PREFIX}_FOR_}\$(echo \${CMD_NAME^^} | cut -d'_' -f2)
 			eval echo \\\${\${TOOL}} '\${@}' >> \${CMD_NAME}.log
 			eval \\\${\${TOOL}} '\${@}'
 		)

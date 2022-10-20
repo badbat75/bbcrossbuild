@@ -3,7 +3,7 @@ PKG_URL="https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libc
 #PKG_CFLAGS=""
 #PKG_LDFLAGS=
 BUILD_PROCESS=simplemake
-PKG_MAKEVARS="lib=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} BUILD_CC=\"\${BUILD_CC}\""
+PKG_MAKEVARS="lib=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} BUILD_CC=\"\${CC_FOR_BUILD}\""
 INST_CMD="install"
 
 PKG_PREBUILD="sed -i 's/:= \$(CROSS_COMPILE)/?= \$(CROSS_COMPILE)/g' Make.Rules"

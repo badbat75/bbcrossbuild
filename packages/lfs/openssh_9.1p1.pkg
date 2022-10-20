@@ -1,5 +1,5 @@
-# openssh_9.0p1
-PKG_URL="http://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.0p1.tar.gz"
+# openssh_9.1p1
+PKG_URL="http://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.1p1.tar.gz"
 PKG_DEPS="lfs/krb5_1.20 lfs/net-tools_2.10"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1

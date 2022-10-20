@@ -78,7 +78,7 @@ build lfs/dosfstools_4.2
 ### Security
 build lfs/sudo_1.9
 build lfs/net-tools_2.10
-build lfs/openssh_9.0p1
+build lfs/openssh_9.1p1
 ### Multimedia
 build lfs/alsa-utils_1.2
 ### System Utilities
