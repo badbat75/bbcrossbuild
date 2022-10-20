@@ -22,7 +22,6 @@ CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR} --with-sysroot=/ -
     --disable-libitm --disable-libmpx"
 if [ "${LTOENABLE:-0}" != "0" ]
 then
-    # CONF_FLAGS+" --enable-symvers=no"
     PKG_PREBUILD="sed '/^  __asm/d;/^# define omp_lock_symver(fn) /a\  extern __typeof (g##fn##_30) _##fn##_30 __attribute__((__symver__ (#fn \"@@OMP_3.0\"))); \\\\\\n  extern __typeof (g##fn##_25) _##fn##_25 __attribute__((__symver__ (#fn \"@OMP_1.0\")));' -i libgomp/libgomp.h;"
 fi
 PKG_MAKEENV="env -u CPP -u CPPFLAGS"
@@ -58,7 +57,6 @@ PKG_POSTBUILD="eval export PKG_PKGPATH=${PKG_PKGPATH}
 
 ##################### Package dedicated code #########################
 PKG_MAKETARGETS=
-INST_CMD="-j1"
 case "${GCC_TARGETS:-all}" in
     all)
         PKG_SUFFIX="-all${PKG_SUFFIX}"
@@ -73,6 +71,8 @@ case "${GCC_TARGETS:-all}" in
     libraries)
         PKG_SUFFIX="-libraries${PKG_SUFFIX}"
         local OBJECTS="target"
+        ### Improves build time disabling LTO on host binaries would not be installed
+        PKG_OVERRIDELTO=0
     ;;
     *) 
         PKG_SUFFIX="-custom${PKG_SUFFIX}"
