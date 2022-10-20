@@ -742,7 +742,7 @@ function build () {(
 				run_cmd \"${AUTOCONF_CMD} -f -i ${ACINCLUDE}\"
 				if [ \${?} -ne 0 ]
 				then
-					echo \"Autoreconf error in {}\"
+					echo \"Autoreconf error in \${PWD}\"
 					exit 1
 				fi
 			"
