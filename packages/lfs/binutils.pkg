@@ -14,7 +14,7 @@ CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR} --with-sysroot=/ -
     --with-isl-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-isl-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
     --enable-targets=${HARCH} --with-arch-directory=${HM} --with-arch=${HMARCH}  \
     --enable-gold --enable-plugins --enable-64-bit-bfd --enable-install-libbfd --with-system-zlib"
-INST_CMD="install-strip"
+INST_CMD="-j1 install-strip"
 PKG_MAKEENV="env -u CPP -u CPPFLAGS"
 PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
     CFLAGS_FOR_TARGET=\"\${CFLAGS} -fno-lto\" \
