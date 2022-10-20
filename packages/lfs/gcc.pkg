@@ -27,8 +27,8 @@ then
 fi
 PKG_MAKEENV="env -u CPP -u CPPFLAGS"
 PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
-    CFLAGS_FOR_TARGET=\"\${CFLAGS}\" \
-    CXXFLAGS_FOR_TARGET=\"\${CXXFLAGS}\" \
+    CFLAGS_FOR_TARGET=\"\${CFLAGS} -fno-lto\" \
+    CXXFLAGS_FOR_TARGET=\"\${CXXFLAGS} -fno-lto\" \
     AR_FOR_TARGET=\"\${AR}\" \
 	NM_FOR_TARGET=\"\${NM}\" \
 	RANLIB_FOR_TARGET=\"\${RANLIB}\" \
