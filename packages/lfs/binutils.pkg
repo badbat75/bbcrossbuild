@@ -30,6 +30,7 @@ case ${BINUTILS_VER} in
         PKG_AUTOCONF=2.69
         PKG_AUTOMAKE=1.15.1
         PKG_LIBTOOL=2.2.6a
+        PKG_GETTEXT=0.14.5
         CONF_FLAGS+=" --disable-dependency-tracking"
     ;;
 esac

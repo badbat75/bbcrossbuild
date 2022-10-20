@@ -729,7 +729,7 @@ function build () {(
 				run_cmd "popd"
 			fi
 			#### Multi process autoreconf (more than 4 processes fails on gcc)
-			echo "$AUTOCONF_PATH" | xargs -P4 -d',' -I{} bash -c "
+			echo "$AUTOCONF_PATH" | xargs -P1 -d',' -I{} bash -c "
 				AUTOCONF_RUNDIR=${PKG_SRCPATH}/{}
 				run_cmd \"cd ${PKG_SRCPATH}/{}\"
 				if [ ! -d m4 ]
