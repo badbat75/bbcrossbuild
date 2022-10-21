@@ -32,6 +32,7 @@ PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
 	RANLIB_FOR_TARGET=\"\${RANLIB}\" \
 "
 PKG_TOOLCHAIN=gnu
+PKG_CFLAGS="-Wno-error=stack-usage="
 
 case ${BINUTILS_VER} in
     *)
