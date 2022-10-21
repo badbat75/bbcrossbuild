@@ -41,7 +41,7 @@ param2value () {
 					fi
 			else
 				echo "Unrecognized option: ${1}"
-				return 1
+				return 1download
 			fi
 		else
 				local NUM=$((NUM+1))
@@ -79,11 +79,11 @@ download_uncompress () {
 	fi
 	if [ ! -d ${DOWNLOAD_PATH} ]
 	then
-		mkdir -p ${DOWNLOAD_PATH}
+		run_cmd "mkdir -pv ${DOWNLOAD_PATH}"
 	fi
 	if [ -f "${DOWNLOAD_PATH}/url2file.map" ]
 	then
-		touch "${DOWNLOAD_PATH}/url2file.map"
+		run_cmd "touch ${DOWNLOAD_PATH}/url2file.map"
 	fi
 	local HASH_ROW=$(grep ${URL_HASH} "${DOWNLOAD_PATH}/url2file.map")
 	# if download file does not exists in database download package
@@ -115,7 +115,7 @@ download_uncompress () {
 	local FILE_ENCODING=$(file -iz ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE})
 	local DOWNLOAD_FILE_TYPE=$(echo ${FILE_ENCODING} | egrep -o "compressed-encoding=[^;]*" | sed 's/compressed-encoding=//')
 	local UNCOMPRESSED_FILE_TYPE=$(echo ${FILE_ENCODING} | awk '{print $2}' | sed 's/;$//')
-	if [ ! -d ${DEST_DIR} ] ; then mkdir -p ${DEST_DIR} ; fi
+	if [ ! -d ${DEST_DIR} ] ; then run_cmd "mkdir -pv ${DEST_DIR}" ; fi
 	case ${UNCOMPRESSED_FILE_TYPE} in
 		application/x-tar)
 			run_cmd "tar xf ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${TARFLAGS} -C ${DEST_DIR} ${ARCHIVE_DIRS}"

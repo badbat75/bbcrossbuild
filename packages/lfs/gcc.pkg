@@ -1,7 +1,15 @@
 # binutils
-PKG_SUFFIX=_${GCC_VER}
 PKG_URL="https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz"
 PKG_DEPS="lfs/gmp lfs/mpfr lfs/mpc lfs/isl lfs/zlib_1.2.12"
+case ${GCC_VER} in
+	12.2.0)
+		PKG_SUFFIX=_12.2.0+b582496f205
+		PATCHES=gcc/gcc_12.2.0+b582496f205.patch
+		;;
+	*)
+		PKG_SUFFIX=_${GCC_VER}
+		;;
+esac
 BUILD_PROCESS=configmake
 AUTOCONF_PATH=autoscan
 STD_CONF_FLAGS=0

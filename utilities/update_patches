@@ -1,0 +1,74 @@
+#!/bin/sh -e
+
+function url4pkg {
+    case ${PACKAGE} in
+        glibc) echo "https://sourceware.org/git/glibc.git" ;;
+        gcc) echo "https://sourceware.org/git/gcc.git" ;;
+    esac
+}
+
+function rel4pkg {
+    case ${PACKAGE} in
+        glibc) echo "refs/tags/glibc-${PKG_VER}" ;;
+        gcc) echo "refs/tags/releases/gcc-${PKG_VER}" ;;
+    esac
+}
+
+function head4pkg {
+    local PKG_MAJVER=$(echo ${PKG_VER} | cut -d'.' -f1)
+    case ${PACKAGE} in
+        glibc) echo "origin/release/${PKG_VER}/master" ;;
+        gcc) echo "origin/releases/gcc-${PKG_MAJVER}" ;;
+    esac
+}
+
+function generate_patch_and_print {
+    local LAST_COMMIT=$(git -C /tmp/${PACKAGE} rev-parse --short -1 $(head4pkg))
+    local PKG_SUFFIX="_${PKG_VER}+${LAST_COMMIT}"
+    local PATCH_FILE=${PACKAGE}/${PACKAGE}${PKG_SUFFIX}.patch
+    mkdir -p ${BBXB_PATH}/patches/${PACKAGE}
+    git -C /tmp/${PACKAGE} diff $(rel4pkg)..${LAST_COMMIT} > ${BBXB_PATH}/patches/${PATCH_FILE}
+    echo -n "\\\t${PKG_VER})\n"
+    echo -n "\\t\\tPKG_SUFFIX=${PKG_SUFFIX}\n"
+    echo -n "\\t\\tPATCHES=${PATCH_FILE}\n"
+    echo -n "\\t\\t;;"
+}
+
+BBXB_PATH=$(realpath "$(dirname ${0})/..")
+echo "bbxbuild path: ${BBXB_PATH}"
+PACKAGE=${1}
+shift
+VERSIONS=${@}
+
+if [ -z "${VERSIONS}" ] && [ -z ${PACKAGE} ]
+then
+    echo "No package and versions has been specified"
+    echo
+    echo "Usage:"
+    echo
+    echo "$(basename ${0}) <package> <ver1> [<ver2..n>]"
+    echo
+    exit 1
+fi
+
+if [ ! -d /tmp/${PACKAGE} ]
+then
+    mkdir /tmp/${PACKAGE}
+    git -C /tmp/${PACKAGE} init
+    git -C /tmp/${PACKAGE} remote add origin $(url4pkg)
+fi
+git -C /tmp/${PACKAGE} fetch
+
+if [ -f ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak ]
+then
+    echo "Please remove or restore ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak before update"
+else
+    cp -v ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak
+    for PKG_VER in ${VERSIONS}
+    do
+        echo -n "Generating patch for ${PACKAGE}_${PKG_VER}... "
+        git -C /tmp/${PACKAGE} branch -m $(head4pkg)
+        eval "sed -i '/^\t${PKG_VER})/,/\t\t;;/c $(generate_patch_and_print)' ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg"
+        echo "done."
+    done
+fi

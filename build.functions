@@ -651,6 +651,7 @@ function build () {(
 				download_uncompress ${scanpatch} ${PKG_SRCPATH}/bbxb_patches
 			else
 				echo -n "${SPACES}Copying $scanpatch patch..."
+				run_cmd "mkdir -pv ${PKG_SRCPATH}/bbxb_patches"
 				run_cmd "cp -v ${PATCH_PATH}/$scanpatch ${PKG_SRCPATH}/bbxb_patches"
 			fi
 			find ${PKG_SRCPATH}/bbxb_patches -type f | xargs -I{} -d'\n' -n1 -P${NPROCS} bash -c "
