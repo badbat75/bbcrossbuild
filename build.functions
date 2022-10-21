@@ -121,7 +121,7 @@ function setbuildenv () {
 				fi
 				### If ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++ is not present then it uses
 				### the one in BIN_PATH, this is a workaround
-				if [ ! -f ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/libgcc_s.so ]
+				if [ ! -f ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/libgcc_s.so ] && ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc --version > /dev/null 2>&1
 				then
 					local GCC_LIBS="$(realpath -m $(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -print-search-dirs | grep "^libraries" | cut -d '=' -f2 | cut -d ':' -f1))"
 					#echo "GCC_LIBS: ${GCC_LIBS}"

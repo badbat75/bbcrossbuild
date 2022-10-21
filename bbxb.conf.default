@@ -97,7 +97,7 @@ GCC_OPTLEVEL=3
 ######
 
 ###### Versions for LLVM and its dependencies
-#LLVM_VER=15.0.2
+#LLVM_VER=15.0.3
 ######
 
 ### Extra flags for GNU or LLVM compilers

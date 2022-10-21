@@ -74,7 +74,7 @@ MPC_VER=${MPC_VER:-1.2.1}
 ISL_VER=${ISL_VER:-0.25}
 
 ### LLVM version
-LLVM_VER=${LLVM_VER:-15.0.2}
+LLVM_VER=${LLVM_VER:-15.0.3}
 
 ### Auto tools versions
 AUTOCONF_VER=${AUTOCONF_VER:-2.71}

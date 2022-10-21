@@ -1,0 +1,163 @@
+# glibc
+PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${BS_GLIBC_VER}.tar.xz"
+PKG_SUFFIX=_${BS_GLIBC_VER}
+
+case ${BS_GLIBC_VER} in
+	2.36)
+		PATCHES="https://sourceware.org/git?p=glibc.git;a=patch;h=c3fda489cfdb2260f9fec706e6fd7259858c4467 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=33f1b4c1452b33991e670f636ebe98b90a405e10 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=c74bb93cfdb04d49155b0e30983a3c866167bbca \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=ac47d8f6cf9744139adb12f540fb9cc610cac579 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=302bc33bc53c787da6e74162a7092e9c0fb964a8 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=e982657073c4db21459ffd9e17bc505b1d64b876 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=8b139cd4f1074ae0d95d9bff60db283a1ed72734 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=d13a7a6f100576b1e30dc044b2e0c4cbcb6196f6 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=5c62874f423af93e97b51bc9a57af228a546156f \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=0062e7dd1c3674ece2daca53a898badd28b60421 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=1cc5513114e76083669cba1b11252aad35525e69 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=4dad97e2a2e510c6b53a0add29a2188714fcf4ab \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=d48813227b63a0d92ea357ea0733229ed74e31ab \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=bb1e8b0ca99b5cbedfae3e6245528a87d95ff3e2 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=3bd3c612e98a53ce60ed972f5cd2b90628b3cba5 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=b0e7888d1fa2dbd2d9e1645ec8c796abf78880b9 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=924e4f3eaa502ce82fccf8537f021a796d158771 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=3c791f2031ca8f6b99e96b774ed1c505ceb93595 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=b3736d1a3c60a3ec9959bf3b38794958546bf6a2 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=645d94808aaa90fb1b20a25ff70bb50d9eb1d55b \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=b46412fb17e8bfc6c9e1f144bbcf833320c80f8a \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=c399271c10bd00714504e8d4dfbec8aebf996dd4 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=9d7eebde8f134ea25bdb9ab61bc74d5e71e41288 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=bffc33e90ed57a4786c676dda92d935e3613e031 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=3c9b4004e2dccc9ca2ace078a0106f9d682fd1a0 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=20ec40a51d3a8e9487f40dc9352d158def23ea8c \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=adb69f8ffe83db5d475868b42996bc70de8cff77 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=f0e9657067240b8b105c6d58d5da9dc926f2f0ed \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=b714ab7e3ce999b79401cdd22291128a7fd6d8ef \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=77f523c473878ec0051582ef15161c6982879095 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=5165080fec63a1f03aa1985b77bca300465bf570 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=78c8ef21fa54e994451d5b42ead6080d99a88a49 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=7a236dc44a22dc4252e803d1ee1d3b970ec43805 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=e2ec6a8db38a6b734bbdb41e498fdc9460f7566a \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=c5cdb39c20e96d9ac0d46fc7284b8276a537fd35 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=a7fa604f3050a1024dc8ec28ff28bad811f6151f \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=5d885617cec5713fdde42177398fe98acb66b7a2 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=df51334828f2af214105aad82042140ee3a6de0a \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=4b95b6e8bbb5a2b6856f707bf3bc3308ebef595a \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=7a3f8c8a7aeb41d4bbfeec07d0be1e92c3019919 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=d1241cf00139733de069c84933cd576dc1a1f45e \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=da5f134f6d59701a3a6119309ae91c93c3fa5b51 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=52c037f3574eb9062b111d78a4cbeb79681d07d3 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=2628500f5dff1dd99c49a09b418b3b1ea3a6b5d3 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=227c9035872fc9e9e2cf56ec8f89219747ee19bc \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=76e05613ee28f4ac4a0ab97effc32e0e78e37a56 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=d1d8379bff34f02f86f82db2cef5bf66746d3560 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=cdc496eb55e30f8f2461bedb0a7381c0a7a3d3ae \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=18bec23cbb4d530a2a8ce95353770661fabcd55f \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=46479e5d10ed87825aa277da158d6a687974518b \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=7afbd1e56acb721031bffd876f275dcb1af7e530 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=29c577e0f54fe6e70ceacb3659179781c5569903 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=d8bf4388df679fa5a3ae7889a649e573e3124530 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=d9196d4f3fa9997388655813ddd236426a16dd92 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=923c3f3c373f499e62160e00831dda576443317b \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=2d8ef784bd6a784496a6fd460de6b6f57c70a501 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=2bd815d8347851212b9a91dbdca8053f4dbdac87 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=3e279192749cfcae4ceebb1f21a3275e677d0561 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=700d3281f9e57b53c27bc991394b22d467432626 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=2681d38cafaceafeb330bc0536fa710b75ed5947 \
+			https://sourceware.org/git?p=glibc.git;a=patch;h=908454129d21126bf7fc58f2a520b1f304dc5f02"
+		;;
+	2.35)
+		;;
+esac
+PATCHES+=" http://www.linuxfromscratch.org/patches/lfs/development/glibc-${BS_GLIBC_VER}-fhs-1.patch"
+BUILD_PROCESS=configmake
+
+PKG_OVERRIDELTO=0
+PKG_TWOSTEPSBUILD=0
+CONF_VARS="libc_cv_forced_unwind=yes \
+	libc_cv_c_cleanup=yes"
+CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}${BUILD_INCLUDEDIR} \
+	--disable-crypt --disable-werror --disable-sanity-checks --disable-profile \
+	--enable-stackguard-randomization --enable-stack-protector=strong \
+	--enable-pt_chown --enable-tunables --enable-bind-now --enable-kernel=5.0.0"
+PKG_MAKEVARS="slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} rootsbindir=${BUILD_PREFIX}/sbin \
+	complocaledir=${BUILD_LIBDIR} cross-compiling=yes"
+PKG_TOOLCHAIN=gnu
+PKG_OVERRIDELD=bfd
+
+#PKG_PREBUILD=""
+
+INST_CMD="install"
+PKG_POSTBUILD="set -x"
+if [ ${BUILD_LIBDIR}${BUILD_LIBSUFFIX} != ${BUILD_LIBDIR} ]
+then
+	PKG_POSTBUILD+="
+		if [ -d ${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX} ]
+		then
+			ld=\$(find ${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX} -name "ld-*.so")
+			ldlink=\$(find ${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX} -name "ld-*.so.*")
+			ln -fsv \${ld#${PKG_PKGPATH}/lib/} ${PKG_PKGPATH}/lib/\${ldlink#${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX}/}
+			ln -fsv \${ldlink#${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX}/} ${PKG_PKGPATH}/lib/ld-linux.so.\$(echo \${ldlink} | sed 's/.*.so.//' )
+		fi"
+fi
+PKG_POSTBUILD+="
+	touch ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/ld.so.conf
+	cp -fv \${PKG_SRCPATH}/nscd/nscd.conf ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/nscd.conf
+	mkdir -pv ${PKG_PKGPATH}/var/cache/nscd
+	install -v -Dm644 \${PKG_SRCPATH}/nscd/nscd.tmpfiles ${PKG_PKGPATH}${BUILD_LIBDIR}/tmpfiles.d/nscd.conf
+	install -v -Dm644 \${PKG_SRCPATH}/nscd/nscd.service ${PKG_PKGPATH}/lib/systemd/system/nscd.service
+	mkdir -pv ${PKG_PKGPATH}${BUILD_LIBDIR}/locale
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i POSIX -f UTF-8 C.UTF-8 2>&1 || true
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i cs_CZ -f UTF-8 cs_CZ.UTF-8
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i de_DE -f ISO-8859-1 de_DE
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i de_DE@euro -f ISO-8859-15 de_DE@euro
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i de_DE -f UTF-8 de_DE.UTF-8
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i el_GR -f ISO-8859-7 el_GR
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i en_GB -f UTF-8 en_GB.UTF-8
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i en_HK -f ISO-8859-1 en_HK
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i en_PH -f ISO-8859-1 en_PH
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i en_US -f ISO-8859-1 en_US
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i en_US -f UTF-8 en_US.UTF-8
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i es_MX -f ISO-8859-1 es_MX
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i fa_IR -f UTF-8 fa_IR
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i fr_FR -f ISO-8859-1 fr_FR
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i fr_FR@euro -f ISO-8859-15 fr_FR@euro
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i fr_FR -f UTF-8 fr_FR.UTF-8
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i it_IT -f ISO-8859-1 it_IT
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i it_IT -f UTF-8 it_IT.UTF-8
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i ja_JP -f EUC-JP ja_JP
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i ja_JP -f SHIFT_JIS ja_JP.SIJS --no-warnings=ascii
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i ja_JP -f UTF-8 ja_JP.UTF-8
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i ru_RU -f KOI8-R ru_RU.KOI8-R
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i ru_RU -f UTF-8 ru_RU.UTF-8
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i tr_TR -f UTF-8 tr_TR.UTF-8
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i zh_CN -f GB18030 zh_CN.GB18030
+	I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i zh_HK -f BIG5-HKSCS zh_HK.BIG5-HKSCS
+	cat > ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/nsswitch.conf <<-EOF
+		# Begin /etc/nsswitch.conf
+
+		passwd: files
+		group: files
+		shadow: files
+
+		hosts: files dns
+		networks: files
+
+		protocols: files
+		services: files
+		ethers: files
+		rpc: files
+
+		# End /etc/nsswitch.conf
+	EOF
+
+	cat > ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/ld.so.conf <<-EOF
+	# Begin /etc/ld.so.conf
+	# Add an include directory
+	include /etc/ld.so.conf.d/*.conf
+
+	/usr/local/lib
+	/opt/lib
+
+	EOF
+	mkdir -pv ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/ld.so.conf.d"
