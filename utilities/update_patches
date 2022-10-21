@@ -4,6 +4,7 @@ function url4pkg {
     case ${PACKAGE} in
         glibc) echo "https://sourceware.org/git/glibc.git" ;;
         gcc) echo "https://sourceware.org/git/gcc.git" ;;
+        binutils) echo "https://sourceware.org/git/binutils-gdb.git" ;;
     esac
 }
 
@@ -11,14 +12,15 @@ function rel4pkg {
     case ${PACKAGE} in
         glibc) echo "refs/tags/glibc-${PKG_VER}" ;;
         gcc) echo "refs/tags/releases/gcc-${PKG_VER}" ;;
+        binutils) echo "refs/tags/binutils-${PKG_USCOREVER}";;
     esac
 }
 
 function head4pkg {
-    local PKG_MAJVER=$(echo ${PKG_VER} | cut -d'.' -f1)
     case ${PACKAGE} in
         glibc) echo "origin/release/${PKG_VER}/master" ;;
         gcc) echo "origin/releases/gcc-${PKG_MAJVER}" ;;
+        binutils) echo "origin/binutils-${PKG_USCOREVER}-branch" ;;
     esac
 }
 
@@ -51,6 +53,16 @@ then
     exit 1
 fi
 
+case ${PACKAGE} in
+    gcc|binutils|glibc)
+    ;;
+    *)
+        echo "Only gcc binutils and glibc supported."
+        echo
+        exit 1
+    ;;
+esac
+
 if [ ! -d /tmp/${PACKAGE} ]
 then
     mkdir /tmp/${PACKAGE}
@@ -66,6 +78,8 @@ else
     cp -v ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak
     for PKG_VER in ${VERSIONS}
     do
+        PKG_MAJVER=$(echo ${PKG_VER} | cut -d'.' -f1)
+        PKG_USCOREVER=$(echo ${PKG_VER} | sed 's/\./_/g')
         echo -n "Generating patch for ${PACKAGE}_${PKG_VER}... "
         git -C /tmp/${PACKAGE} branch -m $(head4pkg)
         eval "sed -i '/^\t${PKG_VER})/,/\t\t;;/c $(generate_patch_and_print)' ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg"

@@ -1,7 +1,15 @@
 # binutils
-PKG_SUFFIX=_${BINUTILS_VER}
 PKG_URL="https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz"
 PKG_DEPS="lfs/gmp lfs/mpfr lfs/mpc"
+case ${BINUTILS_VER} in
+	2.39)
+		PKG_SUFFIX=_2.39+8aa3c8bbc14
+		PATCHES=binutils/binutils_2.39+8aa3c8bbc14.patch
+		;;
+	*)
+		PKG_SUFFIX=_${BINUTILS_VER}
+		;;
+esac
 BUILD_PROCESS=configmake
 AUTOCONF_PATH="bfd,binutils,gas,gold,gprof,gprofng,intl,ld,libctf,libiberty,opcodes"
 STD_CONF_FLAGS=0
