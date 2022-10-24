@@ -111,7 +111,7 @@ then
 	build lfs/automake
 	build lfs/gettext
 else
-	LFS_REMOVE_DEVFILES=--remove_devfiles
+	LFS_REMOVE_DEVFILES="--remove_devfiles"
 fi
 
 ### Final configurations ###
