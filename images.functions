@@ -464,7 +464,7 @@ function inject_into_mount_tag () {
 	fi
 	echo -n "Syncing ${SOURCE_PATH} to ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}... " >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	cd ${SOURCE_PATH}
-	sudo rsync -K -av ${RSYNC_EXCLUDE} --no-owner --no-group ${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
+	sudo rsync -K -av ${RSYNC_EXCLUDE} --devices --specials --no-owner --no-group ${TARGET_FILE} ${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR} >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	cd - > /dev/null
 	echo -e "Done.\n" >> ${LOG_PATH}/images_${ROOT_DIR}.log 2>&1
 	echo -n "Setting ownership... "

@@ -1865,7 +1865,7 @@ function build () {(
 				then
 					create_sfx_package ${PKG_PKGPATH}
 				fi
-				run_cmd "rsync -aKv ${PKG_PKGPATH}/ ${BIN_PATH}"
+				run_cmd "rsync -aKv --devices --specials ${PKG_PKGPATH}/ ${BIN_PATH}"
 				run_cmd "sudo rm -rf ${PKG_PKGPATH}"
 				set +e
 			) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
