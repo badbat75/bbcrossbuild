@@ -1,0 +1,6 @@
+# bison_3
+PKG_SUFFIX=.8.2
+PKG_URL="https://ftp.gnu.org/gnu/bison/bison-3${PKG_SUFFIX}.tar.xz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--docdir=/usr/share/doc/bison-3${PKG_SUFFIX}"
+INST_CMD="install-strip"

@@ -1,0 +1,7 @@
+# automake
+PKG_SUFFIX=_${AUTOMAKE_VER}
+PKG_URL="https://ftp.gnu.org/gnu/automake/automake-${AUTOMAKE_VER}.tar.gz"
+PKG_DEPS=lfs/m4_1.4
+BUILD_PROCESS=configmake
+CONF_FLAGS="--docdir=/usr/share/doc/automake-1.16.4"
+INST_CMD="install-strip"

@@ -97,10 +97,22 @@ build lfs/wireless-tools_29
 build lfs/bind_9.19.4
 build lfs/curl_7.84.0
 ### Development
-build lfs/binutils
-GCC_TARGETS="binaries" build lfs/gcc
 build lfs/strace_5.19
-build lfs/gdb
+
+if [ ${ENABLE_DEV:-0} -eq 1 ]
+then
+	build lfs/binutils
+	GCC_TARGETS="binaries" build lfs/gcc
+	build lfs/gdb
+	build lfs/make_4.3
+	build lfs/bison_3
+	build lfs/libtool
+	build lfs/autoconf
+	build lfs/automake
+	build lfs/gettext
+else
+	LFS_REMOVE_DEVFILES=--remove_devfiles
+fi
 
 ### Final configurations ###
 case x${PLATFORM_NAME} in
@@ -143,7 +155,7 @@ function build_lfs_image () {
 	set -e
 	create_image lfs --rootfstype btrfs --size 3G
 	mount_tag lfs --mountlist "2:/ 1:/boot"
-	inject_into_mount_tag lfs binaries --remove_devfiles
+	inject_into_mount_tag lfs binaries ${LFS_REMOVE_DEVFILES}
 	run_postinstall_scripts lfs
 	run_on_root_dir lfs root "systemctl enable console-getty"
 	run_on_root_dir lfs root "systemctl get-default && systemctl set-default multi-user.target"

@@ -1,0 +1,6 @@
+# libtool
+PKG_SUFFIX=_${LIBTOOL_VER}
+PKG_URL="https://ftp.gnu.org/gnu/libtool/libtool-${LIBTOOL_VER}.tar.gz"
+BUILD_PROCESS=configmake
+CONF_FLAGS=""
+INST_CMD="install-strip"
