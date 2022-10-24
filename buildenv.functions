@@ -728,12 +728,12 @@ function setup_llvm () {
 			-DCMAKE_AR=${LLVM_INSTALL_PATH}/bin/llvm-ar \\
 			-DCMAKE_NM=${LLVM_INSTALL_PATH}/bin/llvm-nm \\
 			-DCMAKE_RANLIB=${LLVM_INSTALL_PATH}/bin/llvm-ranlib \\
-			-DCMAKE_C_FLAGS="--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS} ${WA_CFLAGS}" \\
-			-DCMAKE_CXX_FLAGS="--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS} ${WA_CXXFLAGS}" \\
-			-DCMAKE_ASM_FLAGS="--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS}" \\
-			-DCMAKE_EXE_LINKER_FLAGS="--target=${LLVM_TARGET} -fuse-ld=lld ${WA_LDFLAGS}" \\
-			-DCMAKE_C_COMPILER_TARGET="${LLVM_TARGET}" \\
-			-DCMAKE_ASM_COMPILER_TARGET="${LLVM_TARGET}" \\
+			-DCMAKE_C_FLAGS=\"--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS} ${WA_CFLAGS}\" \\
+			-DCMAKE_CXX_FLAGS=\"--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS} ${WA_CXXFLAGS}\" \\
+			-DCMAKE_ASM_FLAGS=\"--target=${LLVM_TARGET} --sysroot=${SYSROOT} ${PLATFORM_CFLAGS}\" \\
+			-DCMAKE_EXE_LINKER_FLAGS=\"--target=${LLVM_TARGET} -fuse-ld=lld ${WA_LDFLAGS}\" \\
+			-DCMAKE_C_COMPILER_TARGET=\"${LLVM_TARGET}\" \\
+			-DCMAKE_ASM_COMPILER_TARGET=\"${LLVM_TARGET}\" \\
 			\\
 			-DCMAKE_INSTALL_PREFIX=/lib/clang/${LLVM_VER} \\
 			-DCMAKE_BUILD_TYPE=Release \\
