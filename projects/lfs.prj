@@ -12,7 +12,7 @@ build --no_save_status lfs/create-base-fs_1.0
 
 setup_sccache
 setup_gcc
-#setup_llvm
+setup_llvm
 
 GCC_TARGETS="libraries" build lfs/gcc
 
@@ -100,7 +100,7 @@ build lfs/curl_7.84.0
 build lfs/binutils
 GCC_TARGETS="binaries" build lfs/gcc
 build lfs/strace_5.19
-build lfs/gdb_12
+build lfs/gdb
 
 ### Final configurations ###
 case x${PLATFORM_NAME} in

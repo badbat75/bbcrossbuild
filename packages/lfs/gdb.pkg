@@ -1,20 +1,52 @@
-# gdb_12
-PKG_SUFFIX=.1
-PKG_URL="http://ftp.gnu.org/gnu/gdb/gdb-12${PKG_SUFFIX}.tar.xz"
+# gdb
+GDB_VER=${GDB_VER:-12.1}
+PKG_URL="http://ftp.gnu.org/gnu/gdb/gdb-${GDB_VER}.tar.xz"
 PKG_DEPS="lfs/gmp lfs/mpfr lfs/mpc"
+case ${GDB_VER} in
+	12.1)
+		PKG_SUFFIX=_12.1+341f73897e2
+		PATCHES=gdb/gdb_12.1+341f73897e2.patch
+		;;
+	*)
+		PKG_SUFFIX=_${GDB_VER}
+		;;
+esac
 BUILD_PROCESS=configmake
-PKG_AUTOCONF=2.69
-PKG_AUTOMAKE=1.15.1
-PKG_LIBTOOL=2.2.6a
 AUTOCONF_PATH=".,libbacktrace,gdbserver,gdbsupport,gnulib,bfd,opcodes,sim,libctf"
-CONF_FLAGS="--with-sysroot=/ --with-build-sysroot=\${SYSROOT} \
+STD_CONF_FLAGS=0
+CONF_ENV="env -u CPP -u CPPFLAGS"
+CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
+    --build=${BARCH} --host=${HARCH} --target=${HARCH} \
+    --enable-shared --enable-static \
     --with-system-zlib --with-system-readline --disable-install-libbfd \
     --with-mpc-include=\${SYSROOT}\${BUILD_INCLUDEDIR} --with-mpc-lib=\${SYSROOT}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX} \
     --with-mpfr-include=\${SYSROOT}\${BUILD_INCLUDEDIR} --with-mpfr-lib=\${SYSROOT}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX} \
     --with-gmp-include=\${SYSROOT}\${BUILD_INCLUDEDIR} --with-gmp-lib=\${SYSROOT}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX} \
     --enable-static"
 # --with-python=\$(which python3)
+if [ "${LTOENABLE:-0}" != "0" ]
+then
+    PKG_CXXFLAGS="-fno-strict-aliasing"
+fi
+PKG_MAKEENV="env -u CPP -u CPPFLAGS"
+PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
+    CFLAGS_FOR_TARGET=\"\${CFLAGS} -fno-lto\" \
+    CXXFLAGS_FOR_TARGET=\"\${CXXFLAGS} -fno-lto\" \
+    AR_FOR_TARGET=\"\${AR}\" \
+	NM_FOR_TARGET=\"\${NM}\" \
+	RANLIB_FOR_TARGET=\"\${RANLIB}\" \
+"
+PKG_TOOLCHAIN=gnu
 INST_CMD="-C gdb install-strip"
+
+case ${GDB_VER} in
+    *)
+        PKG_AUTOCONF=2.69
+        PKG_AUTOMAKE=1.15.1
+        PKG_LIBTOOL=2.2.6a
+        PKG_GETTEXT=0.14.5
+    ;;
+esac
 
 PKG_PREBUILD="sed -i '/multilib.am/d' libbacktrace/Makefile.am
     sed -i '/^AC_CONFIG_MACRO_DIR/d' libctf/configure.ac
@@ -24,6 +56,3 @@ PKG_PREBUILD="sed -i '/multilib.am/d' libbacktrace/Makefile.am
     "
 PKG_POSTBUILD="./runmake.sh DESTDIR=\${PKG_PKGPATH} -C gdbserver install-strip"
 
-case ${TOOLCHAIN} in
-    llvm)   PKG_CFLAGS="-Wno-constant-logical-operand -Wno-format-nonliteral -Wno-self-assign -Wno-unused-function -Wno-unused-but-set-variable";;
-esac

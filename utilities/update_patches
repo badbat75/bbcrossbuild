@@ -5,6 +5,16 @@ function url4pkg {
         glibc) echo "https://sourceware.org/git/glibc.git" ;;
         gcc) echo "https://sourceware.org/git/gcc.git" ;;
         binutils) echo "https://sourceware.org/git/binutils-gdb.git" ;;
+        gdb) echo "https://sourceware.org/git/binutils-gdb.git" ;;
+    esac
+}
+
+function gitrepo4pkg {
+    case ${PACKAGE} in
+        glibc) echo "glibc" ;;
+        gcc) echo "gcc" ;;
+        binutils) echo "binutils-gdb" ;;
+        gdb) echo "binutils-gdb" ;;
     esac
 }
 
@@ -13,6 +23,7 @@ function rel4pkg {
         glibc) echo "refs/tags/glibc-${PKG_VER}" ;;
         gcc) echo "refs/tags/releases/gcc-${PKG_VER}" ;;
         binutils) echo "refs/tags/binutils-${PKG_USCOREVER}";;
+        gdb) echo "refs/tags/gdb-${PKG_VER}-release";;
     esac
 }
 
@@ -21,15 +32,16 @@ function head4pkg {
         glibc) echo "origin/release/${PKG_VER}/master" ;;
         gcc) echo "origin/releases/gcc-${PKG_MAJVER}" ;;
         binutils) echo "origin/binutils-${PKG_USCOREVER}-branch" ;;
+        gdb) echo "origin/gdb-${PKG_MAJVER}-branch" ;;
     esac
 }
 
 function generate_patch_and_print {
-    local LAST_COMMIT=$(git -C /tmp/${PACKAGE} rev-parse --short -1 $(head4pkg))
+    local LAST_COMMIT=$(git -C /tmp/$(gitrepo4pkg) rev-parse --short -1 $(head4pkg))
     local PKG_SUFFIX="_${PKG_VER}+${LAST_COMMIT}"
     local PATCH_FILE=${PACKAGE}/${PACKAGE}${PKG_SUFFIX}.patch
     mkdir -p ${BBXB_PATH}/patches/${PACKAGE}
-    git -C /tmp/${PACKAGE} diff $(rel4pkg)..${LAST_COMMIT} > ${BBXB_PATH}/patches/${PATCH_FILE}
+    git -C /tmp/$(gitrepo4pkg) diff $(rel4pkg)..${LAST_COMMIT} > ${BBXB_PATH}/patches/${PATCH_FILE}
     echo -n "\\\t${PKG_VER})\n"
     echo -n "\\t\\tPKG_SUFFIX=${PKG_SUFFIX}\n"
     echo -n "\\t\\tPATCHES=${PATCH_FILE}\n"
@@ -54,7 +66,7 @@ then
 fi
 
 case ${PACKAGE} in
-    gcc|binutils|glibc)
+    gcc|binutils|glibc|gdb)
     ;;
     *)
         echo "Only gcc binutils and glibc supported."
@@ -63,13 +75,13 @@ case ${PACKAGE} in
     ;;
 esac
 
-if [ ! -d /tmp/${PACKAGE} ]
+if [ ! -d /tmp/$(gitrepo4pkg) ]
 then
-    mkdir /tmp/${PACKAGE}
-    git -C /tmp/${PACKAGE} init
-    git -C /tmp/${PACKAGE} remote add origin $(url4pkg)
+    mkdir /tmp/$(gitrepo4pkg)
+    git -C /tmp/$(gitrepo4pkg) init
+    git -C /tmp$(gitrepo4pkg) remote add origin $(url4pkg)
 fi
-git -C /tmp/${PACKAGE} fetch
+git -C /tmp/$(gitrepo4pkg) fetch
 
 if [ -f ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak ]
 then
@@ -81,7 +93,7 @@ else
         PKG_MAJVER=$(echo ${PKG_VER} | cut -d'.' -f1)
         PKG_USCOREVER=$(echo ${PKG_VER} | sed 's/\./_/g')
         echo -n "Generating patch for ${PACKAGE}_${PKG_VER}... "
-        git -C /tmp/${PACKAGE} branch -m $(head4pkg)
+        git -C /tmp/$(gitrepo4pkg) branch -m $(head4pkg)
         eval "sed -i '/^\t${PKG_VER})/,/\t\t;;/c $(generate_patch_and_print)' ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg"
         echo "done."
     done

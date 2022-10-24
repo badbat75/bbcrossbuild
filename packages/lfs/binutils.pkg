@@ -33,6 +33,7 @@ PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
 "
 PKG_TOOLCHAIN=gnu
 PKG_CFLAGS="-Wno-error=stack-usage="
+PKG_CXXFLAGS="-Wno-error=stack-usage="
 
 case ${BINUTILS_VER} in
     *)

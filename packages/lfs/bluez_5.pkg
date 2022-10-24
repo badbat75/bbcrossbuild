@@ -10,7 +10,7 @@ CONF_FLAGS="--with-dbusconfdir=${BUILD_SYSCONFDIR} \
 	--enable-library --enable-pie --enable-deprecated --enable-tools --enable-threads --enable-backtrace --enable-nfc --enable-sap --enable-monitor --enable-udev \
   --enable-obex --enable-client --enable-systemd --enable-sixaxis --enable-health --enable-mesh --enable-hid2hci --enable-experimental \
   --enable-btpclient --enable-external-ell"
-if [ ${ENABLE_MIDI:-0} -eq 1]
+if [ ${ENABLE_MIDI:-0} -eq 1 ]
 then
   PKG_DEPS+=" lfs/alsa-lib_1.2"
   CONF_FLAGS+=" --enable-midi"
