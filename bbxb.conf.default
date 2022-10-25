@@ -91,7 +91,7 @@ GCC_OPTLEVEL=3
 ### Enable LTO building for GCC and its libraries (can be set up in the project definition)
 # GCC_LTOENABLE=1
 ### Bootstrap packages
-# BS_KERNEL_VER=6.0.2
+# BS_KERNEL_VER=6.0.3
 # BS_GLIBC_VER=2.36
 # BS_LIBXCRYPT_VER=4.4.28
 ######
