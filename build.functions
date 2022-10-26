@@ -694,7 +694,7 @@ function build () {(
 			local ACINCLUDE=
 			local AUTOPOINTINCLUDE=
 			### If PATH include a AUTOTOOLS build or PKG_AUTOCONF is a particular version
-			#[ -d ${SYSROOT}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${SYSROOT}${BUILD_PREFIX}/share/aclocal"
+			[ -d ${SYSROOT}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${SYSROOT}${BUILD_PREFIX}/share/aclocal"
 			[ -d ${GLOBAL_TOOLCHAIN_PATH}/share/aclocal ] && local ACINCLUDE+=" --include=${GLOBAL_TOOLCHAIN_PATH}/share/aclocal"
 			[ -d ${TOOLCHAIN_PATH}/share/aclocal ] && local ACINCLUDE+=" --include=${TOOLCHAIN_PATH}/share/aclocal"
 			if [[ ${PATH} == *"${AUTOTOOLS_PATH}/bin"* ]] || [ ${PKG_AUTOCONF} != 1 ]
