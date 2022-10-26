@@ -14,7 +14,7 @@ BUILD_PROCESS=configmake
 AUTOCONF_PATH=autoscan
 STD_CONF_FLAGS=0
 CONF_ENV="env -u CPP -u CPPFLAGS"
-CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
+CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
     --build=${BARCH} --host=${HARCH} --target=${HARCH} \
     --enable-shared --enable-static \
     --with-mpc-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpc-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
