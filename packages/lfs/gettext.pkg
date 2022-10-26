@@ -4,3 +4,9 @@ PKG_URL="https://ftp.gnu.org/pub/gnu/gettext/gettext-${GETTEXT_VER}.tar.gz"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--docdir=/usr/share/doc/gettext-${GETTEXT_VER}"
 INST_CMD="install-strip"
+PKG_POSTBUILD="mv -pv \${PKG_PKGPATH}${BUILD_PREFIX}/share/aclocal \${PKG_PKGPATH}${BUILD_PREFIX}/share/aclocal.2bmoved"
+PKG_POSTINSTALL="if [ -d ${BUILD_PREFIX}/share/aclocal.2bmoved ]
+then
+    cp -rpv ${BUILD_PREFIX}/share/aclocal.2bmoved/* ${BUILD_PREFIX}/share/aclocal/
+    rm -rfv ${BUILD_PREFIX}/share/aclocal.2bmoved
+fi"
