@@ -291,19 +291,29 @@ pathremove () {
 }
 
 run_cmd () {
-	set -e
+	trap 'STATUS=${?}; \
+		echo "[${PROCNUM}] # Return code: ${STATUS}"; \
+		echo "[${PROCNUM}] # Command: ${CMDLINE}"; \
+		echo; \
+		trap - ERR; \
+		return ${STATUS}' ERR
+
 	local LINENO=0
+	local STATUS=0
+	local PROCNUM=${$}
+	local CMDLINE="${@}"
 	while IFS= read -r line; do
 		local LINE=$((LINE+1))
 		case ${LINE} in
-			1) echo -en '$ ' ;;
-			*) echo -en '> ' ;;
+			1) echo -en "[${PROCNUM}] $ " ;;
+			*) echo -en "> " ;;
 		esac
 		echo "${line}"
-	done <<< "${@}"
-	eval "${@}" 2>&1
+	done <<< "${CMDLINE}"
+	eval "${CMDLINE}" 2>&1
+	echo "[${PROCNUM}] # OK"
 	echo
-	set +e
+	trap - ERR
 }
 
 export -f run_cmd

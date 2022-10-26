@@ -682,87 +682,55 @@ function build () {(
 	}
 
 	function configmake () {
-		trap 'STATUS=${?}; \
+		trap 'local CMDERR="${BASH_COMMAND}" STATUS=${?}; \
 			echo "fail. [configmake]"; \
+			echo ${CMDERR}; \
 			echo; \
 			trap - ERR; \
 			return ${STATUS}' ERR
-
 		if [ "${PKG_AUTOCONF:-0}" != "0" ]
 		then
 			local AUTOCONF_CMD=
 			local ACINCLUDE=
 			local AUTOPOINTINCLUDE=
 			### If PATH include a AUTOTOOLS build or PKG_AUTOCONF is a particular version
+			#[ -d ${SYSROOT}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${SYSROOT}${BUILD_PREFIX}/share/aclocal"
+			[ -d ${GLOBAL_TOOLCHAIN_PATH}/share/aclocal ] && local ACINCLUDE+=" --include=${GLOBAL_TOOLCHAIN_PATH}/share/aclocal"
+			[ -d ${TOOLCHAIN_PATH}/share/aclocal ] && local ACINCLUDE+=" --include=${TOOLCHAIN_PATH}/share/aclocal"
 			if [[ ${PATH} == *"${AUTOTOOLS_PATH}/bin"* ]] || [ ${PKG_AUTOCONF} != 1 ]
 			then
 				if [ ${PKG_AUTOCONF} != 1 ]
 				then
-					setup_autotools ${PKG_AUTOCONF} ${PKG_AUTOMAKE} ${PKG_LIBTOOL} ${PKG_GETTEXT}
+					echo "# Setting up ${PKG_AUTOCONF:-${AUTOCONF_VER}} ${PKG_AUTOMAKE:-${AUTOMAKE_VER}} ${PKG_LIBTOOL:-${LIBTOOL_VER}} ${PKG_GETTEXT:-${GETTEXT_VER}}"
+					setup_autotools ${PKG_AUTOCONF:-${AUTOCONF_VER}} ${PKG_AUTOMAKE:-${AUTOMAKE_VER}} ${PKG_LIBTOOL:-${LIBTOOL_VER}} ${PKG_GETTEXT:-${GETTEXT_VER}}
 				fi
-				if [ -f ${AUTOTOOLS_PATH}/bin/autoconf ]
-				then
-					local AUTOCONF_CMD+="AUTOCONF=${AUTOTOOLS_PATH}/bin/autoconf AUTOHEADER=${AUTOTOOLS_PATH}/bin/autoheader "
-					local ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/autoconf"
-				fi
-				if [ -f ${AUTOTOOLS_PATH}/bin/automake ]
-				then
-					local AUTOMAKE_MAJVER=$(echo ${PKG_AUTOMAKE:-${AUTOMAKE_VER}} | cut -d'.' -f 1,2)
-					local AUTOCONF_CMD+="AUTOM4TE=${AUTOTOOLS_PATH}/bin/autom4te AUTOMAKE=${AUTOTOOLS_PATH}/bin/automake ACLOCAL=${AUTOTOOLS_PATH}/bin/aclocal "
-					#local ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/aclocal"
-					local ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/aclocal-${AUTOMAKE_MAJVER}"
-				fi
-				if [ ! -z ${AUTOTOOLS_PATH}/bin/libtoolize ]
-				then
-					local AUTOCONF_CMD+="LIBTOOLIZE=${AUTOTOOLS_PATH}/bin/libtoolize "
-				fi
-				local AUTOCONF_CMD+="${AUTOTOOLS_PATH}/bin/autoreconf"
+				local ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/autoconf"
+				local AUTOMAKE_MAJVER=$(echo ${PKG_AUTOMAKE:-${AUTOMAKE_VER}} | cut -d'.' -f 1,2)
+				local ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/aclocal-${AUTOMAKE_MAJVER}"
+				local AUTOCONF_CMD="${AUTOTOOLS_PATH}/bin/autoreconf"
 			else
 				local AUTOCONF_CMD=autoreconf
 			fi
-			[ -d ${GLOBAL_TOOLCHAIN_PATH}/share/aclocal ] && local ACINCLUDE+=" --include=${GLOBAL_TOOLCHAIN_PATH}/share/aclocal"
-			[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
 			if [ "${AUTOCONF_PATH}" == "autoscan" ]
 			then
 				run_cmd "pushd ${PKG_SRCPATH}"
-				AUTOCONF_PATH=$(find . -name "configure.ac" | xargs dirname | sort -r | tr '\n' ',')
+				AUTOCONF_PATH="$(find . -name "configure.ac" -printf '%P\n' | xargs dirname | sort | tr '\n' ',' | sed 's/,$//' )"
 				echo "Scanned AUTOCONF_PATH: ${AUTOCONF_PATH}"
 				run_cmd "popd"
 			fi
 			#### Multi process autoreconf (more than 4 processes fails on gcc)
-			echo "$AUTOCONF_PATH" | xargs -P1 -d',' -I{} bash -c "
-				AUTOCONF_RUNDIR=${PKG_SRCPATH}/{}
-				run_cmd \"cd ${PKG_SRCPATH}/{}\"
+			echo -n "${AUTOCONF_PATH}" | xargs --verbose -P${NPROCS} -d',' -I{} sh -e -c "
+				run_cmd \"export PATH=\\\"${AUTOTOOLS_PATH}/bin:${PATH}\\\"\";
+				AUTOCONF_RUNDIR=\"${PKG_SRCPATH}/{}\"
+				run_cmd \"cd \\\"${PKG_SRCPATH}/{}\\\"\"
 				if [ ! -d m4 ]
 				then
 					run_cmd \"mkdir m4\"
 				fi
-				#[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=\" --include=${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal\"
-				[ -d autom4te.cache ] && run_cmd \"rm -rfv autom4te.cache\" || true
+				rm -rfv autom4te.cache aclocal.m4 configure
 				[ -f po/update-potfiles ] && run_cmd \"./po/update-potfiles\" || true
-				run_cmd \"${AUTOCONF_CMD} -f -i ${ACINCLUDE}\"
-				if [ \${?} -ne 0 ]
-				then
-					echo \"Autoreconf error in \${PWD}\"
-					exit 1
-				fi
+				run_cmd \"${AUTOCONF_CMD} -f -i ${ACINCLUDE}\" || exit 255
 			"
-			#### Serial process autoreconf.
-			#IFS=,
-			#for cp in ${AUTOCONF_PATH:-.}
-			#do
-			#	run_cmd "pushd ${PKG_SRCPATH}/${cp}"
-			#	if [ ! -d m4 ]
-			#	then
-			#		run_cmd "mkdir m4"
-			#	fi
-			#	#[ -d ${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${DISTOS_PATH}${BUILD_PREFIX}/share/aclocal"
-			#	[ -f po/update-potfiles ] && run_cmd "./po/update-potfiles" || true
-			#	[ -d autom4te.cache ] && run_cmd "rm -rfv autom4te.cache" || true
-			#	run_cmd "${AUTOCONF_CMD} -f -i -v ${ACINCLUDE}"
-			#	run_cmd "popd"
-			#done
-			#unset IFS
 		fi
 		run_cmd "mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 		run_cmd "pushd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"

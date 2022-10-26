@@ -334,6 +334,9 @@ function setup_gcc () {
 
 		echo "### Finalize the installation of the limits.h header"
 		run_cmd "${TOOLCHAIN_PATH}/libexec/gcc/${HARCH}/${GCC_MAJVER}/install-tools/mkheaders"
+		echo "### Install aclocal files"
+		run_cmd "mkdir -pv ${TOOLCHAIN_PATH}/share/aclocal"
+		run_cmd "${TOOLCHAIN_SRCPATH}/config/*.m4 ${TOOLCHAIN_PATH}/share/aclocal"
 
 		if [ ! -d ${GLIBC_SYSROOT}${BUILD_PREFIX}/lib ] && [[ "${BUILD_LIBSUFFIX}" == 64* ]]
 		then
@@ -1003,11 +1006,11 @@ function setup_autotools () {
 	local LIBTOOL_VER=${_param_3:-${LIBTOOL_VER}}
 	local GETTEXT_VER=${_param_4:-${GETTEXT_VER}}
 
-	AUTOTOOLS_VER=${AUTOCONF_VER}${AUTOMAKE_VER:+-${AUTOMAKE_VER}}${LIBTOOL_VER:+-${LIBTOOL_VER}}${GETTEXT_VER:+-${GETTEXT_VER}}
+	AUTOTOOLS_VER=${AUTOCONF_VER}-${AUTOMAKE_VER}-${LIBTOOL_VER}-${GETTEXT_VER}
 	AUTOTOOLS_PATH=${GLOBAL_TOOLCHAIN_PATH}/autotools-${AUTOTOOLS_VER}
 
 	echo -n "Setting up autotools... "
-	if [ ! -f ${AUTOTOOLS_PATH}/bin/autoconf ] || [ ! ${AUTOTOOLS_PATH}/bin/automake ] || [ ! ${AUTOTOOLS_PATH}/bin/libtoolize ]
+	if [ ! -f ${AUTOTOOLS_PATH}/bin/autoconf ] || [ ! ${AUTOTOOLS_PATH}/bin/automake ] || [ ! ${AUTOTOOLS_PATH}/bin/libtoolize ] || [ ! ${AUTOTOOLS_PATH}/bin/autopoint ]
 	then
 		#### Download all auto tools
 		download_autotools
@@ -1366,53 +1369,60 @@ function setup_pkgconfig () {
 
 	echo -n "Setting up pkg-config... "
 
-	if [ ! -f ${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config ]
+	if [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config ]
 	then
 		local PKGCONFIG_URL="https://pkgconfig.freedesktop.org/releases/pkg-config-${PKGCONFIG_VER}.tar.gz"
-		download_uncompress "${PKGCONFIG_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER} >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		download_uncompress "${PKGCONFIG_URL}" ${TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER} >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
 		echo -n "building... "
-		pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER} >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
-		#run_cmd "autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
-		popd >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
-		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER} ]
+		pushd ${TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER} >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
+		#run_cmd "autoreconf -fiv" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		popd >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
+		if [ -d ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER} ]
 		then
-			run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+			run_cmd "rm -rfv ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
 		fi
-		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
-		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER} >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
-		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \\
+		run_cmd "mkdir -pv ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		pushd ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER} >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
+		(	setbuildenv
+			run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \\
 				CFLAGS=\"-march=native -O3 -flto\" \\
 				LDFLAGS=\"-fuse-ld=gold -fuse-linker-plugin\" \\
-					${GLOBAL_TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
-		popd >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
-		run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
-		run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+					${TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}/configure --prefix=${TOOLCHAIN_PATH} \
+					--disable-host-tool \
+					--program-prefix=${HARCH}- \
+					--with-pc-path=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig:${SYSROOT}${BUILD_PREFIX}/share \
+					--with-system-include-path=${SYSROOT}${BUILD_INCLUDEDIR} \
+					--with-system-library-path=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		)
+		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		popd >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
+		run_cmd "rm -rfv ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		run_cmd "rm -rfv ${TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
 	fi
 
-	if  [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config ]
-	then
-		echo -n "creating ${ARCH} specific script... "
-		if [ ! -d ${TOOLCHAIN_PATH}/bin ]
-		then
-			mkdir ${TOOLCHAIN_PATH}/bin
-		fi
-		setbuildenv
-		cat > ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config <<-EOF
-			#!/bin/sh
-			set -o pipefail
-			echo "PKG_CONFIG_LIBDIR=\${PKG_CONFIG_LIBDIR} \\\" >> pkg-config.log
-			echo "PKG_CONFIG_SYSROOT_DIR=\${PKG_CONFIG_SYSROOT_DIR} \\\" >> pkg-config.log
-			echo ${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config \$@ >> pkg-config.log
-			${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config \$@ | tee -a pkg-config.log
-			STATUS=\$?
-			echo >> pkg-config.log
-			set +o pipefail
-			exit \${STATUS}
-		EOF
-		chmod +x ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config
-	fi
+	#if  [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config ]
+	#then
+	#	echo -n "creating ${ARCH} specific script... "
+	#	if [ ! -d ${TOOLCHAIN_PATH}/bin ]
+	#	then
+	#		mkdir ${TOOLCHAIN_PATH}/bin
+	#	fi
+	#	setbuildenv
+	#	cat > ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config <<-EOF
+	#		#!/bin/sh
+	#		set -o pipefail
+	#		echo "PKG_CONFIG_LIBDIR=\${PKG_CONFIG_LIBDIR} \\\" >> pkg-config.log
+	#		echo "PKG_CONFIG_SYSROOT_DIR=\${PKG_CONFIG_SYSROOT_DIR} \\\" >> pkg-config.log
+	#		echo ${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config \$@ >> pkg-config.log
+	#		${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config \$@ | tee -a pkg-config.log
+	#		STATUS=\$?
+	#		echo >> pkg-config.log
+	#		set +o pipefail
+	#		exit \${STATUS}
+	#	EOF
+	#	chmod +x ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config
+	#fi
 
 	echo "done."
 	trap ERR

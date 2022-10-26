@@ -1,0 +1,12 @@
+# sccache
+PKG_VER=0.3.0
+PKG_SUFFIX=_${PKG_VER}
+PKG_URL="https://github.com/mozilla/sccache/archive/refs/tags/v${PKG_VER}.tar.gz"
+BUILD_PROCESS=cargobuild
+CONF_FLAGS=""
+#PKG_RUSTFLAGS=
+#PKG_DEPS=""
+#CARGO_BIN=/usr/bin
+#CARGO_LIB=/usr/lib/${HARCH}
+CARGO_BINLIST="sccache"
+PKG_LDFLAGS=-s

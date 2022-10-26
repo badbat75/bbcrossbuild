@@ -15,7 +15,7 @@ BUILD_PROCESS=configmake
 AUTOCONF_PATH=".,libbacktrace,gdbserver,gdbsupport,gnulib,bfd,opcodes,sim,libctf"
 STD_CONF_FLAGS=0
 CONF_ENV="env -u CPP -u CPPFLAGS"
-CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
+CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=--libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
     --build=${BARCH} --host=${HARCH} --target=${HARCH} \
     --enable-shared --enable-static \
     --with-system-zlib --with-system-readline --disable-install-libbfd \
@@ -44,7 +44,7 @@ case ${GDB_VER} in
         PKG_AUTOCONF=2.69
         PKG_AUTOMAKE=1.15.1
         PKG_LIBTOOL=2.2.6a
-        PKG_GETTEXT=0.14.5
+        PKG_GETTEXT=0.18.3
     ;;
 esac
 
