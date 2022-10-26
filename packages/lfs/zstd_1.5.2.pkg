@@ -1,6 +1,6 @@
 # zstd_1.5.2
 PKG_URL="https://github.com/facebook/zstd/releases/download/v1.5.2/zstd-1.5.2.tar.gz"
-PKG_DEPS="lfs/zlib_1.2.12"
+PKG_DEPS="lfs/zlib_1"
 #PKG_DEPS+=" lfs/lz4_1.9.3-2"
 PKG_TWOSTEPSBUILD=0
 BUILD_PROCESS=simplemake

@@ -1,6 +1,6 @@
 # util-linux_2.38.1
 PKG_URL="https://github.com/util-linux/util-linux/archive/refs/tags/v2.38.1.tar.gz"
-PKG_DEPS="lfs/zlib_1.2.12 lfs/bzip2_1.0.8 lfs/ncurses_6 lfs/readline_8.2"
+PKG_DEPS="lfs/zlib_1 lfs/bzip2_1.0.8 lfs/ncurses_6 lfs/readline_8.2"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="ADJTIME_PATH=/var/lib/hwclock/adjtime \

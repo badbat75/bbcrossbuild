@@ -12,7 +12,7 @@ build --no_save_status lfs/create-base-fs_1.0
 
 setup_sccache
 setup_gcc
-setup_llvm
+#setup_llvm
 setup_rust
 
 GCC_TARGETS="libraries" build lfs/gcc
@@ -26,7 +26,7 @@ build lfs/glibc
 build lfs/tzdata_2022c
 build lfs/man-pages_5.13
 build lfs/iana-etc_20220819
-build lfs/zlib_1.2.12
+build lfs/zlib_1
 build lfs/bzip2_1.0.8
 build lfs/xz_5.2.5
 build lfs/zstd_1.5.2

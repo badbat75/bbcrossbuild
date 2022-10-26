@@ -719,7 +719,7 @@ function build () {(
 				run_cmd "popd"
 			fi
 			#### Multi process autoreconf (more than 4 processes fails on gcc)
-			echo -n "${AUTOCONF_PATH}" | xargs --verbose -P${NPROCS} -d',' -I{} sh -e -c "
+			echo -n "${AUTOCONF_PATH:-.}" | xargs --verbose -P${NPROCS} -d',' -I{} sh -e -c "
 				run_cmd \"export PATH=\\\"${AUTOTOOLS_PATH}/bin:${PATH}\\\"\";
 				AUTOCONF_RUNDIR=\"${PKG_SRCPATH}/{}\"
 				run_cmd \"cd \\\"${PKG_SRCPATH}/{}\\\"\"

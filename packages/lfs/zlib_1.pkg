@@ -1,5 +1,6 @@
-# zlib_1.2.12
-PKG_URL="https://zlib.net/zlib-1.2.12.tar.xz"
+# zlib_1
+PKG_SUFFIX=.2.13
+PKG_URL="https://zlib.net/zlib-1${PKG_SUFFIX}.tar.xz"
 VAR_INSTALL_LIBDIR=INSTALL_LIB_DIR
 VAR_INSTALL_INCDIR=INSTALL_INC_DIR
 BUILD_PROCESS=cmakebuild

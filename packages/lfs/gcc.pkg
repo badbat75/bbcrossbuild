@@ -1,6 +1,6 @@
 # binutils
 PKG_URL="https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz"
-PKG_DEPS="lfs/gmp lfs/mpfr lfs/mpc lfs/isl lfs/zlib_1.2.12"
+PKG_DEPS="lfs/gmp lfs/mpfr lfs/mpc lfs/isl lfs/zlib_1"
 case ${GCC_VER} in
 	12.2.0)
 		PKG_SUFFIX=_12.2.0+b582496f205
@@ -54,7 +54,7 @@ case ${GCC_VER} in
 esac
 
 PKG_PREBUILD+="sed '/^AC_INIT/a AC_CONFIG_MACRO_DIR([../config])' \
-    -i gcc/configure.ac libgcc/configure.ac libobjc/configure.ac libiberty/configure.ac -i Makefile.in
+    -i fixincludes/configure.ac gcc/configure.ac libgcc/configure.ac libobjc/configure.ac libiberty/configure.ac lto-plugin/configure.ac -i Makefile.in
     sed '/all-build-libcpp/,/TARGET-build-libcpp/ s/\\\$(BASE_FLAGS_TO_PASS) //' -i Makefile.in
 "
 
