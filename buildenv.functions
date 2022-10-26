@@ -905,11 +905,18 @@ function setup_rust () {
 	if [ ! -x ${GLOBAL_TOOLCHAIN_PATH}/bin/cargo-install-update ]
 	then
 		echo -n "installing update tools... "
-		run_cmd "cargo install cargo-update" >> ${GLOBAL_LOG_PATH}/rust.log
+		( set -e
+			export CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+			export CARGO_PROFILE_RELEASE_LTO=thin
+			run_cmd "cargo install cargo-update" >> ${GLOBAL_LOG_PATH}/rust.log
+		)
 	fi
 	echo -n "upgrading packages... "
-	run_cmd "cargo -v install-update -a" >> ${GLOBAL_LOG_PATH}/rust.log
-
+		( set -e
+			export CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+			export CARGO_PROFILE_RELEASE_LTO=thin
+			run_cmd "cargo -v install-update -a" >> ${GLOBAL_LOG_PATH}/rust.log
+		)
 	echo -n "adding ${CARGO_TARGET} libraries... "
 	run_cmd "rustup -v target add ${CARGO_TARGET}" >> ${GLOBAL_LOG_PATH}/rust.log
 	echo "done."
@@ -939,7 +946,11 @@ function setup_sccache () {
 			setup_rust
 		fi
 		echo -n "Setting up sccache..."
-		run_cmd "cargo -v install sccache" >> ${GLOBAL_LOG_PATH}/rust.log
+		( set -e
+			export CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+			export CARGO_PROFILE_RELEASE_LTO=thin
+			run_cmd "cargo -v install sccache" >> ${GLOBAL_LOG_PATH}/rust.log
+		)
 		echo "done."
 	else
 		echo "sccache already there."		
