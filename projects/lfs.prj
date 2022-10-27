@@ -55,7 +55,7 @@ build lfs/openssl_3.0.5
 PYTHON_VER="3.10.6"
 SKIP_PYTHONVENV=1 setup_python "${PYTHON_VER}"
 build lfs/python_3
-setup_python
+#setup_python
 build lfs/coreutils_9.1
 build lfs/diffutils_3.8
 build lfs/gawk_5.1.1

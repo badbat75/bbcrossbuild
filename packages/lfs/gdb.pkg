@@ -44,7 +44,7 @@ case ${GDB_VER} in
         PKG_AUTOCONF=2.69
         PKG_AUTOMAKE=1.15.1
         PKG_LIBTOOL=2.2.6a
-        PKG_GETTEXT=0.18.3
+        PKG_GETTEXT=0.14.6
     ;;
 esac
 

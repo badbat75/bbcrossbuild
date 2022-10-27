@@ -290,33 +290,67 @@ pathremove () {
 	"
 }
 
-run_cmd () {
-	trap 'STATUS=${?}; \
-		echo "[${PROCNUM}] # Return code: ${STATUS}"; \
-		echo "[${PROCNUM}] # Command: ${CMDLINE}"; \
-		echo; \
-		trap - ERR; \
-		return ${STATUS}' ERR
 
-	local LINENO=0
-	local STATUS=0
-	local PROCNUM=${$}
-	local CMDLINE="${@}"
-	while IFS= read -r line; do
-		local LINE=$((LINE+1))
-		case ${LINE} in
-			1) echo -en "[${PROCNUM}] $ " ;;
-			*) echo -en "> " ;;
-		esac
-		echo "${line}"
-	done <<< "${CMDLINE}"
-	eval "${CMDLINE}" 2>&1
-	echo "[${PROCNUM}] # OK"
-	echo
-	trap - ERR
+
+log_buffer () {
+	local LOG_TYPE="${1:-log}"
+	case ${LOG_TYPE} in
+		cmd)    local LOG_CHAR='$';;
+		info)   local LOG_CHAR='#';;
+		log)    local LOG_CHAR='-';;
+		status) local LOG_CHAR='=';;
+		*)      local LOG_CHAR="${LOG_TYPE}";;
+	esac
+	while IFS= read -r line
+	do
+		printf "%s - [%s]${LOG_CHAR} %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$(basename ${PWD})" "${line}"
+	done < /dev/stdin
 }
 
-export -f run_cmd
+run_cmd () {
+	trap 'trap - SIGINT; return 100' SIGINT
+	local CMDLINE="${@}"
+	local STATUS=255
+	local RETRIES=0
+	local LOG_PROMPT="[$(basename ${PWD})]"
+	while [ ${STATUS} -ne 0 ] && [ ${RETRIES} -lt 5 ]
+	do
+		local RETRIES=$((RETRIES+1))
+		if [ ${RETRIES} -gt 1 ]
+		then
+			# Sleep random between 1 and 5 seconds
+			sleep $((1 + $RANDOM % 5))
+			echo "Try ${RETRIES}" | log_buffer info
+		fi
+		(
+			local LINENO=0
+			while IFS= read -r line
+			do
+				local LINE=$((LINE+1))
+				case ${LINE} in
+					1) local LOG_TYPE=cmd ;;
+					*) local LOG_TYPE='>' ;;
+				esac
+				echo "${line}" | log_buffer "${LOG_TYPE}"
+			done <<< "${CMDLINE}"
+		)
+		eval "${CMDLINE}" 2>&1 | log_buffer
+		local STATUS=${PIPESTATUS[0]}
+	done
+	if [ ${STATUS} -ne 0 ]
+	then
+		echo "Return code: ${STATUS}" | log_buffer status
+		echo "Command: ${CMDLINE}" | log_buffer status
+		echo
+	else
+		echo "OK" | log_buffer status
+		echo
+	fi
+	trap - SIGINT
+	return ${STATUS}
+}
+
+export -f run_cmd log_buffer
 
 tab () {
 	echo -en '\t'

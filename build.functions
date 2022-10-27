@@ -681,7 +681,37 @@ function build () {(
 		fi
 	}
 
-	function configmake () {
+	function smart_autoreconf () {
+		local WORK_DIR=${1}
+		local AUTOCONF_CMD=
+		local ACINCLUDE=
+		local AUTOPOINTINCLUDE=
+		### If PATH include a AUTOTOOLS build or PKG_AUTOCONF is a particular version
+		[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
+		[ -d ${GLOBAL_TOOLCHAIN_PATH}/share/aclocal ] && local ACINCLUDE+=" --include=${GLOBAL_TOOLCHAIN_PATH}/share/aclocal"
+		[ -d ${TOOLCHAIN_PATH}/share/aclocal ] && local ACINCLUDE+=" --include=${TOOLCHAIN_PATH}/share/aclocal"
+		if [ ! -z ${AUTOTOOLS_PATH} ] && [ -d ${AUTOTOOLS_PATH} ]
+		then
+			local AUTOMAKE_MAJVER=$(echo ${PKG_AUTOMAKE:-${AUTOMAKE_VER}} | cut -d'.' -f 1,2)
+			local ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/autoconf --include=${AUTOTOOLS_PATH}/share/aclocal-${AUTOMAKE_MAJVER}"
+			local AUTOCONF_CMD="${AUTOTOOLS_PATH}/bin/autoreconf"
+		else
+			local AUTOCONF_CMD=autoreconf
+		fi
+		cd ${PKG_SRCPATH}/${WORK_DIR}
+		#if [ ! -d m4 ]
+		#then
+		#	run_cmd \"mkdir m4\"
+		#fi
+		run_cmd "rm -rfv autom4te.cache aclocal.m4 configure libtool ltmain.sh lt-main.sh"
+		export PATH="${AUTOTOOLS_PATH}/bin:${PATH}";
+		[ -f po/update-potfiles ] && run_cmd "./po/update-potfiles" || true
+		run_cmd "${AUTOCONF_CMD} -f -i ${ACINCLUDE}"
+		return ${?}
+	}
+	export -f smart_autoreconf
+
+	function configmake () {	
 		trap 'local CMDERR="${BASH_COMMAND}" STATUS=${?}; \
 			echo "fail. [configmake]"; \
 			echo ${CMDERR}; \
@@ -690,50 +720,24 @@ function build () {(
 			return ${STATUS}' ERR
 		if [ "${PKG_AUTOCONF:-0}" != "0" ]
 		then
-			local AUTOCONF_CMD=
-			local ACINCLUDE=
-			local AUTOPOINTINCLUDE=
-			### If PATH include a AUTOTOOLS build or PKG_AUTOCONF is a particular version
-			[ -d ${SYSROOT}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${SYSROOT}${BUILD_PREFIX}/share/aclocal"
-			[ -d ${GLOBAL_TOOLCHAIN_PATH}/share/aclocal ] && local ACINCLUDE+=" --include=${GLOBAL_TOOLCHAIN_PATH}/share/aclocal"
-			[ -d ${TOOLCHAIN_PATH}/share/aclocal ] && local ACINCLUDE+=" --include=${TOOLCHAIN_PATH}/share/aclocal"
-			if [[ ${PATH} == *"${AUTOTOOLS_PATH}/bin"* ]] || [ ${PKG_AUTOCONF} != 1 ]
+			if [ "${PKG_AUTOCONF:-0}" == "1" ]
 			then
-				if [ ${PKG_AUTOCONF} != 1 ]
-				then
-					echo "# Setting up ${PKG_AUTOCONF:-${AUTOCONF_VER}} ${PKG_AUTOMAKE:-${AUTOMAKE_VER}} ${PKG_LIBTOOL:-${LIBTOOL_VER}} ${PKG_GETTEXT:-${GETTEXT_VER}}"
-					setup_autotools ${PKG_AUTOCONF:-${AUTOCONF_VER}} ${PKG_AUTOMAKE:-${AUTOMAKE_VER}} ${PKG_LIBTOOL:-${LIBTOOL_VER}} ${PKG_GETTEXT:-${GETTEXT_VER}}
-				fi
-				local ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/autoconf"
-				local AUTOMAKE_MAJVER=$(echo ${PKG_AUTOMAKE:-${AUTOMAKE_VER}} | cut -d'.' -f 1,2)
-				local ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/aclocal-${AUTOMAKE_MAJVER}"
-				local AUTOCONF_CMD="${AUTOTOOLS_PATH}/bin/autoreconf"
-			else
-				local AUTOCONF_CMD=autoreconf
+				PKG_AUTOCONF=${AUTOCONF_VER}
 			fi
+			echo "# Setting up ${PKG_AUTOCONF:-${AUTOCONF_VER}} ${PKG_AUTOMAKE:-${AUTOMAKE_VER}} ${PKG_LIBTOOL:-${LIBTOOL_VER}} ${PKG_GETTEXT:-${GETTEXT_VER}}"
+			setup_autotools ${PKG_AUTOCONF:-${AUTOCONF_VER}} ${PKG_AUTOMAKE:-${AUTOMAKE_VER}} ${PKG_LIBTOOL:-${LIBTOOL_VER}} ${PKG_GETTEXT:-${GETTEXT_VER}}
 			if [ "${AUTOCONF_PATH}" == "autoscan" ]
 			then
-				run_cmd "pushd ${PKG_SRCPATH}"
-				AUTOCONF_PATH="$(find . -name "configure.ac" -printf '%P\n' | xargs dirname | sort | tr '\n' ',' | sed 's/,$//' )"
+				pushd ${PKG_SRCPATH}
+				AUTOCONF_PATH="$(find . -name "configure.ac" -printf '%P\n' | xargs dirname | tr '\n' ',' | sed 's/,$//' )"
 				echo "Scanned AUTOCONF_PATH: ${AUTOCONF_PATH}"
-				run_cmd "popd"
+				popd
 			fi
-			#### Multi process autoreconf (more than 4 processes fails on gcc)
-			echo -n "${AUTOCONF_PATH:-.}" | xargs --verbose -P${NPROCS} -d',' -I{} sh -e -c "
-				run_cmd \"export PATH=\\\"${AUTOTOOLS_PATH}/bin:${PATH}\\\"\";
-				AUTOCONF_RUNDIR=\"${PKG_SRCPATH}/{}\"
-				run_cmd \"cd \\\"${PKG_SRCPATH}/{}\\\"\"
-				if [ ! -d m4 ]
-				then
-					run_cmd \"mkdir m4\"
-				fi
-				rm -rfv autom4te.cache aclocal.m4 configure
-				[ -f po/update-potfiles ] && run_cmd \"./po/update-potfiles\" || true
-				run_cmd \"${AUTOCONF_CMD} -f -i ${ACINCLUDE}\" || exit 255
-			"
+			#### Multi process autoreconf 
+			echo -n "${AUTOCONF_PATH:-.}" | xargs --verbose -P${NPROCS} -d',' -I{} bash -c "PKG_AUTOMAKE=${PKG_AUTOMAKE} smart_autoreconf {} || exit 255"
 		fi
 		run_cmd "mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
-		run_cmd "pushd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
+		pushd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 		if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 		then
 			CONF_FLAGS="--prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} \
@@ -790,7 +794,7 @@ function build () {(
 			done
 		fi
 		run_cmd "./runmake.sh DESTDIR=${PKG_PKGPATH} ${INST_CMD:-}"
-		run_cmd "popd"
+		popd
 		trap - ERR
 	}
 
@@ -1611,9 +1615,9 @@ function build () {(
 	PKG_KERNEL_BUILD_MODULES="${_param_with_extra_modules:-${PKG_KERNEL_BUILD_MODULES}}"
 
 	eval local PKG_NAME=${PKG_NAME}
-	eval local PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
-	eval local PKG_BLDPATH=${PKG_BLDPATH}
-	eval local PKG_PKGPATH=${PKG_PKGPATH}
+	eval export PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
+	eval export PKG_BLDPATH=${PKG_BLDPATH}
+	eval export PKG_PKGPATH=${PKG_PKGPATH}
 	
 	echo "Package ${PKG_NAME}"
 
