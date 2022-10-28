@@ -708,7 +708,7 @@ function build () {(
 			run_cmd "rm -rfv autom4te.cache aclocal.m4 configure libtool ltmain.sh lt-main.sh"
 			export PATH="${AUTOTOOLS_PATH}/bin:${PATH}";
 			[ -f po/update-potfiles ] && run_cmd "./po/update-potfiles" || true
-			run_cmd "${AUTOCONF_CMD} -f -i ${ACINCLUDE}"
+			MAX_RETRIES=5 run_cmd "${AUTOCONF_CMD} -f -i ${ACINCLUDE}"
 			return ${?}
 		}
 		export -f smart_autoreconf
@@ -982,7 +982,7 @@ function build () {(
 		done
 		export RUSTFLAGS+=" ${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}"
 		echo "RUSTFLAGS=${RUSTFLAGS}"
-		run_cmd "cargo build --verbose --release ${CONF_FLAGS} --target=${CARGO_TARGET}"
+		run_cmd "cargo build $( [${MAKEVERBOSE:-0} -eq 1] && echo -n "--verbose" ) --release ${CONF_FLAGS} --target=${CARGO_TARGET}"
 		for file in ${CARGO_BINLIST}
 		do
 			if [ ! -d ${PKG_PKGPATH}${CARGO_BIN} ]

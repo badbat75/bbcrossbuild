@@ -111,6 +111,7 @@ then
 	build lfs/autoconf
 	build lfs/automake
 	build lfs/gettext
+	build lfs/pkg-config
 	build lfs/sccache
 else
 	LFS_REMOVE_DEVFILES="--remove_devfiles"

@@ -308,12 +308,13 @@ log_buffer () {
 }
 
 run_cmd () {
-	trap 'trap - SIGINT; return 100' SIGINT
+	trap 'STATUS=${?); trap - ERR SIGINT; return ${STATUS}' ERR
+	trap 'trap - ERR SIGINT; return 100' SIGINT
 	local CMDLINE="${@}"
 	local STATUS=255
 	local RETRIES=0
 	local LOG_PROMPT="[$(basename ${PWD})]"
-	while [ ${STATUS} -ne 0 ] && [ ${RETRIES} -lt 5 ]
+	while [ ${STATUS} -ne 0 ] && [ ${RETRIES} -lt ${MAX_RETRIES:-1} ]
 	do
 		local RETRIES=$((RETRIES+1))
 		if [ ${RETRIES} -gt 1 ]
@@ -346,7 +347,7 @@ run_cmd () {
 		echo "OK" | log_buffer status
 		echo
 	fi
-	trap - SIGINT
+	trap - ERR SIGINT
 	return ${STATUS}
 }
 

@@ -1,0 +1,14 @@
+# pkg-config
+PKG_SUFFIX=_${PKGCONFIG_VER}
+PKG_URL="https://pkgconfig.freedesktop.org/releases/pkg-config-${PKGCONFIG_VER}.tar.gz"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--with-pc-path=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig:${BUILD_PREFIX}/share \
+    --with-system-include-path=${BUILD_INCLUDEDIR} \
+    --with-system-library-path=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
+INST_CMD="install-strip"
+PKG_POSTBUILD="mv -v \${PKG_PKGPATH}${BUILD_PREFIX}/share/aclocal \${PKG_PKGPATH}${BUILD_PREFIX}/share/aclocal.2bmoved"
+PKG_POSTINSTALL="if [ -d ${BUILD_PREFIX}/share/aclocal.2bmoved ]
+then
+    cp -fprv ${BUILD_PREFIX}/share/aclocal.2bmoved/* ${BUILD_PREFIX}/share/aclocal/
+    rm -rfv ${BUILD_PREFIX}/share/aclocal.2bmoved
+fi"
