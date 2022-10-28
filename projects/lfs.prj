@@ -86,8 +86,10 @@ build lfs/alsa-utils_1.2
 build raspberrypi/pi-bluetooth_0
 build lfs/bluez_5
 build lfs/usb-utils_014
-#build lfs/pciutils_5.7.0
+build lfs/pciutils_3.8.0
 build lfs/lsof_4.95
+build lfs/wget_1.21.1
+build lfs/which_2.21
 ### Network
 build lfs/dhcp_4.4.3
 build firmwares/wireless-regdb
@@ -165,6 +167,7 @@ function build_lfs_image () {
 	run_on_root_dir lfs root "systemctl enable systemd-networkd"
 	run_on_root_dir lfs root "systemctl enable systemd-resolved"
 	run_on_root_dir lfs root "systemctl enable systemd-timesyncd"
+	run_on_root_dir lfs root "systemctl mask tmp.mount"
 	run_on_root_dir lfs root "useradd -G wheel -m lfs"
 	run_on_root_dir lfs root "echo root:changeme | chpasswd"
 	run_on_root_dir lfs root "echo lfs:lfs | chpasswd"

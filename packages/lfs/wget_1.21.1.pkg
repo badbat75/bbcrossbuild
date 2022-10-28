@@ -1,0 +1,6 @@
+# wget_1.21.1
+PKG_URL="https://ftp.gnu.org/gnu/wget/wget-1.21.1.tar.gz"
+PKG_DEPS="lfs/openssl_3.0.5 lfs/make-ca_1 lfs/libidn2_2.3 lfs/pcre2_10.40"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--with-ssl=openssl"
+INST_CMD="install-strip"
