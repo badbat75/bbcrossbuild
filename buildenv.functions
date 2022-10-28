@@ -336,7 +336,6 @@ function setup_gcc () {
 		run_cmd "${TOOLCHAIN_PATH}/libexec/gcc/${HARCH}/${GCC_MAJVER}/install-tools/mkheaders"
 		echo "### Install aclocal files"
 		run_cmd "mkdir -pv ${TOOLCHAIN_PATH}/share/aclocal"
-		run_cmd "${TOOLCHAIN_SRCPATH}/config/*.m4 ${TOOLCHAIN_PATH}/share/aclocal"
 
 		if [ ! -d ${GLIBC_SYSROOT}${BUILD_PREFIX}/lib ] && [[ "${BUILD_LIBSUFFIX}" == 64* ]]
 		then
