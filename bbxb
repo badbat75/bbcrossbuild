@@ -1,7 +1,7 @@
 #!/bin/bash
 trap 'STATUS=${?}; \
 	set +x; \
-	echo "ERR received. [bbxb]"; \
+	echo "ERR received. [bbxb: ${STATUS}]"; \
 	echo; \
 	pause; \
 	check_images_functions; \
@@ -14,6 +14,8 @@ trap 'set +x; \
 	echo; \
 	check_images_functions && unmount_tag --all --kill || true; \
 	exit 0' SIGINT
+
+set -o pipefail
 
 START_PWD=${PWD}
 BB_HOME=$(dirname $(realpath ${BASH_SOURCE}))
@@ -50,6 +52,6 @@ fi
 
 echo "Project path: ${DATA_PATH}/${PRJ_NAME}"
 echo
-. $PRJ
+source ${PRJ}
 check_images_functions && unmount_tag --all || true
 trap - ERR SIGINT

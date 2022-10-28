@@ -294,22 +294,32 @@ pathremove () {
 
 log_buffer () {
 	local LOG_TYPE="${1:-log}"
+	local LOG_FILE="${2:-/dev/stdout}"
 	case ${LOG_TYPE} in
 		cmd)    local LOG_CHAR='$';;
 		info)   local LOG_CHAR='#';;
 		log)    local LOG_CHAR='-';;
 		status) local LOG_CHAR='=';;
+		error)  local LOG_CHAR='!';;
 		*)      local LOG_CHAR="${LOG_TYPE}";;
 	esac
 	while IFS= read -r line
 	do
-		printf "%s - [%s]${LOG_CHAR} %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$(basename ${PWD})" "${line}"
+		printf "%s - [%s]${LOG_CHAR} %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$(basename ${PWD})" "${line}" >> ${LOG_FILE}
 	done < /dev/stdin
 }
 
 run_cmd () {
-	trap 'STATUS=${?); trap - ERR SIGINT; return ${STATUS}' ERR
-	trap 'trap - ERR SIGINT; return 100' SIGINT
+	trap 'local STATUS=${PIPESTATUS[0]}; \
+		trap - ERR; \
+		trap - SIGINT; \
+		echo -e "\nERR caught. [run_cmd: ${STATUS}]" >&2;  \
+		echo -e "Command: ${CMDLINE}\n" >&2; \
+		return ${STATUS};' ERR
+	trap 'echo "SIGINT caught. [run_cmd]"; \
+		trap - ERR; \
+		trap - SIGINT; \
+		return 100;' SIGINT
 	local CMDLINE="${@}"
 	local STATUS=255
 	local RETRIES=0
@@ -335,20 +345,12 @@ run_cmd () {
 				echo "${line}" | log_buffer "${LOG_TYPE}"
 			done <<< "${CMDLINE}"
 		)
-		eval "${CMDLINE}" 2>&1 | log_buffer
-		local STATUS=${PIPESTATUS[0]}
+		eval "${CMDLINE}" 2> >(log_buffer error) > >(log_buffer) 
 	done
-	if [ ${STATUS} -ne 0 ]
-	then
-		echo "Return code: ${STATUS}" | log_buffer status
-		echo "Command: ${CMDLINE}" | log_buffer status
-		echo
-	else
-		echo "OK" | log_buffer status
-		echo
-	fi
-	trap - ERR SIGINT
-	return ${STATUS}
+	echo "OK" | log_buffer status
+	echo | log_buffer status
+	trap - ERR
+	trap - SIGINT
 }
 
 export -f run_cmd log_buffer
