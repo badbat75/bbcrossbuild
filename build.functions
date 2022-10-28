@@ -701,10 +701,7 @@ function build () {(
 				local AUTOCONF_CMD=autoreconf
 			fi
 			cd ${PKG_SRCPATH}/${WORK_DIR}
-			#if [ ! -d m4 ]
-			#then
-			#	run_cmd \"mkdir m4\"
-			#fi
+			run_cmd "mkdir -pv m4"
 			run_cmd "rm -rfv autom4te.cache aclocal.m4 configure libtool ltmain.sh lt-main.sh"
 			export PATH="${AUTOTOOLS_PATH}/bin:${PATH}";
 			[ -f po/update-potfiles ] && run_cmd "./po/update-potfiles" || true
