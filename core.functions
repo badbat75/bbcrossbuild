@@ -345,10 +345,12 @@ run_cmd () {
 				echo "${line}" | log_buffer "${LOG_TYPE}"
 			done <<< "${CMDLINE}"
 		)
-		eval "${CMDLINE}" 2> >(log_buffer error) > >(log_buffer) 
+		eval "${CMDLINE}" 2> >(log_buffer error) > >(log_buffer)
+		local STATUS=${PIPESTATUS[0]}
 	done
 	echo "OK" | log_buffer status
 	echo | log_buffer status
+	return ${STATUS}
 	trap - ERR
 	trap - SIGINT
 }
