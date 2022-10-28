@@ -2,9 +2,7 @@
 PKG_SUFFIX=.1
 PKG_URL="https://ftp.gnu.org/gnu/nettle/nettle-3.8${PKG_SUFFIX}.tar.gz"
 BUILD_PROCESS=configmake
-PKG_AUTOCONF=1
 CONF_FLAGS=""
 INST_CMD=install
-
 # Dependencies:
 
