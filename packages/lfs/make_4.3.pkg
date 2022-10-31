@@ -1,5 +1,0 @@
-# make_4.3
-PKG_URL="https://ftp.gnu.org/gnu/make/make-4.3.tar.gz"
-BUILD_PROCESS=configmake
-CONF_FLAGS="--without-guile"
-INST_CMD="install-strip"

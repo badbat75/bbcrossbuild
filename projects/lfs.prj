@@ -107,7 +107,7 @@ then
 	build lfs/binutils
 	GCC_TARGETS="binaries" build lfs/gcc
 	build lfs/gdb
-	build lfs/make_4.3
+	build lfs/make_4
 	build lfs/bison_3
 	build lfs/libtool
 	build lfs/autoconf
