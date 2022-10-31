@@ -1,6 +1,6 @@
 # libxslt_1.1.36
 PKG_URL="https://gitlab.gnome.org/GNOME/libxslt/-/archive/v1.1.36/libxslt-v1.1.36.tar.bz2"
-PKG_DEPS="lfs/libxml2_2.10.1"
+PKG_DEPS="lfs/libxml2_2.10"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--without-crypto"

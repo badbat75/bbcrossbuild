@@ -1,5 +1,6 @@
-# bind_9.19.4
-PKG_URL="https://downloads.isc.org/isc/bind9/9.19.4/bind-9.19.4.tar.xz"
+# bind_9.19
+PKG_SUFFIX=.6
+PKG_URL="https://downloads.isc.org/isc/bind9/9.19${PKG_SUFFIX}/bind-9.19${PKG_SUFFIX}.tar.xz"
 PKG_DEPS="lfs/ncurses_6 lfs/readline_8.2 lfs/libuv_1.41.0 lfs/openssl_3.0.5 lfs/libnghttp2_1.49 lfs/krb5_1.20"
 BUILD_PROCESS=configmake
 CONF_VARS="BUILD_CC=\"\${CC_FOR_BUILD}\""

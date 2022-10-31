@@ -17,7 +17,7 @@ CONF_FLAGS="--with-randomdev= \
     --with-srv6-lease-file=/var/lib/dhcpd/dhcpd6.leases \
     --with-cli-lease-file=/var/lib/dhclient/dhclient.leases \
     --with-cli6-lease-file=/var/lib/dhclient/dhclient6.leases"
-#PKG_DEPS="lfs/bind_9.19.4"
+#PKG_DEPS="lfs/bind_9.19"
 #CONF_FLAGS+=" --enable-libtool --with-libbind=${BIN_PATH}"
 CONF_VARS="BUILD_CC=\"\${CC_FOR_BUILD}\""
 PKG_MAKEVARS="-j1 AR=\"\${AR_FOR_BUILD}\""

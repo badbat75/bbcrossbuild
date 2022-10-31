@@ -1,8 +1,6 @@
 # ncurses_6
-PKG_SUFFIX=.3+p20220924
-PKG_URL="https://github.com/mirror/ncurses/archive/b5d80765d2da2bcc9d9f71cafd081ad4453cd365.tar.gz"
-#GIT_URL="https://github.com/mirror/ncurses.git"
-#GIT_COMMIT=
+PKG_SUFFIX=.3+p20221029
+PKG_URL="https://github.com/mirror/ncurses/archive/da409f83dde1caedbb9c84acaf5943275e60e0e0.tar.gz"
 
 BUILD_PROCESS=configmake
 CONF_FLAGS="--with-pkg-config-libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig \

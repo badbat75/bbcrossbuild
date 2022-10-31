@@ -1,5 +1,5 @@
 # rpi-firmware_1
-PKG_SUFFIX=.20220830
+PKG_SUFFIX=.20221028
 PKG_URL="https://github.com/raspberrypi/firmware/archive/refs/tags/1${PKG_SUFFIX}.tar.gz"
 BUILD_PROCESS=downloadonly
 PKG_PREBUILD="mkdir -pv ${PKG_PKGPATH}/boot

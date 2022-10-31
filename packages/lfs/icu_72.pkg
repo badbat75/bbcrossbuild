@@ -1,5 +1,5 @@
 # icu_72
-PKG_SUFFIX=-rc
+PKG_SUFFIX=-1
 PKG_URL="https://github.com/unicode-org/icu/archive/refs/tags/release-72${PKG_SUFFIX}.tar.gz"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
