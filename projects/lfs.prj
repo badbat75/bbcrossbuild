@@ -12,7 +12,7 @@ build --no_save_status lfs/create-base-fs_1.0
 
 setup_sccache
 setup_gcc
-#setup_llvm
+setup_llvm
 setup_rust
 
 GCC_TARGETS="libraries" build lfs/gcc
