@@ -5,9 +5,3 @@ PKG_DEPS="lfs/glib_2.74 lfs/libxml2_2.10"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--docdir=/usr/share/doc/gettext-${GETTEXT_VER}"
 INST_CMD="install-strip"
-PKG_POSTBUILD="mv -v \${PKG_PKGPATH}${BUILD_PREFIX}/share/aclocal \${PKG_PKGPATH}${BUILD_PREFIX}/share/aclocal.2bmoved"
-PKG_POSTINSTALL="if [ -d ${BUILD_PREFIX}/share/aclocal.2bmoved ]
-then
-    cp -fprv ${BUILD_PREFIX}/share/aclocal.2bmoved/* ${BUILD_PREFIX}/share/aclocal/
-    rm -rfv ${BUILD_PREFIX}/share/aclocal.2bmoved
-fi"
