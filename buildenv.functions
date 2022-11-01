@@ -353,8 +353,7 @@ function setup_autotools () {
 		#### Build gettext
 		echo -n "gettext-${GETTEXT_VER}... "
 		pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER} >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log 2>&1
-		#run_cmd "AUTOCONF=${AUTOTOOLS_PATH}/bin/autoconf AUTOCONF=${AUTOTOOLS_PATH}/bin/automake LIBTOOLIZE=${AUTOTOOLS_PATH}/bin/libtoolize \\
-		#	${AUTOTOOLS_PATH}/bin/autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
+		smart_autoreconf "${PWD}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
 		popd >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log 2>&1
 		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER} ]
 		then
@@ -1020,6 +1019,8 @@ function setup_llvm () {
 		else
 			local SYSROOT=${BIN_PATH}
 			export QEMU_LD_PREFIX="${BIN_PATH}"
+			local WA_CFLAGS="--gcc-toolchain=${TOOLCHAIN_PATH}"
+			local WA_CXXFLAGS="--gcc-toolchain=${TOOLCHAIN_PATH}"
 		fi
 		local PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
 		### Can we build the RT builtins?
@@ -1034,14 +1035,6 @@ function setup_llvm () {
 					fi
 				;;
 			*) local COMPILER_RT_BUILD_BUILTINS=ON
-				;;
-		esac
-		case x${HM} in
-			xarm*)
-				if test_version ${LLVM_VER} -ge 15.0.0
-				then 
-					local WA_CXXFLAGS="-lgcc_s -Wno-unused-command-line-argument"
-				fi
 				;;
 		esac
 		run_cmd "cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/compiler-rt -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} -G Ninja \\
