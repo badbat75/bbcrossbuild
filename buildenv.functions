@@ -249,6 +249,34 @@ function setup_autotools () {
 		trap ERR
 	}
 
+	function smart_autoreconf () {
+		local WORK_DIR=${1}
+		local AUTOCONF_CMD=
+		local ACINCLUDE=
+		local AUTOPOINTINCLUDE=
+		### If PATH include a AUTOTOOLS build or PKG_AUTOCONF is a particular version
+		[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
+		[ -d ${GLOBAL_TOOLCHAIN_PATH}/share/aclocal ] && local ACINCLUDE+=" --include=${GLOBAL_TOOLCHAIN_PATH}/share/aclocal"
+		[ -d ${TOOLCHAIN_PATH}/share/aclocal ] && local ACINCLUDE+=" --include=${TOOLCHAIN_PATH}/share/aclocal"
+		if [ ! -z ${AUTOTOOLS_PATH} ] && [ -d ${AUTOTOOLS_PATH} ]
+		then
+			local AUTOMAKE_MAJVER=$(echo ${PKG_AUTOMAKE:-${AUTOMAKE_VER}} | cut -d'.' -f 1,2)
+			local ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/autoconf --include=${AUTOTOOLS_PATH}/share/aclocal-${AUTOMAKE_MAJVER}"
+			local AUTOCONF_CMD="${AUTOTOOLS_PATH}/bin/autoreconf"
+		else
+			local AUTOCONF_CMD=autoreconf
+		fi
+		cd ${WORK_DIR}
+		run_cmd "mkdir -pv m4"
+		run_cmd "rm -rfv autom4te.cache aclocal.m4 configure libtool ltmain.sh lt-main.sh"
+		export PATH="${AUTOTOOLS_PATH}/bin:${PATH}";
+		[ -f po/update-potfiles ] && run_cmd "./po/update-potfiles" || true
+		MAX_RETRIES=5 run_cmd "${AUTOCONF_CMD} -f -i ${ACINCLUDE}"
+		return ${?}
+	}
+
+	export -f smart_autoreconf
+
 	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \

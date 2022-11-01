@@ -329,8 +329,8 @@ run_cmd () {
 		local RETRIES=$((RETRIES+1))
 		if [ ${RETRIES} -gt 1 ]
 		then
-			# Sleep random between 1 and 5 seconds
-			sleep $((1 + $RANDOM % 5))
+			# Sleep random between 6 and 10 seconds
+			sleep $((6 + $RANDOM % 5))
 			echo "Try ${RETRIES}" | log_buffer info
 		fi
 		(
