@@ -1,5 +1,6 @@
-# openssl_3.0.5
-PKG_URL="https://www.openssl.org/source/openssl-3.0.5.tar.gz"
+# openssl_3
+PKG_SUFFIX=.0.7
+PKG_URL="https://www.openssl.org/source/openssl-3${PKG_SUFFIX}.tar.gz"
 
 CONF_COPYRSC=1
 CONF_CMD="Configure"
