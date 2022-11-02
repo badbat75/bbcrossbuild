@@ -1,6 +1,7 @@
 # make_4
 PKG_SUFFIX=.4
 PKG_URL="https://ftp.gnu.org/gnu/make/make-4${PKG_SUFFIX}.tar.gz"
+PKG_AUTOCONF=1
 BUILD_PROCESS=configmake
 CONF_FLAGS="--without-guile"
 INST_CMD="install-strip"
