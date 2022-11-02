@@ -113,112 +113,53 @@ function check_llvm_c () {
 	fi
 }
 
-function setup_sccache () {
+function setup_make () {
 	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/rust.log ];
+		if [ -f ${GLOBAL_LOG_PATH}/make-${MAKE_VER}.log ];
 		then \
-			echo "Log ${GLOBAL_LOG_PATH}/rust.log:"; \
+			echo "Log ${GLOBAL_LOG_PATH}/make-${MAKE_VER}.log:"; \
 			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/rust.log; \
+			tail -n24 ${GLOBAL_LOG_PATH}/make-${MAKE_VER}.log; \
 		fi;
 		set +x; \
 		trap - ERR; \
 		return ${STATUS}' ERR
 
-	if [ ! -x ${GLOBAL_TOOLCHAIN_PATH}/bin/sccache ]
-	then
-		if [ "${CARGO_HOME}" != "${GLOBAL_TOOLCHAIN_PATH}" ]
-		then
-			setup_rust
-		fi
-		echo -n "Setting up sccache..."
-		( set -e
-			export CARGO_PROFILE_RELEASE_OPT_LEVEL=3
-			export CARGO_PROFILE_RELEASE_LTO=thin
-			run_cmd "cargo -v install sccache" >> ${GLOBAL_LOG_PATH}/rust.log
-		)
-		echo "done."
-	else
-		echo "sccache already there."		
-	fi
-	CCWRAPPER="${GLOBAL_TOOLCHAIN_PATH}/bin/sccache"
-	export RUSTC_WRAPPER="${CCWRAPPER}"
-	export SCCACHE_DIR=${GLOBAL_CACHE_PATH}/sccache
-	export SCCACHE_CACHE_SIZE="10G"
-	export SCCACHE_NO_DAEMON=0
-	if [ ! -d ${SCCACHE_DIR} ]
-	then
-		run_cmd "mkdir -p ${SCCACHE_DIR}" >> ${GLOBAL_LOG_PATH}/rust.log
-	fi
-	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/sccache -s" >> ${GLOBAL_LOG_PATH}/rust.log
-	echo
-	trap ERR
-}
+	echo -n "Setting up make-${MAKE_VER}... "
 
-function setup_pkgconfig () {
-	trap 'local STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log ];
-		then \
-			echo "Log ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log:"; \
-			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log; \
-		fi;
-		set +x; \
-		trap - ERR; \
-		return ${STATUS}' ERR
-
-	echo -n "Setting up pkg-config... "
-
-	if [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config ]
+	if [ ! -f ${GLOBAL_TOOLCHAIN_PATH}/bin/make ]
 	then
-		local PKGCONFIG_URL="https://pkgconfig.freedesktop.org/releases/pkg-config-${PKGCONFIG_VER}.tar.gz"
-		download_uncompress "${PKGCONFIG_URL}" ${TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER} >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		local MAKE_URL="https://ftp.gnu.org/gnu/make/make-${MAKE_VER}.tar.gz"
+		download_uncompress "${MAKE_URL}" ${TOOLCHAIN_SRCPATH}/make-${MAKE_VER} >> ${GLOBAL_LOG_PATH}/make-${MAKE_VER}.log
 		echo -n "building... "
-		pushd ${TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER} >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
-		#run_cmd "autoreconf -fiv" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
-		popd >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
-		if [ -d ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER} ]
+		pushd ${TOOLCHAIN_SRCPATH}/make-${MAKE_VER} >> ${GLOBAL_LOG_PATH}/make-${MAKE_VER}.log 2>&1
+		popd >> ${GLOBAL_LOG_PATH}/make-${MAKE_VER}.log 2>&1
+		if [ -d ${TOOLCHAIN_BLDPATH}/make-${MAKE_VER} ]
 		then
-			run_cmd "rm -rfv ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+			run_cmd "rm -rfv ${TOOLCHAIN_BLDPATH}/make-${MAKE_VER}" >> ${GLOBAL_LOG_PATH}/make-${MAKE_VER}.log
 		fi
-		run_cmd "mkdir -pv ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
-		pushd ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER} >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
+		run_cmd "mkdir -pv ${TOOLCHAIN_BLDPATH}/make-${MAKE_VER}" >> ${GLOBAL_LOG_PATH}/make-${MAKE_VER}.log
+		pushd ${TOOLCHAIN_BLDPATH}/make-${MAKE_VER} >> ${GLOBAL_LOG_PATH}/make-${MAKE_VER}.log 2>&1
 		#### Build for target
 		(	setbuildenv
-			run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \\
+			run_cmd "CC=\"$(which ${BARCH}-gcc 2>/dev/null)\" \\
 				CFLAGS=\"-march=native -O3 -flto\" \\
 				LDFLAGS=\"-fuse-ld=gold -fuse-linker-plugin\" \\
-					${TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}/configure --prefix=${TOOLCHAIN_PATH} \
-					--disable-host-tool \
-					--program-prefix=${HARCH}- \
-					--with-pc-path=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig:${SYSROOT}${BUILD_PREFIX}/share \
-					--with-system-include-path=${SYSROOT}${BUILD_INCLUDEDIR} \
-					--with-system-library-path=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+					${TOOLCHAIN_SRCPATH}/make-${MAKE_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}" >> ${GLOBAL_LOG_PATH}/make-${MAKE_VER}.log
 		)
-		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
-		### Clean-up build directory
-		run_cmd "make V=${MAKEVERBOSE:-0} distclean" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
-		### Build for host
-		(	setbuildenv
-			run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \\
-				CFLAGS=\"-march=native -O3 -flto\" \\
-				LDFLAGS=\"-fuse-ld=gold -fuse-linker-plugin\" \\
-					${TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
-		)
-		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		run_cmd "./build.sh" >> ${GLOBAL_LOG_PATH}/make-${MAKE_VER}.log
+		run_cmd "./make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/make-${MAKE_VER}.log
 		### Clean-up build environment
-		popd >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
-		run_cmd "rm -rfv ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
-		run_cmd "rm -rfv ${TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}" >> ${LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		popd >> ${GLOBAL_LOG_PATH}/make-${MAKE_VER}.log 2>&1
+		run_cmd "rm -rfv ${TOOLCHAIN_BLDPATH}/make-${MAKE_VER}" >> ${GLOBAL_LOG_PATH}/make-${MAKE_VER}.log
+		run_cmd "rm -rfv ${TOOLCHAIN_SRCPATH}/make-${MAKE_VER}" >> ${GLOBAL_LOG_PATH}/make-${MAKE_VER}.log
+		echo "done."
+	else
+		echo "already there."
 	fi
 
-	echo "done."
 	trap ERR
 }
 
@@ -322,8 +263,8 @@ function setup_autotools () {
 		fi
 		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
 		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER} >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
-		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \
-			CXX=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-g++ 2>/dev/null)\" \
+		run_cmd "CC=\"$$(which ${BARCH}-gcc 2>/dev/null)\" \
+			CXX=\"$(which ${BARCH}-g++ 2>/dev/null)\" \
 			AR=\"$(which ${BARCH}-gcc-ar 2>/dev/null)\" \
 			NM=\"$(which ${BARCH}-gcc-nm 2>/dev/null)\" \
 			RANLIB=\"$(which ${BARCH}-gcc-ranlib 2>/dev/null)\" \
@@ -364,8 +305,8 @@ function setup_autotools () {
 		fi
 		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
 		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER} >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
-		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \\
-			CXX=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-g++ 2>/dev/null)\" \\
+		run_cmd "CC=\"$(which ${BARCH}-gcc 2>/dev/null)\" \\
+			CXX=\"$(which ${BARCH}-g++ 2>/dev/null)\" \\
 			AR=\"$(which gcc-ar 2>/dev/null)\" \\
 			NM=\"$(which gcc-nm 2>/dev/null)\" \\
 			RANLIB=\"$(which gcc-ranlib 2>/dev/null)\" \\
@@ -389,8 +330,8 @@ function setup_autotools () {
 		fi
 		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}" >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
 		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER} >> ${GLOBAL_LOG_PATH}/autotools-${AUTOTOOLS_VER}.log
-		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \\
-			CXX=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-g++ 2>/dev/null)\" \\
+		run_cmd "CC=\"$(which ${BARCH}-gcc 2>/dev/null)\" \\
+			CXX=\"$(which ${BARCH}-g++ 2>/dev/null)\" \\
 			AR=\"$(which gcc-ar 2>/dev/null)\" \\
 			NM=\"$(which gcc-nm 2>/dev/null)\" \\
 			RANLIB=\"$(which gcc-ranlib 2>/dev/null)\" \\
@@ -408,7 +349,7 @@ function setup_autotools () {
 		echo -n "already there. "
 	fi
 
-	echo -n "checking support tools... "
+	echo -n "Checking support tools... "
 	if [ ! -f ${GLOBAL_TOOLCHAIN_PATH}/share/info/autoconf-archive.info ]
 	then
 		#### Download all auto tools support tools
@@ -427,9 +368,9 @@ function setup_autotools () {
 		popd >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}.log
 		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}.log
 		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" >> ${GLOBAL_LOG_PATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}.log
-		echo -n "done."
+		echo "done."
 	else
-		echo -n "already there."
+		echo "already there."
 	fi
 	if [ ${_param_default:-0} -eq 1 ]
 	then
@@ -439,28 +380,126 @@ function setup_autotools () {
 	trap ERR
 }
 
-function setup_ldd () {
-	local LDD_PATH=${1:-${DISTOS_PATH}}
-	if [ -f "${LDD_PATH}/usr/bin/ldd" ] || [ -f "${LDD_PATH}/bin/ldd" ]
+function setup_pkgconfig () {
+	trap 'local STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log ];
+		then \
+			echo "Log ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log:"; \
+			echo; \
+			tail -n24 ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log; \
+		fi;
+		set +x; \
+		trap - ERR; \
+		return ${STATUS}' ERR
+
+	echo -n "Setting up pkg-config... "
+	if [ ! -f ${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config ] || [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config ]
 	then
-		eval local $(grep "^RTLDLIST=" ${LDD_PATH}/usr/bin/ldd)
-		for ldso in ${RTLDLIST}
-		do
-			if [ -f ${LDD_PATH}${ldso} ]
-			then
-				local RTD=${RTD:+ }${LDD_PATH}${ldso}
-			fi
-		done
-		if [ -n "${RTD}" ]
-		then
-			if [ ! -d ${TOOLCHAIN_PATH}/bin ]
-			then
-				mkdir ${TOOLCHAIN_PATH}/bin
-			fi
-			sed "/^RTLDLIST=/ s#\".*\"#\"${RTD}\"#" ${LDD_PATH}/usr/bin/ldd > ${TOOLCHAIN_PATH}/bin/ldd
-			chmod +x ${TOOLCHAIN_PATH}/bin/ldd
-		fi
+		local PKGCONFIG_URL="https://pkgconfig.freedesktop.org/releases/pkg-config-${PKGCONFIG_VER}.tar.gz"
+		download_uncompress "${PKGCONFIG_URL}" ${TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER} >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
 	fi
+	### Build for host
+	if [ ! -f ${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config ]
+	then
+		echo -n "building for host..."
+		if [ -d ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER} ]
+		then
+			run_cmd "rm -rfv ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		fi
+		run_cmd "mkdir -pv ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		pushd ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER} >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
+		(	setbuildenv
+			run_cmd "CC=\"$(which ${BARCH}-gcc 2>/dev/null)\" \\
+				CFLAGS=\"-march=native -O3 -flto\" \\
+				LDFLAGS=\"-fuse-ld=gold -fuse-linker-plugin\" \\
+					${TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		)
+		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		### Clean-up build environment
+		popd >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
+		run_cmd "rm -rfv ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		run_cmd "rm -rfv ${TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		echo -n "done. "
+	fi
+	### Build for target
+	if [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config ]
+	then
+		echo -n "building for target... "
+		if [ -d ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER} ]
+		then
+			run_cmd "rm -rfv ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		fi
+		run_cmd "mkdir -pv ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		pushd ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER} >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
+		#### Build for target
+		(	setbuildenv
+			run_cmd "CC=\"$(which ${BARCH}-gcc 2>/dev/null)\" \\
+				CFLAGS=\"-march=native -O3 -flto\" \\
+				LDFLAGS=\"-fuse-ld=gold -fuse-linker-plugin\" \\
+					${TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}/configure --prefix=${TOOLCHAIN_PATH} \
+					--disable-host-tool \
+					--program-prefix=${HARCH}- \
+					--with-pc-path=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig:${SYSROOT}${BUILD_PREFIX}/share \
+					--with-system-include-path=${SYSROOT}${BUILD_INCLUDEDIR} \
+					--with-system-library-path=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		)
+		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		### Clean-up build environment
+		popd >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log 2>&1
+		run_cmd "rm -rfv ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		run_cmd "rm -rfv ${TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/pkg-config-${PKGCONFIG_VER}.log
+		echo -n "done."
+	fi
+	echo
+	trap ERR
+}
+
+function setup_sccache () {
+	trap 'local STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${GLOBAL_LOG_PATH}/rust.log ];
+		then \
+			echo "Log ${GLOBAL_LOG_PATH}/rust.log:"; \
+			echo; \
+			tail -n24 ${GLOBAL_LOG_PATH}/rust.log; \
+		fi;
+		set +x; \
+		trap - ERR; \
+		return ${STATUS}' ERR
+
+	if [ ! -x ${GLOBAL_TOOLCHAIN_PATH}/bin/sccache ]
+	then
+		if [ "${CARGO_HOME}" != "${GLOBAL_TOOLCHAIN_PATH}" ]
+		then
+			setup_rust
+		fi
+		echo -n "Setting up sccache..."
+		( set -e
+			export CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+			export CARGO_PROFILE_RELEASE_LTO=thin
+			run_cmd "cargo -v install sccache" >> ${GLOBAL_LOG_PATH}/rust.log
+		)
+		echo "done."
+	else
+		echo "sccache already there."		
+	fi
+	CCWRAPPER="${GLOBAL_TOOLCHAIN_PATH}/bin/sccache"
+	export RUSTC_WRAPPER="${CCWRAPPER}"
+	export SCCACHE_DIR=${GLOBAL_CACHE_PATH}/sccache
+	export SCCACHE_CACHE_SIZE="10G"
+	export SCCACHE_NO_DAEMON=0
+	if [ ! -d ${SCCACHE_DIR} ]
+	then
+		run_cmd "mkdir -p ${SCCACHE_DIR}" >> ${GLOBAL_LOG_PATH}/rust.log
+	fi
+	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/sccache -s" >> ${GLOBAL_LOG_PATH}/rust.log
+	echo
+	trap ERR
 }
 
 function setup_gcc () {
@@ -789,8 +828,6 @@ function setup_gcc () {
 	local GCC_INSTALL_TARGETS=${_param_install:-0}
 	local GCC_IS_MAIN=${_param_main_gcc:-0}
 
-	setup_autotools --default >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
-	pathadd PATH "${TOOLCHAIN_PATH}/bin"
 	if [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc ] && [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ ]
 	then
 		gcc_buildenv > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log
@@ -883,9 +920,6 @@ function setup_gcc () {
 		run_cmd "rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 		run_cmd "rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${BINUTILS_VER}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	fi
-	setup_pkgconfig >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
-	setup_ldd >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
-	setup_toolchain_wrapper >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	echo "done."
 
 	trap - ERR
@@ -1203,10 +1237,6 @@ function setup_llvm () {
 	then
 		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}" >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
 	fi
-	setup_autotools --default >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
-	setup_pkgconfig >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
-	setup_ldd >> ${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log
-	setup_toolchain_wrapper >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	echo "done."
 
 	trap ERR
@@ -1231,7 +1261,6 @@ function setup_rust () {
 	echo -n "Setting up RUST... "
 	export CARGO_HOME=${GLOBAL_TOOLCHAIN_PATH}
 	export RUSTUP_HOME=${GLOBAL_TOOLCHAIN_PATH}/var/rustup
-	pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/bin"
 	CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
 	if [ ! -x ${GLOBAL_TOOLCHAIN_PATH}/bin/cargo ] || [ ! -x ${GLOBAL_TOOLCHAIN_PATH}/bin/rustc ]
 	then
@@ -1269,9 +1298,10 @@ function setup_rust () {
 }
 
 function setup_toolchain_wrapper () {
+	> ${LOG_PATH}/toolchain_wrapper.log
 	if [ ! -d ${TOOLCHAIN_PATH}/bin ]
 	then
-		mkdir ${TOOLCHAIN_PATH}/bin
+		run_cmd "mkdir ${TOOLCHAIN_PATH}/bin" >> ${LOG_PATH}/toolchain_wrapper.log
 	fi
 	for tool in cc cxx cpp fc f90 ar as nm ranlib strip objcopy objdump readelf
 	do
@@ -1286,21 +1316,48 @@ function setup_toolchain_wrapper () {
 			eval \\\${\${TOOL}} '\${@}'
 		)
 	EOF
-	chmod -v +x ${TOOLCHAIN_PATH}/bin/toolchain_wrapper
-		ln -sfv toolchain_wrapper ${TOOLCHAIN_PATH}/bin/toolchain_build_${tool}
-		ln -sfv toolchain_wrapper ${TOOLCHAIN_PATH}/bin/toolchain_${tool}
+	run_cmd "chmod -v +x ${TOOLCHAIN_PATH}/bin/toolchain_wrapper" >> ${LOG_PATH}/toolchain_wrapper.log
+	run_cmd "ln -sfv toolchain_wrapper ${TOOLCHAIN_PATH}/bin/toolchain_build_${tool}" >> ${LOG_PATH}/toolchain_wrapper.log
+	run_cmd "ln -sfv toolchain_wrapper ${TOOLCHAIN_PATH}/bin/toolchain_${tool}" >> ${LOG_PATH}/toolchain_wrapper.log
 	done
 }
 
+function setup_ldd () {
+	local LDD_PATH=${1:-${DISTOS_PATH}}
+	if [ -f "${LDD_PATH}/usr/bin/ldd" ] || [ -f "${LDD_PATH}/bin/ldd" ]
+	then
+		eval local $(grep "^RTLDLIST=" ${LDD_PATH}/usr/bin/ldd)
+		for ldso in ${RTLDLIST}
+		do
+			if [ -f ${LDD_PATH}${ldso} ]
+			then
+				local RTD=${RTD:+ }${LDD_PATH}${ldso}
+			fi
+		done
+		if [ -n "${RTD}" ]
+		then
+			if [ ! -d ${TOOLCHAIN_PATH}/bin ]
+			then
+				mkdir ${TOOLCHAIN_PATH}/bin
+			fi
+			sed "/^RTLDLIST=/ s#\".*\"#\"${RTD}\"#" ${LDD_PATH}/usr/bin/ldd > ${TOOLCHAIN_PATH}/bin/ldd
+			chmod +x ${TOOLCHAIN_PATH}/bin/ldd
+		fi
+	fi
+}
+
 function setup_full_toolchain () {
+	set -e
+	setup_make
 	setup_autotools --default
 	setup_pkgconfig
+	setup_rust
 	setup_sccache
 	setup_gcc
 	setup_llvm
-	setup_rust
 	setup_ldd
 	setup_toolchain_wrapper
+	set +e
 }
 
 function setup_python () {
@@ -1531,3 +1588,6 @@ then
 	exit 1
 fi
 BARCH=$(gcc -dumpmachine)
+
+pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/bin"
+pathadd PATH "${TOOLCHAIN_PATH}/bin"
