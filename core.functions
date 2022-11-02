@@ -320,6 +320,18 @@ run_cmd () {
 		trap - ERR; \
 		trap - SIGINT; \
 		return 100;' SIGINT
+	
+	unset RUNCMD_SUDO
+	case "${1}" in
+		"-S") 
+			local RUNCMD_SUDO="sudo/bash"
+			shift
+			;;
+		"-s")
+			local RUNCMD_SUDO="sudo"
+			shift
+			;;
+	esac
 	local CMDLINE="${@}"
 	local STATUS=255
 	local RETRIES=0
@@ -343,13 +355,18 @@ run_cmd () {
 					*) local LOG_TYPE='>' ;;
 				esac
 				echo "${line}" | log_buffer "${LOG_TYPE}"
-			done <<< "${CMDLINE}"
+			done <<< "${RUNCMD_SUDO:+[${RUNCMD_SUDO}] }${CMDLINE}"
 		)
-		eval "${CMDLINE}" 2> >(log_buffer error) > >(log_buffer)
-		local STATUS=${PIPESTATUS[0]}
+		case "${RUNCMD_SUDO}" in
+		"sudo/bash") 
+			sudo bash -c "${CMDLINE}" 2> >(log_buffer error) > >(log_buffer)
+			local STATUS=${PIPESTATUS[0]}
+			;;
+		*)	eval "${RUNCMD_SUDO:+${RUNCMD_SUDO} }${CMDLINE}" 2> >(log_buffer error) > >(log_buffer)
+			local STATUS=${PIPESTATUS[0]}
+			;;
+		esac
 	done
-	echo "OK" | log_buffer status
-	echo | log_buffer status
 	return ${STATUS}
 	trap - ERR
 	trap - SIGINT

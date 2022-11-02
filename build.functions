@@ -1744,7 +1744,7 @@ function build () {(
 			fi
 			if [ -d ${PKG_PKGPATH} ]
 			then
-				run_cmd "sudo rm -rf ${PKG_PKGPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
+				run_cmd -s "rm -rf ${PKG_PKGPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
 			fi
 			run_cmd "mkdir -p ${PKG_PKGPATH}" >> ${LOG_PATH}/${PKG_NAME}.log
 			if [ -n "${PKG_PREBUILD}" ]
@@ -1802,7 +1802,7 @@ function build () {(
 					then
 						create_sfx_package ${PKG_PKGPATH}
 					fi
-					run_cmd "sudo rm -rf ${PKG_PKGPATH}"
+					run_cmd -s "rm -rf ${PKG_PKGPATH}"
 					set +e
 				) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 				if [ ${KEEPBUILDDIR} -eq 0 ]
@@ -1818,8 +1818,8 @@ function build () {(
 				then
 					create_sfx_package ${PKG_PKGPATH}
 				fi
-				run_cmd "rsync -aKv --devices --specials ${PKG_PKGPATH}/ ${BIN_PATH}"
-				run_cmd "sudo rm -rf ${PKG_PKGPATH}"
+				run_cmd "rsync -aK --devices --specials ${PKG_PKGPATH}/ ${BIN_PATH}"
+				run_cmd -s "rm -rf ${PKG_PKGPATH}"
 				set +e
 			) >> ${LOG_PATH}/${PKG_NAME}.log 2>&1
 			if [ ${KEEPBUILDDIR} -eq 0 ]
