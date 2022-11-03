@@ -3,8 +3,8 @@ PKG_URL="https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.g
 PKG_DEPS="lfs/gmp lfs/mpfr lfs/mpc lfs/isl lfs/zlib_1"
 case ${GCC_VER} in
 	12.2.0)
-		PKG_SUFFIX=_12.2.0+b582496f205
-		PATCHES=gcc/gcc_12.2.0+b582496f205.patch
+		PKG_SUFFIX=_12.2.0+35e8b889af1
+		PATCHES=gcc/gcc_12.2.0+35e8b889af1.patch
 		;;
 	*)
 		PKG_SUFFIX=_${GCC_VER}

@@ -1,5 +1,6 @@
 # sudo_1.9
-PKG_URL="https://www.sudo.ws/dist/sudo-1.9.11p3.tar.gz"
+PKG_SUFFIX=.12
+PKG_URL="https://www.sudo.ws/dist/sudo-1.9${PKG_SUFFIX}.tar.gz"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--libexecdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
 			--with-secure-path \

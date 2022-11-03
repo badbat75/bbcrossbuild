@@ -1627,7 +1627,7 @@ function create_sysroot () {
 }
 
 export MAKEFLAGS="--output-sync=line"
-export MAKEFLAGS+=" --jobs="
+export MAKEFLAGS+=" --jobs=${NPROCS}"
 export MAKEFLAGS+=" --load-average=${NPROCS}"
 
 TOOLCHAIN_SRCPATH=${SRC_PATH}/toolchain
