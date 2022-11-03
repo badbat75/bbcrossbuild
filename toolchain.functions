@@ -1626,7 +1626,7 @@ function create_sysroot () {
 	trap ERR
 }
 
-export MAKEFLAGS="-Otarget"
+export MAKEFLAGS="--output-sync=line"
 export MAKEFLAGS+=" --jobs="
 export MAKEFLAGS+=" --load-average=${NPROCS}"
 
