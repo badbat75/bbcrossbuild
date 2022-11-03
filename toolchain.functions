@@ -1626,9 +1626,9 @@ function create_sysroot () {
 	trap ERR
 }
 
-export MAKEFLAGS="--output-sync=line"
-export MAKEFLAGS+=" --jobs=${NPROCS}"
+export MAKEFLAGS="--jobs=${NPROCS}"
 export MAKEFLAGS+=" --load-average=${NPROCS}"
+#export MAKEFLAGS+=" --output-sync=line"
 
 TOOLCHAIN_SRCPATH=${SRC_PATH}/toolchain
 TOOLCHAIN_BLDPATH=${BLD_PATH}/toolchain
