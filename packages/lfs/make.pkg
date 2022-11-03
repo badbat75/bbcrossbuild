@@ -3,5 +3,5 @@ PKG_SUFFIX=_${MAKE_VER}
 PKG_URL="https://ftp.gnu.org/gnu/make/make-${MAKE_VER}.tar.gz"
 PKG_AUTOCONF=1
 BUILD_PROCESS=configmake
-CONF_FLAGS="--without-guile"
+CONF_FLAGS="--with-guile"
 INST_CMD="install-strip"

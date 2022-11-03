@@ -17,6 +17,10 @@ CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}\${BUILD_INCLUDEDIR} --d
 	--enable-stack-protector=strong --enable-pt_chown"
 PKG_MAKEVARS="slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} rootsbindir=${BUILD_PREFIX}/sbin \
 	cross-compiling=yes"
+if test_version ${MAKE_VER} -ge 4.4
+then
+    PKG_MAKEVARS+=" --jobserver-style=pipe"
+fi
 if [ ${WITH_LIBXCRYPT:-0} -eq 1 ]
 then
 	CONF_FLAGS+=" --disable-crypt"
@@ -25,6 +29,5 @@ INST_CMD="${INST_CMD:-install}"
 PKG_POSTBUILD="if [ ! -f ${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h ];
 	then touch ${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h; \
 	fi"
-PKG_MAKEVARS="-j1"
 PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd

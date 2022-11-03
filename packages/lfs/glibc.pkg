@@ -30,9 +30,10 @@ CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}${BUILD_INCLUDEDIR} \
 	--enable-pt_chown --enable-tunables --enable-bind-now --enable-kernel=5.0.0"
 PKG_MAKEVARS="slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} rootsbindir=${BUILD_PREFIX}/sbin \
 	complocaledir=${BUILD_LIBDIR} cross-compiling=yes"
-case ${MAKE_VER} in
-    4.4) PKG_MAKEVARS="-j1";;
-esac
+if test_version ${MAKE_VER} -ge 4.4
+then
+    PKG_MAKEVARS+=" --jobserver-style=pipe"
+fi
 PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd
 

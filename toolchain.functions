@@ -165,7 +165,7 @@ function setup_make () {
 			run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \\
 				CFLAGS=\"-march=native -O3 -flto\" \\
 				LDFLAGS=\"-fuse-ld=gold -fuse-linker-plugin\" \\
-					${TOOLCHAIN_SRCPATH}/make-${MAKE_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
+					${TOOLCHAIN_SRCPATH}/make-${MAKE_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH} --with-guile" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
 		)
 		run_cmd "./build.sh" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
 		run_cmd "./make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
@@ -1626,7 +1626,7 @@ function create_sysroot () {
 	trap ERR
 }
 
-export MAKEFLAGS="-j${NPROCS}${MAKEFLAGS:+ ${MAKEFLAGS}}"
+export MAKEFLAGS="--jobs= --load-average=${NPROCS}${MAKEFLAGS:+ ${MAKEFLAGS}}"
 
 TOOLCHAIN_SRCPATH=${SRC_PATH}/toolchain
 TOOLCHAIN_BLDPATH=${BLD_PATH}/toolchain
