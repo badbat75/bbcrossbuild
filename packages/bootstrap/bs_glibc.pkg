@@ -1,12 +1,6 @@
 # bs_glibc
 PKG_SUFFIX=_${BS_GLIBC_VER}
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${BS_GLIBC_VER}.tar.xz"
-case ${BS_GLIBC_VER} in
-	2.36)
-		PKG_SUFFIX=_2.36+dd4131c832
-		PATCHES=glibc/glibc_2.36+dd4131c832.patch
-		;;
-esac
 PATCHES+=" http://www.linuxfromscratch.org/patches/lfs/development/glibc-${BS_GLIBC_VER}-fhs-1.patch"
 BUILD_PROCESS=configmake
 
@@ -17,15 +11,14 @@ CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}\${BUILD_INCLUDEDIR} --d
 	--enable-stack-protector=strong --enable-pt_chown"
 PKG_MAKEVARS="slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} rootsbindir=${BUILD_PREFIX}/sbin \
 	cross-compiling=yes"
-if test_version ${MAKE_VER} -ge 4.4
-then
-    PKG_MAKEVARS+=" --jobserver-style=pipe"
-fi
 if [ ${WITH_LIBXCRYPT:-0} -eq 1 ]
 then
 	CONF_FLAGS+=" --disable-crypt"
 fi
 INST_CMD="${INST_CMD:-install}"
+
+PKG_PREBUILD="sed '/MAKEFLAGS :=/s/)r/) -r/' -i Makerules"
+
 PKG_POSTBUILD="if [ ! -f ${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h ];
 	then touch ${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h; \
 	fi"
