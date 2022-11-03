@@ -1,7 +1,13 @@
 # bs_glibc
 PKG_SUFFIX=_${BS_GLIBC_VER}
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${BS_GLIBC_VER}.tar.xz"
-PATCHES+="http://www.linuxfromscratch.org/patches/lfs/development/glibc-${BS_GLIBC_VER}-fhs-1.patch"
+case ${BS_GLIBC_VER} in
+	2.36)
+		PKG_SUFFIX=_2.36+dd4131c832
+		PATCHES=glibc/glibc_2.36+dd4131c832.patch
+		;;
+esac
+PATCHES+=" http://www.linuxfromscratch.org/patches/lfs/development/glibc-${BS_GLIBC_VER}-fhs-1.patch"
 BUILD_PROCESS=configmake
 
 PKG_OVERRIDELTO=0
@@ -18,7 +24,7 @@ fi
 INST_CMD="${INST_CMD:-install}"
 PKG_POSTBUILD="if [ ! -f ${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h ];
 	then touch ${PKG_PKGPATH}\${BUILD_INCLUDEDIR}/gnu/stubs.h; \
-	fi" \
-
+	fi"
+PKG_MAKEVARS="-j1"
 PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd

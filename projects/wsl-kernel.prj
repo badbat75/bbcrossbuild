@@ -11,9 +11,7 @@ BUILD_LIBSTATIC=0
 
 build lfs/create-base-fs_1.0
 
-setup_sccache
-setup_gcc
-#setup_llvm
+setup_full_toolchain
 build microsoft/wsl-kernel_5.15
 
 cp -fv ${BIN_PATH}/boot/vmlinuz* ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}

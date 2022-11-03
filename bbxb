@@ -5,6 +5,7 @@ trap 'STATUS=${?}; \
 	echo; \
 	pause; \
 	check_images_functions; \
+	set +o pipefail; \
 	unmount_tag --all --kill || true; \
 	trap - ERR SIGINT; \
 	exit ${STATUS}' ERR
@@ -12,6 +13,7 @@ trap 'set +x; \
 	echo "SIGINT received. [bbxb]"; \
 	trap - ERR SIGINT; \
 	echo; \
+	set +o pipefail; \
 	check_images_functions && unmount_tag --all --kill || true; \
 	exit 0' SIGINT
 
@@ -39,7 +41,7 @@ fi
 . setenv
 . ${BB_HOME}/build.functions
 . ${BB_HOME}/project.functions
-. ${BB_HOME}/buildenv.functions
+. ${BB_HOME}/toolchain.functions
 . ${BB_HOME}/images.functions
 . ${BB_HOME}/data.functions
 

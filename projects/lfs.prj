@@ -10,10 +10,7 @@ TOOLCHAIN=gnu
 
 build --no_save_status lfs/create-base-fs_1.0
 
-setup_sccache
-setup_gcc
-setup_llvm
-setup_rust
+setup_full_toolchain
 
 GCC_TARGETS="libraries" build lfs/gcc
 
@@ -107,8 +104,8 @@ then
 	build lfs/binutils
 	GCC_TARGETS="binaries" build lfs/gcc
 	build lfs/gdb
-	build lfs/make_4
-	build lfs/bison_3
+	build lfs/make
+	build lfs/bison
 	build lfs/libtool
 	build lfs/autoconf
 	build lfs/automake

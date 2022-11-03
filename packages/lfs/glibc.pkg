@@ -2,16 +2,16 @@
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${BS_GLIBC_VER}.tar.xz"
 case ${BS_GLIBC_VER} in
 	2.36)
-		PKG_SUFFIX=_2.36+19535f3b57
-		PATCHES=glibc/glibc_2.36+19535f3b57.patch
+		PKG_SUFFIX=_2.36+dd4131c832
+		PATCHES=glibc/glibc_2.36+dd4131c832.patch
 		;;
 	2.35)
-		PKG_SUFFIX=_2.35+8d125a1f91
-		PATCHES=glibc/glibc_2.35+8d125a1f91.patch
+		PKG_SUFFIX=_2.35+cbfe89a675
+		PATCHES=glibc/glibc_2.35+cbfe89a675.patch
 		;;
 	2.34)
-		PKG_SUFFIX=_2.34+9f55d2e7c4
-		PATCHES=glibc/glibc_2.34+9f55d2e7c4.patch
+		PKG_SUFFIX=_2.34+ca5df79545
+		PATCHES=glibc/glibc_2.34+ca5df79545.patch
 		;;
 	*)
 		PKG_SUFFIX=_${BS_GLIBC_VER}
@@ -30,10 +30,11 @@ CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}${BUILD_INCLUDEDIR} \
 	--enable-pt_chown --enable-tunables --enable-bind-now --enable-kernel=5.0.0"
 PKG_MAKEVARS="slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} rootsbindir=${BUILD_PREFIX}/sbin \
 	complocaledir=${BUILD_LIBDIR} cross-compiling=yes"
+case ${MAKE_VER} in
+    4.4) PKG_MAKEVARS="-j1";;
+esac
 PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd
-
-#PKG_PREBUILD=""
 
 INST_CMD="install"
 PKG_POSTBUILD="set -x"

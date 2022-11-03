@@ -1,0 +1,7 @@
+# bison
+PKG_SUFFIX=_${BISON_VER}
+PKG_URL="https://ftp.gnu.org/gnu/bison/bison-${BISON_VER}.tar.xz"
+BUILD_PROCESS=configmake
+PKG_AUTOCONF=1
+CONF_FLAGS="--docdir=/usr/share/doc/bison-${BISON_VER}"
+INST_CMD="install-strip"

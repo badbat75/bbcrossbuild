@@ -1,6 +1,6 @@
-# make_4
-PKG_SUFFIX=.4
-PKG_URL="https://ftp.gnu.org/gnu/make/make-4${PKG_SUFFIX}.tar.gz"
+# make
+PKG_SUFFIX=_${MAKE_VER}
+PKG_URL="https://ftp.gnu.org/gnu/make/make-${MAKE_VER}.tar.gz"
 PKG_AUTOCONF=1
 BUILD_PROCESS=configmake
 CONF_FLAGS="--without-guile"

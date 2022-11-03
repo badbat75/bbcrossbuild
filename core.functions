@@ -310,7 +310,7 @@ log_buffer () {
 }
 
 run_cmd () {
-	trap 'local STATUS=${PIPESTATUS[0]}; \
+	trap 'STATUS=${PIPESTATUS[0]}; \
 		trap - ERR; \
 		trap - SIGINT; \
 		echo -e "\nERR caught. [run_cmd: ${STATUS}]" >&2;  \
