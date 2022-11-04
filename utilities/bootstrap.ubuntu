@@ -1,7 +1,6 @@
 #!/bin/bash
-sudo apt-get install -y bc kpartx parted curl ccache build-essential libzstd1 libzstd-dev \
-    gawk bison flex cmake ninja-build \
-    autoconf autoconf2.64 autoconf-archive automake autopoint libtool \
+sudo apt-get install -y bc kpartx parted curl build-essential libzstd1 libzstd-dev \
+    gawk flex \
     git xmltoman docbook-utils swig doxygen texinfo python3-docutils
 
 # For Image emulation
@@ -12,7 +11,6 @@ sudo apt install -y sqlite3
 
 # for meson-ninja
 sudo apt-get install -y python3-pip
-sudo pip3 install --system meson ninja
 
 # for Python 3.7
 sudo apt-get install -y libssl-dev libffi-dev

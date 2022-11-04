@@ -7,10 +7,11 @@ LTOENABLE=thin
 KERNEL_LTOENABLE=thin
 
 TOOLCHAIN=gnu
+PYTHON_VER=3.10.6
 
 build --no_save_status lfs/create-base-fs_1.0
 
-setup_full_toolchain
+setup_full_toolchain --with-python
 
 GCC_TARGETS="libraries" build lfs/gcc
 
@@ -49,9 +50,7 @@ build lfs/kmod_30
 build lfs/elfutils_0.187
 build lfs/libffi_3.3
 build lfs/openssl_3
-PYTHON_VER="3.10.6"
-SKIP_PYTHONVENV=1 setup_python "${PYTHON_VER}"
-build lfs/python_3
+build lfs/python3
 #setup_python
 build lfs/coreutils_9.1
 build lfs/diffutils_3.8

@@ -1,7 +1,7 @@
 # openssl_3
 PKG_SUFFIX=.0.7
 PKG_URL="https://www.openssl.org/source/openssl-3${PKG_SUFFIX}.tar.gz"
-
+PKG_DEPS="lfs/zlib_1"
 CONF_COPYRSC=1
 CONF_CMD="Configure"
 STD_CONF_FLAGS=0

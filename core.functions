@@ -14,7 +14,7 @@ param2value () {
 	# Requires at least one OPTS or OPTS_WITH_VALUE to run
 	# OPTS="-a -b -c" OPTS_WITH_VALUE="-d" param2value "${@}"
 
-	local OPTS+=" -v"
+	local OPTS+=" -v "
 	local NUM=0
 
 	unset $( ( set -o posix ; set ) | grep ^_param_ | sed 's/=.*$//g' | xargs )
@@ -22,11 +22,11 @@ param2value () {
 	while(($#)) ; do
 		if [[ ${1} == -* ]]
 		then
-			if [ "${1}" == "$(echo ${OPTS} ${OPTS_WITH_VALUE} | grep -o -- "${1}\b")" ]
+			if [ "${1} " == "$(echo ${OPTS} ${OPTS_WITH_VALUE} | grep -o -- "${1} ")" ]
 				then
 					local OPTION=${1}
-					local PARAMETER=$(echo ${1} | sed -e 's/^--\?//')
-					if [ "${1}" == "$(echo ${OPTS_WITH_VALUE} | grep -o -- "${1}\b")" ]
+					local PARAMETER=$(echo ${1} | sed -e 's/^--\?//;s/-/_/g')
+					if [ "${1} " == "$(echo ${OPTS_WITH_VALUE} | grep -o -- "${1} ")" ]
 					then
 						shift
 						if [ ! "x${1}" == "x" ]
@@ -41,7 +41,7 @@ param2value () {
 					fi
 			else
 				echo "Unrecognized option: ${1}"
-				return 1download
+				return 1
 			fi
 		else
 				local NUM=$((NUM+1))
@@ -367,9 +367,9 @@ run_cmd () {
 			;;
 		esac
 	done
-	return ${STATUS}
 	trap - ERR
 	trap - SIGINT
+	return ${STATUS}
 }
 
 export -f run_cmd log_buffer

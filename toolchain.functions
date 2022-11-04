@@ -29,12 +29,12 @@ function setup_rust () {
 	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/toolchain_rust.log ];
+		if [ -f ${GLOBAL_LOG_PATH}/toolchain_rust.log ]; \
 		then \
 			echo "Log ${GLOBAL_LOG_PATH}/toolchain_rust.log:"; \
 			echo; \
 			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_rust.log; \
-		fi;
+		fi; \
 		set +x; \
 		trap - ERR; \
 		return ${STATUS}' ERR
@@ -81,12 +81,12 @@ function setup_sccache () {
 	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log ];
+		if [ -f ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log ]; \
 		then \
 			echo "Log ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log:"; \
 			echo; \
 			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log; \
-		fi;
+		fi; \
 		set +x; \
 		trap - ERR; \
 		return ${STATUS}' ERR
@@ -108,6 +108,7 @@ function setup_sccache () {
 			export CARGO_PROFILE_RELEASE_LTO=thin; \\
 			cargo build $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -n "--verbose" ) --release" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
 		run_cmd "cp -fv target/release/sccache ${GLOBAL_TOOLCHAIN_PATH}/bin" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
+		run_cmd "ln -s sccache ${GLOBAL_TOOLCHAIN_PATH}/bin/ccache" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
 		### Clean-up build environment
 		popd >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log 2>&1
 		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/sccache-${SCCACHE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
@@ -135,12 +136,12 @@ function setup_make () {
 	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log ];
+		if [ -f ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log ]; \
 		then \
 			echo "Log ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log:"; \
 			echo; \
 			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log; \
-		fi;
+		fi; \
 		set +x; \
 		trap - ERR; \
 		return ${STATUS}' ERR
@@ -150,29 +151,29 @@ function setup_make () {
 	if [ "$( [ -f ${GLOBAL_TOOLCHAIN_PATH}/bin/make ] && ${GLOBAL_TOOLCHAIN_PATH}/bin/make --version | awk 'NR==1{print $3}')" != "${MAKE_VER}" ]
 	then
 		local MAKE_URL="https://ftp.gnu.org/gnu/make/make-${MAKE_VER}.tar.gz"
-		download_uncompress "${MAKE_URL}" ${TOOLCHAIN_SRCPATH}/make-${MAKE_VER} > ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
+		download_uncompress "${MAKE_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/make-${MAKE_VER} > ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
 		echo -n "building... "
-		pushd ${TOOLCHAIN_SRCPATH}/make-${MAKE_VER} >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log 2>&1
+		pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/make-${MAKE_VER} >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log 2>&1
 		popd >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log 2>&1
-		if [ -d ${TOOLCHAIN_BLDPATH}/make-${MAKE_VER} ]
+		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/make-${MAKE_VER} ]
 		then
-			run_cmd "rm -rfv ${TOOLCHAIN_BLDPATH}/make-${MAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
+			run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/make-${MAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
 		fi
-		run_cmd "mkdir -pv ${TOOLCHAIN_BLDPATH}/make-${MAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
-		pushd ${TOOLCHAIN_BLDPATH}/make-${MAKE_VER} >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log 2>&1
+		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/make-${MAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
+		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/make-${MAKE_VER} >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log 2>&1
 		#### Build for target
 		(	setbuildenv
-			run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \\
-				CFLAGS=\"-march=native -O3 -flto\" \\
-				LDFLAGS=\"-fuse-ld=gold -fuse-linker-plugin\" \\
-					${TOOLCHAIN_SRCPATH}/make-${MAKE_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH} --with-guile" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
+			run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
+				CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
+				LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
+					${GLOBAL_TOOLCHAIN_SRCPATH}/make-${MAKE_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH} --with-guile" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
 		)
 		run_cmd "./build.sh" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
 		run_cmd "./make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
 		### Clean-up build environment
 		popd >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log 2>&1
-		run_cmd "rm -rfv ${TOOLCHAIN_BLDPATH}/make-${MAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
-		run_cmd "rm -rfv ${TOOLCHAIN_SRCPATH}/make-${MAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
+		run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/make-${MAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
+		run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_SRCPATH}/make-${MAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
 		echo "done."
 	else
 		echo "already there."
@@ -239,7 +240,7 @@ function setup_autotools () {
 	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log ];
+		if [ -f ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log ]; \
 		then \
 			echo "Log ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log:"; \
 			echo; \
@@ -281,14 +282,14 @@ function setup_autotools () {
 		fi
 		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
 		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER} >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
-		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \
-			CXX=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-g++ 2>/dev/null)\" \
-			AR=\"$(which ${BARCH}-gcc-ar 2>/dev/null)\" \
-			NM=\"$(which ${BARCH}-gcc-nm 2>/dev/null)\" \
-			RANLIB=\"$(which ${BARCH}-gcc-ranlib 2>/dev/null)\" \
-			CFLAGS=\"-march=native -O3 -flto\" \
-			CXXFLAGS=\"-march=native -O3 -flto\" \
-			LDFLAGS=\"-fuse-ld=gold -fuse-linker-plugin\" \
+		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \
+			CXX=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \
+			AR=\"${AR_FOR_BUILD}\" \
+			NM=\"${NM_FOR_BUILD}\" \
+			RANLIB=\"${RANLIB_FOR_BUILD}\" \
+			CFLAGS=\"${CFLAGS_FOR_BUILD}\" \
+			CXXFLAGS=\"${CXXFLAGS_FOR_BUILD}\" \
+			LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \
 				${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}/configure --prefix=${AUTOTOOLS_PATH}" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
 		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
 		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
@@ -323,14 +324,14 @@ function setup_autotools () {
 		fi
 		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
 		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER} >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
-		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \\
-			CXX=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-g++ 2>/dev/null)\" \\
-			AR=\"$(which gcc-ar 2>/dev/null)\" \\
-			NM=\"$(which gcc-nm 2>/dev/null)\" \\
-			RANLIB=\"$(which gcc-ranlib 2>/dev/null)\" \\
-			CFLAGS=\"-march=native -O3 -flto\" \\
-			CXXFLAGS=\"-march=native -O3 -flto\" \\
-			LDFLAGS=\"-fuse-ld=gold -fuse-linker-plugin\" \\
+		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
+			CXX=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
+			AR=\"${AR_FOR_BUILD}\" \\
+			NM=\"${NM_FOR_BUILD}\" \\
+			RANLIB=\"${RANLIB_FOR_BUILD}\" \\
+			CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
+			CXXFLAGS=\"${CXXFLAGS_FOR_BUILD}\" \\
+			LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
 				${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}/configure --prefix=${AUTOTOOLS_PATH}" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
 		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
 		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
@@ -348,14 +349,14 @@ function setup_autotools () {
 		fi
 		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
 		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER} >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
-		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \\
-			CXX=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-g++ 2>/dev/null)\" \\
-			AR=\"$(which gcc-ar 2>/dev/null)\" \\
-			NM=\"$(which gcc-nm 2>/dev/null)\" \\
-			RANLIB=\"$(which gcc-ranlib 2>/dev/null)\" \\
-			CFLAGS=\"-march=native -O3 -flto\" \\
-			CXXFLAGS=\"-march=native -O3 -flto\" \\
-			LDFLAGS=\"-fuse-ld=gold -fuse-linker-plugin\" \\
+		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
+			CXX=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
+			AR=\"${AR_FOR_BUILD}\" \\
+			NM=\"${NM_FOR_BUILD}\" \\
+			RANLIB=\"${RANLIB_FOR_BUILD}\" \\
+			CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
+			CXXFLAGS=\"${CXXFLAGS_FOR_BUILD}\" \\
+			LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
 				${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}/configure --prefix=${AUTOTOOLS_PATH}" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
 		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
 		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
@@ -402,12 +403,12 @@ function setup_pkgconfig () {
 	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log ];
+		if [ -f ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log ]; \
 		then \
 			echo "Log ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log:"; \
 			echo; \
 			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log; \
-		fi;
+		fi; \
 		set +x; \
 		trap - ERR; \
 		return ${STATUS}' ERR
@@ -432,9 +433,9 @@ function setup_pkgconfig () {
 		fi
 		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
 		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER} >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
-		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \\
-				CFLAGS=\"-march=native -O3 -flto\" \\
-				LDFLAGS=\"-fuse-ld=gold -fuse-linker-plugin\" \\
+		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
+				CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
+				LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
 					${GLOBAL_TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH} \
 					--with-pc-path=${BLIB_PATH}/pkgconfig:/usr/share/pkgconfig \
 					--with-system-include-path=${BINC_PATH} \
@@ -458,9 +459,9 @@ function setup_pkgconfig () {
 		pushd ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER} >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
 		#### Build for target
 		(	setbuildenv
-			run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \\
-				CFLAGS=\"-march=native -O3 -flto\" \\
-				LDFLAGS=\"-fuse-ld=gold -fuse-linker-plugin\" \\
+			run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
+				CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
+				LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
 					${GLOBAL_TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}/configure --prefix=${TOOLCHAIN_PATH} \
 					--disable-host-tool \
 					--program-prefix=${HARCH}- \
@@ -487,12 +488,12 @@ function setup_bison () {
 	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log ];
+		if [ -f ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log ]; \
 		then \
 			echo "Log ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log:"; \
 			echo; \
 			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log; \
-		fi;
+		fi; \
 		set +x; \
 		trap - ERR; \
 		return ${STATUS}' ERR
@@ -511,9 +512,9 @@ function setup_bison () {
 		fi
 		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/bison-${BISON_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log
 		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/bison-${BISON_VER} >> ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log 2>&1
-		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \\
-			CFLAGS=\"-march=native -O3 -flto\" \\
-			LDFLAGS=\"-fuse-ld=gold -fuse-linker-plugin\" \\
+		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
+			CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
+			LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
 				${GLOBAL_TOOLCHAIN_SRCPATH}/bison-${BISON_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}" >> ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log
 		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log
 		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log
@@ -701,19 +702,19 @@ function setup_gcc () {
 		local PLATFORM_ARCHFLAGS="--enable-targets=${HM}-${HOS}-${HLIBC} --with-arch-directory=${HM} ${HMARCH:+ --with-arch=${HMARCH}}${PLATFORM_ARCHFLAGS}"
 		echo "### GCC_BUILD_PATH: ${TOOLCHAIN_PATH}/gcc-${GCC_VER}"
 		pushd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
-		run_cmd "CC_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc)\" \\
-				CXX_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-g++)\" \\
-				AR_FOR_BUILD=\"$(which ${BARCH}-gcc-ar 2>/dev/null)\" \\
-				NM_FOR_BUILD=\"$(which ${BARCH}-gcc-nm 2>/dev/null)\" \\
-				RANLIB_FOR_BUILD=\"$(which ${BARCH}-gcc-ranlib 2>/dev/null)\" \\
+		run_cmd "CC_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
+				CXX_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
+				AR_FOR_BUILD=\"${AR_FOR_BUILD}\" \\
+				NM_FOR_BUILD=\"${NM_FOR_BUILD}\" \\
+				RANLIB_FOR_BUILD=\"${RANLIB_FOR_BUILD}\" \\
 				CFLAGS_FOR_BUILD=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}\" \\
 				CXXFLAGS_FOR_BUILD=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}\" \\
 				LDFLAGS_FOR_BUILD=\"${LINKERFLAGS}\" \\
-				CC=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-gcc 2>/dev/null)\" \\
-				CXX=\"${CCWRAPPER:+${CCWRAPPER} }$(which ${BARCH}-g++ 2>/dev/null)\" \\
-				AR=\"$(which ${BARCH}-gcc-ar 2>/dev/null)\" \\
-				NM=\"$(which ${BARCH}-gcc-nm 2>/dev/null)\" \\
-				RANLIB=\"$(which ${BARCH}-gcc-ranlib 2>/dev/null)\" \\
+				CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
+				CXX=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
+				AR=\"${AR_FOR_BUILD}\" \\
+				NM=\"${NM_FOR_BUILD}\" \\
+				RANLIB=\"${RANLIB_FOR_BUILD}\" \\
 				CFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}\" \\
 				CXXFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_LINKERFLAGS}\" \\
 				LDFLAGS=\"${LINKERFLAGS}\" \\
@@ -731,7 +732,7 @@ function setup_gcc () {
 		if [ -n "${GLIBC_SYSROOT}" ]
 		then
 			run_cmd "mkdir -p ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${HARCH}/libgcc"
-			echo "### Create a symlink that allows libgcc to be built with posix threads support"
+			echo "### Create a symlink that allows libgcc to be built with posix threads support" | log_buffer info
 			run_cmd "ln -s ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/libgcc/gthr-posix.h ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${HARCH}/libgcc/gthr-default.h"
 		fi
 		trap - ERR
@@ -838,6 +839,16 @@ function setup_gcc () {
 		trap ERR
 	}
 
+	function gcc_toolchain_libraries_linkerflags () {
+		local SEARCH_LIBS="$(realpath $(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc --print-search-dirs | grep libraries | cut -d= -f2 | cut -d: -f1)/..)"
+		find ${SEARCH_LIBS} -mindepth 1 -maxdepth 1 -type d | xargs -I{} echo -n "-L{} "
+	}
+
+	function gcc_toolchain_binaries_flags () {
+		local SEARCH_LIBS="$(realpath $(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc --print-search-dirs | grep libraries | cut -d= -f2 | cut -d: -f1)/..)"
+		find ${SEARCH_LIBS} -mindepth 1 -maxdepth 1 -type d | xargs -I{} echo -n "-B{} "
+	}
+
 	trap 'local STATUS=${?}; \
 		trap - ERR; \
 		echo "fail."; \
@@ -903,6 +914,7 @@ function setup_gcc () {
 			gcc_make_target_libs >> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log
 		fi
 	else
+		gcc_buildenv > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log
 		# If gcc and g++ are in toolchain but some target libraries are not
 		if [ ! -e ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/*/libgcc.a ] && \
 			[ ${GCC_INSTALL_TARGETS} == 1 ]
@@ -952,6 +964,52 @@ function setup_gcc () {
 	trap - ERR
 }
 
+function setup_cmake () {
+	trap 'local STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log ]; \
+		then \
+			echo "Log ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log:"; \
+			echo; \
+			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log; \
+		fi; \
+		set +x; \
+		trap - ERR; \
+		return ${STATUS}' ERR
+
+	echo -n "Setting up cmake-${CMAKE_VER}... "
+
+	if [ "$( [ -f ${GLOBAL_TOOLCHAIN_PATH}/bin/cmake ] && ${GLOBAL_TOOLCHAIN_PATH}/bin/cmake --version | awk 'NR==1{print $3}' || true)" != "${CMAKE_VER}" ]
+	then
+		local CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v${CMAKE_VER}/cmake-${CMAKE_VER}.tar.gz"
+		download_uncompress "${CMAKE_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/cmake-${CMAKE_VER} > ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log
+		echo -n "building... "
+		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/cmake-${CMAKE_VER} ]
+		then
+			run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/cmake-${CMAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log
+		fi
+		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/cmake-${CMAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log
+		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/cmake-${CMAKE_VER} >> ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log 2>&1
+		run_cmd "CC=\"${CC_FOR_BUILD}\" CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
+			CXX=\"${CXX_FOR_BUILD}\" CXXFLAGS=\"${CXXFLAGS_FOR_BUILD}\" \\
+			LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
+				${GLOBAL_TOOLCHAIN_SRCPATH}/cmake-${CMAKE_VER}/bootstrap --prefix=${GLOBAL_TOOLCHAIN_PATH} \\
+					--parallel=${NPROCS} --enable-ccache $(if [ ${MAKEVERBOSE:-0} -eq 1 ]; then echo --verbose; fi)" >> ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log
+		run_cmd "make VERBOSE=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log
+		run_cmd "make VERBOSE=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log
+		### Clean-up build environment
+		popd >> ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log 2>&1
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/cmake-${CMAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/cmake-${CMAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log
+		echo "done."
+	else
+		echo "already there."
+	fi
+
+	trap ERR
+}
+
 function setup_llvm () {
 	function download_llvm () {
 		trap 'STATUS=${?}; \
@@ -992,11 +1050,11 @@ function setup_llvm () {
 				echo "Clang for build and lto active."
 			;;
 			*)
-				local C="$(which ${BARCH}-gcc)"
-				local CXX="$(which ${BARCH}-g++)"
-				local AR="$(which gcc-ar)"
-				local NM="$(which gcc-nm)"
-				local RANLIB="$(which gcc-ranlib)"
+				local C="${CC_FOR_BUILD}"
+				local CXX="${CXX_FOR_BUILD}"
+				local AR="${AR_FOR_BUILD}"
+				local NM="${NM_FOR_BUILD}"
+				local RANLIB="${RANLIB_FOR_BUILD}"
 				local LINKER=gold
 				local LINKER_FLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}"
 				local LTO=OFF
@@ -1009,7 +1067,7 @@ function setup_llvm () {
 		unset CFLAGS CXXFLAGS CPPFLAGS PKG_CONFIG PKG_CONFIG_LIBDIR PKG_CONFIG_SYSROOT_DIR PKG_CONFIG_ALLOW_CROSS
 		export LDFLAGS="${LINKER_FLAGS}"
 		
-		run_cmd "cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER} -G Ninja \\
+		run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER} -G Ninja \\
 			-W no-dev \\
 			-DLLVM_PARALLEL_COMPILE_JOBS=${NPROCS} \\
 			-DLLVM_PARALLEL_LINK_JOBS=${PARALLEL_LINK_JOB} \\
@@ -1126,7 +1184,7 @@ function setup_llvm () {
 			*) local COMPILER_RT_BUILD_BUILTINS=ON
 				;;
 		esac
-		run_cmd "cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/compiler-rt -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} -G Ninja \\
+		run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/cmake -S ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/compiler-rt -B ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET} -G Ninja \\
 			\\
 			-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \\
 			-DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \\
@@ -1269,6 +1327,96 @@ function setup_llvm () {
 	trap ERR
 }
 
+function setup_ninja () {
+	trap 'local STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log ]; \
+		then \
+			echo "Log ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log:"; \
+			echo; \
+			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log; \
+		fi; \
+		set +x; \
+		trap - ERR; \
+		return ${STATUS}' ERR
+
+	echo -n "Setting up ninja-${NINJA_VER}... "
+
+	if [ "$( [ -f ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ] && ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja --version || true)" != "${NINJA_VER}" ]
+	then
+		local NINJA_URL="https://github.com/ninja-build/ninja/archive/refs/tags/v${NINJA_VER}.tar.gz"
+		download_uncompress "${NINJA_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/ninja-${NINJA_VER} > ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log
+		echo -n "building... "
+		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/ninja-${NINJA_VER} ]
+		then
+			run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/ninja-${NINJA_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log
+		fi
+		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/ninja-${NINJA_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log
+		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/ninja-${NINJA_VER} >> ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log 2>&1
+		run_cmd "CC=\"${CC_FOR_BUILD}\" CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
+			CXX=\"${CXX_FOR_BUILD}\" CXXFLAGS=\"${CXXFLAGS_FOR_BUILD}\" \\
+			LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
+				${GLOBAL_TOOLCHAIN_PATH}/bin/cmake ${GLOBAL_TOOLCHAIN_SRCPATH}/ninja-${NINJA_VER} -DCMAKE_BUILD_TYPE=\"Release\" \\
+					-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} -DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \\
+					-DCMAKE_INSTALL_PREFIX=${GLOBAL_TOOLCHAIN_PATH}" >> ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log
+		run_cmd "make VERBOSE=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log
+		run_cmd "make VERBOSE=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log
+		### Clean-up build environment
+		popd >> ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log 2>&1
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/ninja-${NINJA_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/ninja-${NINJA_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log
+		echo "done."
+	else
+		echo "already there."
+	fi
+
+	trap ERR
+}
+
+function setup_meson () {
+	trap 'local STATUS=${?}; \
+		echo "fail."; \
+		echo; \
+		if [ -f ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log ]; \
+		then \
+			echo "Log ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log:"; \
+			echo; \
+			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log; \
+		fi; \
+		set +x; \
+		trap - ERR; \
+		return ${STATUS}' ERR
+
+	echo -n "Setting up meson-${MESON_VER}... "
+
+	local MESON_LIBPATH="$(find ${GLOBAL_TOOLCHAIN_PATH}/lib/python3* -name "meson-${MESON_VER}*egg" 2>/dev/null)"
+	if [ -z ${MESON_LIBPATH} ]
+	then
+		local MESON_URL="https://github.com/mesonbuild/meson/archive/refs/tags/${MESON_VER}.tar.gz"
+		download_uncompress "${MESON_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/meson-${MESON_VER} > ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
+		echo -n "building... "
+		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/meson-${MESON_VER} ]
+		then
+			run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/meson-${MESON_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
+		fi
+		run_cmd "cp -rp ${GLOBAL_TOOLCHAIN_SRCPATH}/meson-${MESON_VER} ${GLOBAL_TOOLCHAIN_BLDPATH}/meson-${MESON_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
+		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/meson-${MESON_VER} >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log 2>&1
+		run_cmd "python3 setup.py build" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
+		run_cmd "python3 setup.py install --prefix=${GLOBAL_TOOLCHAIN_PATH}" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
+		### Clean-up build environment
+		popd >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log 2>&1
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/meson-${MESON_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/meson-${MESON_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
+		echo "done."
+	else
+		echo "already there."
+	fi
+	pathadd PYTHONPATH $(find ${GLOBAL_TOOLCHAIN_PATH}/lib/python3* -name "meson-${MESON_VER}*egg")
+	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/meson --version" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
+	trap ERR
+}
+
 function setup_toolchain_wrapper () {
 	> ${LOG_PATH}/toolchain_wrapper.log
 	if [ ! -d ${TOOLCHAIN_PATH}/bin ]
@@ -1320,69 +1468,91 @@ function setup_ldd () {
 
 function setup_full_toolchain () {
 	set -e
+	OPTS="--with-llvm --with-python --with-gnu-install --with-main-gcc --with-llvm-install" OPTS_WITH_VALUE="" param2value "${@}"
+
+	local WITH_LLVM=${_param_with_llvm:-0}
+	local WITH_PYTHON=${_param_with_python:-0}
+	local WITH_GNU_INSTALL=${_param_with_gnu_install:-0}
+	local WITH_MAIN_GCC=${_param_with_main_gcc:-0}
+	local WITH_LLVM_INSTALL=${_param_with_llvm_install:-0}
+	local SETUP_GCC=
+	local SETUP_LLVM=
+
+	if [ ${WITH_GNU_INSTALL} -eq 1 ]
+	then
+		local SETUP_GCC="--install"
+	fi
+	if [ ${WITH_MAIN_GCC} -eq 1 ]
+	then
+		local SETUP_GCC="${SETUP_GCC:+${SETUP_GCC} }--main_gcc"
+	fi
+	if [ ${WITH_LLVM_INSTALL} -eq 1 ]
+	then
+		local SETUP_LLVM="--install"
+	fi
+
 	setup_rust
 	setup_sccache
 	setup_make
 	setup_autotools --default
 	setup_pkgconfig
 	setup_bison
-	setup_gcc
-	setup_llvm
+	setup_gcc ${SETUP_GCC}
+	setup_cmake
+	if [ ${WITH_LLVM} -eq 1 ] || [ "${TOOLCHAIN}" = "llvm" ]
+	then
+		setup_llvm ${SETUP_LLVM}
+	fi
 	setup_ldd
+	setup_ninja
+	setup_meson
 	setup_toolchain_wrapper
-	set +e
+	if [ ${WITH_PYTHON} -eq 1 ]
+	then
+		set +e
+		setup_python
+		case ${?} in
+			2)
+				set -e
+				NUMSPACES=1 build --toolchain gnu --no_save_status lfs/python3
+				setup_python
+				set +e
+			;;
+			*) return ${?};;
+		esac
+	fi
 }
 
 function setup_python () {
 	function download_pyton () {
 		trap 'STATUS=${?}; \
-			set +x; \
 			trap ERR; \
 			return ${STATUS}' ERR
 
-		set -x
 		local PYTHONURL="https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PYTHON_VER}.tar.xz"
 		download_uncompress ${PYTHONURL} ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER} &&
-		curl -LsR -o ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py https://bootstrap.pypa.io/get-pip.py
-		set +x
+		run_cmd "curl -LsR -o ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py https://bootstrap.pypa.io/get-pip.py"
 		trap ERR
 	}
 
 	function build_python () {
 		trap 'STATUS=${?}; \
-			set +x; \
 			trap ERR; \
 			return ${STATUS}' ERR
 
-		set -x
 		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER} ]
 		then
-			rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
+			run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}"
 		fi
-		mkdir -p ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
-		cd ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
+		run_cmd "mkdir -p ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}"
+		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
 		case ${TOOLCHAIN} in
 			gnu)
-				if which ${BARCH}-gcc-ar > /dev/null 2>&1
-				then
-					local HOST_AR="${BARCH}-gcc-ar"
-				else
-					local HOST_AR="gcc-ar"
-				fi
-				if which ${BARCH}-gcc-nm > /dev/null 2>&1
-				then
-					local HOST_NM="${BARCH}-gcc-nm"
-				else
-					local HOST_NM="gcc-nm"
-				fi
-				if which ${BARCH}-gcc-ranlib > /dev/null 2>&1
-				then
-					local HOST_RANLIB="${BARCH}-gcc-ranlib"
-				else
-					local HOST_RANLIB="gcc-ranlib"
-				fi
-				export CC="${CCWRAPPER:+${CCWRAPPER} }${BARCH}-gcc"
-				export CXX="${CCWRAPPER:+${CCWRAPPER} }${BARCH}-g++"
+				local HOST_AR="${AR_FOR_BUILD}"
+				local HOST_NM="${NM_FOR_BUILD}"
+				local HOST_RANLIB="${RANLIB_FOR_BUILD}"
+				export CC="${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}"
+				export CXX="${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}"
 				export CFLAGS="-march=native"
 				export CXXFLAG="-march=native"
 				export AR="${HOST_AR}"
@@ -1399,42 +1569,45 @@ function setup_python () {
 				export LDFLAGS="-fuse-ld=lld -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS} ${OPTLINK_FLAGS}"
 				;;
 		esac
-		${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER} --enable-shared --with-lto \
-			--with-system-ffi ax_cv_c_float_words_bigendian=no
+		run_cmd "${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER} --enable-shared --with-lto \
+			--with-system-ffi ax_cv_c_float_words_bigendian=no"
 		#--with-address-sanitizer --with-undefined-behavior-sanitizer
-		make
-		make install
-		${BUILD_PYTHON} ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py
-		cd ${START_PWD}
-		rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}
-		${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip -v install --upgrade setuptools pip meson ninja jinja2 docutils
-		set +x
+		run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make"
+		run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make install"
+		run_cmd "${BUILD_PYTHON} ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py"
+		popd
+		pushd ${START_PWD}
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}"
+		run_cmd "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip -v install --upgrade setuptools pip jinja2 docutils"
+		popd
 		trap ERR
 	}
 
 	function build_python_crossenv () {
 		trap 'STATUS=${?}; \
-			set +x; \
 			[ -d ${TOOLCHAIN_PATH}/venv-${HARCH} ] && rm -rf || true; \
 			trap ERR; \
 			return ${STATUS}' ERR
 
-		set -x
-		${BUILD_PYTHONPIP} install crossenv
-		${BUILD_PYTHON} -m crossenv ${HOST_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH}
-		rmdir -v ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include
-		ln -sfv ${SYSROOT}${BUILD_INCLUDEDIR}/python${PYTHONBIN_VER} ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include
+		run_cmd "${BUILD_PYTHONPIP} install crossenv"
+		if [ ! -f ${TARGET_PYTHON} ]
+		then
+			echo "${TARGET_PYTHON} not found!!! Run build python to build one." | log_buffer error
+			return 2
+		fi
+		run_cmd "${BUILD_PYTHON} -m crossenv ${TARGET_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH}"
+		run_cmd "rmdir -v ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include"
+		run_cmd "ln -sfv ${SYSROOT}${BUILD_INCLUDEDIR}/python${PYTHONBIN_VER} ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include"
 		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate
-		build-python -m pip install --upgrade cython setuptools==60.10.0 wheel 2>&1
-		mkdir -p ${TOOLCHAIN_BLDPATH}/build_python_crossenv
+		run_cmd "build-python -m pip install --upgrade cython setuptools==60.10.0 wheel"
+		run_cmd "mkdir -p ${TOOLCHAIN_BLDPATH}/build_python_crossenv"
 		pushd ${TOOLCHAIN_BLDPATH}/build_python_crossenv
 		TOOLCHAIN=gnu create_environment_source
 		source environment.source
-		cross-pip -v install --upgrade setuptools cython 2>&1
-		build-pip -v install --upgrade setuptools jinja2 2>&1
+		run_cmd "cross-pip -v install --upgrade setuptools cython"
+		run_cmd "build-pip -v install --upgrade setuptools jinja2"
 		popd
-		rm -rf ${TOOLCHAIN_BLDPATH}/build_python_crossenv
-		set +x
+		run_cmd "rm -rf ${TOOLCHAIN_BLDPATH}/build_python_crossenv"
 		trap ERR
 	}
 
@@ -1460,36 +1633,35 @@ function setup_python () {
 	else
 		local PYTHON_SEARCHPATH=${BIN_PATH}
 	fi
-	if [ -z ${1} ]
+	if [ "${1}" == "detect" ]
 	then
-		local PYTHON_VER=$(find ${PYTHON_SEARCHPATH}/usr/include -maxdepth 1 -name 'python*' -exec grep '#define PY_VERSION ' {}/patchlevel.h \; | awk '{print $3}' | sed 's/\"//g' | sort -u | tail -n1)
+		PYTHON_VER=$(find ${PYTHON_SEARCHPATH}/usr/include -maxdepth 1 -name 'python*' -exec grep '#define PY_VERSION ' {}/patchlevel.h \; | awk '{print $3}' | sed 's/\"//g' | sort -u | tail -n1)
 		if [ "x${PYTHON_VER}" == "x" ]
 		then
 			echo "...no way to guess its version and not specified. Exiting... "
 			echo
-			return 1
+			return 2
 		else
 			echo -n "-${PYTHON_VER} (guessed)... "
 		fi
 	else
-		local PYTHON_VER=${1}
 		echo -n "-${PYTHON_VER}... "
 	fi
 	PYTHONBIN_VER=$( echo ${PYTHON_VER} | cut -d'.' -f1,2)
 	BUILD_PYTHON=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/python${PYTHONBIN_VER}
 	BUILD_PYTHONPIP=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip${PYTHONBIN_VER}
-	HOST_PYTHON=${PYTHON_SEARCHPATH}/usr/bin/python${PYTHONBIN_VER}
+	TARGET_PYTHON=${PYTHON_SEARCHPATH}/usr/bin/python${PYTHONBIN_VER}
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin"
 	pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib"
 	if [ ! -x ${BUILD_PYTHON} ] || [ ! -x ${BUILD_PYTHONPIP} ]
 	then
 		echo -n "downloading... "
-		download_pyton > ${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log 2>&1
+		download_pyton | log_buffer > ${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log 2>&1
 		echo -n "building... "
-		build_python >> ${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log 2>&1
+		build_python | log_buffer >> ${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log 2>&1
 		echo "done."
-		rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}"
 	else
 		echo "already there."
 	fi
@@ -1497,15 +1669,15 @@ function setup_python () {
 	then
 		if [ ! $(stat -c '%u' ${DISTOS_PATH}) -eq $(id -u) ]
 		then
-			local SUDO_CMD='sudo'
+			local SUDO_CMD='-s'
 		fi
 		if [ -f ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/plat-${HARCH}/_sysconfigdata_m.py ]
 		then
-			eval ${SUDO_CMD} mv ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/plat-${HARCH}/_sysconfigdata_m.py ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/_sysconfigdata.py
+			run_cmd ${SUDO_CMD} "mv ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/plat-${HARCH}/_sysconfigdata_m.py ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/_sysconfigdata.py"
 		fi
 		if [ -d ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m-${HARCH} ] && [ ! -L ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m ]
 		then
-			eval ${SUDO_CMD} ln -s config-${PYTHONBIN_VER}m-${HARCH} ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m
+			run_cmd ${SUDO_CMD} "ln -s config-${PYTHONBIN_VER}m-${HARCH} ${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m"
 		fi
 	fi
 	trap ERR
@@ -1526,7 +1698,7 @@ function setup_python () {
 		echo -n "Creating virtual cross environment... "
 		if [ ! -d ${TOOLCHAIN_PATH}/venv-${HARCH} ]
 		then
-			build_python_crossenv >> ${LOG_PATH}/toolchain_python-crossenv.log 2>&1
+			build_python_crossenv > ${LOG_PATH}/toolchain_python-crossenv.log 2>&1
 			echo "done."
 			echo
 		else
@@ -1651,7 +1823,16 @@ then
 	exit 1
 fi
 BARCH=$(gcc -dumpmachine)
-BLIB_PATH=$(realpath $(gcc -print-search-dirs | grep "^libraries" | cut -d '=' -f2 | cut -d ':' -f5))
+CC_FOR_BUILD=$(which gcc)
+CXX_FOR_BUILD=$(which g++)
+CPP_FOR_BUILD="$(which gcc) -E"
+AR_FOR_BUILD=$(which gcc-ar)
+NM_FOR_BUILD=$(which gcc-nm)
+RANLIB_FOR_BUILD=$(which gcc-ranlib)
+CFLAGS_FOR_BUILD="-O3 -march=native -flto=${NPROCS}"
+CXXFLAGS_FOR_BUILD="-O3 -march=native -flto=${NPROCS}"
+LDFLAGS_FOR_BUILD="-fuse-ld=gold -fuse-linker-plugin${OPTLINK_FLAGS:+ ${OPTLINK_FLAGS}}"
+BLIB_PATH=$(realpath $(${CC_FOR_BUILD} -print-search-dirs | grep "^libraries" | cut -d '=' -f2 | cut -d ':' -f5))
 BINC_PATH=$(find {/,/usr/} -mindepth 1 -maxdepth 1 -name include -type d)
 
 pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/bin"
