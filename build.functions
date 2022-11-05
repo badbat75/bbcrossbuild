@@ -1550,6 +1550,7 @@ function build () {(
 	local FORCE=${_param_force:-0}
 	local NOSAVESTATUS=${_param_no_save_status:-0}
 	local KEEPBUILDDIR=${_param_keep_builddir:-0}
+	local TEMPORARY_STATUS=
 
 	if [ ${_param_temporary:-0} -eq 1 ]
 	then
@@ -1595,17 +1596,15 @@ function build () {(
 		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
 		echo -n "${SPACES}Requires "
 		#echo "Called from ${PKG_FILE}"
-		build $( if [ ${NOSAVESTATUS} -eq 1 ]; then echo "--no_save_status"; fi) \
-			$( if [ "${TEMPORARY_STATUS}" == ".tmp" ]; then echo "--temporary"; fi) \
-			${deps}
+		build $( if [ ${NOSAVESTATUS} -eq 1 ] || [ "${TEMPORARY_STATUS}" == ".tmp" ]; then echo "--temporary"; fi) ${deps}
 		local NUMSPACES=$((NUMSPACES-1))
 		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
 	done
 
 
-	if [ -f ${STATUS_PATH}/${PKG_NAME} ] && [ ${FORCE} -eq 0 ]
+	if [ -f ${STATUS_PATH}/${PKG_NAME}${TEMPORARY_STATUS} ] && [ ${FORCE} -eq 0 ]
 	then
-		if [ "$(md5sum ${PKG_PATH}/${PKG_FILE}.pkg)" == "$(cat ${STATUS_PATH}/${PKG_NAME})" ]
+		if [ "$(md5sum ${PKG_PATH}/${PKG_FILE}.pkg)" == "$(cat ${STATUS_PATH}/${PKG_NAME}${TEMPORARY_STATUS})" ]
 		then
 			echo "${SPACES}Package ${PKG_NAME} already built."
 			echo
@@ -1613,7 +1612,7 @@ function build () {(
 			trap - ERR
 			return 0
 		else
-			rm -f ${STATUS_PATH}/${PKG_NAME}
+			rm -f ${STATUS_PATH}/${PKG_NAME}${TEMPORARY_STATUS}
 		fi
 	fi
 
@@ -1813,7 +1812,7 @@ function build () {(
 			(
 				set -e
 				pwd
-				if [ ${NOSAVESTATUS} -eq 0 ]
+				if [ ${NOSAVESTATUS} -eq 0 ] && [ -z "${TEMPORARY_STATUS}" ]
 				then
 					create_sfx_package ${PKG_PKGPATH}
 				fi
@@ -1830,11 +1829,13 @@ function build () {(
 	### Save build status
 	if [ ! -d ${STATUS_PATH} ]
 	then
-		mkdir -p ${STATUS_PATH}
+		run_cmd "mkdir -p ${STATUS_PATH}" >> ${LOG_PATH}/${PKG_NAME}.log
 	fi
 	if [ ${NOSAVESTATUS} -eq 0 ]
 	then
-		md5sum ${PKG_PATH}/${PKG_FILE}.pkg > ${STATUS_PATH}/${PKG_NAME}
+		run_cmd "md5sum ${PKG_PATH}/${PKG_FILE}.pkg > ${STATUS_PATH}/${PKG_NAME}${TEMPORARY_STATUS}" >> ${LOG_PATH}/${PKG_NAME}.log
+	else
+		run_cmd "rm -f ${STATUS_PATH}/*${TEMPORARY_STATUS}" >> ${LOG_PATH}/${PKG_NAME}.log
 	fi
 	set +x
 	echo "Done."
