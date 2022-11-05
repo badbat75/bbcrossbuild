@@ -1595,7 +1595,9 @@ function build () {(
 		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
 		echo -n "${SPACES}Requires "
 		#echo "Called from ${PKG_FILE}"
-		build $( if [ ${NOSAVESTATUS} -eq 1 ]; then echo "--no_save_status "; fi)${deps}
+		build $( if [ ${NOSAVESTATUS} -eq 1 ]; then echo "--no_save_status"; fi) \
+			$( if [ "${TEMPORARY_STATUS}" == ".tmp" ]; then echo "--temporary"; fi) \
+			${deps}
 		local NUMSPACES=$((NUMSPACES-1))
 		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
 	done
