@@ -79,11 +79,9 @@ function setbuildenv () {
 				#echo "PKG_TOOLCHAIN: ${PKG_TOOLCHAIN}"
 				case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
 					gnu)
-						local GCC_BINS="$(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -print-search-dirs | grep "^programs" | cut -d '=' -f2 | cut -d ':' -f1)"
-						#echo "GCC_BINS: ${GCC_BINS}"
-						COMMON_CFLAGS+=" -B${GCC_BINS} -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
-						COMMON_CXXFLAGS+=" -B${GCC_BINS} -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
-						COMMON_LDFLAGS+=" -B${GCC_BINS} -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
+						COMMON_CFLAGS+="$(gcc_toolchain_binaries_flags) -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
+						COMMON_CXXFLAGS+="$(gcc_toolchain_binaries_flags) -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
+						COMMON_LDFLAGS+="$(gcc_toolchain_binaries_flags) -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
 						;;
 				esac			
 			fi
@@ -126,9 +124,9 @@ function setbuildenv () {
 				### the one in BIN_PATH, this is a workaround
 				if [ ! -f ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/libgcc_s.so ] && ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc --version > /dev/null 2>&1
 				then
-					COMMON_CFLAGS+=" $(gcc_toolchain_binaries_flags)"
-					COMMON_CXXFLAGS+=" $(gcc_toolchain_binaries_flags)"
-					COMMON_LDFLAGS+=" $(gcc_toolchain_binaries_flags) $(gcc_toolchain_libraries_linkerflags)"
+					COMMON_CFLAGS+="$(gcc_toolchain_binaries_flags)"
+					COMMON_CXXFLAGS+="$(gcc_toolchain_binaries_flags)"
+					COMMON_LDFLAGS+="$(gcc_toolchain_binaries_flags)$(gcc_toolchain_libraries_linkerflags)"
 				fi
 				;;
 		esac			
@@ -1545,13 +1543,18 @@ function build () {(
 		VAR_INSTALL_CONFDIR \
 		MULTI_ARCH
 
-	OPTS="--force --no_gcc_check --no_save_status --keep_builddir" OPTS_WITH_VALUE="--toolchain --with_extra_modules" param2value "${@}"
+	OPTS="--force --no_gcc_check --no_save_status --temporary --keep_builddir" OPTS_WITH_VALUE="--toolchain --with_extra_modules" param2value "${@}"
 	[ ${_param_v:-0} -eq 1 ] && set -x || true
 	local PKG_FILE="${_param_1}"
 	local GCC_CHECK=${_param_no_gcc_check:-0}
 	local FORCE=${_param_force:-0}
 	local NOSAVESTATUS=${_param_no_save_status:-0}
 	local KEEPBUILDDIR=${_param_keep_builddir:-0}
+
+	if [ ${_param_temporary:-0} -eq 1 ]
+	then
+		local TEMPORARY_STATUS=.tmp
+	fi
 
 	if [ -z "${NUMSPACES}" ]
 	then

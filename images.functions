@@ -428,7 +428,7 @@ function inject_into_mount_tag () {
 	local TARGET_OWNER=${_param_4:-"root:root"}
 	local TARGET_PATH=${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}
 
-	setbuildenv
+	sethostenv
 
 	case ${OBJECT} in
 		binaries)

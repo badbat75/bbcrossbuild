@@ -25,6 +25,65 @@ function check_llvm_c () {
 	fi
 }
 
+function set_gnu_buildenv () {
+
+	function gcc_toolchain_print_searchdirs () {
+		case ${1} in
+			build)
+				local GCC_CMD=${CC_FOR_BUILD}
+				shift
+				;;
+			cross)
+				local GCC_CMD=${TOOLCHAIN_PATH}/bin/${HARCH}-gcc
+				shift
+				;;
+			*) local GCC_CMD=${HARCH}-gcc;;
+		esac
+		local RECORD_LIST=${1:-1}
+		if [ "${RECORD_LIST}" == "all" ]
+		then
+			local RECORD_LIST=1,2,3,4,5,6,7,8,9,10
+		fi
+		IFS=','
+		for RECORD in ${RECORD_LIST}
+		do
+			realpath -m $(${GCC_CMD} --print-search-dirs 2>/dev/null | grep libraries | cut -d= -f2 | cut -d: -f${RECORD}) 2>/dev/null
+		done | xargs
+		IFS=
+	}
+	
+	function gcc_toolchain_libraries_linkerflags () {
+		### Accept only build or cross as parameter, only first record is admitted
+		find $(realpath -m $(gcc_toolchain_print_searchdirs ${1} 1)/..) -mindepth 1 -maxdepth 1 -type d -printf ' -L%p' 2>/dev/null
+	}
+
+	function gcc_toolchain_binaries_flags () {
+		### Accept only build or cross as parameter, only first record is admitted
+		find $(realpath -m $(gcc_toolchain_print_searchdirs ${1} 1)/..) -mindepth 1 -maxdepth 1 -type d -printf ' -B%p' 2>/dev/null
+	}
+
+	# Check the toolchains
+	gcc -v > /dev/null 2>&1
+	if [ ! ${?} -eq 0 ]
+	then
+		echo "gcc for build compile does not exist."
+		exit 1
+	fi
+	BARCH=$(gcc -dumpmachine)
+	CC_FOR_BUILD=$(which gcc)
+	CXX_FOR_BUILD=$(which g++)
+	CPP_FOR_BUILD="$(which gcc) -E"
+	AR_FOR_BUILD=$(which gcc-ar)
+	NM_FOR_BUILD=$(which gcc-nm)
+	RANLIB_FOR_BUILD=$(which gcc-ranlib)
+	CFLAGS_FOR_BUILD="-O3 -march=native -flto=${NPROCS}"
+	CXXFLAGS_FOR_BUILD="-O3 -march=native -flto=${NPROCS}"
+	LDFLAGS_FOR_BUILD="-fuse-ld=gold -fuse-linker-plugin${OPTLINK_FLAGS:+ ${OPTLINK_FLAGS}}"
+	LIBRARY_PATH_FOR_BUILD=$(gcc_toolchain_print_searchdirs build 5)
+	INCLUDE_PATH_FOR_BUILD=$(find {/,/usr/} -mindepth 1 -maxdepth 1 -name include -type d)
+
+}
+
 function setup_rust () {
 	trap 'local STATUS=${?}; \
 		echo "fail."; \
@@ -358,7 +417,7 @@ function setup_autotools () {
 			CXXFLAGS=\"${CXXFLAGS_FOR_BUILD}\" \\
 			LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
 				${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}/configure --prefix=${AUTOTOOLS_PATH}" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0} NM=\"${NM_FOR_BUILD}\"" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
 		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
 		popd >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
 		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
@@ -437,9 +496,9 @@ function setup_pkgconfig () {
 				CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
 				LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
 					${GLOBAL_TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH} \
-					--with-pc-path=${BLIB_PATH}/pkgconfig:/usr/share/pkgconfig \
-					--with-system-include-path=${BINC_PATH} \
-					--with-system-library-path=${BLIB_PATH}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
+					--with-pc-path=${LIBRARY_PATH_FOR_BUILD}/pkgconfig:/usr/share/pkgconfig \
+					--with-system-include-path=${INCLUDE_PATH_FOR_BUILD} \
+					--with-system-library-path=${LIBRARY_PATH_FOR_BUILD}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
 		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
 		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
 		### Clean-up build environment
@@ -837,16 +896,6 @@ function setup_gcc () {
 		run_cmd "make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} install-strip-target-libsanitizer"
 
 		trap ERR
-	}
-
-	function gcc_toolchain_libraries_linkerflags () {
-		local SEARCH_LIBS="$(realpath $(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc --print-search-dirs | grep libraries | cut -d= -f2 | cut -d: -f1)/..)"
-		find ${SEARCH_LIBS} -mindepth 1 -maxdepth 1 -type d | xargs -I{} echo -n "-L{} "
-	}
-
-	function gcc_toolchain_binaries_flags () {
-		local SEARCH_LIBS="$(realpath $(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc --print-search-dirs | grep libraries | cut -d= -f2 | cut -d: -f1)/..)"
-		find ${SEARCH_LIBS} -mindepth 1 -maxdepth 1 -type d | xargs -I{} echo -n "-B{} "
 	}
 
 	trap 'local STATUS=${?}; \
@@ -1815,25 +1864,7 @@ then
 	mkdir -p ${GLOBAL_TOOLCHAIN_PATH}
 fi
 
-# Check the toolchains
-gcc -v > /dev/null 2>&1
-if [ ! ${?} -eq 0 ]
-then
-	echo "The toolchain for host compile does not exist."
-	exit 1
-fi
-BARCH=$(gcc -dumpmachine)
-CC_FOR_BUILD=$(which gcc)
-CXX_FOR_BUILD=$(which g++)
-CPP_FOR_BUILD="$(which gcc) -E"
-AR_FOR_BUILD=$(which gcc-ar)
-NM_FOR_BUILD=$(which gcc-nm)
-RANLIB_FOR_BUILD=$(which gcc-ranlib)
-CFLAGS_FOR_BUILD="-O3 -march=native -flto=${NPROCS}"
-CXXFLAGS_FOR_BUILD="-O3 -march=native -flto=${NPROCS}"
-LDFLAGS_FOR_BUILD="-fuse-ld=gold -fuse-linker-plugin${OPTLINK_FLAGS:+ ${OPTLINK_FLAGS}}"
-BLIB_PATH=$(realpath $(${CC_FOR_BUILD} -print-search-dirs | grep "^libraries" | cut -d '=' -f2 | cut -d ':' -f5))
-BINC_PATH=$(find {/,/usr/} -mindepth 1 -maxdepth 1 -name include -type d)
+set_gnu_buildenv
 
 pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/bin"
 pathadd PATH "${TOOLCHAIN_PATH}/bin"
