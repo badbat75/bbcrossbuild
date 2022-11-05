@@ -701,7 +701,15 @@ function setup_gcc () {
 		local GCCURL=https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz
 
 		download_uncompress ${BINUTILSURL} ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}
+		if [ -f ${PATCH_PATH}/binutils/binutils_${BINUTILS_VER}.patch ]
+		then
+			( cd ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}; run_cmd "set +o pipefail; patch -p1 < ${PATCH_PATH}/binutils/binutils_${BINUTILS_VER}.patch || true; set -o pipefail" )
+		fi
 		download_uncompress ${GCCURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
+		if [ -f ${PATCH_PATH}/gcc/gcc_${GCC_VER}.patch ]
+		then 
+			( cd ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}; run_cmd "patch -t -p1 < ${PATCH_PATH}/gcc/gcc_${GCC_VER}.patch" )
+		fi
 		download_uncompress ${GMPURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/gmp
 		download_uncompress ${MPFRURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpfr
 		download_uncompress ${MPCURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpc
@@ -919,11 +927,8 @@ function setup_gcc () {
 	then
 		gcc_buildenv > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log
 		
-		if [ ! -d ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER} ] || [ ! -d ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
-		then
-			echo -n "downloading... "
-			gcc_download >> ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log 2>&1
-		fi
+		echo -n "downloading... "
+		gcc_download >> ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log 2>&1
 		echo -n "${ECHO_BOOTSTRAP}configuration... "
 		gcc_configuration >> ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log 2>&1
 		echo -n "${ECHO_BOOTSTRAP}building host binaries... "
