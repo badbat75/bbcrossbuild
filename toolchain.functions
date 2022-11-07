@@ -628,22 +628,30 @@ function setup_gcc () {
 			fi
 		fi
 
-		GCC_CONFIG="--enable-checking=release --enable-multiarch --disable-multilib --enable-version-specific-runtime-libs --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --with-system-zlib --with-glibc-version=2.11 --with-gcc-major-version-only --enable-linker-build-id --enable-lto --enable-plugin --disable-nls --disable-libitm --disable-libmpx --disable-option-checking ${SILENTCONFIG}"
+		GCC_CONFIG="--enable-checking=release --enable-multiarch --disable-multilib --enable-version-specific-runtime-libs \
+			--enable-shared --enable-threads=posix --enable-gnu-indirect-function --enable-initfini-array \
+			--enable-gnu-unique-object --enable-clocale=gnu --enable-linker-build-id --enable-lto --enable-plugin \
+			--enable-__cxa_atexit --with-default-libstdcxx-abi=new --enable-gcov \
+			--enable-libmudflap --enable-libgomp --enable-libssp --enable-libsanitizer \
+			--enable-install-libiberty \
+			--with-system-zlib --with-glibc-version=2.11 --with-gcc-major-version-only \
+			--disable-nls --disable-libitm --disable-libmpx --disable-option-checking \
+			${SILENTCONFIG}"
 		### Workaround for latest patches (--disable-werror)
-		BINUTILS_CONFIG="--disable-werror --enable-gold --enable-64-bit-bfd --enable-plugins"
+		BINUTILS_CONFIG="--disable-werror --enable-gold --enable-64-bit-bfd --enable-plugins --enable-install-libbfd"
 
 		if [ -n "${GLIBC_SYSROOT}" ]
 		then
-			GCC_CONFIG+=" --enable-languages=${GCC_LANGUAGES:-c,c++} --enable-shared --enable-threads=posix --enable-clocale=gnu --enable-__cxa_atexit --with-default-libstdcxx-abi=new --enable-gcov --enable-libmudflap --enable-libgomp --enable-libssp --enable-libsanitizer --enable-install-libiberty"
+			GCC_CONFIG+=" --enable-languages=${GCC_LANGUAGES:-c,c++}"
 			if [ "$(echo ${GCC_LANGUAGES} | grep -o fortran)" == "fortran" ]
 			then
 				GCC_CONFIG+=" --enable-libquadmath --enable-libquadmath-support"
 			fi
 			BINUTILS_CONFIG+=" --enable-install-libbfd"	
 		else
-			GCC_CONFIG+=" --enable-languages=c --disable-shared --disable-threads --disable-libstdcxx --disable-gcov --disable-libatomic --disable-libgomp --disable-libssp --disable-libvtv --disable-libsanitizer"
+			GCC_CONFIG+=" --enable-languages=c,c++"
 			### To check howto bootstrap without those. Notes: to try with --with-headers=${BIN_PATH}${BUILD_INCLUDEDIR}
-			GCC_CONFIG+=" --without-headers --with-newlib"
+			#GCC_CONFIG+=" --without-headers --with-newlib"
 			#BINUTILS_CONFIG+=""
 		fi
 		COMPFLAGS="${GNU_EXTRACOMPFLAGS}"
@@ -939,7 +947,7 @@ function setup_gcc () {
 		KERNEL_HDRS_ONLY=1 build --no_gcc_check ${BS_KERNEL:-lfs/kernel}
 		### Install glibc headers
 		echo -n "${SPACES}"
-		GLIBC_HDRS_ONLY=1 build --no_gcc_check lfs/glibc
+		GLIBC_TARGET=headers build --no_gcc_check lfs/glibc
 		echo -n "downloading... "
 		gcc_download >> ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log 2>&1
 		echo -n "${ECHO_BOOTSTRAP}configuration... "
@@ -952,6 +960,9 @@ function setup_gcc () {
 			### Bootstrapping sysroot
 			echo "done."
 			echo "Bootstrapping foundation libraries in ${BIN_PATH}... "
+			### Install glibc headers
+			echo -n "${SPACES}"
+			GLIBC_TARGET=crts build lfs/glibc
 			echo -n "${SPACES}"
 			echo -n "building bootstrap libgcc... "
 			GCC_TARGETS="libgcc" GCC_INSTALL_TARGETS=0 gcc_make_target_libs > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}target-gcclibs-${GCC_VER}.log
