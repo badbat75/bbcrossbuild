@@ -5,22 +5,23 @@ BUILD_LIBSTATIC=0
 ## Enable LTO both for kernel and applications
 LTOENABLE=thin
 KERNEL_LTOENABLE=thin
+GCC_LTOENABLE=1
 
 TOOLCHAIN=gnu
 PYTHON_VER=3.10.6
 
 build --no_save_status lfs/create-base-fs_1.0
 
-setup_full_toolchain --with-python
+setup_full_toolchain --with-python --with-gnu-install --with-main-gcc
 
-GCC_TARGETS="libraries" build lfs/gcc
+#### Gcc libraries built on gcc cross building should be almost the same
+# GCC_TARGETS="libraries" build lfs/gcc
 
 build lfs/create-base-config_1.0
 build raspberrypi/rpi-firmware_1
 build firmwares/linux-firmware
-#build firmwares/broadcom-bt-firmware-master
-build raspberrypi/rpi-kernel_$( echo ${BS_KERNEL_VER} | cut -d'.' -f1,2 )
-build lfs/glibc
+build raspberrypi/rpi-kernel_$( echo ${KERNEL_VER} | cut -d'.' -f1,2 )
+#build lfs/glibc
 build lfs/tzdata_2022c
 build lfs/man-pages_5.13
 build lfs/iana-etc_20220819

@@ -3,8 +3,8 @@ PKG_URL="https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz"
 PKG_DEPS="lfs/gmp lfs/mpfr lfs/mpc"
 case ${BINUTILS_VER} in
 	2.39)
-		PKG_SUFFIX=_2.39+01856deb1dd
-		PATCHES=binutils/binutils_2.39+01856deb1dd.patch
+		PKG_SUFFIX=_2.39+9ad221fed27
+		PATCHES=binutils/binutils_2.39+9ad221fed27.patch
 		;;
 	*)
 		PKG_SUFFIX=_${BINUTILS_VER}
@@ -16,6 +16,7 @@ STD_CONF_FLAGS=0
 CONF_ENV="env -u CPP -u CPPFLAGS"
 CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
     --build=${BARCH} --host=${HARCH} --target=${HARCH} \
+    --disable-werror \
     --enable-shared --enable-static \
     --with-mpc-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpc-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
     --with-mpfr-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpfr-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
@@ -32,8 +33,6 @@ PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
 	RANLIB_FOR_TARGET=\"\${RANLIB}\" \
 "
 PKG_TOOLCHAIN=gnu
-PKG_CFLAGS="-Wno-error=stack-usage="
-PKG_CXXFLAGS="-Wno-error=stack-usage="
 
 case ${BINUTILS_VER} in
     *)

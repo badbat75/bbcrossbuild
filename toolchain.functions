@@ -628,19 +628,23 @@ function setup_gcc () {
 			fi
 		fi
 
-		GCC_CONFIG="--enable-checking=release --enable-multiarch --disable-multilib --enable-version-specific-runtime-libs --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --with-system-zlib --with-glibc-version=2.11 --with-gcc-major-version-only --enable-linker-build-id --disable-option-checking ${SILENTCONFIG}"
+		GCC_CONFIG="--enable-checking=release --enable-multiarch --disable-multilib --enable-version-specific-runtime-libs --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --with-system-zlib --with-glibc-version=2.11 --with-gcc-major-version-only --enable-linker-build-id --enable-lto --enable-plugin --disable-nls --disable-libitm --disable-libmpx --disable-option-checking ${SILENTCONFIG}"
+		### Workaround for latest patches (--disable-werror)
+		BINUTILS_CONFIG="--disable-werror --enable-gold --enable-64-bit-bfd --enable-plugins"
 
 		if [ -n "${GLIBC_SYSROOT}" ]
 		then
-			GCC_CONFIG+=" --enable-lto --enable-threads=posix --enable-languages=${GCC_LANGUAGES:-c,c++} --enable-shared --enable-plugin --enable-clocale=gnu --enable-nls --enable-__cxa_atexit --with-default-libstdcxx-abi=new --enable-gcov --enable-libmudflap --enable-libgomp --enable-libssp --enable-libsanitizer --enable-install-libiberty --disable-libitm --disable-libmpx"
+			GCC_CONFIG+=" --enable-languages=${GCC_LANGUAGES:-c,c++} --enable-shared --enable-threads=posix --enable-clocale=gnu --enable-__cxa_atexit --with-default-libstdcxx-abi=new --enable-gcov --enable-libmudflap --enable-libgomp --enable-libssp --enable-libsanitizer --enable-install-libiberty"
 			if [ "$(echo ${GCC_LANGUAGES} | grep -o fortran)" == "fortran" ]
 			then
 				GCC_CONFIG+=" --enable-libquadmath --enable-libquadmath-support"
 			fi
-			BINUTILS_CONFIG=" --enable-gold --enable-plugins --enable-64-bit-bfd --enable-install-libbfd"	
+			BINUTILS_CONFIG+=" --enable-install-libbfd"	
 		else
-			GCC_CONFIG+=" --disable-lto --disable-threads --enable-languages=c --with-newlib --disable-shared --disable-decimal-float --disable-plugin --disable-nls --disable-libstdcxx --disable-gcov --without-headers --disable-libatomic --disable-libgomp --disable-libssp --disable-libvtv --disable-libsanitizer --disable-libitm --disable-libmpx"
-			BINUTILS_CONFIG=" --enable-ld=default --disable-plugins --enable-64-bit-bfd"
+			GCC_CONFIG+=" --enable-languages=c --disable-shared --disable-threads --disable-libstdcxx --disable-gcov --disable-libatomic --disable-libgomp --disable-libssp --disable-libvtv --disable-libsanitizer"
+			### To check howto bootstrap without those. Notes: to try with --with-headers=${BIN_PATH}${BUILD_INCLUDEDIR}
+			GCC_CONFIG+=" --without-headers --with-newlib"
+			#BINUTILS_CONFIG+=""
 		fi
 		COMPFLAGS="${GNU_EXTRACOMPFLAGS}"
 		LINKERFLAGS="${GNU_EXTRALDFLAGS}"
@@ -652,6 +656,8 @@ function setup_gcc () {
 		if [ -n "${GLIBC_SYSROOT}" ]
 		then
 			GCC_SYSROOT_FLAGS=" --with-sysroot=${GLIBC_SYSROOT}"
+		else
+			GCC_SYSROOT_FLAGS=" --with-sysroot=${BIN_PATH}"
 		fi
 		### Create sccache_wrapper to work around an issue of not supporting correctly the
 		### -B parameter. It is not able to find the local cc1 executable running xgcc
@@ -682,7 +688,8 @@ function setup_gcc () {
 			run_cmd "chmod +x ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper"
 			GCC_CCWRAPPER="${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper"
 		else
-			GCC_CCWRAPPER="${CCWRAPPER}"
+			GCC_LTO_COMPFLAGS=" ${LTO_COMPFLAGS}"
+			GCC_LTO_LINKERFFLAGS=" "
 		fi
 	}
 
@@ -703,7 +710,7 @@ function setup_gcc () {
 		download_uncompress ${BINUTILSURL} ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}
 		if [ -f ${PATCH_PATH}/binutils/binutils_${BINUTILS_VER}.patch ]
 		then
-			( cd ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}; run_cmd "set +o pipefail; patch -p1 < ${PATCH_PATH}/binutils/binutils_${BINUTILS_VER}.patch || true; set -o pipefail" )
+			( cd ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}; run_cmd "patch -p1 < ${PATCH_PATH}/binutils/binutils_${BINUTILS_VER}.patch" )
 		fi
 		download_uncompress ${GCCURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
 		if [ -f ${PATCH_PATH}/gcc/gcc_${GCC_VER}.patch ]
@@ -783,8 +790,8 @@ function setup_gcc () {
 				NM=\"${NM_FOR_BUILD}\" \\
 				RANLIB=\"${RANLIB_FOR_BUILD}\" \\
 				CFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}\" \\
-				CXXFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_LINKERFLAGS}\" \\
-				LDFLAGS=\"${LINKERFLAGS}\" \\
+				CXXFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}\" \\
+				LDFLAGS=\"${LINKERFLAGS}${LTO_LINKERFLAGS}\" \\
 				CFLAGS_FOR_TARGET=\"${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
 				CXXFLAGS_FOR_TARGET=\"${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
 				LDFLAGS_FOR_TARGET=\"${LINKERFLAGS} ${OPTLINK_FLAGS}\" \\
@@ -917,7 +924,7 @@ function setup_gcc () {
 	[ ${_param_v:-0} -eq 1 ] && set -x || true
 	
 	echo -n "Setting up gcc"
-	echo -n "-${GCC_VER}... "
+	echo "-${GCC_VER}"
 
 	local GCC_TARGETS=${_param_targets:-all}
 	local GCC_INSTALL_TARGETS=${_param_install:-0}
@@ -925,8 +932,14 @@ function setup_gcc () {
 
 	if [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc ] && [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ ]
 	then
+		local SPACES="   "
 		gcc_buildenv > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log
-		
+		### Install kernel headers
+		echo -n "${SPACES}"
+		KERNEL_HDRS_ONLY=1 build --no_gcc_check ${BS_KERNEL:-lfs/kernel}
+		### Install glibc headers
+		echo -n "${SPACES}"
+		GLIBC_HDRS_ONLY=1 build --no_gcc_check lfs/glibc
 		echo -n "downloading... "
 		gcc_download >> ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log 2>&1
 		echo -n "${ECHO_BOOTSTRAP}configuration... "
@@ -939,20 +952,16 @@ function setup_gcc () {
 			### Bootstrapping sysroot
 			echo "done."
 			echo "Bootstrapping foundation libraries in ${BIN_PATH}... "
-			local SPACES="   "
 			echo -n "${SPACES}"
 			echo -n "building bootstrap libgcc... "
 			GCC_TARGETS="libgcc" GCC_INSTALL_TARGETS=0 gcc_make_target_libs > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}target-gcclibs-${GCC_VER}.log
 			echo "done."
-			### Build & install kernel headers
-			echo -n "${SPACES}"
-			NUMSPACES=1 KERNEL_HDRS_ONLY=1 build --no_gcc_check --no_save_status ${BS_KERNEL:-bootstrap/bs_kernel}
 			### Build & install glibc
 			echo -n "${SPACES}"
-			NUMSPACES=1 WITH_LIBXCRYPT=1 build --toolchain gnu --no_save_status bootstrap/bs_glibc
+			WITH_LIBXCRYPT=1 build lfs/glibc
 			### Build & install libxcrypt
 			echo -n "${SPACES}"
-			NUMSPACES=1 build --toolchain gnu --no_save_status bootstrap/bs_libxcrypt
+			build --toolchain gnu lfs/libxcrypt
 			run_cmd "rm -rf ${TOOLCHAIN_PATH}" >> ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}target-gcclibs-${GCC_VER}.log
 			echo -n "Rebuild final gcc... "
 			gcc_buildenv >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
@@ -974,33 +983,35 @@ function setup_gcc () {
 			[ ${GCC_INSTALL_TARGETS} == 1 ]
 		then
 			echo "exists in the toolchain but not all the foundation libraries are found."
-			gcc_buildenv > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log
-			echo "Building foundation libraries in ${BIN_PATH}... "
-			local SPACES="   "
-			if [ -z "${GLIBC_SYSROOT}" ]
-			then
-				### Build & install kernel headers
-				echo -n "${SPACES}"
-				NUMSPACES=1 KERNEL_HDRS_ONLY=1 build --no_gcc_check --no_save_status ${BS_KERNEL:-bootstrap/bs_kernel}
-				### Build & install glibc
-				echo -n "${SPACES}"
-				NUMSPACES=1 WITH_LIBXCRYPT=1 build --toolchain gnu --no_save_status bootstrap/bs_glibc			
-			fi
-			if [ ! -e ${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/libcrypt.so ] && [ "${GLIBC_SYSROOT}" != "${DISTOS_PATH}" ]
-			then
-				### Build & install libxcrypt
-				echo -n "${SPACES}"
-				NUMSPACES=1 build --toolchain gnu --no_save_status bootstrap/bs_libxcrypt
-			fi
-			if [ ! -d ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER} ] || [ ! -d ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
-			then
-				echo -n "downloading... "
-				gcc_download >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
-			fi
-			echo -n "configuration... "
-			gcc_configuration >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
-			echo -n "building target libraries... "
-			gcc_make_target_libs > ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log 2>&1
+			echo "Delete ${TOOLCHAIN_PATH} and start over."
+			return 100
+			#if [ ! -d ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER} ] || [ ! -d ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
+			#then
+			#	echo -n "downloading... "
+			#	gcc_download >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
+			#fi
+			#gcc_buildenv > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log
+			#echo "Building foundation libraries in ${BIN_PATH}... "
+			#local SPACES="   "
+			#echo -n "${SPACES}"
+			#echo -n "building bootstrap libgcc... "
+			#GCC_TARGETS="libgcc" GCC_INSTALL_TARGETS=0 gcc_make_target_libs > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}target-gcclibs-${GCC_VER}.log
+			#if [ -z "${GLIBC_SYSROOT}" ]
+			#then
+			#	### Build & install kernel headers
+			#	echo -n "${SPACES}"
+			#	KERNEL_HDRS_ONLY=1 build --no_gcc_check ${BS_KERNEL:-lfs/kernel}
+			#	### Build & install glibc
+			#	echo -n "${SPACES}"
+			#	WITH_LIBXCRYPT=1 build --toolchain gnu lfs/glibc			
+			#fi
+			#echo -n "${SPACES}"
+			#### Build & install libxcrypt
+			#build --toolchain gnu lfs/libxcrypt
+			#echo -n "configuration... "
+			#gcc_configuration >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
+			#echo -n "building target libraries... "
+			#gcc_make_target_libs > ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log 2>&1
 		fi
 	fi
 
@@ -1568,7 +1579,7 @@ function setup_full_toolchain () {
 		case ${?} in
 			2)
 				set -e
-				NUMSPACES=1 build --toolchain gnu --no_save_status lfs/python3
+				NUMSPACES=1 build --toolchain gnu lfs/python3
 				setup_python
 				set +e
 			;;

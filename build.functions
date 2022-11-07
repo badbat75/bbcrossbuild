@@ -268,26 +268,29 @@ function settcenv () {
 	fi
 	case ${TOOLCHAIN} in
 		gnu)
-			TOOLCHAIN_CC=$(which ${HARCH}-gcc)
-			TOOLCHAIN_CPP="$(which ${HARCH}-gcc) -E"
-			if ${HARCH}-g++ --version > /dev/null 2>&1
+			if ${HARCH}-gcc --version > /dev/null 2>&1
 			then
-				TOOLCHAIN_CXX=$(which ${HARCH}-g++)
+				TOOLCHAIN_CC=$(which ${HARCH}-gcc)
+				TOOLCHAIN_CPP="$(which ${HARCH}-gcc) -E"
+				if ${HARCH}-g++ --version > /dev/null 2>&1
+				then
+					TOOLCHAIN_CXX=$(which ${HARCH}-g++)
+				fi
+				if ${HARCH}-gfortran --version > /dev/null 2>&1
+				then
+					TOOLCHAIN_FC=$(which ${HARCH}-gfortran)
+					TOOLCHAIN_F90=$(which ${HARCH}-gfortran)
+				fi
+				TOOLCHAIN_AR=$(which ${HARCH}-gcc-ar)
+				TOOLCHAIN_AS=$(which ${HARCH}-as)
+				TOOLCHAIN_NM=$(which ${HARCH}-gcc-nm)
+				TOOLCHAIN_RANLIB=$(which ${HARCH}-gcc-ranlib)
+				TOOLCHAIN_STRIP=$(which ${HARCH}-strip)
+				TOOLCHAIN_OBJCOPY=$(which ${HARCH}-objcopy)
+				TOOLCHAIN_OBJDUMP=$(which ${HARCH}-objdump)
+				TOOLCHAIN_READELF=$(which ${HARCH}-readelf)
+				TOOLCHAIN_LD=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
 			fi
-			if ${HARCH}-gfortran --version > /dev/null 2>&1
-			then
-				TOOLCHAIN_FC=$(which ${HARCH}-gfortran)
-				TOOLCHAIN_F90=$(which ${HARCH}-gfortran)
-			fi
-			TOOLCHAIN_AR=$(which ${HARCH}-gcc-ar)
-			TOOLCHAIN_AS=$(which ${HARCH}-as)
-			TOOLCHAIN_NM=$(which ${HARCH}-gcc-nm)
-			TOOLCHAIN_RANLIB=$(which ${HARCH}-gcc-ranlib)
-			TOOLCHAIN_STRIP=$(which ${HARCH}-strip)
-			TOOLCHAIN_OBJCOPY=$(which ${HARCH}-objcopy)
-			TOOLCHAIN_OBJDUMP=$(which ${HARCH}-objdump)
-			TOOLCHAIN_READELF=$(which ${HARCH}-readelf)
-			TOOLCHAIN_LD=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
 			if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
 			then
 				TOOLCHAIN_COMPFLAGS="${GNU_EXTRAGCCFLAGS}"
@@ -390,8 +393,8 @@ function settcenv () {
 	esac
 	case ${TOOLCHAIN_LD} in
 		gold)
-			TOOLCHAIN_LINKERFLAGS+=" -fuse-linker-plugin -Wl,--threads -Wl,--thread-count,${NPROCS}"
-			TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -fuse-linker-plugin -Wl,--threads -Wl,--thread-count,${NPROCS}"
+			TOOLCHAIN_LINKERFLAGS+=" -Wl,--threads -Wl,--thread-count,${NPROCS}"
+			TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--threads -Wl,--thread-count,${NPROCS}"
 			;;
 		lld)
 			TOOLCHAIN_LINKERFLAGS+=" -Wl,--thinlto-jobs=${NPROCS}"
@@ -458,12 +461,15 @@ function create_environment_source () {
 		export READELF_FOR_BUILD='${TOOLCHAIN_READELF_FOR_BUILD}'
 
 	EOF
-	cat <<-EOF >> environment.source
+	if [ ! -z "${TOOLCHAIN_CC}" ]
+	then
+		cat <<-EOF >> environment.source
 		export CC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 		export CFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}'
 		export CPP='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CPP}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 		export CPPFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CPPFLAGS} ${PLATFORM_CFLAGS} ${PKG_CPPFLAGS}'
 	EOF
+	fi
 	if [ ! -z "${TOOLCHAIN_CXX}" ]
 	then
 		cat <<-EOF >> environment.source
@@ -1600,7 +1606,6 @@ function build () {(
 		local NUMSPACES=$((NUMSPACES-1))
 		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
 	done
-
 
 	if [ -f ${STATUS_PATH}/${PKG_NAME}${TEMPORARY_STATUS} ] && [ ${FORCE} -eq 0 ]
 	then

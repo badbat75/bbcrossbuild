@@ -18,6 +18,12 @@ function gitrepo4pkg {
     esac
 }
 
+function gitrepo_additional_params {
+    case ${PACKAGE} in
+        binutils) echo "-- . "':!libbacktrace/';;
+    esac
+}
+
 function rel4pkg {
     case ${PACKAGE} in
         glibc) echo "refs/tags/glibc-${PKG_VER}" ;;
@@ -38,13 +44,16 @@ function head4pkg {
 
 function generate_patch_and_print {
     local LAST_COMMIT=$(git -C /tmp/$(gitrepo4pkg) rev-parse --short -1 $(head4pkg))
-    local PKG_SUFFIX="_${PKG_VER}+${LAST_COMMIT}"
-    local PATCH_FILE=${PACKAGE}/${PACKAGE}${PKG_SUFFIX}.patch
+    local PKG_SUFFIX=_${PKG_VER}+${LAST_COMMIT}
+    local PATCH_FILE=${PACKAGE}_${PKG_VER}+${LAST_COMMIT}.patch
+    local LINK_FILE=${PACKAGE}_${PKG_VER}.patch
+    git -C /tmp/$(gitrepo4pkg) branch -m $(head4pkg)
     mkdir -p ${BBXB_PATH}/patches/${PACKAGE}
-    git -C /tmp/$(gitrepo4pkg) diff $(rel4pkg)..${LAST_COMMIT} > ${BBXB_PATH}/patches/${PATCH_FILE}
+    git -C /tmp/$(gitrepo4pkg) diff $(rel4pkg)..${LAST_COMMIT} $(gitrepo_additional_params) > ${BBXB_PATH}/patches/${PACKAGE}/${PATCH_FILE}
+    ln -fs ${PATCH_FILE} ${BBXB_PATH}/patches/${PACKAGE}/${LINK_FILE}
     echo -n "\\\t${PKG_VER})\n"
     echo -n "\\t\\tPKG_SUFFIX=${PKG_SUFFIX}\n"
-    echo -n "\\t\\tPATCHES=${PATCH_FILE}\n"
+    echo -n "\\t\\tPATCHES=${PACKAGE}/${PATCH_FILE}\n"
     echo -n "\\t\\t;;"
 }
 
@@ -83,17 +92,16 @@ then
 fi
 git -C /tmp/$(gitrepo4pkg) fetch
 
-if [ -f ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak ]
+if [ -f ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak ] && [ ${SAFE:-1} -eq 1 ]
 then
     echo "Please remove or restore ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak before update"
 else
-    cp -v ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak
+    cp ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak
     for PKG_VER in ${VERSIONS}
     do
         PKG_MAJVER=$(echo ${PKG_VER} | cut -d'.' -f1)
         PKG_USCOREVER=$(echo ${PKG_VER} | sed 's/\./_/g')
         echo -n "Generating patch for ${PACKAGE}_${PKG_VER}... "
-        git -C /tmp/$(gitrepo4pkg) branch -m $(head4pkg)
         eval "sed -i '/^\t${PKG_VER})/,/\t\t;;/c $(generate_patch_and_print)' ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg"
         echo "done."
     done

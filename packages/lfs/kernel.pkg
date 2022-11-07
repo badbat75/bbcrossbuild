@@ -1,0 +1,7 @@
+# bs_kernel
+PKG_SUFFIX=_${KERNEL_VER}
+PKG_URL="https://cdn.kernel.org/pub/linux/kernel/v$( echo ${KERNEL_VER} | cut -d'.' -f1 ).x/linux-${KERNEL_VER}.tar.xz"
+BUILD_PROCESS=kernelbuild
+INST_CMD="INSTALL_MOD_STRIP=1"
+
+if [ ${KERNEL_HDRS_ONLY:-0} -eq 1 ]; then PKG_SUFFIX="-headers${PKG_SUFFIX}"; fi
