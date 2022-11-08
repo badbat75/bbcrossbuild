@@ -33,30 +33,24 @@ PKG_MAKEVARS="slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} rootsbindir=${BUILD_PREF
 PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd
 PKG_PREBUILD="sed '/MAKEFLAGS :=/s/)r/) -r/' -i Makerules"
+PKG_POSTBUILD="if [ ! -f \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h ]
+	then
+		touch \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h
+	fi;"
 
 case ${GLIBC_TARGET} in
-	headers)
-		STD_CONF_FLAGS=0
-		CONF_FLAGS+=" --build=${BARCH} --prefix=${BUILD_PREFIX}"
-		CONF_ENV="CC="'${CC_FOR_BUILD}'" CFLAGS="'${CFLAGS_FOR_BUILD}'
-		PKG_SUFFIX="-headers${PKG_SUFFIX}"
-		PKG_MAKEVARS="install-bootstrap-headers=yes"
-		INST_CMD="install-headers"
-		PKG_POSTBUILD="if [ ! -f \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h ]
-			then
-				touch \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h
-			fi"
-	;;
-	crts)
+	bootstrap)
 		PKG_SUFFIX="-crts${PKG_SUFFIX}"
-		INST_CMD="csu/subdir_lib"
-		PKG_POSTBUILD="mkdir -pv \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
+		PKG_TWOSTEPSBUILD=0
+		PKG_MAKETARGETS="csu/subdir_lib"
+		INST_CMD="install-headers"
+		PKG_MAKEVARS="install-bootstrap-headers=yes"
+		PKG_POSTBUILD+="mkdir -pv \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 			install csu/crt1.o csu/crti.o csu/crtn.o \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 			\${CC} -nostdlib -nostartfiles -shared -x c /dev/null -o \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libc.so"
 	;;
 	*)
 		INST_CMD="install"
-		PKG_POSTBUILD=""
 		if [ ${BUILD_LIBDIR}${BUILD_LIBSUFFIX} != ${BUILD_LIBDIR} ]
 		then
 			PKG_POSTBUILD+="

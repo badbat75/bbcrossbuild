@@ -592,13 +592,38 @@ function setup_bison () {
 function setup_gcc () {
 
 	function gcc_buildenv () {
+		function create_sccache_wrapper () {
+			if [[ ${CCWRAPPER} == *sccache ]] && [ ! -f ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper ]
+			then
+				run_cmd "mkdir -p ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}"
+				cat <<-EOF > ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper
+					#!/bin/sh
+
+					set -e
+
+					dir=\$(dirname \$(realpath \$1))
+					cc1=\${dir}/cc1
+
+					if [ -e "\${cc1}"  ]; then
+						export PATH=\${dir}:\${PATH}
+						echo "${CCWRAPPER} \$@" >> \$dir/sccache_wrapper.log
+						exec ${CCWRAPPER} "\$@"
+					else
+						echo "\$@" >> \$dir/sccache_wrapper.log
+						exec "\$@"
+					fi
+				EOF
+				run_cmd "chmod +x ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper"
+			fi
+		}
 		MULTI_ARCH=${MULTIARCH:-1}
-		BUILD_PREFIX="${BUILD_PREFIX:-/usr}"
+		export BUILD_PREFIX="${BUILD_PREFIX:-/usr}"
+		export BUILD_LIBDIR="${BUILD_LIBDIR:-${BUILD_PREFIX}/lib}"
 		if [ ${MULTI_ARCH} -eq 1 ] && [ -z "${HARCH_LIB}" ]
 		then
-			BUILD_LIBSUFFIX="/${HARCH}"
+			export BUILD_LIBSUFFIX="/${HARCH}"
 		else
-			BUILD_LIBSUFFIX="${HARCH_LIB}"
+			export BUILD_LIBSUFFIX="${HARCH_LIB}"
 		fi
 
 		if [ ${MAKEVERBOSE:-0} -eq 0 ]
@@ -609,26 +634,23 @@ function setup_gcc () {
 			target_configargs="${SILENTCONFIG}"
 		fi
 
-		unset GLIBC_SYSROOT ECHO_BOOTSTRAP
+		unset GLIBC_SYSROOT
 		# Check where glibc is installed
-		if ( [ -f ${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crtn.o ] && \
-				[ -f ${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crti.o ] && \
-				[ -f ${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crt1.o ] )
+		if ( [ -f ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/crtn.o ] && \
+				[ -f ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/crti.o ] && \
+				[ -f ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/crt1.o ] )
 		then
 			GLIBC_SYSROOT=${BIN_PATH}
 		else
-			if [ -f ${DISTOS_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crtn.o ] && \
-				[ -f ${DISTOS_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crti.o ] && \
-				[ -f ${DISTOS_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crt1.o ]
+			if [ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/crtn.o ] && \
+				[ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/crti.o ] && \
+				[ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/crt1.o ]
 			then
 				GLIBC_SYSROOT=${DISTOS_PATH}
-			else
-				ECHO_BOOTSTRAP="bootstrap "
-				LOG_BOOTSTRAP="bs-"
 			fi
 		fi
 
-		GCC_CONFIG="--enable-checking=release --enable-multiarch --disable-multilib --enable-version-specific-runtime-libs \
+		GCC_CONFIG="--enable-languages=${GCC_LANGUAGES:-c,c++} --enable-checking=release --enable-multiarch --disable-multilib --enable-version-specific-runtime-libs \
 			--enable-shared --enable-threads=posix --enable-gnu-indirect-function --enable-initfini-array \
 			--enable-gnu-unique-object --enable-clocale=gnu --enable-linker-build-id --enable-lto --enable-plugin \
 			--enable-__cxa_atexit --with-default-libstdcxx-abi=new --enable-gcov \
@@ -640,20 +662,11 @@ function setup_gcc () {
 		### Workaround for latest patches (--disable-werror)
 		BINUTILS_CONFIG="--disable-werror --enable-gold --enable-64-bit-bfd --enable-plugins --enable-install-libbfd"
 
-		if [ -n "${GLIBC_SYSROOT}" ]
+		if [ "$(echo ${GCC_LANGUAGES} | grep -o fortran)" == "fortran" ]
 		then
-			GCC_CONFIG+=" --enable-languages=${GCC_LANGUAGES:-c,c++}"
-			if [ "$(echo ${GCC_LANGUAGES} | grep -o fortran)" == "fortran" ]
-			then
-				GCC_CONFIG+=" --enable-libquadmath --enable-libquadmath-support"
-			fi
-			BINUTILS_CONFIG+=" --enable-install-libbfd"	
-		else
-			GCC_CONFIG+=" --enable-languages=c,c++"
-			### To check howto bootstrap without those. Notes: to try with --with-headers=${BIN_PATH}${BUILD_INCLUDEDIR}
-			#GCC_CONFIG+=" --without-headers --with-newlib"
-			#BINUTILS_CONFIG+=""
+			GCC_CONFIG+=" --enable-libquadmath --enable-libquadmath-support"
 		fi
+
 		COMPFLAGS="${GNU_EXTRACOMPFLAGS}"
 		LINKERFLAGS="${GNU_EXTRALDFLAGS}"
 		if [ ${GCC_LTOENABLE:-0} -eq 1 ] && [ -n "${GLIBC_SYSROOT}" ]
@@ -669,31 +682,8 @@ function setup_gcc () {
 		fi
 		### Create sccache_wrapper to work around an issue of not supporting correctly the
 		### -B parameter. It is not able to find the local cc1 executable running xgcc
-		if [[ ${CCWRAPPER} == *sccache ]]
+		if [[ ${CCWRAPPER} == *sccache ]] 
 		then
-			if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ]
-			then
-				run_cmd "rm -rf ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}"
-			fi
-			run_cmd "mkdir -p ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}"
-			cat <<-EOF > ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper
-				#!/bin/sh
-
-				set -e
-
-				dir=\$(dirname \$(realpath \$1))
-				cc1=\${dir}/cc1
-
-				if [ -e "\${cc1}"  ]; then
-					export PATH=\${dir}:\${PATH}
-					echo "${CCWRAPPER} \$@" >> \$dir/sccache_wrapper.log
-					exec ${CCWRAPPER} "\$@"
-				else
-					echo "\$@" >> \$dir/sccache_wrapper.log
-					exec "\$@"
-				fi
-			EOF
-			run_cmd "chmod +x ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper"
 			GCC_CCWRAPPER="${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper"
 		else
 			GCC_LTO_COMPFLAGS=" ${LTO_COMPFLAGS}"
@@ -730,6 +720,7 @@ function setup_gcc () {
 		download_uncompress ${MPCURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpc
 		download_uncompress ${ISLURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/isl
 		pushd ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
+		run_cmd "sed 's@^#include <limits.h>@#include <linux/limits.h>@' -i ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/libsanitizer/asan/asan_linux.cpp"
 		find ../binutils-${BINUTILS_VER} -maxdepth 1 -type d ! -path ../binutils-${BINUTILS_VER} -exec bash -c 'run_cmd "ln -fs {} ."' \;
 		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 9 && test_version ${BINUTILS_VER} -ge 2.33
 		then
@@ -783,6 +774,11 @@ function setup_gcc () {
 		esac
 		local PLATFORM_ARCHFLAGS="--enable-targets=${HM}-${HOS}-${HLIBC} --with-arch-directory=${HM} ${HMARCH:+ --with-arch=${HMARCH}}${PLATFORM_ARCHFLAGS}"
 		echo "### GCC_BUILD_PATH: ${TOOLCHAIN_PATH}/gcc-${GCC_VER}"
+		if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ]
+		then
+			rm -rf ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
+		fi
+		create_sccache_wrapper
 		pushd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 		run_cmd "CC_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
 				CXX_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
@@ -845,79 +841,129 @@ function setup_gcc () {
 	}
 
 	function gcc_make_target_libs () {
+
+		function relink_libraries () {
+			local RELATIVE_TO="${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
+			local SOURCE="$(realpath -m --relative-to=${RELATIVE_TO} ${1})"
+			local DESTINATION="${RELATIVE_TO}/$(basename ${1})"
+			set -x
+			ln -fsv ${SOURCE} ${DESTINATION}
+			set +x
+		}
+		export -f relink_libraries
+
+		function relink_la_libraries () {
+			echo "### Adapting .la libraries to ${1}"
+			export LIB_LA_SEDTRANS="s&^dependency_libs=' -L${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/./ld&dependency_libs='&; s&^libdir='${TOOLCHAIN_PATH}&libdir='${BUILD_PREFIX}&"
+			run_cmd "echo \"${LIB_LA_SEDTRANS}\""
+			if [ -d ${1} ]
+			then
+				run_cmd "find \"${1}\" -mindepth 1 -name \"*.la\" -type f | xargs -r -I{} bash -c \
+					\"sed -i \\\"\\\${LIB_LA_SEDTRANS}\\\" {}\""
+			fi
+		}
+
 		trap 'STATUS=${?}; \
 			trap ERR; \
 			return ${STATUS}' ERR
 
-		export LIB_LA_SEDTRANS="s&^dependency_libs=' -L${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/./ld&dependency_libs='&; s&^libdir='${TOOLCHAIN_PATH}&libdir='${BUILD_PREFIX}&"
-
+		local GCC_BOOTSTRAP=${GCC_BOOTSTRAP:-0}
+		
 		### Define objects to be built
 		echo "### Targets to build: ${GCC_TARGETS}"
 		echo "### Install target: ${GCC_INSTALL_TARGETS}"
 		echo "### GCC main: ${GCC_IS_MAIN}"
+		echo "### Is bootstrap: ${GCC_BOOTSTRAP}"
+
+		if [ ${GCC_BOOTSTRAP} -eq 1 ]
+		then
+			local OBJECT_PREFIX="bootstrap-"
+		fi
 		if [ "${GCC_TARGETS}" = "all" ]
 		then
-			local OBJECTS="libgcc libstdc++-v3 libgomp libssp libatomic"
-			if [ "$(echo ${GCC_LANGUAGES} | grep -o fortran)" == "fortran" ]
+			local GCC_TARGETS="libgcc libstdc++-v3 libgomp libssp libatomic libvtv libsanitizer"
+			if [[ "${GCC_LANGUAGES}" =~ "fortran" ]]
 			then
-				OBJECTS+=" libquadmath"
+				GCC_TARGETS+=" libquadmath"
 			fi
 		else
-			local OBJECTS="${GCC_TARGETS}"
+			local GCC_TARGETS="${GCC_TARGETS}"
 		fi
+
+		for object in $( echo ${GCC_TARGETS} | tr ',' ' ' )
+		do
+			local PKG_NAME="gcc-${OBJECT_PREFIX}target-${object}_${GCC_VER}"
+			echo -n "### Checking if ${STATUS_PATH}/${PKG_NAME} exists... "
+			if [ ! -f ${STATUS_PATH}/${PKG_NAME} ]
+			then
+				local OBJECTS+="${object} "
+				echo "no"
+			else
+				echo "already built"
+			fi
+		done
+
 		local BUILD_OBJECTS=
 		for object in $( echo ${OBJECTS} | tr ',' ' ' )
 		do
 			local BUILD_OBJECTS+=" all-target-${object}"
 		done
-		echo "### Making target libraries."
-		run_cmd "make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" ${BUILD_OBJECTS}"
 
-		setbuildenv
-		for object in $( echo ${OBJECTS} | tr ',' ' ' )
-		do
-			echo "### Installing in the toolchain dir"
-			run_cmd "make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} install-strip-target-${object}"
-			###  Create package if it is not bootstrapping
-			if [ -n "${GLIBC_SYSROOT}" ]
-			then
-				echo "### Creating package for ${object}"
-				if [ -d ${PACKAGES_PATH}/gcc-libs-${GCC_VER} ]
-				then
-					run_cmd "rm -rf ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}"
-				fi
-				run_cmd "make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} DESTDIR="${PACKAGES_PATH}/gcc-${object}_${GCC_VER}" prefix=${BUILD_PREFIX} install-strip-target-${object}"
-				echo "### Adapting .la libraries to ${BIN_PATH}${BIN_PREFIX}"
-				find ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER} -mindepth 1 -name "*.la" -type f | xargs -r -I{} bash -c \
-					"run_cmd 'sed -i \"\${LIB_LA_SEDTRANS}\" {}'"
-				run_cmd "create_sfx_package ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}"
-				run_cmd "rm -rf ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}"
-			fi
-			### Install in BIN_PATH if requested via --install
-			if [ ${GCC_INSTALL_TARGETS} -eq 1 ] 
-			then
-				echo "### Installing in ${BIN_PATH}${BUILD_PREFIX}"
-				run_cmd "make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} DESTDIR="${BIN_PATH}" prefix=${BUILD_PREFIX} install-strip-target-${object}"
-			fi
-		done
-
-		if [ ${GCC_IS_MAIN} -eq 1 ]
+		echo "### Targets to build: ${OBJECTS}"
+		if [ ! -z "${OBJECTS}" ]
 		then
-			echo "### Linking GCC target libraries in ${BUILD_PREFIX}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} from ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}"
-			if [ -d ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH} ]
+			echo "ls -l ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}"
+			if [ ! -d ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
 			then
-				find ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH} -type f,l \( -name "*.so*" -a ! -name "*.so*.py" -o -name "*.a*" -o -name "*.la*" -o -name "crt*.o" \) | xargs -r -I{} bash -c \
-					"run_cmd 'ln -fsv \$(realpath --relative-to=${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} {}) ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/\$(basename {})'"
+				echo "### GCC Sources disappeared (${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}). Reconfigure them."
+				echo -n "${SPACES}"
+				echo -n "Downloading... "
+				gcc_download
+			fi
+			if [ ! -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ]
+			then
+				echo -n "configuration... "
+				gcc_configuration
 			fi
 		fi
 
-		echo "### Adapting .la libraries to ${BIN_PATH}${BIN_PREFIX}"
-		find ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER} $( [ ${GCC_INSTALL_TARGETS:-0} -eq 1 ] && echo "${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" || true ) -mindepth 1 -name "*.la" -type f | xargs -r -I{} bash -c \
-				"run_cmd 'sed -i \"\${LIB_LA_SEDTRANS}\" {}'"
-
-		run_cmd "make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER="${CCWRAPPER}" all-target-libsanitizer"
-		run_cmd "make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} install-strip-target-libsanitizer"
-
+		for object in $( echo ${OBJECTS} | tr ',' ' ' )
+		do
+			echo "### Making target libraries."
+			run_cmd "make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" all-target-${object}"
+			echo "### Installing in the toolchain dir"
+			run_cmd "make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} install-strip-target-${object}"
+			if [ "${object}" != "libsanitizer" ]
+			then
+				local PKG_NAME="gcc-${OBJECT_PREFIX}target-${object}_${GCC_VER}"
+				###  Create package if it is not bootstrapping
+				echo "### Creating package for ${PKG_NAME}"
+				if [ -d ${PACKAGES_PATH}/${PKG_NAME} ]
+				then
+					run_cmd "rm -rf ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}"
+				fi
+				run_cmd "make -C ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} V=${MAKEVERBOSE:-0} DESTDIR="${PACKAGES_PATH}/${PKG_NAME}" prefix=${BUILD_PREFIX} install-strip-target-${object}"
+				relink_la_libraries "${PACKAGES_PATH}/${PKG_NAME}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}"
+				run_cmd "create_sfx_package ${PACKAGES_PATH}/${PKG_NAME}"
+				if [ ${GCC_INSTALL_TARGETS} -eq 1 ] && [ ${GCC_BOOTSTRAP} -eq 0 ]
+				then
+					run_cmd "rsync -aK --devices --specials ${PACKAGES_PATH}/${PKG_NAME}/ ${BIN_PATH}"
+					relink_la_libraries "${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}"
+					if [ ${GCC_IS_MAIN} -eq 1 ]
+					then
+						echo "### Linking GCC target libraries in ${BUILD_PREFIX}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} from ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}"
+						if [ -d ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH} ]
+						then
+							run_cmd "echo ${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
+							run_cmd "find ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH} -type f,l \\( -name \"*.so*\" -a ! -name \"*.so*.py\" -o -name \"*.a*\" -o -name \"*.la*\" -o -name \"crt*.o\" \\) | xargs -r -I{} bash -c \"relink_libraries {}\""
+						fi
+					fi
+				fi
+				run_cmd "rm -rf ${PACKAGES_PATH}/${PKG_NAME}"
+			fi
+			touch ${STATUS_PATH}/${PKG_NAME}		
+		done
+		relink_la_libraries "${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER}"
 		trap ERR
 	}
 
@@ -938,93 +984,42 @@ function setup_gcc () {
 	local GCC_INSTALL_TARGETS=${_param_install:-0}
 	local GCC_IS_MAIN=${_param_main_gcc:-0}
 
+	local SPACES="   "
+	gcc_buildenv > ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	if [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc ] && [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ ]
 	then
-		local SPACES="   "
-		gcc_buildenv > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log
-		### Install kernel headers
-		echo -n "${SPACES}"
-		KERNEL_HDRS_ONLY=1 build --no_gcc_check ${BS_KERNEL:-lfs/kernel}
-		### Install glibc headers
-		echo -n "${SPACES}"
-		GLIBC_TARGET=headers build --no_gcc_check lfs/glibc
-		echo -n "downloading... "
-		gcc_download >> ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log 2>&1
-		echo -n "${ECHO_BOOTSTRAP}configuration... "
-		gcc_configuration >> ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log 2>&1
-		echo -n "${ECHO_BOOTSTRAP}building host binaries... "
-		gcc_make_host ${HARCH} >> ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log 2>&1
-		### Check if bootstrap sysroot before building target libraries
 		if [ -z "${GLIBC_SYSROOT}" ]
 		then
-			### Bootstrapping sysroot
-			echo "done."
-			echo "Bootstrapping foundation libraries in ${BIN_PATH}... "
-			### Install glibc headers
+			### Install kernel headers
 			echo -n "${SPACES}"
-			GLIBC_TARGET=crts build lfs/glibc
-			echo -n "${SPACES}"
-			echo -n "building bootstrap libgcc... "
-			GCC_TARGETS="libgcc" GCC_INSTALL_TARGETS=0 gcc_make_target_libs > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}target-gcclibs-${GCC_VER}.log
-			echo "done."
-			### Build & install glibc
-			echo -n "${SPACES}"
-			WITH_LIBXCRYPT=1 build lfs/glibc
-			### Build & install libxcrypt
-			echo -n "${SPACES}"
-			build --toolchain gnu lfs/libxcrypt
-			run_cmd "rm -rf ${TOOLCHAIN_PATH}" >> ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}target-gcclibs-${GCC_VER}.log
-			echo -n "Rebuild final gcc... "
-			gcc_buildenv >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
-			echo -n "configuration... "
-			gcc_configuration >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
-			echo -n "building for host... "
-			gcc_make_host ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
-			echo -n "building target libraries... "
-			gcc_make_target_libs >> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log
-		else
-			# if gcc is not bootstrapping
-			echo -n "building target libraries... "
-			gcc_make_target_libs >> ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log
+			KERNEL_HDRS_ONLY=1 build --no_gcc_check ${BS_KERNEL:-lfs/kernel}
 		fi
-	else
-		gcc_buildenv > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log
-		# If gcc and g++ are in toolchain but some target libraries are not
-		if [ ! -e ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/*/libgcc.a ] && \
-			[ ${GCC_INSTALL_TARGETS} == 1 ]
-		then
-			echo "exists in the toolchain but not all the foundation libraries are found."
-			echo "Delete ${TOOLCHAIN_PATH} and start over."
-			return 100
-			#if [ ! -d ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER} ] || [ ! -d ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
-			#then
-			#	echo -n "downloading... "
-			#	gcc_download >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
-			#fi
-			#gcc_buildenv > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}gcc-${GCC_VER}.log
-			#echo "Building foundation libraries in ${BIN_PATH}... "
-			#local SPACES="   "
-			#echo -n "${SPACES}"
-			#echo -n "building bootstrap libgcc... "
-			#GCC_TARGETS="libgcc" GCC_INSTALL_TARGETS=0 gcc_make_target_libs > ${LOG_PATH}/toolchain_${LOG_BOOTSTRAP}target-gcclibs-${GCC_VER}.log
-			#if [ -z "${GLIBC_SYSROOT}" ]
-			#then
-			#	### Build & install kernel headers
-			#	echo -n "${SPACES}"
-			#	KERNEL_HDRS_ONLY=1 build --no_gcc_check ${BS_KERNEL:-lfs/kernel}
-			#	### Build & install glibc
-			#	echo -n "${SPACES}"
-			#	WITH_LIBXCRYPT=1 build --toolchain gnu lfs/glibc			
-			#fi
-			#echo -n "${SPACES}"
-			#### Build & install libxcrypt
-			#build --toolchain gnu lfs/libxcrypt
-			#echo -n "configuration... "
-			#gcc_configuration >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
-			#echo -n "building target libraries... "
-			#gcc_make_target_libs > ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log 2>&1
-		fi
+		echo -n "${SPACES}"
+		echo -n "Downloading... "
+		gcc_download >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
+		echo -n "configuration... "
+		gcc_configuration >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
+		echo -n "building host binaries... "
+		gcc_make_host ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
+		echo "done."
 	fi
+	### Bootstrapping sysroot
+	echo "Bootstrapping foundation libraries in ${BIN_PATH}... "
+	### Install glibc headers
+	echo -n "${SPACES}"
+	GLIBC_TARGET=bootstrap build lfs/glibc
+	echo -n "${SPACES}"
+	echo -n "building bootstrap target libgcc... "
+	GCC_BOOTSTRAP=1 GCC_TARGETS="libgcc" gcc_make_target_libs > ${LOG_PATH}/toolchain_bootstrap-target-libgcc-${GCC_VER}.log
+	echo "done."
+	### Build & install glibc
+	echo -n "${SPACES}"
+	WITH_LIBXCRYPT=1 build lfs/glibc
+	### Build & install libxcrypt
+	echo -n "${SPACES}"
+	build --toolchain gnu lfs/libxcrypt
+	echo -n "building target libraries... "
+	gcc_make_target_libs > ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log
 
 	if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ]
 	then

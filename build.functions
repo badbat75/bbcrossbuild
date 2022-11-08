@@ -1840,7 +1840,7 @@ function build () {(
 	then
 		run_cmd "md5sum ${PKG_PATH}/${PKG_FILE}.pkg > ${STATUS_PATH}/${PKG_NAME}${TEMPORARY_STATUS}" >> ${LOG_PATH}/${PKG_NAME}.log
 	else
-		run_cmd "rm -f ${STATUS_PATH}/*${TEMPORARY_STATUS}" >> ${LOG_PATH}/${PKG_NAME}.log
+		run_cmd "rm -f ${STATUS_PATH}/*.tmp" >> ${LOG_PATH}/${PKG_NAME}.log
 	fi
 	set +x
 	echo "Done."
