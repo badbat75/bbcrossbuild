@@ -3,11 +3,18 @@ PYTHON_BINVER=$(echo ${PYTHON_VER} | cut -d"." -f1,2)
 PKG_SUFFIX=_${PYTHON_VER}
 PKG_URL="https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PYTHON_VER}.tar.xz"
 PKG_DEPS="lfs/ncurses_6 lfs/zlib_1 lfs/zlib_1 lfs/bzip2_1.0.8 lfs/expat_2.4.8 lfs/libffi_3.3 lfs/gdbm_1.23 lfs/readline_8.2 lfs/openssl_3"
+PKG_AUTOCONF=1
 BUILD_PROCESS=configmake
 PKG_TWOSTEPSBUILD=1
-CONF_FLAGS="--with-build-python=python${PYTHON_BINVER} --with-platlibdir=lib --with-system-expat --with-system-ffi --enable-ipv6 --with-ensurepip=yes"
+CONF_FLAGS="--with-platlibdir=lib --with-system-expat --with-system-ffi --enable-ipv6 --with-ensurepip=yes"
+echo "LTOENABLE: ${LTOENABLE}"
+if [ "${LTOENABLE:-0}" != "0" ]
+then
+	CONF_FLAGS+=" --with-lto"
+fi
 CONF_VARS="CROSS_COMPILE=${HARCH}- CROSS_COMPILE_TARGET=yes \
 	ax_cv_c_float_words_bigendian=$([ ${HMENDIAN} != little ] && echo yes || echo no) \
 	ac_cv_file__dev_ptmx=yes ac_cv_file__dev_ptc=no"
 INST_CMD="install"
-PKG_FAULTYCFLAGS=1
+PKG_FAULTYCFLAGS=0
+PKG_OVERRIDELTO=0

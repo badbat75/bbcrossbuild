@@ -17,7 +17,7 @@ function setbuildenv () {
 		export CROSS_COMPILING=yes
 		export PKG_CONFIG_ALLOW_CROSS=1
 	fi
-	MULTI_ARCH=${MULTIARCH:-1}
+	local MULTI_ARCH=${MULTIARCH:-1}
 	BUILD_PREFIX="${BUILD_PREFIX:-/usr}"
 	BUILD_EXECPREFIX="${BUILD_EXECPREFIX:-${BUILD_PREFIX}}"
 	BUILD_INCLUDEDIR="${BUILD_INCLUDEDIR:-$(readlink -m ${BUILD_PREFIX}/include)}"
@@ -1651,6 +1651,11 @@ function build () {(
 	echo "Post build script:" >> ${LOG_PATH}/${PKG_NAME}.log
 	echo "==================" >> ${LOG_PATH}/${PKG_NAME}.log
 	echo "${PKG_POSTBUILD}" >> ${LOG_PATH}/${PKG_NAME}.log
+	echo "==================" >> ${LOG_PATH}/${PKG_NAME}.log
+	echo >> ${LOG_PATH}/${PKG_NAME}.log
+	echo "Post install script:" >> ${LOG_PATH}/${PKG_NAME}.log
+	echo "==================" >> ${LOG_PATH}/${PKG_NAME}.log
+	echo "${PKG_POSTINSTALL}" >> ${LOG_PATH}/${PKG_NAME}.log
 	echo "==================" >> ${LOG_PATH}/${PKG_NAME}.log
 	echo >> ${LOG_PATH}/${PKG_NAME}.log
 	case x${BUILD_PROCESS} in
