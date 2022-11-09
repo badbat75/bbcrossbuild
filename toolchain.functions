@@ -954,7 +954,7 @@ function setup_gcc () {
 			relink_la_libraries "${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER}"
 			if [ ${GCC_BOOTSTRAP} -eq 1 ]
 			then
-				run_cmd "rm -f ${HARCH}/libgcc"
+				run_cmd "rm -rf ${HARCH}/libgcc"
 			fi
 			popd
 		fi
@@ -1046,7 +1046,7 @@ function setup_gcc () {
 	fi
 	if [ ! -f ${TOOLCHAIN_PATH}/bin/ldconfig ]
 	then
-		run_cmd "ln -s $(which true) ${TOOLCHAIN_PATH}/bin/ldconfig"
+		run_cmd "ln -s $(which true) ${TOOLCHAIN_PATH}/bin/ldconfig" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	fi
 	echo -n "building target libraries... "
 	gcc_make_target_libs > ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log
