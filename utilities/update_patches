@@ -88,7 +88,7 @@ if [ ! -d /tmp/$(gitrepo4pkg) ]
 then
     mkdir /tmp/$(gitrepo4pkg)
     git -C /tmp/$(gitrepo4pkg) init
-    git -C /tmp$(gitrepo4pkg) remote add origin $(url4pkg)
+    git -C /tmp/$(gitrepo4pkg) remote add origin $(url4pkg)
 fi
 git -C /tmp/$(gitrepo4pkg) fetch
 
