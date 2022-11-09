@@ -1005,7 +1005,7 @@ function setup_gcc () {
 
 	local SPACES="   "
 	gcc_buildenv
-	if [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc ] && [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ ]
+	if [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc ] || [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ ]
 	then
 		if [ ${GLIBC_SYSROOT} == ${BIN_PATH} ]
 		then
