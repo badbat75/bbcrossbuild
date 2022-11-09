@@ -2,16 +2,16 @@
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${GLIBC_VER}.tar.xz"
 case ${GLIBC_VER} in
 	2.36)
-		PKG_SUFFIX=_2.36+2fce85f67c
-		PATCHES=glibc/glibc_2.36+2fce85f67c.patch
+		PKG_SUFFIX=_2.36+70410f2286
+		PATCHES=glibc/glibc_2.36+70410f2286.patch
 		;;
 	2.35)
-		PKG_SUFFIX=_2.35+cbfe89a675
-		PATCHES=glibc/glibc_2.35+cbfe89a675.patch
+		PKG_SUFFIX=_2.35+f6d4c1ac64
+		PATCHES=glibc/glibc_2.35+f6d4c1ac64.patch
 		;;
 	2.34)
-		PKG_SUFFIX=_2.34+ca5df79545
-		PATCHES=glibc/glibc_2.34+ca5df79545.patch
+		PKG_SUFFIX=_2.34+675ba1f361
+		PATCHES=glibc/glibc_2.34+675ba1f361.patch
 		;;
 	*)
 		PKG_SUFFIX=_${GLIBC_VER}
@@ -32,7 +32,7 @@ PKG_MAKEVARS="slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} rootsbindir=${BUILD_PREF
 	complocaledir=${BUILD_LIBDIR} cross-compiling=yes"
 PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd
-PKG_PREBUILD="sed '/MAKEFLAGS :=/s/)r/) -r/' -i Makerules"
+#PKG_PREBUILD="sed '/MAKEFLAGS :=/s/)r/) -r/' -i Makerules"
 PKG_POSTBUILD="if [ ! -f \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h ]
 	then
 		touch \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h

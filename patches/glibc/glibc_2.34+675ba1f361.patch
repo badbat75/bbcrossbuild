@@ -16,10 +16,33 @@ index 02dcf6b1ca..6a6f25285b 100644
       Use additional compiler flags CFLAGS to build the parts of the
       library which are always statically linked into applications and
 diff --git a/Makeconfig b/Makeconfig
-index 68663d984e..2fa0884b4e 100644
+index 68663d984e..92affd81b0 100644
 --- a/Makeconfig
 +++ b/Makeconfig
-@@ -412,12 +412,13 @@ link-extra-libs-tests = $(libsupport)
+@@ -42,6 +42,22 @@ else
+ $(error objdir must be defined by the build-directory Makefile)
+ endif
+ 
++# Did we request 'make -s' run? "yes" or "no".
++# Starting from make-4.4 MAKEFLAGS now contains long
++# options like '--shuffle'. To detect presence of 's'
++# we pick first word with short options. Long options
++# are guaranteed to come after whitespace. We use '-'
++# prefix to always have a word before long options
++# even if no short options were passed.
++# Typical MAKEFLAGS values to watch for:
++#   "rs --shuffle=42" (silent)
++#   " --shuffle" (not silent)
++ifeq ($(findstring s, $(firstword -$(MAKEFLAGS))),)
++silent-make := no
++else
++silent-make := yes
++endif
++
+ # Root of the sysdeps tree.
+ sysdep_dir := $(..)sysdeps
+ export sysdep_dir := $(sysdep_dir)
+@@ -412,12 +428,13 @@ link-extra-libs-tests = $(libsupport)
  
  # Command for linking PIE programs with the C library.
  ifndef +link-pie
@@ -36,7 +59,7 @@ index 68663d984e..2fa0884b4e 100644
  	     $(filter-out $(addprefix $(csu-objpfx),start.o \
  						    S$(start-installed-name))\
  			  $(+preinit) $(link-extra-libs) \
-@@ -442,11 +443,12 @@ endef
+@@ -442,11 +459,12 @@ endef
  endif
  # Command for statically linking programs with the C library.
  ifndef +link-static
@@ -51,7 +74,7 @@ index 68663d984e..2fa0884b4e 100644
  	      $(filter-out $(addprefix $(csu-objpfx),start.o \
  						     $(start-installed-name))\
  			   $(+preinit) $(link-extra-libs-static) \
-@@ -473,13 +475,16 @@ endif
+@@ -473,13 +491,16 @@ endif
  ifeq (yes,$(build-pie-default))
  +link = $(+link-pie)
  +link-tests = $(+link-pie-tests)
@@ -70,7 +93,7 @@ index 68663d984e..2fa0884b4e 100644
  	      $(filter-out $(addprefix $(csu-objpfx),start.o \
  						     $(start-installed-name))\
  			   $(+preinit) $(link-extra-libs) \
-@@ -491,6 +496,8 @@ $(CC) $(link-libc-rpath-link) $(+link-before-libc) $(rtld-LDFLAGS) \
+@@ -491,6 +512,8 @@ $(CC) $(link-libc-rpath-link) $(+link-before-libc) $(rtld-LDFLAGS) \
    $(link-extra-flags) $(link-libc) $(+link-after-libc)
  $(call after-link,$@)
  endef
@@ -79,7 +102,7 @@ index 68663d984e..2fa0884b4e 100644
  define +link-tests
  $(CC) $(+link-before-libc) $(rtld-tests-LDFLAGS) $(link-libc-tests) \
  		     $(+link-after-libc)
-@@ -505,6 +512,8 @@ endif  # build-pie-default
+@@ -505,6 +528,8 @@ endif  # build-pie-default
  else  # build-static
  +link = $(+link-static)
  +link-tests = $(+link-static-tests)
@@ -88,8 +111,17 @@ index 68663d984e..2fa0884b4e 100644
  +link-printers-tests = $(+link-static-tests)
  endif  # build-shared
  endif  # +link
+@@ -903,7 +928,7 @@ endif
+ # umpteen zillion filenames along with it (we use `...' instead)
+ # but we don't want this echoing done when the user has said
+ # he doesn't want to see commands echoed by using -s.
+-ifneq	"$(findstring s,$(MAKEFLAGS))" ""	# if -s
++ifeq ($(silent-make),yes)			# if -s
+ +cmdecho	:= echo >/dev/null
+ else						# not -s
+ +cmdecho	:= echo
 diff --git a/Makerules b/Makerules
-index 596fa68376..7fbe85719a 100644
+index 596fa68376..e5916f29fa 100644
 --- a/Makerules
 +++ b/Makerules
 @@ -424,6 +424,12 @@ $(objpfx)%$o: $(objpfx)%.c $(before-compile); $$(compile-command.c)
@@ -105,6 +137,24 @@ index 596fa68376..7fbe85719a 100644
  endif
  
  # Generate .dT files as we compile.
+@@ -804,7 +810,7 @@ endif
+ # Maximize efficiency by minimizing the number of rules.
+ .SUFFIXES:	# Clear the suffix list.  We don't use suffix rules.
+ # Don't define any builtin rules.
+-MAKEFLAGS := $(MAKEFLAGS)r
++MAKEFLAGS := $(MAKEFLAGS) -r
+ 
+ # Generic rule for making directories.
+ %/:
+@@ -821,7 +827,7 @@ MAKEFLAGS := $(MAKEFLAGS)r
+ .PRECIOUS: $(foreach l,$(libtypes),$(patsubst %,$(common-objpfx)$l,c))
+ 
+ # Use the verbose option of ar and tar when not running silently.
+-ifeq	"$(findstring s,$(MAKEFLAGS))" ""	# if not -s
++ifeq ($(silent-make),no)			# if not -s
+ verbose := v
+ else	   					# -s
+ verbose	:=
 diff --git a/NEWS b/NEWS
 index 3c610744c9..b4811098c8 100644
 --- a/NEWS
@@ -6117,6 +6167,19 @@ index ff3a85c847..21a351686b 100644
  
  /* Activity types signaled through la_activity.  */
  enum
+diff --git a/elf/rtld-Rules b/elf/rtld-Rules
+index 10de81918c..a452536d39 100644
+--- a/elf/rtld-Rules
++++ b/elf/rtld-Rules
+@@ -52,7 +52,7 @@ $(objpfx)rtld-libc.a: $(foreach dir,$(rtld-subdirs),\
+ 	mv -f $@T $@
+ 
+ # Use the verbose option of ar and tar when not running silently.
+-ifeq	"$(findstring s,$(MAKEFLAGS))" ""	# if not -s
++ifeq ($(silent-make),no)			# if not -s
+ verbose := v
+ else						# -s
+ verbose	:=
 diff --git a/elf/rtld.c b/elf/rtld.c
 index d733359eaf..c59f0f17bd 100644
 --- a/elf/rtld.c
@@ -52775,6 +52838,59 @@ index 6b318d3f29..9006f22209 100644
 -
 -END (wcsrchr)
 +#include "../strrchr.S"
+diff --git a/time/mktime.c b/time/mktime.c
+index 8e78006eea..74d9bbaa5b 100644
+--- a/time/mktime.c
++++ b/time/mktime.c
+@@ -429,8 +429,13 @@ __mktime_internal (struct tm *tp,
+ 	 time with the right value, and use its UTC offset.
+ 
+ 	 Heuristic: probe the adjacent timestamps in both directions,
+-	 looking for the desired isdst.  This should work for all real
+-	 time zone histories in the tz database.  */
++	 looking for the desired isdst.  If none is found within a
++	 reasonable duration bound, assume a one-hour DST difference.
++	 This should work for all real time zone histories in the tz
++	 database.  */
++
++      /* +1 if we wanted standard time but got DST, -1 if the reverse.  */
++      int dst_difference = (isdst == 0) - (tm.tm_isdst == 0);
+ 
+       /* Distance between probes when looking for a DST boundary.  In
+ 	 tzdata2003a, the shortest period of DST is 601200 seconds
+@@ -441,12 +446,14 @@ __mktime_internal (struct tm *tp,
+ 	 periods when probing.  */
+       int stride = 601200;
+ 
+-      /* The longest period of DST in tzdata2003a is 536454000 seconds
+-	 (e.g., America/Jujuy starting 1946-10-01 01:00).  The longest
+-	 period of non-DST is much longer, but it makes no real sense
+-	 to search for more than a year of non-DST, so use the DST
+-	 max.  */
+-      int duration_max = 536454000;
++      /* In TZDB 2021e, the longest period of DST (or of non-DST), in
++	 which the DST (or adjacent DST) difference is not one hour,
++	 is 457243209 seconds: e.g., America/Cambridge_Bay with leap
++	 seconds, starting 1965-10-31 00:00 in a switch from
++	 double-daylight time (-05) to standard time (-07), and
++	 continuing to 1980-04-27 02:00 in a switch from standard time
++	 (-07) to daylight time (-06).  */
++      int duration_max = 457243209;
+ 
+       /* Search in both directions, so the maximum distance is half
+ 	 the duration; add the stride to avoid off-by-1 problems.  */
+@@ -483,6 +490,11 @@ __mktime_internal (struct tm *tp,
+ 	      }
+ 	  }
+ 
++      /* No unusual DST offset was found nearby.  Assume one-hour DST.  */
++      t += 60 * 60 * dst_difference;
++      if (mktime_min <= t && t <= mktime_max && convert_time (convert, t, &tm))
++	goto offset_found;
++
+       __set_errno (EOVERFLOW);
+       return -1;
+     }
 diff --git a/time/tzfile.c b/time/tzfile.c
 index 4377018a55..8668392ad3 100644
 --- a/time/tzfile.c
