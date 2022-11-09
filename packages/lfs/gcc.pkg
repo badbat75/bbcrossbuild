@@ -1,6 +1,6 @@
 # binutils
 PKG_URL="https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz"
-PKG_DEPS="lfs/gmp lfs/mpfr lfs/mpc lfs/isl lfs/zlib_1"
+PKG_DEPS="lfs/libgmp lfs/libmpfr lfs/libmpc lfs/libisl lfs/zlib_1"
 case ${GCC_VER} in
 	12.2.0)
 		PKG_SUFFIX=_12.2.0+d644dfe36d9

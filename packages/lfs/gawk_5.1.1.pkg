@@ -1,6 +1,6 @@
 # gawk_5.1.1
 PKG_URL="http://ftp.gnu.org/gnu/gawk/gawk-5.1.1.tar.xz"
-PKG_DEPS="lfs/readline_8.2 lfs/ncurses_6 lfs/gmp lfs/mpfr"
+PKG_DEPS="lfs/readline_8.2 lfs/ncurses_6 lfs/libgmp lfs/libmpfr"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS=""

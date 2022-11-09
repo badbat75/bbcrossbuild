@@ -1,7 +1,7 @@
 # gdb
 GDB_VER=${GDB_VER:-12.1}
 PKG_URL="http://ftp.gnu.org/gnu/gdb/gdb-${GDB_VER}.tar.xz"
-PKG_DEPS="lfs/gmp lfs/mpfr lfs/mpc"
+PKG_DEPS="lfs/libgmp lfs/libmpfr lfs/libmpc"
 case ${GDB_VER} in
 	12.1)
 		PKG_SUFFIX=_12.1+341f73897e2
