@@ -5,7 +5,6 @@ BUILD_LIBSTATIC=0
 ## Enable LTO both for kernel and applications
 LTOENABLE=thin
 KERNEL_LTOENABLE=thin
-GCC_LTOENABLE=1
 
 TOOLCHAIN=gnu
 

@@ -1,5 +1,6 @@
 BB_HOME=$(dirname $(realpath ${BASH_SOURCE}))
 NPROCS=$(nproc --ignore=1)
+LTOPROCS=$(( $(nproc) / 4 ))
 
 ulimit -n 2048
 umask 0022
@@ -93,7 +94,7 @@ NINJA_VER=${NINJA_VER:-1.11.1}
 MESON_VER=${MESON_VER:-0.63.3}
 export AUTOMAKE_VER
 ### Bootstrap libraries and headers versions
-KERNEL_VER=${KERNEL_VER:-6.0.3}
+KERNEL_VER=${KERNEL_VER:-6.0.7}
 GLIBC_VER=${GLIBC_VER:-2.36}
-LIBXCRYPT_VER=${LIBXCRYPT_VER:-4.4.28}
+LIBXCRYPT_VER=${LIBXCRYPT_VER:-4.4.30}
 

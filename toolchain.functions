@@ -76,8 +76,8 @@ function set_gnu_buildenv () {
 	AR_FOR_BUILD=$(which gcc-ar)
 	NM_FOR_BUILD=$(which gcc-nm)
 	RANLIB_FOR_BUILD=$(which gcc-ranlib)
-	CFLAGS_FOR_BUILD="-O3 -march=native -flto=${NPROCS}"
-	CXXFLAGS_FOR_BUILD="-O3 -march=native -flto=${NPROCS}"
+	CFLAGS_FOR_BUILD="-O3 -march=native -flto=${LTOPROCS}"
+	CXXFLAGS_FOR_BUILD="-O3 -march=native -flto=${LTOPROCS}"
 	LDFLAGS_FOR_BUILD="-fuse-ld=gold -fuse-linker-plugin${OPTLINK_FLAGS:+ ${OPTLINK_FLAGS}}"
 	LIBRARY_PATH_FOR_BUILD=$(gcc_toolchain_print_searchdirs build 5)
 	INCLUDE_PATH_FOR_BUILD=$(find {/,/usr/} -mindepth 1 -maxdepth 1 -name include -type d)
@@ -667,7 +667,7 @@ function setup_gcc () {
 		LTO_LINKERFLAGS=
 		if [ ${GCC_LTOENABLE:-0} -eq 1 ]
 		then
-			LTO_COMPFLAGS=" -flto=$(( $(nproc) / 4 ))"
+			LTO_COMPFLAGS=" -flto=${LTOPROCS}"
 			LTO_LINKERFLAGS=" -fuse-linker-plugin"
 		fi
 		### Create sccache_wrapper to work around an issue of not supporting correctly the
@@ -762,7 +762,7 @@ function setup_gcc () {
 		fi
 		run_cmd "mkdir -p ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${HARCH}/libgcc"
 		create_sccache_wrapper
-		run_cmd "pushd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}"
+		pushd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 		run_cmd "CC_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
 				CXX_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
 				AR_FOR_BUILD=\"${AR_FOR_BUILD}\" \\
@@ -801,6 +801,16 @@ function setup_gcc () {
 			trap ERR; \
 			return ${STATUS}' ERR
 
+		if [ ! -d ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
+		then
+			echo "Downloading... " | log_buffer info
+			gcc_download
+		fi
+		if [ ! -f ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/config.status ]
+		then
+			echo "Configuration... " | log_buffer info
+			gcc_configuration
+		fi
 		pushd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 		echo "Making compiler." | log_buffer info
 		run_cmd "make STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" all-host"
@@ -908,7 +918,7 @@ function setup_gcc () {
 				echo "Downloading... " | log_buffer info
 				gcc_download
 			fi
-			if [ ! -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ]
+			if [ ! -f ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/config.status ]
 			then
 				echo "Configuration... " | log_buffer info
 				GCC_LTOENABLE=0
@@ -1017,12 +1027,8 @@ function setup_gcc () {
 			GLIBC_TARGET=headers build --no_gcc_check lfs/glibc
 		fi
 		echo -n "${SPACES}"
-		echo -n "Downloading... "
-		gcc_download >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
-		echo -n "configuration... "
-		gcc_configuration >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
-		echo -n "building host binaries... "
-		gcc_make_host ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
+		echo -n "Building host binaries... "
+		gcc_make_host ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 		echo "done."
 	fi
 	if [ ${GLIBC_SYSROOT} == ${BIN_PATH} ]
@@ -1034,21 +1040,22 @@ function setup_gcc () {
 		echo -n "${SPACES}"
 		GLIBC_TARGET=bootstrap build lfs/glibc
 		echo -n "${SPACES}"
-		echo -n "building bootstrap target libgcc... "
+		echo -n "Building bootstrap target libgcc... "
 		GCC_BOOTSTRAP=1 GCC_TARGETS="libgcc" gcc_make_target_libs > ${LOG_PATH}/toolchain_bootstrap-target-libgcc-${GCC_VER}.log
 		echo "done."
 		### Build & install glibc
 		echo -n "${SPACES}"
 		WITH_LIBXCRYPT=1 build lfs/glibc
 		### Build & install libxcrypt
-		echo -n "${SPACES}${SPACES}"
+		echo -n "${SPACES}"
 		build --toolchain gnu lfs/libxcrypt
 	fi
 	if [ ! -f ${TOOLCHAIN_PATH}/bin/ldconfig ]
 	then
 		run_cmd "ln -s $(which true) ${TOOLCHAIN_PATH}/bin/ldconfig" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	fi
-	echo -n "building target libraries... "
+	echo -n "${SPACES}"
+	echo -n "Building target libraries... "
 	gcc_make_target_libs > ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log
 
 	if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ]
@@ -1063,7 +1070,6 @@ function setup_gcc () {
 	then
 		run_cmd "rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	fi
-
 	echo "done."
 
 	setup_ldd ${GLIBC_SYSROOT}

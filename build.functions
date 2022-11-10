@@ -327,7 +327,7 @@ function settcenv () {
 
 			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 				1|2|fat|thin)
-					OPTCOMP_FLAGS+=" -flto=${NPROCS}"
+					OPTCOMP_FLAGS+=" -flto=${LTOPROCS}"
 					OPTLINK_FLAGS+=" -fuse-linker-plugin"
 					;;
 			esac
