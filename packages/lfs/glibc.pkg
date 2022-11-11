@@ -18,6 +18,7 @@ case ${GLIBC_VER} in
 		;;
 esac
 PATCHES+=" http://www.linuxfromscratch.org/patches/lfs/development/glibc-${GLIBC_VER}-fhs-1.patch"
+PKG_SRCDIR=glibc${PKG_SUFFIX}
 
 PKG_OVERRIDELTO=0
 PKG_TWOSTEPSBUILD=0
@@ -36,21 +37,28 @@ PKG_OVERRIDELD=bfd
 
 case ${GLIBC_TARGET} in
 	headers)
-		CONF_ENV="CC="'${CC_FOR_BUILD}'" CFLAGS="'${CFLAGS_FOR_BUILD}' unset CXX CXX FLAGS CPPFLAGS
 		PKG_SUFFIX="-headers${PKG_SUFFIX}"
-		PKG_MAKEVARS="install-bootstrap-headers=yes"
-		INST_CMD="install-headers"
-		PKG_POSTBUILD="if [ ! -f \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h ]
+		BUILD_PROCESS=downloadonly
+		#STD_CONF_FLAGS=0
+		#CONF_FLAGS="--build=${BARCH} --host=${HARCH} --target=${HARCH} --prefix=${BUILD_PREFIX} --includedir=${BUILD_INCLUDEDIR}"
+		#CONF_ENV="CC="'${CC_FOR_BUILD}'" CFLAGS="'${CFLAGS_FOR_BUILD}' unset CXX CXX FLAGS CPPFLAGS
+		#PKG_MAKEVARS="install-bootstrap-headers=yes"
+		#INST_CMD="install-headers"
+		PKG_PREBUILD="mkdir -pv \${PKG_PKGPATH}${BUILD_PREFIX}
+			cp -Rv include \${PKG_PKGPATH}${BUILD_INCLUDEDIR}"
+		PKG_POSTBUILD+="if [ ! -f \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h ]
 		then
 			touch \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h
 		fi;"
 	;;
 	bootstrap)
 		PKG_SUFFIX="-crts${PKG_SUFFIX}"
-		INST_CMD="csu/subdir_lib"
+		PKG_MAKEVARS="install-bootstrap-headers=yes"
+		PKG_MAKETARGETS="csu/subdir_lib"
+		INST_CMD="install-headers"
 		PKG_POSTBUILD+="mkdir -pv \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 			install csu/crt1.o csu/crti.o csu/crtn.o \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
-			\${CC} -nostdlib -nostartfiles -shared -x c /dev/null -o \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libc.so"
+			\${CC} \${CFLAGS} \${LDFLAGS} -nostdlib -nostartfiles -shared -x c /dev/null -o \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libc.so"
 	;;
 	lib)
 		PKG_SUFFIX="-lib${PKG_SUFFIX}"

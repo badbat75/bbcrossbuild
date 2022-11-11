@@ -53,11 +53,13 @@ function setbuildenv () {
 	COMMON_PKG_CONFIG_LIBDIR="${BIN_PATH}/lib${BUILD_LIBSUFFIX}/pkgconfig"
 	COMMON_PKG_CONFIG_LIBDIR+=":${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig:${BIN_PATH}${BUILD_PREFIX}/share/pkgconfig"
 	COMMON_PKG_CONFIG_SYSROOT="${BIN_PATH}"
-	local SYSROOT_GCCVER=
+	unset SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH
 	# Construct build tools flags
 	# Build Include search paths
 	if [ -d ${DISTOS_PATH}${BUILD_INCLUDEDIR} ]
 	then
+		SYSROOT_GCCVER="$(find ${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/ -mindepth 1 -maxdepth 1 -type d -printf '%P\n' | sort -hr | head -n1)"
+		SYSROOT="${DISTOS_PATH}"
 		COMMON_CFLAGS+=" ${SYSINCLUDE_OPT}${DISTOS_PATH}${BUILD_INCLUDEDIR} ${STD_CFLAGS} ${SYSINCLUDE_OPT}${DISTOS_PATH}${BUILD_INCLUDEDIR}${BUILD_LIBSUFFIX}"
 		COMMON_CXXFLAGS+=" ${SYSINCLUDE_OPT}${DISTOS_PATH}${BUILD_INCLUDEDIR} ${STD_CXXFLAGS} ${SYSINCLUDE_OPT}${DISTOS_PATH}${BUILD_INCLUDEDIR}${BUILD_LIBSUFFIX}"
 		COMMON_FCFLAGS+=" ${SYSINCLUDE_OPT}${DISTOS_PATH}${BUILD_INCLUDEDIR} ${STD_CXXFLAGS} ${SYSINCLUDE_OPT}${DISTOS_PATH}${BUILD_INCLUDEDIR}${BUILD_LIBSUFFIX}"
@@ -67,9 +69,8 @@ function setbuildenv () {
 		COMMON_PKG_CONFIG_LIBDIR+=":${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig:${DISTOS_PATH}/usr/share/pkgconfig"
 		COMMON_PKG_CONFIG_SYSROOT="${DISTOS_PATH}"
 		# Try to find if gcc libraries are installed and not yet defined in binary dir, if so set search path on that path
-		if [ "${GLIBC_SYSROOT}" != "${BIN_PATH}" ]
+		if [ "$(gcc_sysroot)" == "${DISTOS_PATH}" ]
 		then
-			local SYSROOT_GCCVER="$(find ${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/ -mindepth 1 -maxdepth 1 -type d -printf '%P\n' | sort -hr | head -n1)"
 			if [ -n "${SYSROOT_GCCVER}" ]
 			then
 				COMMON_CXXFLAGS+=" -I${DISTOS_PATH}${BUILD_INCLUDEDIR}/c++/${SYSROOT_GCCVER} -I${DISTOS_PATH}${BUILD_INCLUDEDIR}/${HARCH}/c++/${SYSROOT_GCCVER}"
@@ -79,59 +80,66 @@ function setbuildenv () {
 				#echo "PKG_TOOLCHAIN: ${PKG_TOOLCHAIN}"
 				case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
 					gnu)
-						COMMON_CFLAGS+="$(gcc_toolchain_binaries_flags) -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
-						COMMON_CXXFLAGS+="$(gcc_toolchain_binaries_flags) -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
-						COMMON_LDFLAGS+="$(gcc_toolchain_binaries_flags) -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
+						COMMON_CFLAGS+=" -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
+						COMMON_CXXFLAGS+=" -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
+						COMMON_LDFLAGS+=" -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
 						;;
 				esac			
 			fi
+		else
+		SYSROOT_GCCVER=$(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -dumpversion 2>/dev/null)
 		fi
-		SYSROOT="${DISTOS_PATH}"
 	else
-		case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
-			gnu)
-				### If ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++ is not present use the one in BIN_PATH, this is a workaround
-				if [ -f ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc ]
-				then
-					local SYSROOT_GCCVER=$(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -dumpversion)
-					if [ ! -d ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++ ]
-					then
-						if [ ${MAKEVERBOSE:-0} -eq 1 ]
-						then
-							echo -n "Directory ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++ do not exist. Applying workaround, but better to reinstall toolchain!!!"
-						fi
-						if [ -d ${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++ ]
-						then
-							COMMON_CXXFLAGS+=" -I${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++"
-							COMMON_CPPFLAGS+=" -I${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++"
-						fi
-						if [ -d ${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++/${HARCH} ]
-						then
-							COMMON_CXXFLAGS+=" -I${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++/${HARCH}"
-							COMMON_CPPFLAGS+=" -I${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++/${HARCH}"
-						fi
-					fi
-				fi
-				if ( [ -f ${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crtn.o ] && \
-						[ -f ${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crti.o ] && \
-						[ -f ${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}/crt1.o ] )
-				then
-					COMMON_CFLAGS+=" -B${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}"
-					COMMON_CXXFLAGS+=" -B${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}"
-					COMMON_LDFLAGS+=" -B${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}"
-				fi
-				### If ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++ is not present then it uses
-				### the one in BIN_PATH, this is a workaround
-				if [ ! -f ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/libgcc_s.so ] && ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc --version > /dev/null 2>&1
-				then
-					COMMON_CFLAGS+="$(gcc_toolchain_binaries_flags)"
-					COMMON_CXXFLAGS+="$(gcc_toolchain_binaries_flags)"
-					COMMON_LDFLAGS+="$(gcc_toolchain_binaries_flags)$(gcc_toolchain_libraries_linkerflags)"
-				fi
-				;;
-		esac			
 		SYSROOT="${BIN_PATH}"
+		if ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -dumpversion >/dev/null 2>&1
+		then
+			SYSROOT_GCCVER=$(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -dumpversion 2>/dev/null)
+			if [ -d ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${SYSROOT_GCCVER} ]
+			then
+				QEMU_LD_LIBRARY_PATH="${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}:"
+			fi
+		fi
+		#case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
+		#	gnu)
+		#		### If ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++ is not present use the one in BIN_PATH, this is a workaround
+		#		if [ -f ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc ]
+		#		then
+		#			if [ ! -d ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++ ]
+		#			then
+		#				if [ ${MAKEVERBOSE:-0} -eq 1 ]
+		#				then
+		#					echo -n "Directory ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++ do not exist. Applying workaround, but better to reinstall toolchain!!!"
+		#				fi
+		#				if [ -d ${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++ ]
+		#				then
+		#					COMMON_CXXFLAGS+=" -I${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++"
+		#					COMMON_CPPFLAGS+=" -I${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++"
+		#				fi
+		#				if [ -d ${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++/${HARCH} ]
+		#				then
+		#					COMMON_CXXFLAGS+=" -I${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++/${HARCH}"
+		#					COMMON_CPPFLAGS+=" -I${BIN_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++/${HARCH}"
+		#				fi
+		#			fi
+		#		fi
+		#		#if [ "$(gcc_sysroot)" == "${BIN_PATH}" ]
+		#		#then
+		#		#	COMMON_CFLAGS+=" -B${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}"
+		#		#	COMMON_CXXFLAGS+=" -B${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}"
+		#		#	COMMON_LDFLAGS+=" -B${BIN_PATH}${BUILD_PREFIX}/lib${BUILD_LIBSUFFIX}"
+		#		#fi
+		#		#### If ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/include/c++ is not present then it uses
+		#		#### the one in BIN_PATH, this is a workaround
+		#		#if [ ! -f ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}/libgcc_s.so ] && ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc --version > /dev/null 2>&1
+		#		#then
+		#		#	COMMON_CFLAGS+="$(gcc_toolchain_binaries_flags)"
+		#		#	COMMON_CXXFLAGS+="$(gcc_toolchain_binaries_flags)"
+		#		#	COMMON_LDFLAGS+="$(gcc_toolchain_binaries_flags)$(gcc_toolchain_libraries_linkerflags)"
+		#		#fi
+		#		;;
+		#esac			
 	fi
+	QEMU_LD_LIBRARY_PATH+=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 	case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
 		gnu)
 		;;
@@ -507,7 +515,7 @@ function create_environment_source () {
 		export PKG_CONFIG_SYSROOT_DIR='${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}'
 		export PKG_CONFIG_ALLOW_CROSS='${PKG_CONFIG_ALLOW_CROSS}'
 
-		export LD_LIBRARY_PATH='${LD_LIBRARY_PATH}${PKG_LD_LIBRARY_PATH:+:${PKG_LD_LIBRARY_PATH}}'
+		export LD_LIBRARY_PATH='${LD_LIBRARY_PATH}${QEMU_LD_LIBRARY_PATH:+:${QEMU_LD_LIBRARY_PATH}}${PKG_LD_LIBRARY_PATH:+:${PKG_LD_LIBRARY_PATH}}'
 		export PATH='${PATH}'
 
 		export CARGO_HOME='${CARGO_HOME}'

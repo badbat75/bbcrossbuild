@@ -111,8 +111,11 @@ function setup_rust () {
 		run_cmd "/tmp/rustup-init -v -y --no-modify-path" >> ${GLOBAL_LOG_PATH}/toolchain_rust.log
 		run_cmd "rm -f /tmp/rustup-init" >> ${GLOBAL_LOG_PATH}/toolchain_rust.log
 	else
-		echo -n "already there. Check for updates... "
-		run_cmd "rustup -v update" >> ${GLOBAL_LOG_PATH}/toolchain_rust.log
+		if [ ${RUST_UPDATE:-0} -eq 1 ]
+		then
+			echo -n "already there. Check for updates... "
+			run_cmd "rustup -v update" >> ${GLOBAL_LOG_PATH}/toolchain_rust.log
+		fi
 	fi
 	if [ ! -x ${GLOBAL_TOOLCHAIN_PATH}/bin/cargo-install-update ]
 	then
@@ -123,12 +126,15 @@ function setup_rust () {
 			run_cmd "cargo install cargo-update" >> ${GLOBAL_LOG_PATH}/toolchain_rust.log
 		)
 	fi
-	echo -n "upgrading packages... "
-		( set -e
-			export CARGO_PROFILE_RELEASE_OPT_LEVEL=3
-			export CARGO_PROFILE_RELEASE_LTO=thin
-			run_cmd "cargo -v install-update -a" >> ${GLOBAL_LOG_PATH}/toolchain_rust.log
-		)
+	if [ ${RUST_UPDATE:-0} -eq 1 ]
+	then
+		echo -n "upgrading packages... "
+			( set -e
+				export CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+				export CARGO_PROFILE_RELEASE_LTO=thin
+				run_cmd "cargo -v install-update -a" >> ${GLOBAL_LOG_PATH}/toolchain_rust.log
+			)
+	fi
 	echo -n "adding ${CARGO_TARGET} libraries... "
 	run_cmd "rustup -v target add ${CARGO_TARGET}" >> ${GLOBAL_LOG_PATH}/toolchain_rust.log
 	echo "done."
@@ -590,93 +596,15 @@ function setup_bison () {
 }
 
 function setup_gcc () {
-
-	function gcc_buildenv () {
-		function create_sccache_wrapper () {
-			if [[ ${CCWRAPPER} == *sccache ]] && [ ! -f ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper ]
-			then
-				cat <<-EOF > ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper
-					#!/bin/sh
-
-					set -e
-
-					dir=\$(dirname \$(realpath \$1))
-					cc1=\${dir}/cc1
-
-					if [ -e "\${cc1}"  ]; then
-						export PATH=\${dir}:\${PATH}
-						echo "${CCWRAPPER} \$@" >> \$dir/sccache_wrapper.log
-						exec ${CCWRAPPER} "\$@"
-					else
-						echo "\$@" >> \$dir/sccache_wrapper.log
-						exec "\$@"
-					fi
-				EOF
-				run_cmd "chmod +x ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper"
-			fi
-		}
-		local MULTI_ARCH=${MULTIARCH:-1}
-		BUILD_PREFIX="${BUILD_PREFIX:-/usr}"
-		BUILD_LIBDIR="${BUILD_LIBDIR:-${BUILD_PREFIX}/lib}"
-		if [ ${MULTI_ARCH} -eq 1 ] && [ -z "${HARCH_LIB}" ]
-		then
-			BUILD_LIBSUFFIX="/${HARCH}"
-		else
-			BUILD_LIBSUFFIX="${HARCH_LIB}"
-		fi
-
-		if [ ${MAKEVERBOSE:-0} -eq 0 ]
-		then
-			local SILENTCONFIG="--enable-silent-rules"
-			build_configargs="${SILENTCONFIG}"
-			host_configargs="${SILENTCONFIG}"
-			target_configargs="${SILENTCONFIG}"
-		fi
-
+	function gcc_sysroot () {
 		# Check where glibc is installed
 		if [ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/crtn.o ] && \
 			[ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/crti.o ] && \
 			[ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/crt1.o ]
 		then
-			GLIBC_SYSROOT=${DISTOS_PATH}
+			echo "${DISTOS_PATH}"
 		else
-			GLIBC_SYSROOT=${BIN_PATH}
-		fi
-
-		GCC_CONFIG="--with-sysroot=${GLIBC_SYSROOT} --enable-languages=${GCC_LANGUAGES:-c,c++} \
-			--enable-checking=release --enable-multiarch --disable-multilib --enable-version-specific-runtime-libs \
-			--enable-shared --enable-threads=posix --enable-gnu-indirect-function --enable-initfini-array \
-			--enable-gnu-unique-object --enable-clocale=gnu --enable-linker-build-id --enable-lto --enable-plugin \
-			--enable-__cxa_atexit --with-default-libstdcxx-abi=new --enable-gcov \
-			--enable-libmudflap --enable-libgomp --enable-libssp --enable-libsanitizer \
-			--enable-install-libiberty \
-			--with-system-zlib --with-glibc-version=2.11 --with-gcc-major-version-only \
-			--disable-nls --disable-libitm --disable-libmpx --disable-option-checking \
-			${SILENTCONFIG}"
-		### Workaround for latest patches (--disable-werror)
-		BINUTILS_CONFIG="--disable-werror --enable-gold --enable-64-bit-bfd --enable-plugins --enable-install-libbfd"
-
-		if [[ "${GCC_LANGUAGES}" =~ "fortran" ]]
-		then
-			GCC_CONFIG+=" --enable-libquadmath --enable-libquadmath-support"
-		fi
-
-		COMPFLAGS="${GNU_EXTRACOMPFLAGS} -Wno-maybe-uninitialized -Wno-stringop-overflow -Wno-stack-usage -Wno-alloc-size-larger-than"
-		LINKERFLAGS="${GNU_EXTRALDFLAGS}"
-		LTO_COMPFLAGS=
-		LTO_LINKERFLAGS=
-		if [ ${GCC_LTOENABLE:-0} -eq 1 ]
-		then
-			LTO_COMPFLAGS=" -flto=${LTOPROCS}"
-			LTO_LINKERFLAGS=" -fuse-linker-plugin"
-		fi
-		### Create sccache_wrapper to work around an issue of not supporting correctly the
-		### -B parameter. It is not able to find the local cc1 executable running xgcc
-		if [[ ${CCWRAPPER} == *sccache ]] 
-		then
-			GCC_CCWRAPPER="${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper"
-		else
-			GCC_CCWRAPPER="${CCWRAPPER}"
+			echo "${BIN_PATH}"
 		fi
 	}
 
@@ -742,6 +670,54 @@ function setup_gcc () {
 		trap ERR
 	}
 
+	function gcc_buildenv () {
+		local MULTI_ARCH=${MULTIARCH:-1}
+		BUILD_PREFIX="${BUILD_PREFIX:-/usr}"
+		BUILD_LIBDIR="${BUILD_LIBDIR:-${BUILD_PREFIX}/lib}"
+		if [ ${MULTI_ARCH} -eq 1 ] && [ -z "${HARCH_LIB}" ]
+		then
+			BUILD_LIBSUFFIX="/${HARCH}"
+		else
+			BUILD_LIBSUFFIX="${HARCH_LIB}"
+		fi
+
+		if [ ${MAKEVERBOSE:-0} -eq 0 ]
+		then
+			local SILENTCONFIG="--enable-silent-rules"
+			build_configargs="${SILENTCONFIG}"
+			host_configargs="${SILENTCONFIG}"
+			target_configargs="${SILENTCONFIG}"
+		fi
+
+		GCC_CONFIG="--with-sysroot=$(gcc_sysroot) --enable-languages=${GCC_LANGUAGES:-c,c++} \
+			--enable-checking=release --enable-multiarch --disable-multilib --enable-version-specific-runtime-libs \
+			--enable-shared --enable-threads=posix --enable-gnu-indirect-function --enable-initfini-array \
+			--enable-gnu-unique-object --enable-clocale=gnu --enable-linker-build-id --enable-lto --enable-plugin \
+			--enable-__cxa_atexit --with-default-libstdcxx-abi=new --enable-gcov \
+			--enable-libmudflap --enable-libgomp --enable-libssp --enable-libsanitizer \
+			--enable-install-libiberty \
+			--with-system-zlib --with-glibc-version=2.11 --with-gcc-major-version-only \
+			--disable-nls --disable-libitm --disable-libmpx --disable-option-checking \
+			${SILENTCONFIG}"
+		### Workaround for latest patches (--disable-werror)
+		BINUTILS_CONFIG="--disable-werror --enable-gold --enable-64-bit-bfd --enable-plugins --enable-install-libbfd"
+
+		if [[ "${GCC_LANGUAGES}" =~ "fortran" ]]
+		then
+			GCC_CONFIG+=" --enable-libquadmath --enable-libquadmath-support"
+		fi
+
+		COMPFLAGS="${GNU_EXTRACOMPFLAGS} -Wno-maybe-uninitialized -Wno-stringop-overflow -Wno-stack-usage -Wno-alloc-size-larger-than"
+		LINKERFLAGS="${GNU_EXTRALDFLAGS}"
+		LTO_COMPFLAGS=
+		LTO_LINKERFLAGS=
+		if [ ${GCC_LTOENABLE:-0} -eq 1 ]
+		then
+			LTO_COMPFLAGS=" -flto=${LTOPROCS}"
+			LTO_LINKERFLAGS=" -fuse-linker-plugin"
+		fi
+	}
+	
 	function gcc_configuration () {
 		trap 'STATUS=${?}; \
 			trap ERR; \
@@ -761,8 +737,8 @@ function setup_gcc () {
 			rm -rf ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 		fi
 		run_cmd "mkdir -p ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${HARCH}/libgcc"
-		create_sccache_wrapper
 		pushd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
+		gcc_buildenv
 		run_cmd "CC_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
 				CXX_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
 				AR_FOR_BUILD=\"${AR_FOR_BUILD}\" \\
@@ -796,6 +772,35 @@ function setup_gcc () {
 		trap - ERR
 	}
 
+	function create_sccache_wrapper () {
+		### Create sccache_wrapper to work around an issue of not supporting correctly the
+		### -B parameter. It is not able to find the local cc1 executable running xgcc
+		if [[ ${CCWRAPPER} == *sccache ]] && [ ! -f ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper ]
+		then
+			cat <<-EOF > ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper
+				#!/bin/sh
+
+				set -e
+
+				dir=\$(dirname \$(realpath \$1))
+				cc1=\${dir}/cc1
+
+				if [ -e "\${cc1}"  ]; then
+					export PATH=\${dir}:\${PATH}
+					echo "${CCWRAPPER} \$@" >> \$dir/sccache_wrapper.log
+					exec ${CCWRAPPER} "\$@"
+				else
+					echo "\$@" >> \$dir/sccache_wrapper.log
+					exec "\$@"
+				fi
+			EOF
+			run_cmd "chmod +x ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper"
+			GCC_CCWRAPPER="${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper"
+		else
+			GCC_CCWRAPPER="${CCWRAPPER}"
+		fi
+	}
+	
 	function gcc_make_host () {
 		trap 'STATUS=${?}; \
 			trap ERR; \
@@ -812,6 +817,7 @@ function setup_gcc () {
 			gcc_configuration
 		fi
 		pushd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
+		create_sccache_wrapper
 		echo "Making compiler." | log_buffer info
 		run_cmd "make STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" all-host"
 		run_cmd "make STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" install-strip-host"
@@ -823,13 +829,37 @@ function setup_gcc () {
 		echo "Install aclocal files" | log_buffer info
 		run_cmd "mkdir -pv ${TOOLCHAIN_PATH}/share/aclocal"
 
-		if [ ! -d ${GLIBC_SYSROOT}${BUILD_PREFIX}/lib ] && [[ "${BUILD_LIBSUFFIX}" == 64* ]]
+		if [ ! -d $(gcc_sysroot)${BUILD_PREFIX}/lib ] && [[ "${BUILD_LIBSUFFIX}" == 64* ]]
 		then
-			echo "Workaround for ${GLIBC_SYSROOT}${BUILD_PREFIX}/lib/../lib64" | log_buffer info
-			run_cmd "mkdir -pv \"${GLIBC_SYSROOT}${BUILD_PREFIX}/lib\""
+			echo "Workaround for $(gcc_sysroot)${BUILD_PREFIX}/lib/../lib64" | log_buffer info
+			run_cmd "mkdir -pv \"$(gcc_sysroot)${BUILD_PREFIX}/lib\""
 		fi
 		popd
 		trap ERR
+	}
+
+	function setup_ldd () {
+		local LDD_PATH=${1:-${BIN_PATH}}
+		if [ -f "${LDD_PATH}/usr/bin/ldd" ] || [ -f "${LDD_PATH}/bin/ldd" ]
+		then
+			eval local $(grep "^RTLDLIST=" ${LDD_PATH}/usr/bin/ldd)
+			for ldso in ${RTLDLIST}
+			do
+				if [ -f ${LDD_PATH}${ldso} ]
+				then
+					local RTD=${RTD:+ }${LDD_PATH}${ldso}
+				fi
+			done
+			if [ -n "${RTD}" ]
+			then
+				if [ ! -d ${TOOLCHAIN_PATH}/bin ]
+				then
+					mkdir ${TOOLCHAIN_PATH}/bin
+				fi
+				sed "/^RTLDLIST=/ s#\".*\"#\"${RTD}\"#" ${LDD_PATH}/usr/bin/ldd > ${TOOLCHAIN_PATH}/bin/ldd
+				chmod +x ${TOOLCHAIN_PATH}/bin/ldd
+			fi
+		fi
 	}
 
 	function gcc_make_target_libs () {
@@ -922,10 +952,10 @@ function setup_gcc () {
 			then
 				echo "Configuration... " | log_buffer info
 				GCC_LTOENABLE=0
-				gcc_buildenv
 				gcc_configuration
 			fi
 			pushd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
+			create_sccache_wrapper
 			for object in $( echo ${OBJECTS} | tr ',' ' ' )
 			do
 				echo "Making target ${object} libraries." | log_buffer info
@@ -959,41 +989,17 @@ function setup_gcc () {
 					fi
 					run_cmd "rm -rf ${PACKAGES_PATH}/${PKG_NAME}"
 				fi
+				if [ ${GCC_BOOTSTRAP} -eq 1 ]
+				then
+					run_cmd "rm -rf ${HARCH}/${PKG_NAME}"
+				fi
+				done
 				run_cmd "touch ${STATUS_PATH}/${PKG_NAME}"
-			done
 			relink_la_libraries "${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER}"
-			if [ ${GCC_BOOTSTRAP} -eq 1 ]
-			then
-				run_cmd "rm -rf ${HARCH}/libgcc"
-			fi
 			popd
 		fi
 			
 		trap ERR
-	}
-
-	function setup_ldd () {
-		local LDD_PATH=${1:-${BIN_PATH}}
-		if [ -f "${LDD_PATH}/usr/bin/ldd" ] || [ -f "${LDD_PATH}/bin/ldd" ]
-		then
-			eval local $(grep "^RTLDLIST=" ${LDD_PATH}/usr/bin/ldd)
-			for ldso in ${RTLDLIST}
-			do
-				if [ -f ${LDD_PATH}${ldso} ]
-				then
-					local RTD=${RTD:+ }${LDD_PATH}${ldso}
-				fi
-			done
-			if [ -n "${RTD}" ]
-			then
-				if [ ! -d ${TOOLCHAIN_PATH}/bin ]
-				then
-					mkdir ${TOOLCHAIN_PATH}/bin
-				fi
-				sed "/^RTLDLIST=/ s#\".*\"#\"${RTD}\"#" ${LDD_PATH}/usr/bin/ldd > ${TOOLCHAIN_PATH}/bin/ldd
-				chmod +x ${TOOLCHAIN_PATH}/bin/ldd
-			fi
-		fi
 	}
 
 	trap 'local STATUS=${?}; \
@@ -1014,8 +1020,7 @@ function setup_gcc () {
 	local GCC_IS_MAIN=${_param_main_gcc:-0}
 
 	local SPACES="   "
-	gcc_buildenv
-	if [ ${GLIBC_SYSROOT} == ${BIN_PATH} ]
+	if [ $(gcc_sysroot) == ${BIN_PATH} ]
 	then
 		### Install kernel headers
 		echo -n "${SPACES}"
@@ -1029,20 +1034,18 @@ function setup_gcc () {
 		echo -n "${SPACES}"
 		echo -n "Building host binaries... "
 		gcc_make_host ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
-		echo "done."
+		echo -e "done.\n"
 	fi
-	if [ ${GLIBC_SYSROOT} == ${BIN_PATH} ]
+	if [ $(gcc_sysroot) == ${BIN_PATH} ]
 	then
 		### Bootstrapping sysroot
-		echo -n "${SPACES}"
-		echo "Bootstrapping foundation libraries in ${BIN_PATH}... "
+		echo "${SPACES}Bootstrapping foundation libraries in ${BIN_PATH}... "
 		### Install glibc headers and raw libraries
 		echo -n "${SPACES}"
 		GLIBC_TARGET=bootstrap build lfs/glibc
-		echo -n "${SPACES}"
-		echo -n "Building bootstrap target libgcc... "
-		GCC_BOOTSTRAP=1 GCC_TARGETS="libgcc" gcc_make_target_libs > ${LOG_PATH}/toolchain_bootstrap-target-libgcc-${GCC_VER}.log
-		echo "done."
+		echo -n "${SPACES}Building target libgcc... "
+		GCC_TARGETS="libgcc" gcc_make_target_libs > ${LOG_PATH}/toolchain_bootstrap-target-libgcc-${GCC_VER}.log
+		echo -e "done.\n"
 		### Build & install glibc lib
 		echo -n "${SPACES}"
 		GLIBC_TARGET=lib build lfs/glibc
@@ -1054,11 +1057,11 @@ function setup_gcc () {
 	then
 		run_cmd "ln -s $(which true) ${TOOLCHAIN_PATH}/bin/ldconfig" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	fi
-	echo -n "${SPACES}"
-	echo -n "Building target libraries... "
+	echo -n "${SPACES}Building target libraries... "
 	gcc_make_target_libs > ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log
+	echo -e "done.\n"
 
-	if [ ${GLIBC_SYSROOT} == ${BIN_PATH} ]
+	if [ $(gcc_sysroot) == ${BIN_PATH} ]
 	then
 		### Build & install glibc
 		echo -n "${SPACES}"
@@ -1076,9 +1079,9 @@ function setup_gcc () {
 	then
 		run_cmd "rm -rf ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	fi
-	echo "done."
+	echo -e "done.\n"
 
-	setup_ldd ${GLIBC_SYSROOT}
+	setup_ldd $(gcc_sysroot)
 
 	trap - ERR
 }
