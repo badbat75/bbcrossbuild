@@ -54,7 +54,7 @@ build lfs/diffutils_3.8
 build lfs/gawk_5
 build lfs/findutils_4.9.0
 build lfs/groff_1.22.4
-build lfs/less_581.2
+build lfs/less
 build lfs/gzip_1.12
 build lfs/iproute2_5.19.0
 build lfs/kbd_2.5.1
