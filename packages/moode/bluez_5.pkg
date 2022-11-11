@@ -2,7 +2,7 @@
 PKG_SUFFIX=.65
 PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-5${PKG_SUFFIX}.tar.xz"
 PKG_DEPS="raspbian/ell_0.53-1"
-#PKG_DEPS+=" lfs/elfutils_0.187"
+#PKG_DEPS+=" lfs/elfutils_0"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--with-dbusconfdir=${BUILD_SYSCONFDIR} \
 	--with-dbussystembusdir=${BUILD_PREFIX}/share/dbus-1/system-services \

@@ -1,6 +1,6 @@
 # iproute2_5.19.0
 PKG_URL="https://www.kernel.org/pub/linux/utils/net/iproute2/iproute2-5.19.0.tar.xz"
-PKG_DEPS="lfs/elfutils_0.187 lfs/libmnl_1.0.5"
+PKG_DEPS="lfs/elfutils_0 lfs/libmnl_1.0.5"
 PKG_CFLAGS="-fpic -fPIC -D_FILE_OFFSET_BITS=64"
 #PKG_LDFLAGS=
 BUILD_PROCESS=simplemake

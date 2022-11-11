@@ -993,12 +993,11 @@ function setup_gcc () {
 				then
 					run_cmd "rm -rf ${HARCH}/${PKG_NAME}"
 				fi
-				done
 				run_cmd "touch ${STATUS_PATH}/${PKG_NAME}"
+				done
 			relink_la_libraries "${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER}"
 			popd
-		fi
-			
+		fi		
 		trap ERR
 	}
 

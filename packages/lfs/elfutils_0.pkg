@@ -1,5 +1,6 @@
-# elfutils_0.187
-PKG_URL="https://sourceware.org/ftp/elfutils/0.187/elfutils-0.187.tar.bz2"
+# elfutils_0
+PKG_SUFFIX=.188
+PKG_URL="https://sourceware.org/ftp/elfutils/0${PKG_SUFFIX}/elfutils-0${PKG_SUFFIX}.tar.bz2"
 PKG_DEPS="lfs/zlib_1 lfs/gzip_1.12 lfs/bzip2_1.0.8 lfs/zstd_1.5.2"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1

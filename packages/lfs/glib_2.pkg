@@ -1,6 +1,6 @@
-# glib_2.74
-PKG_SUFFIX=.1
-PKG_URL="https://download.gnome.org/sources/glib/2.74/glib-2.74${PKG_SUFFIX}.tar.xz"
+# glib_2
+PKG_SUFFIX=.75
+PKG_URL="https://download.gnome.org/sources/glib/2${PKG_SUFFIX}/glib-2${PKG_SUFFIX}.tar.xz"
 PKG_DEPS="lfs/libxslt_1.1.36 lfs/pcre2_10.40 lfs/D-Bus-minimal_1.14"
 #PKG_DEPS+" lfs/gobject-introspection"
 BUILD_PROCESS=mesonninja

@@ -33,7 +33,7 @@ build lfs/bc_1.0.7
 build lfs/attr_2.4.48
 build lfs/acl_2.2.53
 build lfs/libcap_2.47
-build lfs/shadow_4.12.3
+build lfs/shadow_4
 build lfs/sed_4.8
 build lfs/psmisc_23.5
 build lfs/grep_3.6
@@ -46,14 +46,14 @@ build perl/XML::Parser_2.46
 build lfs/perl_5
 build lfs/intltool_0.51.0
 build lfs/kmod_30
-build lfs/elfutils_0.187
+build lfs/elfutils_0
 build lfs/libffi_3.3
 build lfs/openssl_3
 build lfs/python3
 #setup_python
 build lfs/coreutils_9.1
 build lfs/diffutils_3.8
-build lfs/gawk_5.1.1
+build lfs/gawk_5
 build lfs/findutils_4.9.0
 build lfs/groff_1.22.4
 build lfs/less_581.2
@@ -69,7 +69,7 @@ build lfs/D-Bus_1.14
 build lfs/procps-ng_4
 build lfs/util-linux_2.38.1
 build lfs/e2fsprogs_1.46
-build lfs/btrfs-progs_5.19
+build lfs/btrfs-progs
 build lfs/dosfstools_4.2
 ### Security
 build lfs/sudo_1.9

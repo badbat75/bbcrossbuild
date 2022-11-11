@@ -1,5 +1,6 @@
-# shadow_4.12.3
-PKG_URL="https://github.com/shadow-maint/shadow/releases/download/4.12.3/shadow-4.12.3.tar.xz"
+# shadow_4
+PKG_SUFFIX=.13
+PKG_URL="https://github.com/shadow-maint/shadow/releases/download/4${PKG_SUFFIX}/shadow-4${PKG_SUFFIX}.tar.xz"
 #PKG_DEPS="lfs/cracklib_2.9.7"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
