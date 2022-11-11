@@ -11,6 +11,7 @@ BUILD_LIBSTATIC=0
 
 build lfs/create-base-fs_1.0
 
+KERNEL_VER=5.15.74
 setup_full_toolchain
 build microsoft/wsl-kernel_5.15
 
