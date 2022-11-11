@@ -754,7 +754,7 @@ function build () {(
 		#	run_cmd "${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS}"
 		#fi
 		run_cmd "./runconfig.sh"
-		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
+		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ -n "${PKG_MAKETARGETS}" ]
 		then
 			for target in ${PKG_MAKETARGETS:-all}
 			do

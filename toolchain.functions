@@ -1015,17 +1015,17 @@ function setup_gcc () {
 
 	local SPACES="   "
 	gcc_buildenv
+	if [ ${GLIBC_SYSROOT} == ${BIN_PATH} ]
+	then
+		### Install kernel headers
+		echo -n "${SPACES}"
+		KERNEL_HDRS_ONLY=1 build --no_gcc_check ${BS_KERNEL:-lfs/kernel}
+		### Install glibc headers
+		echo -n "${SPACES}"
+		GLIBC_TARGET=headers build --no_gcc_check lfs/glibc
+	fi
 	if [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc ] || [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ ]
 	then
-		if [ ${GLIBC_SYSROOT} == ${BIN_PATH} ]
-		then
-			### Install kernel headers
-			echo -n "${SPACES}"
-			KERNEL_HDRS_ONLY=1 build --no_gcc_check ${BS_KERNEL:-lfs/kernel}
-			### Install glibc headers
-			echo -n "${SPACES}"
-			GLIBC_TARGET=headers build --no_gcc_check lfs/glibc
-		fi
 		echo -n "${SPACES}"
 		echo -n "Building host binaries... "
 		gcc_make_host ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
@@ -1043,9 +1043,9 @@ function setup_gcc () {
 		echo -n "Building bootstrap target libgcc... "
 		GCC_BOOTSTRAP=1 GCC_TARGETS="libgcc" gcc_make_target_libs > ${LOG_PATH}/toolchain_bootstrap-target-libgcc-${GCC_VER}.log
 		echo "done."
-		### Build & install glibc
+		### Build & install glibc lib
 		echo -n "${SPACES}"
-		WITH_LIBXCRYPT=1 build lfs/glibc
+		GLIBC_TARGET=lib build lfs/glibc
 		### Build & install libxcrypt
 		echo -n "${SPACES}"
 		build --toolchain gnu lfs/libxcrypt
@@ -1058,6 +1058,12 @@ function setup_gcc () {
 	echo -n "Building target libraries... "
 	gcc_make_target_libs > ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log
 
+	if [ ${GLIBC_SYSROOT} == ${BIN_PATH} ]
+	then
+		### Build & install glibc
+		echo -n "${SPACES}"
+		build lfs/glibc
+	fi
 	if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ]
 	then
 		run_cmd "rm -rf ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
