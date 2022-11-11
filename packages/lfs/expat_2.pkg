@@ -1,0 +1,6 @@
+# expat_2
+PKG_SUFFIX=.5.0
+PKG_URL="https://altushost-swe.dl.sourceforge.net/project/expat/expat/2${PKG_SUFFIX}/expat-2${PKG_SUFFIX}.tar.xz"
+BUILD_PROCESS=configmake
+CONF_FLAGS=""
+INST_CMD="install-strip"

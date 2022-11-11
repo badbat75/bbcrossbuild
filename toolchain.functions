@@ -1800,7 +1800,7 @@ function setup_full_toolchain () {
 		case ${?} in
 			2)
 				set -e
-				NUMSPACES=1 build --toolchain gnu lfs/python3
+				NUMSPACES=1 build lfs/python3
 				setup_python
 				set +e
 			;;

@@ -6,7 +6,7 @@ PKG_PERL_LIBVER=5.${PKG_PERL_MIDVER}
 # perl-cross_1.4+f842531
 PKG_PERLCROSS_VER=f842531ca3198ac30dddfd36f881b947cbffebdd
 PKG_URL="https://www.cpan.org/src/5.0/perl-5${PKG_SUFFIX}.tar.xz"
-PKG_DEPS="lfs/gdbm_1.23 lfs/expat_2.4.8"
+PKG_DEPS="lfs/gdbm_1.23 lfs/expat_2"
 BUILD_PROCESS=downloadonly
 PKG_COPYSRC=1
 PKG_FAULTYCFLAGS=1
