@@ -775,7 +775,7 @@ function setup_gcc () {
 	function create_sccache_wrapper () {
 		### Create sccache_wrapper to work around an issue of not supporting correctly the
 		### -B parameter. It is not able to find the local cc1 executable running xgcc
-		if [[ ${CCWRAPPER} == *sccache ]] && [ ! -f ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper ]
+		if [[ ${CCWRAPPER} == *sccache ]]
 		then
 			cat <<-EOF > ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper
 				#!/bin/sh
@@ -788,10 +788,10 @@ function setup_gcc () {
 				if [ -e "\${cc1}"  ]; then
 					export PATH=\${dir}:\${PATH}
 					echo "${CCWRAPPER} \$@" >> \$dir/sccache_wrapper.log
-					exec ${CCWRAPPER} "\$@"
+					eval ${CCWRAPPER} "\$@"
 				else
 					echo "\$@" >> \$dir/sccache_wrapper.log
-					exec "\$@"
+					eval "\$@"
 				fi
 			EOF
 			run_cmd "chmod +x ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper"
@@ -1032,7 +1032,7 @@ function setup_gcc () {
 	if [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc ] || [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ ]
 	then
 		echo -n "${SPACES}"
-		echo -n "Building host binaries... "
+		echo -n "Building ${GCC_LANGUAGES:-c,c++} compilers... "
 		gcc_make_host ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 		echo -e "done.\n"
 	fi
@@ -1043,15 +1043,12 @@ function setup_gcc () {
 		### Install glibc headers and raw libraries
 		echo -n "${SPACES}"
 		GLIBC_TARGET=bootstrap build lfs/glibc
-		echo -n "${SPACES}Building target libgcc... "
-		GCC_TARGETS="libgcc" gcc_make_target_libs > ${LOG_PATH}/toolchain_bootstrap-target-libgcc-${GCC_VER}.log
+		echo -n "${SPACES}Bootstrapping target libgcc... "
+		GCC_BOOTSTRAP=1 GCC_TARGETS="libgcc" gcc_make_target_libs > ${LOG_PATH}/toolchain_bootstrap-target-libgcc-${GCC_VER}.log
 		echo -e "done.\n"
 		### Build & install glibc lib
 		echo -n "${SPACES}"
 		GLIBC_TARGET=lib build lfs/glibc
-		### Build & install libxcrypt
-		echo -n "${SPACES}"
-		build --toolchain gnu lfs/libxcrypt
 	fi
 	if [ ! -f ${TOOLCHAIN_PATH}/bin/ldconfig ]
 	then
@@ -1066,6 +1063,9 @@ function setup_gcc () {
 		### Build & install glibc
 		echo -n "${SPACES}"
 		build lfs/glibc
+		### Build & install libxcrypt
+		echo -n "${SPACES}"
+		build --toolchain gnu lfs/libxcrypt
 	fi
 	if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ]
 	then

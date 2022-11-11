@@ -38,22 +38,19 @@ PKG_OVERRIDELD=bfd
 case ${GLIBC_TARGET} in
 	headers)
 		PKG_SUFFIX="-headers${PKG_SUFFIX}"
-		BUILD_PROCESS=downloadonly
-		#STD_CONF_FLAGS=0
-		#CONF_FLAGS="--build=${BARCH} --host=${HARCH} --target=${HARCH} --prefix=${BUILD_PREFIX} --includedir=${BUILD_INCLUDEDIR}"
-		#CONF_ENV="CC="'${CC_FOR_BUILD}'" CFLAGS="'${CFLAGS_FOR_BUILD}' unset CXX CXX FLAGS CPPFLAGS
-		#PKG_MAKEVARS="install-bootstrap-headers=yes"
-		#INST_CMD="install-headers"
-		PKG_PREBUILD="mkdir -pv \${PKG_PKGPATH}${BUILD_PREFIX}
-			cp -Rv include \${PKG_PKGPATH}${BUILD_INCLUDEDIR}"
+		STD_CONF_FLAGS=0
+		CONF_FLAGS="--build=${BARCH} --host=${HARCH} --target=${HARCH} --prefix=${BUILD_PREFIX} --includedir=${BUILD_INCLUDEDIR}"
+		CONF_ENV="unset CXX CXXFLAGS; CC=\"${CC_FOR_BUILD}\" CFLAGS=\"${CFLAGS_FOR_BUILD}\" CC=\"${CPP_FOR_BUILD}\" CPPFLAGS=\"${CPPLAGS_FOR_BUILD}\""
+		PKG_MAKEVARS="install-bootstrap-headers=yes"
+		INST_CMD="install-headers"
 		PKG_POSTBUILD+="if [ ! -f \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h ]
 		then
+			mkdir -pv \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu
 			touch \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h
 		fi;"
 	;;
 	bootstrap)
-		PKG_SUFFIX="-crts${PKG_SUFFIX}"
-		PKG_MAKEVARS="install-bootstrap-headers=yes"
+		PKG_SUFFIX="-bootstrap${PKG_SUFFIX}"
 		PKG_MAKETARGETS="csu/subdir_lib"
 		INST_CMD="install-headers"
 		PKG_POSTBUILD+="mkdir -pv \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
