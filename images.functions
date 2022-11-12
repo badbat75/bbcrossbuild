@@ -428,21 +428,21 @@ function inject_into_mount_tag () {
 	local TARGET_OWNER=${_param_4:-"root:root"}
 	local TARGET_PATH=${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}
 
-	sethostenv
+	setbuildenv
 
 	case ${OBJECT} in
 		binaries)
 			local SOURCE_PATH=${PLATFORM_PATH}/binaries
 			local TARGET_FILE=*
 			;;
-		gcclibs)
-			local GCCLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 \( -name 'libgcc_s.so*' -o -name 'libssp.so*' -o -name 'libstdc++.so.*' ! -name 'libstdc++.so.*-*.py' \) 2>/dev/null )
-			local GCCLIBNAME="$( ( for name in ${GCCLIB}; do echo $(basename ${name}); done ) | sort | uniq )"
-			local GCCLIBPATH="$( ( for name in ${GCCLIB}; do echo $(dirname ${name}); done ) | sort | uniq )"
-			local TARGET_FILE="${GCCLIBNAME}"
-			local SOURCE_PATH="${GCCLIBPATH}"
-			local TARGET_DIR="${TARGET_DIR:-${BUILD_LIBDIR}${BUILD_LIBSUFFIX}}"
-			;;
+		#gcclibs)
+		#	local GCCLIB=$(find ${GCCSEARCHLIBS} -maxdepth 1 \( -name 'libgcc_s.so*' -o -name 'libssp.so*' -o -name 'libstdc++.so.*' ! -name 'libstdc++.so.*-*.py' \) 2>/dev/null )
+		#	local GCCLIBNAME="$( ( for name in ${GCCLIB}; do echo $(basename ${name}); done ) | sort | uniq )"
+		#	local GCCLIBPATH="$( ( for name in ${GCCLIB}; do echo $(dirname ${name}); done ) | sort | uniq )"
+		#	local TARGET_FILE="${GCCLIBNAME}"
+		#	local SOURCE_PATH="${GCCLIBPATH}"
+		#	local TARGET_DIR="${TARGET_DIR:-${BUILD_LIBDIR}${BUILD_LIBSUFFIX}}"
+		#	;;
 		*)
 			local TARGET_FILE=$(basename ${OBJECT})
 			local SOURCE_PATH=$(dirname ${OBJECT})

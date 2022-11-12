@@ -1,6 +1,6 @@
 # binutils
 PKG_URL="https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz"
-PKG_DEPS="lfs/libgmp lfs/libmpfr lfs/libmpc"
+PKG_DEPS="lfs/libgmp lfs/libmpfr lfs/libmpc lfs/libisl"
 case ${BINUTILS_VER} in
 	2.39)
 		PKG_SUFFIX=_2.39+9ad221fed27
