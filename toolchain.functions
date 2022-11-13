@@ -671,16 +671,6 @@ function setup_gcc () {
 	}
 
 	function gcc_buildenv () {
-		local MULTI_ARCH=${MULTIARCH:-1}
-		BUILD_PREFIX="${BUILD_PREFIX:-/usr}"
-		BUILD_LIBDIR="${BUILD_LIBDIR:-${BUILD_PREFIX}/lib}"
-		if [ ${MULTI_ARCH} -eq 1 ] && [ -z "${HARCH_LIB}" ]
-		then
-			BUILD_LIBSUFFIX="/${HARCH}"
-		else
-			BUILD_LIBSUFFIX="${HARCH_LIB}"
-		fi
-
 		if [ ${MAKEVERBOSE:-0} -eq 0 ]
 		then
 			local SILENTCONFIG="--enable-silent-rules"
@@ -1640,7 +1630,7 @@ function setup_python () {
 		fi
 		run_cmd "${BUILD_PYTHON} -m crossenv ${TARGET_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH}"
 		run_cmd "rmdir -v ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include"
-		run_cmd "ln -sfv ${SYSROOT}${BUILD_INCLUDEDIR}/python${PYTHONBIN_VER} ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include"
+		run_cmd "ln -sfv ${PYTHON_SEARCHPATH}${BUILD_INCLUDEDIR}/python${PYTHONBIN_VER} ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include"
 		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate
 		run_cmd "build-python -m pip install --upgrade cython setuptools==60.10.0 wheel"
 		run_cmd "mkdir -p ${TOOLCHAIN_BLDPATH}/build_python_crossenv"

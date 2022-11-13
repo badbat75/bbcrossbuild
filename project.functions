@@ -25,7 +25,6 @@ function remove_devfiles () {
 		trap ERR; \
 		return ${STATUS};' ERR
 
-	setbuildenv
 	echo -n "Removing development files... "
 	if [ ! -d ${BIN_PATH} ]
 	then
