@@ -78,11 +78,28 @@ function setbuildenv () {
 		if ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -dumpversion >/dev/null 2>&1
 		then
 			SYSROOT_GCCVER=$(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -dumpversion 2>/dev/null)
-			### !!!!!! Implement search path in the toolchain gcc libs !!!!!!
-			if [ -d ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${SYSROOT_GCCVER} ]
+			if [ -d "$(gcc_toolchain_print_searchdirs)" ]
 			then
-				QEMU_LD_LIBRARY_PATH="${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${SYSROOT_GCCVER}:"
+				QEMU_LD_LIBRARY_PATH="$(gcc_toolchain_print_searchdirs):"
 			fi
+			### Search path in the toolchain gcc libs
+			# -enable-version-specific-runtime-libs workaround to fing libgcc_s under lib64 path instead of ${GCC_VER}
+			local GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE="$(realpath -m $(gcc_toolchain_print_searchdirs)/../lib64)"
+			if [ -n "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ] && [ -d "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ]
+			then
+				QEMU_LD_LIBRARY_PATH+="${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}:"
+			fi			
+			case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
+				gnu) if [ -n "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ] && [ -d "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ]
+					then
+						COMMON_LDFLAGS+=" -L${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}"
+					fi
+				;;
+				llvm) COMMON_CFLAGS+=" $(gcc_toolchain_libraries_compilerflags)"
+					COMMON_CXXFLAGS+=" $(gcc_toolchain_libraries_compilerflags)"
+					COMMON_LDFLAGS+=" $(gcc_toolchain_libraries_linkerflags)"
+				;;
+			esac
 		fi
 	fi
 	QEMU_LD_LIBRARY_PATH+=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
