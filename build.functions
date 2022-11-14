@@ -1166,8 +1166,8 @@ function build () {(
 
 		run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
 		cd ${PKG_BLDPATH}
-		local PYTHONBIN_VER=$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)
-		local PYTHONBIN_MAJVER=$(echo ${PYTHONBIN_VER} | cut -d'.' -f1,1)
+		local PYTHONBIN_VER=$(cut -d. -f1,2 <<<$(awk '{print $2}' <<<$(python -V)))
+		local PYTHONBIN_MAJVER=$(cut -d. -f1 <<<${PYTHONBIN_VER})
 		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
 		then
 			COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
@@ -1222,8 +1222,8 @@ function build () {(
 
 		run_cmd "mkdir -pv ${PKG_BLDPATH}"
 		cd ${PKG_BLDPATH}
-		local PYTHONBIN_VER=$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)
-		local PYTHONBIN_MAJVER=$(echo ${PYTHONBIN_VER} | cut -d'.' -f1,1)
+		local PYTHONBIN_VER=$(cut -d. -f1,2 <<<$(awk '{print $2}' <<<$(python -V)))
+		local PYTHONBIN_MAJVER=$(cut -d. -f1 <<<${PYTHONBIN_VER})
 		if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
 		then
 			COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"

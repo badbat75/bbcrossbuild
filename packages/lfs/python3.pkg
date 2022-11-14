@@ -7,7 +7,6 @@ PKG_AUTOCONF=1
 BUILD_PROCESS=configmake
 PKG_TWOSTEPSBUILD=1
 CONF_FLAGS="--with-platlibdir=lib --with-system-expat --with-system-ffi --with-system-libmpdec --enable-ipv6 --with-ensurepip=yes --enable-optimizations --disable-test-modules"
-echo "LTOENABLE: ${LTOENABLE}"
 if [ "${LTOENABLE:-0}" != "0" ]
 then
 	CONF_FLAGS+=" --with-lto"
