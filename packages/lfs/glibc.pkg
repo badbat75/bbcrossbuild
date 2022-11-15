@@ -35,9 +35,8 @@ PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd
 #PKG_PREBUILD="sed '/MAKEFLAGS :=/s/)r/) -r/' -i Makerules"
 
-case ${GLIBC_TARGET} in
+case ${PKG_TARGET} in
 	headers)
-		PKG_SUFFIX="-headers${PKG_SUFFIX}"
 		STD_CONF_FLAGS=0
 		CONF_FLAGS="--build=${BARCH} --host=${HARCH} --target=${HARCH} --prefix=${BUILD_PREFIX} --includedir=${BUILD_INCLUDEDIR}"
 		CONF_ENV="unset CXX CXXFLAGS; CC=\"${CC_FOR_BUILD}\" CFLAGS=\"${CFLAGS_FOR_BUILD}\" CC=\"${CPP_FOR_BUILD}\" CPPFLAGS=\"${CPPLAGS_FOR_BUILD}\""
@@ -50,7 +49,6 @@ case ${GLIBC_TARGET} in
 		fi;"
 	;;
 	bootstrap)
-		PKG_SUFFIX="-bootstrap${PKG_SUFFIX}"
 		PKG_MAKETARGETS="csu/subdir_lib"
 		INST_CMD="install-headers"
 		PKG_POSTBUILD+="mkdir -pv \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
@@ -58,7 +56,6 @@ case ${GLIBC_TARGET} in
 			\${CC} \${CFLAGS} \${LDFLAGS} -nostdlib -nostartfiles -shared -x c /dev/null -o \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libc.so"
 	;;
 	lib)
-		PKG_SUFFIX="-lib${PKG_SUFFIX}"
 		INST_CMD="install"
 	;;
 	*)

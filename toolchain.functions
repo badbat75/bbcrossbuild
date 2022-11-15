@@ -849,30 +849,6 @@ function setup_gcc () {
 		fi
 	}
 
-	function setup_ldd () {
-		local LDD_PATH=${1:-${BIN_PATH}}
-		if [ -f "${LDD_PATH}/usr/bin/ldd" ] || [ -f "${LDD_PATH}/bin/ldd" ]
-		then
-			eval local $(grep "^RTLDLIST=" ${LDD_PATH}/usr/bin/ldd)
-			for ldso in ${RTLDLIST}
-			do
-				if [ -f ${LDD_PATH}${ldso} ]
-				then
-					local RTD=${RTD:+ }${LDD_PATH}${ldso}
-				fi
-			done
-			if [ -n "${RTD}" ]
-			then
-				if [ ! -d ${TOOLCHAIN_PATH}/bin ]
-				then
-					mkdir ${TOOLCHAIN_PATH}/bin
-				fi
-				sed "/^RTLDLIST=/ s#\".*\"#\"${RTD}\"#" ${LDD_PATH}/usr/bin/ldd > ${TOOLCHAIN_PATH}/bin/ldd
-				chmod +x ${TOOLCHAIN_PATH}/bin/ldd
-			fi
-		fi
-	}
-
 	function gcc_make_target_libs () {
 
 		function relink_libraries () {
@@ -905,6 +881,65 @@ function setup_gcc () {
 			fi
 		}
 
+		function build_gcc_library () {
+			local OBJECT=${1}
+			local PKG_NAME="gcc-${OBJECT}_${GCC_VER}${OBJECT_TARGET}"
+			if [ -f ${STATUS_PATH}/${PKG_NAME} ]
+			then
+				echo "${OBJECT} already built." | log_buffer info
+				return 0
+			fi
+			echo "Making target ${OBJECT} libraries." | log_buffer info
+			run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" all-target-${OBJECT}"
+			echo "Installing ${OBJECT} in the toolchain dir" | log_buffer info
+			run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" install-strip-target-${OBJECT}"
+			relink_la_libraries "${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER}"
+			if [ "${OBJECT}" != "libsanitizer" ]
+			then
+				echo "Creating package for ${PKG_NAME}" | log_buffer info
+				if [ -d ${PACKAGES_PATH}/${PKG_NAME} ]
+				then
+					run_cmd "rm -rf ${PACKAGES_PATH}/gcc-${OBJECT}_${GCC_VER}"
+				fi
+				run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" DESTDIR="${PACKAGES_PATH}/${PKG_NAME}" prefix=${BUILD_PREFIX} install-strip-target-${OBJECT}"
+				relink_la_libraries "${PACKAGES_PATH}/${PKG_NAME}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}"
+				if [ ${GCC_BOOTSTRAP} -eq 0 ]
+				then
+					if [ ${GCC_IS_MAIN} -eq 1 ]
+					then
+						echo "### Linking GCC target libraries in ${BUILD_PREFIX}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} from ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" | log_buffer info
+						if [ -d ${PACKAGES_PATH}/${PKG_NAME}${BUILD_PREFIX}/lib/gcc/${HARCH} ]
+						then
+							relink_libraries "${PACKAGES_PATH}/${PKG_NAME}"
+						fi
+					else
+						run_cmd "mkdir -pv ${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d ${PACKAGES_PATH}/${PKG_NAME}/postinst_scripts"
+						run_cmd "echo ${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER} >${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d/gcc-${GCC_MAJVER}.conf"
+						if [ -d "${PACKAGES_PATH}/${PKG_NAME}${BUILD_PREFIX}/lib/gcc/${HARCH}/lib64" ]
+						then
+							run_cmd "echo ${BUILD_PREFIX}/lib/gcc/${HARCH}/lib64 >>${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d/gcc-${GCC_MAJVER}.conf"
+						fi
+						run_cmd "echo \"ldconfig -v\" >>${PACKAGES_PATH}/${PKG_NAME}/postinst_scripts/00_gcc-libs_${GCC_MAJVER}"
+					fi
+					if [ ${GCC_INSTALL_TARGETS} -eq 1 ]
+					then
+						run_cmd "rsync -aK --devices --specials ${PACKAGES_PATH}/${PKG_NAME}/ ${BIN_PATH}"
+						if [ -f ${TOOLCHAIN_PATH}/bin/ldconfig ]
+						then
+							run_cmd "${TOOLCHAIN_PATH}/bin/ldconfig -v"
+						fi
+					fi
+				fi
+				run_cmd "create_sfx_package ${PACKAGES_PATH}/${PKG_NAME}"
+				run_cmd "rm -rf ${PACKAGES_PATH}/${PKG_NAME}"
+			fi
+			if [ ${GCC_BOOTSTRAP} -eq 1 ]
+			then
+				run_cmd "rm -rf ${HARCH}/${PKG_NAME}"
+			fi
+			run_cmd "touch ${STATUS_PATH}/${PKG_NAME}"
+		}
+
 		trap 'STATUS=${?}; \
 			trap ERR; \
 			return ${STATUS}' ERR
@@ -919,7 +954,7 @@ function setup_gcc () {
 
 		if [ ${GCC_BOOTSTRAP} -eq 1 ]
 		then
-			local OBJECT_PREFIX="bootstrap-"
+			local OBJECT_TARGET="-bootstrap"
 		fi
 		if [ "${GCC_TARGETS}" = "all" ]
 		then
@@ -932,26 +967,8 @@ function setup_gcc () {
 			local GCC_TARGETS="${GCC_TARGETS}"
 		fi
 
-		for object in $( echo ${GCC_TARGETS} | tr ',' ' ' )
-		do
-			local PKG_NAME="gcc-${OBJECT_PREFIX}target-${object}_${GCC_VER}"
-			if [ ! -f ${STATUS_PATH}/${PKG_NAME} ]
-			then
-				local OBJECTS+="${object} "
-				echo "${object} not yet installed." | log_buffer info
-			else
-				echo "${object} already built and installed" | log_buffer info
-			fi
-		done
-
-		local BUILD_OBJECTS=
-		for object in $( echo ${OBJECTS} | tr ',' ' ' )
-		do
-			local BUILD_OBJECTS+=" all-target-${object}"
-		done
-
-		echo "Targets to build: ${OBJECTS}" | log_buffer info
-		if [ ! -z "${OBJECTS}" ]
+		echo "Targets to build: ${GCC_TARGETS}" | log_buffer info
+		if [ ! -z "${GCC_TARGETS}" ]
 		then
 			if [ ! -d ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
 			then
@@ -967,66 +984,37 @@ function setup_gcc () {
 			fi
 			pushd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 			create_sccache_wrapper
-			for object in $( echo ${OBJECTS} | tr ',' ' ' )
+			for object in $( echo ${GCC_TARGETS} | tr ',' ' ' )
 			do
-				echo "Making target ${object} libraries." | log_buffer info
-				run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" all-target-${object}"
-				echo "Installing ${object} in the toolchain dir" | log_buffer info
-				run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" install-strip-target-${object}"
-				echo "Status ${object}: ${?}" | log_buffer info
-				local PKG_NAME="gcc-${OBJECT_PREFIX}target-${object}_${GCC_VER}"
-				if [ "${object}" != "libsanitizer" ]
-				then
-					echo "Creating package for ${PKG_NAME}" | log_buffer info
-					if [ -d ${PACKAGES_PATH}/${PKG_NAME} ]
-					then
-						run_cmd "rm -rf ${PACKAGES_PATH}/gcc-${object}_${GCC_VER}"
-					fi
-					run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" DESTDIR="${PACKAGES_PATH}/${PKG_NAME}" prefix=${BUILD_PREFIX} install-strip-target-${object}"
-					if [ ${GCC_INSTALL_TARGETS} -eq 1 ]
-					then
-						if [ ${GCC_BOOTSTRAP} -eq 0 ]
-						then
-							if [ ${GCC_IS_MAIN} -eq 1 ]
-							then
-								echo "### Linking GCC target libraries in ${BUILD_PREFIX}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} from ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" | log_buffer info
-								if [ -d ${PACKAGES_PATH}/${PKG_NAME}${BUILD_PREFIX}/lib/gcc/${HARCH} ]
-								then
-									relink_libraries "${PACKAGES_PATH}/${PKG_NAME}"
-								fi
-							else
-								if [ "${object}" == "libgcc" ]
-								then
-									run_cmd "mkdir -pv ${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d ${PACKAGES_PATH}/${PKG_NAME}/postinst_scripts"
-									run_cmd "echo ${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER} >${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d/gcc-${GCC_MAJVER}.conf"
-									if [ -d "${PACKAGES_PATH}/${PKG_NAME}${BUILD_PREFIX}/lib/gcc/${HARCH}/lib64" ]
-									then
-										run_cmd "echo ${BUILD_PREFIX}/lib/gcc/${HARCH}/lib64 >>${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d/gcc-${GCC_MAJVER}.conf"
-									fi
-									run_cmd "echo \"ldconfig -v\" >>${PACKAGES_PATH}/${PKG_NAME}/postinst_scripts/00_libgcc_${GCC_MAJVER}"
-								fi
-							fi
-						fi
-						relink_la_libraries "${PACKAGES_PATH}/${PKG_NAME}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}"
-						run_cmd "rsync -aK --devices --specials ${PACKAGES_PATH}/${PKG_NAME}/ ${BIN_PATH}"
-						if [ -f ${TOOLCHAIN_PATH}/bin/ldconfig ]
-						then
-							run_cmd "${TOOLCHAIN_PATH}/bin/ldconfig -v"
-						fi
-					fi
-					run_cmd "create_sfx_package ${PACKAGES_PATH}/${PKG_NAME}"
-					run_cmd "rm -rf ${PACKAGES_PATH}/${PKG_NAME}"
-				fi
-				if [ ${GCC_BOOTSTRAP} -eq 1 ]
-				then
-					run_cmd "rm -rf ${HARCH}/${PKG_NAME}"
-				fi
-				run_cmd "touch ${STATUS_PATH}/${PKG_NAME}"
-				done
-			relink_la_libraries "${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER}"
+				build_gcc_library ${object}
+			done
 			popd
 		fi		
 		trap ERR
+	}
+
+	function setup_ldd () {
+		local LDD_PATH=${1:-${BIN_PATH}}
+		if [ -f "${LDD_PATH}/usr/bin/ldd" ] || [ -f "${LDD_PATH}/bin/ldd" ]
+		then
+			eval local $(grep "^RTLDLIST=" ${LDD_PATH}/usr/bin/ldd)
+			for ldso in ${RTLDLIST}
+			do
+				if [ -f ${LDD_PATH}${ldso} ]
+				then
+					local RTD=${RTD:+ }${LDD_PATH}${ldso}
+				fi
+			done
+			if [ -n "${RTD}" ]
+			then
+				if [ ! -d ${TOOLCHAIN_PATH}/bin ]
+				then
+					mkdir ${TOOLCHAIN_PATH}/bin
+				fi
+				sed "/^RTLDLIST=/ s#\".*\"#\"${RTD}\"#" ${LDD_PATH}/usr/bin/ldd > ${TOOLCHAIN_PATH}/bin/ldd
+				chmod +x ${TOOLCHAIN_PATH}/bin/ldd
+			fi
+		fi
 	}
 
 	trap 'local STATUS=${?}; \
@@ -1053,10 +1041,10 @@ function setup_gcc () {
 	then
 		### Install kernel headers
 		echo -n "${SPACES}"
-		KERNEL_HDRS_ONLY=1 build --no_gcc_check ${BS_KERNEL:-lfs/kernel}
+		build --target headers --no_gcc_check ${BS_KERNEL:-lfs/kernel}
 		### Install glibc headers
 		echo -n "${SPACES}"
-		GLIBC_TARGET=headers build --no_gcc_check lfs/glibc
+		build --target headers --no_gcc_check lfs/glibc
 	fi
 	if [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc ] || [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ ]
 	then
@@ -1068,20 +1056,20 @@ function setup_gcc () {
 	if [ $(gcc_sysroot) == ${BIN_PATH} ]
 	then
 		### Bootstrapping sysroot
-		echo "${SPACES}Bootstrapping foundation libraries in ${BIN_PATH}... "
+		echo "${SPACES}Bootstrapping foundation libraries... "
 		### Install glibc headers and raw libraries
 		echo -n "${SPACES}"
-		GLIBC_TARGET=bootstrap build lfs/glibc
+		build --target bootstrap lfs/glibc
 		echo -n "${SPACES}Bootstrapping target libgcc... "
-		GCC_BOOTSTRAP=1 GCC_TARGETS="libgcc" gcc_make_target_libs > ${LOG_PATH}/toolchain_bootstrap-target-libgcc-${GCC_VER}.log
+		GCC_BOOTSTRAP=1 GCC_TARGETS="libgcc" gcc_make_target_libs > ${LOG_PATH}/gcc-libgcc_${GCC_VER}-bootstrap.log
 		echo -e "done.\n"
 		### Build & install glibc lib
 		echo -n "${SPACES}"
-		GLIBC_TARGET=lib build lfs/glibc
+		build --target lib lfs/glibc
 	fi
 	setup_ldconfig
 	echo -n "${SPACES}Building target libraries... "
-	gcc_make_target_libs > ${LOG_PATH}/toolchain_target-gcclibs-${GCC_VER}.log
+	gcc_make_target_libs > ${LOG_PATH}/gcc-libs-${GCC_VER}.log
 	echo -e "done.\n"
 
 	if [ $(gcc_sysroot) == ${BIN_PATH} ]

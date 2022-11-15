@@ -290,23 +290,23 @@ pathremove () {
 	"
 }
 
-
-
 log_buffer () {
-	local LOG_TYPE="${1:-log}"
-	local LOG_FILE="${2:-/dev/stdout}"
-	case ${LOG_TYPE} in
-		cmd)    local LOG_CHAR='$';;
-		info)   local LOG_CHAR='#';;
-		log)    local LOG_CHAR='-';;
-		status) local LOG_CHAR='=';;
-		error)  local LOG_CHAR='!';;
-		*)      local LOG_CHAR="${LOG_TYPE}";;
-	esac
-	while IFS= read -r line
-	do
-		printf "%s - [%s]${LOG_CHAR} %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$(basename ${PWD})" "${line}" >> ${LOG_FILE}
-	done < /dev/stdin
+	(
+		local LOG_TYPE="${1:-log}"
+		local LOG_FILE="${2:-/dev/stdout}"
+		case ${LOG_TYPE} in
+			cmd)    local LOG_CHAR='$';;
+			info)   local LOG_CHAR='#';;
+			log)    local LOG_CHAR='-';;
+			status) local LOG_CHAR='=';;
+			error)  local LOG_CHAR='!';;
+			*)      local LOG_CHAR="${LOG_TYPE}";;
+		esac
+		while IFS= read -r line
+		do
+			printf "%s - [%s]${LOG_CHAR} %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$(basename ${PWD})" "${line}" >> ${LOG_FILE}
+		done < /dev/stdin
+	)
 }
 
 run_cmd () {
