@@ -19,3 +19,6 @@ BUILD_PROCESS=configmake
 INST_CMD="install"
 PKG_TWOSTEPSBUILD=1
 PKG_MAKEVARS="MANSUFFIX=ssl LIBDIR=lib${BUILD_LIBSUFFIX}"
+case ${TOOLCHAIN} in
+    llvm) PKG_CFLAGS="-std=gnu99";;
+esac

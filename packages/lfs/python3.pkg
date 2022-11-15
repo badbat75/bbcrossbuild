@@ -6,7 +6,7 @@ PKG_DEPS="lfs/ncurses_6 lfs/zlib_1 lfs/zlib_1 lfs/bzip2_1.0.8 lfs/expat_2 lfs/li
 PKG_AUTOCONF=1
 BUILD_PROCESS=configmake
 PKG_TWOSTEPSBUILD=1
-CONF_FLAGS="--with-platlibdir=lib --with-system-expat --with-system-ffi --with-system-libmpdec --enable-ipv6 --with-ensurepip=yes --enable-optimizations --disable-test-modules"
+CONF_FLAGS="--with-platlibdir=lib --with-system-expat --with-system-ffi --with-system-libmpdec --enable-ipv6 --with-ensurepip=yes --disable-test-modules"
 if [ "${LTOENABLE:-0}" != "0" ]
 then
 	CONF_FLAGS+=" --with-lto"
