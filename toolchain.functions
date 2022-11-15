@@ -255,7 +255,7 @@ function setup_make () {
 function setup_autotools () {
 	function download_autotools () {
 		trap 'STATUS=${?}; \
-			trap ERR; \
+			trap - ERR; \
 			return ${STATUS};' ERR
 
 		local AUTOCONF_URL="https://ftp.gnu.org/gnu/autoconf/autoconf-${AUTOCONF_VER}.tar.gz"
@@ -271,7 +271,7 @@ function setup_autotools () {
 
 	function download_autotools_support () {
 		trap 'STATUS=${?}; \
-			trap ERR; \
+			trap - ERR; \
 			return ${STATUS};' ERR
 
 		local AUTOCONFARCHIVE_URL="http://mirror.kumi.systems/gnu/autoconf-archive/autoconf-archive-${AUTOCONFARCHIVE_VER}.tar.xz"
@@ -615,7 +615,7 @@ function setup_gcc () {
 
 	function gcc_download () {
 		trap 'local STATUS=${?}; \
-			trap ERR; \
+			trap - ERR; \
 			return ${STATUS};' ERR
 
 		local GMPURL=https://gmplib.org/download/gmp/gmp-${GMP_VER}.tar.xz
@@ -714,7 +714,7 @@ function setup_gcc () {
 	
 	function gcc_configuration () {
 		trap 'STATUS=${?}; \
-			trap ERR; \
+			trap - ERR; \
 			return ${STATUS}' ERR
 
 		local CONFIG_ARCH_PARAMS="--build=${BARCH} --host=${BARCH} --target=${HARCH}"
@@ -797,7 +797,7 @@ function setup_gcc () {
 	
 	function gcc_make_host () {
 		trap 'STATUS=${?}; \
-			trap ERR; \
+			trap - ERR; \
 			return ${STATUS}' ERR
 
 		if [ ! -d ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
@@ -882,13 +882,32 @@ function setup_gcc () {
 		}
 
 		function build_gcc_library () {
+			trap 'STATUS=${?}; \
+				trap - ERR; \
+				return ${STATUS}' ERR
+
 			local OBJECT=${1}
 			local PKG_NAME="gcc-${OBJECT}_${GCC_VER}${OBJECT_TARGET}"
 			if [ -f ${STATUS_PATH}/${PKG_NAME} ]
 			then
 				echo "${OBJECT} already built." | log_buffer info
+				trap - ERR
 				return 0
 			fi
+			if [ ! -d ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
+			then
+				echo "GCC Sources disappeared (${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}). Reconfigure them." | log_buffer info
+				echo "Downloading... " | log_buffer info
+				gcc_download
+			fi
+			if [ ! -f ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/config.status ]
+			then
+				echo "Configuration... " | log_buffer info
+				GCC_LTOENABLE=0
+				gcc_configuration
+			fi
+			pushd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
+			create_sccache_wrapper
 			echo "Making target ${OBJECT} libraries." | log_buffer info
 			run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" all-target-${OBJECT}"
 			echo "Installing ${OBJECT} in the toolchain dir" | log_buffer info
@@ -938,20 +957,15 @@ function setup_gcc () {
 				run_cmd "rm -rf ${HARCH}/${PKG_NAME}"
 			fi
 			run_cmd "touch ${STATUS_PATH}/${PKG_NAME}"
+			popd
+			trap - ERR
 		}
 
 		trap 'STATUS=${?}; \
-			trap ERR; \
+			trap - ERR; \
 			return ${STATUS}' ERR
 
-		local GCC_BOOTSTRAP=${GCC_BOOTSTRAP:-0}
-		
-		### Define objects to be built
-		echo "Targets to build: ${GCC_TARGETS}" | log_buffer info
-		echo "Install target: ${GCC_INSTALL_TARGETS}" | log_buffer info
-		echo "GCC main: ${GCC_IS_MAIN}" | log_buffer info
-		echo "Is bootstrap: ${GCC_BOOTSTRAP}" | log_buffer info
-
+		local GCC_BOOTSTRAP=${GCC_BOOTSTRAP:-0}	
 		if [ ${GCC_BOOTSTRAP} -eq 1 ]
 		then
 			local OBJECT_TARGET="-bootstrap"
@@ -966,29 +980,12 @@ function setup_gcc () {
 		else
 			local GCC_TARGETS="${GCC_TARGETS}"
 		fi
-
-		echo "Targets to build: ${GCC_TARGETS}" | log_buffer info
 		if [ ! -z "${GCC_TARGETS}" ]
 		then
-			if [ ! -d ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
-			then
-				echo "GCC Sources disappeared (${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}). Reconfigure them." | log_buffer info
-				echo "Downloading... " | log_buffer info
-				gcc_download
-			fi
-			if [ ! -f ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/config.status ]
-			then
-				echo "Configuration... " | log_buffer info
-				GCC_LTOENABLE=0
-				gcc_configuration
-			fi
-			pushd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
-			create_sccache_wrapper
 			for object in $( echo ${GCC_TARGETS} | tr ',' ' ' )
 			do
-				build_gcc_library ${object}
+				build_gcc_library ${object} > ${LOG_PATH}/gcc-${object}_${GCC_VER}${OBJECT_TARGET}.log
 			done
-			popd
 		fi		
 		trap ERR
 	}
@@ -1061,7 +1058,7 @@ function setup_gcc () {
 		echo -n "${SPACES}"
 		build --target bootstrap lfs/glibc
 		echo -n "${SPACES}Bootstrapping target libgcc... "
-		GCC_BOOTSTRAP=1 GCC_TARGETS="libgcc" gcc_make_target_libs > ${LOG_PATH}/gcc-libgcc_${GCC_VER}-bootstrap.log
+		GCC_BOOTSTRAP=1 GCC_TARGETS="libgcc" gcc_make_target_libs
 		echo -e "done.\n"
 		### Build & install glibc lib
 		echo -n "${SPACES}"
@@ -1069,7 +1066,7 @@ function setup_gcc () {
 	fi
 	setup_ldconfig
 	echo -n "${SPACES}Building target libraries... "
-	gcc_make_target_libs > ${LOG_PATH}/gcc-libs-${GCC_VER}.log
+	gcc_make_target_libs
 	echo -e "done.\n"
 
 	if [ $(gcc_sysroot) == ${BIN_PATH} ]
@@ -1174,7 +1171,7 @@ function setup_cmake () {
 function setup_llvm () {
 	function download_llvm () {
 		trap 'STATUS=${?}; \
-			trap ERR; \
+			trap - ERR; \
 			return ${STATUS};' ERR
 
 		local GCCURL=https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VER}/llvm-project-${LLVM_VER}.src.tar.xz
@@ -1184,7 +1181,7 @@ function setup_llvm () {
 
 	function configure_llvm () {
 		trap 'STATUS=${?}; \
-			trap ERR; \
+			trap - ERR; \
 			return ${STATUS};' ERR
 
 		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER} ]
@@ -1291,7 +1288,7 @@ function setup_llvm () {
 
 	function build_llvm () {
 		trap 'STATUS=${?}; \
-			trap ERR; \
+			trap - ERR; \
 			return ${STATUS};' ERR
 		local LLVM_SHLIBDIR=$(grep -E "install_symlink.*libLLVM-${LLVM_VER}.so" ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/tools/llvm-shlib/cmake_install.cmake | head -n1 | grep -o "lib[36][24]")
 		echo "### Shared LLVM libdir: ${LLVM_SHLIBDIR}"
@@ -1305,7 +1302,7 @@ function setup_llvm () {
 
 	function configure_llvm_builtins () {
 		trap 'STATUS=${?}; \
-			trap ERR; \
+			trap - ERR; \
 			return ${STATUS};' ERR
 
 		local LLVM_TARGET=${1}
@@ -1382,7 +1379,7 @@ function setup_llvm () {
 
 	function build_llvm_builtins () {
 		trap 'STATUS=${?}; \
-			trap ERR; \
+			trap - ERR; \
 			return ${STATUS};' ERR
 
 		local LLVM_TARGET=${1}
@@ -1581,7 +1578,7 @@ function setup_meson () {
 function setup_python () {
 	function download_pyton () {
 		trap 'STATUS=${?}; \
-			trap ERR; \
+			trap - ERR; \
 			return ${STATUS}' ERR
 
 		local PYTHONURL="https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PYTHON_VER}.tar.xz"
@@ -1592,7 +1589,7 @@ function setup_python () {
 
 	function build_python () {
 		trap 'STATUS=${?}; \
-			trap ERR; \
+			trap - ERR; \
 			return ${STATUS}' ERR
 
 		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER} ]
@@ -1644,7 +1641,7 @@ function setup_python () {
 	function build_python_crossenv () {
 		trap 'STATUS=${?}; \
 			[ -d ${TOOLCHAIN_PATH}/venv-${HARCH} ] && rm -rf || true; \
-			trap ERR; \
+			trap - ERR; \
 			return ${STATUS}' ERR
 
 		run_cmd "${BUILD_PYTHONPIP} install crossenv"
@@ -1748,7 +1745,7 @@ function setup_python () {
 			echo; \
 			tail -n24 ${LOG_PATH}/toolchain_python-crossenv.log; \
 		fi;
-		trap ERR; \
+		trap - ERR; \
 		return ${STATUS}' ERR
 
 	if [ ${SKIP_PYTHONVENV:-0} -eq 0 ]
@@ -1834,7 +1831,7 @@ function prepare_sysroot () {
 			echo; \
 			tail -n24 ${LOG_PATH}/sysroot.log; \
 		fi;
-		trap ERR; \
+		trap - ERR; \
 		return ${STATUS}' ERR
 
 	echo -n "Preparing sysroot... "
@@ -1887,7 +1884,7 @@ function create_sysroot () {
 			echo; \
 			tail -n24 ${LOG_PATH}/sysroot.log; \
 		fi;
-		trap ERR; \
+		trap - ERR; \
 		return ${STATUS}' ERR
 
 	echo -n "Creating sysroot with $(basename ${1})... "

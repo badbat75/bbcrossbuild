@@ -22,7 +22,7 @@ function remove_devfiles () {
 		echo "fail."; \
 		echo; \
 		set +x; \
-		trap ERR; \
+		trap - ERR; \
 		return ${STATUS};' ERR
 
 	echo -n "Removing development files... "
@@ -80,7 +80,7 @@ function resume_devfiles () {
 		echo "fail."; \
 		echo; \
 		set +x; \
-		trap ERR; \
+		trap - ERR; \
 		return ${STATUS};' ERR
 
 	echo -n "Resuming development files... "
@@ -99,7 +99,7 @@ function create_sfx_package () {
 		echo "fail."; \
 		echo; \
 		set +x; \
-		trap ERR; \
+		trap - ERR; \
 		return ${STATUS};' ERR
 
 	OPTS="" OPTS_WITH_VALUE="" param2value "${@}"

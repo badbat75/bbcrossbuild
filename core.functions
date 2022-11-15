@@ -63,7 +63,7 @@ download_uncompress () {
 
 	trap 'STATUS=${?}; \
 		echo "Fail."; \
-		trap ERR; \
+		trap - ERR; \
 		return ${STATUS};' ERR
 
 	local URL=${1}
