@@ -18,7 +18,6 @@ case ${GLIBC_VER} in
 		;;
 esac
 PATCHES+=" http://www.linuxfromscratch.org/patches/lfs/development/glibc-${GLIBC_VER}-fhs-1.patch"
-PKG_SRCDIR=glibc${PKG_SUFFIX}
 
 PKG_OVERRIDELTO=0
 PKG_TWOSTEPSBUILD=0
