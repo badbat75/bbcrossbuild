@@ -934,7 +934,7 @@ function setup_gcc () {
 					else
 						run_cmd "mkdir -pv ${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d ${PACKAGES_PATH}/${PKG_NAME}/postinst_scripts"
 						run_cmd "echo ${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER} >${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d/gcc-${GCC_MAJVER}.conf"
-						if [ -d "${PACKAGES_PATH}/${PKG_NAME}${BUILD_PREFIX}/lib/gcc/${HARCH}/lib64" ]
+						if [ -d "${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/lib64" ]
 						then
 							run_cmd "echo ${BUILD_PREFIX}/lib/gcc/${HARCH}/lib64 >>${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d/gcc-${GCC_MAJVER}.conf"
 						fi

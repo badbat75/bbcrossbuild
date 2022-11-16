@@ -95,8 +95,8 @@ function setbuildenv () {
 						COMMON_LDFLAGS+=" -L${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}"
 					fi
 				;;
-				llvm) COMMON_CFLAGS+=" $(gcc_toolchain_libraries_compilerflags)"
-					COMMON_CXXFLAGS+=" $(gcc_toolchain_libraries_compilerflags)"
+				llvm) #COMMON_CFLAGS+=" $(gcc_toolchain_libraries_compilerflags)"
+					#COMMON_CXXFLAGS+=" $(gcc_toolchain_libraries_compilerflags)"
 					COMMON_LDFLAGS+=" $(gcc_toolchain_libraries_linkerflags)"
 				;;
 			esac
