@@ -39,3 +39,7 @@ PKG_PREBUILD="sed -i 's| \$(ICUPKGDATA_DIR)| \$(DESTDIR)/\$(ICUPKGDATA_DIR)|g' i
             make
         )
     fi"
+
+case ${TOOLCHAIN} in
+    llvm) PKG_CXXFLAGS="-Wno-gnu-include-next";;
+esac
