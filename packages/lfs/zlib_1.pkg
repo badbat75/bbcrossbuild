@@ -7,3 +7,7 @@ BUILD_PROCESS=cmakebuild
 CONF_FLAGS="-DINSTALL_PKGCONFIG_DIR=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig"
 PKG_CXXFLAGS="-D_FILE_OFFSET_BITS=64"
 INST_CMD="install/strip"
+
+case ${TOOLCHAIN} in
+    llvm) PKG_CFLAGS="-Wno-deprecated-non-prototype";;
+esac
