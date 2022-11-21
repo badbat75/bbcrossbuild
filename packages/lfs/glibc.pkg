@@ -20,10 +20,9 @@ esac
 PATCHES+=" http://www.linuxfromscratch.org/patches/lfs/development/glibc-${GLIBC_VER}-fhs-1.patch"
 
 PKG_OVERRIDELTO=0
-PKG_TWOSTEPSBUILD=0
 BUILD_PROCESS=configmake
 CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}${BUILD_INCLUDEDIR} \
-	--enable-kernel=5.0.0 --enable-stackguard-randomization --enable-stack-protector=strong \
+	--enable-kernel=5.0.0 \
 	--enable-pt_chown --enable-tunables --enable-bind-now \
 	--disable-profile --disable-crypt --disable-werror --disable-sanity-checks --without-cvs"
 
@@ -39,6 +38,7 @@ case ${PKG_TARGET} in
 		STD_CONF_FLAGS=0
 		CONF_FLAGS="--build=${BARCH} --host=${HARCH} --target=${HARCH} --prefix=${BUILD_PREFIX} --includedir=${BUILD_INCLUDEDIR}"
 		CONF_ENV="unset CXX CXXFLAGS; CC=\"${CC_FOR_BUILD}\" CFLAGS=\"${CFLAGS_FOR_BUILD}\" CC=\"${CPP_FOR_BUILD}\" CPPFLAGS=\"${CPPLAGS_FOR_BUILD}\""
+		PKG_TWOSTEPSBUILD=0
 		PKG_MAKEVARS="install-bootstrap-headers=yes"
 		INST_CMD="install-headers"
 		PKG_POSTBUILD+="if [ ! -f \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h ]
@@ -47,17 +47,21 @@ case ${PKG_TARGET} in
 			touch \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h
 		fi;"
 	;;
-	bootstrap)
+	stage1)
+		PKG_TWOSTEPSBUILD=0
 		PKG_MAKETARGETS="csu/subdir_lib"
 		INST_CMD="install-headers"
 		PKG_POSTBUILD+="mkdir -pv \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 			install csu/crt1.o csu/crti.o csu/crtn.o \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 			\${CC} \${CFLAGS} \${LDFLAGS} -nostdlib -nostartfiles -shared -x c /dev/null -o \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libc.so"
 	;;
-	lib)
+	stage2)
+		PKG_TWOSTEPSBUILD=1
 		INST_CMD="install"
 	;;
 	*)
+		CONF_FLAGS+=" --enable-stackguard-randomization --enable-stack-protector=strong"
+		PKG_TWOSTEPSBUILD=1
 		INST_CMD="install"
 		if [ ${BUILD_LIBDIR}${BUILD_LIBSUFFIX} != ${BUILD_LIBDIR} ]
 		then

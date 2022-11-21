@@ -1057,13 +1057,13 @@ function setup_gcc () {
 		echo "${SPACES}Bootstrapping foundation libraries... "
 		### Install glibc headers and raw libraries
 		echo -n "${SPACES}"
-		build --target bootstrap lfs/glibc
+		build --target stage1 lfs/glibc
 		echo -n "${SPACES}Bootstrapping target libgcc... "
 		GCC_BOOTSTRAP=1 GCC_TARGETS="libgcc" gcc_make_target_libs
 		echo -e "done.\n"
 		### Build & install glibc lib
 		echo -n "${SPACES}"
-		build --target lib lfs/glibc
+		build --target stage2 lfs/glibc
 	fi
 	setup_ldconfig
 	echo -n "${SPACES}Building target libraries... "
