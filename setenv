@@ -93,7 +93,7 @@ MPFR_VER=${MPFR_VER:-4.1.0}
 MPC_VER=${MPC_VER:-1.2.1}
 ISL_VER=${ISL_VER:-0.25}
 ### LLVM version
-LLVM_VER=${LLVM_VER:-15.0.3}
+LLVM_VER=${LLVM_VER:-15.0.5}
 ### Python version
 PYTHON_VER=${PYTHON_VER:-3.10.8}
 #### Tools version

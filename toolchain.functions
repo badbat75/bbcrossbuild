@@ -240,6 +240,7 @@ function setup_make () {
 		)
 		run_cmd "./build.sh" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
 		run_cmd "./make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
+		run_cmd "ln -fs make ${GLOBAL_TOOLCHAIN_PATH}/bin/gmake"
 		### Clean-up build environment
 		popd >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log 2>&1
 		run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/make-${MAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
