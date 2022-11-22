@@ -731,7 +731,7 @@ function setup_gcc () {
 		then
 			rm -rf ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 		fi
-		run_cmd "mkdir -p ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${HARCH}/libgcc"
+		run_cmd "mkdir -p ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}"
 		pushd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 		gcc_buildenv
 		run_cmd "CC_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
@@ -761,9 +761,6 @@ function setup_gcc () {
 					host_configargs='${host_configargs}' \\
 					target_configargs='${target_configargs}'"
 		popd
-		echo "Create a symlink that allows libgcc to be built with posix threads support" | log_buffer info
-		run_cmd "ln -s ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/libgcc/gthr-posix.h ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${HARCH}/libgcc/gthr-default.h"
-		run_cmd "mkdir -p ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}"
 		trap - ERR
 	}
 
@@ -909,6 +906,12 @@ function setup_gcc () {
 			fi
 			pushd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 			create_sccache_wrapper
+			if [ ${GCC_BOOTSTRAP} -eq 0 ]
+			then
+				echo "Create a symlink that allows libgcc to be built with posix threads support" | log_buffer info
+				run_cmd "mkdir -pv ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${HARCH}/libgcc"
+				run_cmd "ln -fs ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/libgcc/gthr-posix.h ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${HARCH}/libgcc/gthr-default.h"
+			fi
 			echo "Making target ${OBJECT} libraries." | log_buffer info
 			run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" all-target-${OBJECT}"
 			echo "Installing ${OBJECT} in the toolchain dir" | log_buffer info
