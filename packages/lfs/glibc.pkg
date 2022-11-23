@@ -24,7 +24,8 @@ BUILD_PROCESS=configmake
 CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}${BUILD_INCLUDEDIR} \
 	--enable-kernel=5.0.0 \
 	--enable-pt_chown --enable-tunables --enable-bind-now \
-	--disable-profile --disable-crypt --disable-werror --disable-sanity-checks --without-cvs"
+	--disable-profile --disable-crypt --disable-build-nscd --disable-nscd \
+	--disable-werror --disable-sanity-checks --without-cvs"
 
 CONF_VARS="libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes"
 PKG_MAKEVARS="slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} rootsbindir=${BUILD_PREFIX}/sbin \
@@ -60,10 +61,10 @@ case ${PKG_TARGET} in
 		INST_CMD="install"
 	;;
 	*)
-		CONF_FLAGS+=" --enable-stackguard-randomization --enable-stack-protector=strong"
+		CONF_FLAGS+=" --enable-systemtap --enable-stackguard-randomization --enable-stack-protector=strong"
 		PKG_TWOSTEPSBUILD=1
 		INST_CMD="install"
-		if [ ${BUILD_LIBDIR}${BUILD_LIBSUFFIX} != ${BUILD_LIBDIR} ]
+		if [ -n "${BUILD_LIBSUFFIX}" ]
 		then
 			PKG_POSTBUILD+="
 				if [ -d \${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX} ]
@@ -72,10 +73,9 @@ case ${PKG_TARGET} in
 					ldlink=\$(find ${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX} -name \"ld-*.so.*\")
 					ln -fsv \${ld#${PKG_PKGPATH}/lib/} ${PKG_PKGPATH}/lib/\${ldlink#${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX}/}
 					ln -fsv \${ldlink#${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX}/} ${PKG_PKGPATH}/lib/ld-linux.so.\$(echo \${ldlink} | sed 's/.*.so.//' )
-				fi"
+				fi;"
 		fi
-		PKG_POSTBUILD+="
-			touch ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/ld.so.conf
+		PKG_POSTBUILD+="touch ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/ld.so.conf
 			cp -fv \${PKG_SRCPATH}/nscd/nscd.conf ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/nscd.conf
 			mkdir -pv ${PKG_PKGPATH}/var/cache/nscd
 			install -v -Dm644 \${PKG_SRCPATH}/nscd/nscd.tmpfiles ${PKG_PKGPATH}${BUILD_LIBDIR}/tmpfiles.d/nscd.conf

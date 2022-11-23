@@ -7,7 +7,7 @@ PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/{dev,proc,sys,run,etc,var}
 		ln -sfv \${PREFIX}/bin ${PKG_PKGPATH}
 		ln -sfv \${PREFIX}/lib ${PKG_PKGPATH}
 		ln -sfv \${PREFIX}/sbin ${PKG_PKGPATH}
-		if [[ "${BUILD_LIBSUFFIX}" == 64* ]]
+		if [ "${HARCH_LIB}" == "64" ]
 		then
 			mkdir -pv ${PKG_PKGPATH}/\${PREFIX}/lib64
 			ln -sfv \${PREFIX}/lib64 ${PKG_PKGPATH}

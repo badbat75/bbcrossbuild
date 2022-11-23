@@ -685,17 +685,19 @@ function setup_gcc () {
 			target_configargs="${SILENTCONFIG}"
 		fi
 
-		GCC_CONFIG="--with-sysroot=$(gcc_sysroot) --enable-languages=${GCC_LANGUAGES:-c,c++} \
-			--enable-checking=release --enable-multiarch --disable-multilib --enable-version-specific-runtime-libs \
-			--enable-shared --enable-threads=posix --enable-gnu-indirect-function --enable-initfini-array \
-			--enable-gnu-unique-object --enable-clocale=gnu --enable-linker-build-id --enable-lto --enable-plugin \
-			--enable-__cxa_atexit --with-default-libstdcxx-abi=new --enable-gcov \
-			--enable-libmudflap --enable-libgomp --enable-libssp --enable-libsanitizer \
-			--with-system-zlib --with-glibc-version=2.11 --with-gcc-major-version-only \
-			--disable-nls --disable-libitm --disable-libmpx --disable-option-checking \
+		### Config parameters in common with GCC and Binutils
+		COMMON_CONFIG="--with-sysroot=/ --with-sysroot=$(gcc_sysroot) --enable-shared --with-system-zlib"
+		GCC_CONFIG="--enable-languages=${GCC_LANGUAGES:-c,c++} --enable-multiarch --enable-version-specific-runtime-libs  \
+			--enable-threads=posix --enable-checking=release --disable-multilib \
+			--enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object \
+			--enable-linker-build-id --with-gcc-major-version-only --enable-libstdcxx-backtrace \
+			--with-linker-hash-style=gnu --enable-plugin --enable-initfini-array \
+			--enable-gnu-indirect-function --disable-nls --disable-option-checking \
 			${SILENTCONFIG}"
 		### Workaround for latest patches (--disable-werror)
-		BINUTILS_CONFIG="--disable-werror --enable-gold --enable-64-bit-bfd --enable-plugins"
+		BINUTILS_CONFIG="--disable-werror --enable-gold=default --enable-ld --enable-gprofng=yes --enable-lto \
+			--enable-new-dtags --disable-rpath --enable-threads=yes --enable-plugins --enable-64-bit-bfd \
+			--enable-compressed-debug-sections=all --enable-separate-code=yes --enable-plugins"
 
 		if [[ "${GCC_LANGUAGES}" =~ "fortran" ]]
 		then
@@ -755,7 +757,7 @@ function setup_gcc () {
 				LDFLAGS_FOR_TARGET=\"${LINKERFLAGS} ${OPTLINK_FLAGS}\" \\
 				${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure \\
 					${CONFIG_ARCH_PARAMS} ${PLATFORM_ARCHFLAGS} \\
-					${BINUTILS_CONFIG} ${GCC_CONFIG} \\
+					${COMMON_CONFIG} ${BINUTILS_CONFIG} ${GCC_CONFIG} \\
 					--prefix=\"${TOOLCHAIN_PATH}\" \\
 					build_configargs='${build_configargs}' \\
 					host_configargs='${host_configargs}' \\
@@ -819,7 +821,7 @@ function setup_gcc () {
 		echo "Install aclocal files" | log_buffer info
 		run_cmd "mkdir -pv ${TOOLCHAIN_PATH}/share/aclocal"
 
-		if [ ! -d $(gcc_sysroot)${BUILD_PREFIX}/lib ] && [[ "${BUILD_LIBSUFFIX}" == 64* ]]
+		if [ ! -d $(gcc_sysroot)${BUILD_PREFIX}/lib ] && [ "${HARCH_LIB}" == "64" ]
 		then
 			echo "Workaround for $(gcc_sysroot)${BUILD_PREFIX}/lib/../lib64" | log_buffer info
 			run_cmd "mkdir -pv \"$(gcc_sysroot)${BUILD_PREFIX}/lib\""
