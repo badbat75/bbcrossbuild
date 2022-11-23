@@ -37,7 +37,8 @@ PKG_OVERRIDELD=bfd
 case ${PKG_TARGET} in
 	headers)
 		STD_CONF_FLAGS=0
-		CONF_FLAGS="--build=${BARCH} --host=${HARCH} --target=${HARCH} --prefix=${BUILD_PREFIX} --includedir=${BUILD_INCLUDEDIR}"
+		CONF_FLAGS="--build=${BARCH} --host=${HARCH} --target=${HARCH} --prefix=${BUILD_PREFIX} --includedir=${BUILD_INCLUDEDIR} \
+			--with-headers=${BIN_PATH}${BUILD_INCLUDEDIR}"
 		CONF_ENV="unset CXX CXXFLAGS; CC=\"${CC_FOR_BUILD}\" CFLAGS=\"${CFLAGS_FOR_BUILD}\" CC=\"${CPP_FOR_BUILD}\" CPPFLAGS=\"${CPPLAGS_FOR_BUILD}\""
 		PKG_TWOSTEPSBUILD=0
 		PKG_MAKEVARS="install-bootstrap-headers=yes"
