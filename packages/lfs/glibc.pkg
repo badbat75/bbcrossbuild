@@ -61,7 +61,12 @@ case ${PKG_TARGET} in
 		INST_CMD="install"
 	;;
 	*)
-		CONF_FLAGS+=" --enable-systemtap --enable-stackguard-randomization --enable-stack-protector=strong"
+		CONF_FLAGS+=" --enable-stackguard-randomization --enable-stack-protector=strong"
+		if [ ${GLIBC_SYSTEMTAP:-0} -eq 1 ]
+		then
+			PKG_DEPS="lfs/systemtap"
+			CONF_FLAGS+=" --enable-systemtap"
+		fi
 		PKG_TWOSTEPSBUILD=1
 		INST_CMD="install"
 		if [ -n "${BUILD_LIBSUFFIX}" ]
