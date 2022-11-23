@@ -64,8 +64,14 @@ case ${PKG_TARGET} in
 		CONF_FLAGS+=" --enable-stackguard-randomization --enable-stack-protector=strong"
 		if [ ${GLIBC_SYSTEMTAP:-0} -eq 1 ]
 		then
-			PKG_DEPS="lfs/systemtap"
+			PKG_DEPS+=" lfs/systemtap"
 			CONF_FLAGS+=" --enable-systemtap"
+		fi
+		if [ ${GLIBC_WITH_ANNOBIN:-0} -eq 1 ]
+		then
+			PKG_DEPS+=" lfs/annobin"
+			CONF_FLAGS+=" --with-nonshared-cflags="'"-fplugin=annobin -fplugin-arg-annobin-disable -Wa,--generate-missing-build-notes=yes"'
+			PKG_MAKEVARS+=" ASFLAGS="'"-g -Wa,--generate-missing-build-notes=yes"'
 		fi
 		PKG_TWOSTEPSBUILD=1
 		INST_CMD="install"
