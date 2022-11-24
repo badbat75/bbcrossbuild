@@ -172,7 +172,8 @@ function setup_sccache () {
 		then
 			run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/sccache-${SCCACHE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
 		fi
-		run_cmd "cp -rp ${GLOBAL_TOOLCHAIN_SRCPATH}/sccache-${SCCACHE_VER} ${GLOBAL_TOOLCHAIN_BLDPATH}/sccache-${SCCACHE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
+		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/sccache-${SCCACHE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
+		run_cmd "cp -rp ${GLOBAL_TOOLCHAIN_SRCPATH}/sccache-${SCCACHE_VER} ${GLOBAL_TOOLCHAIN_BLDPATH}" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
 		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/sccache-${SCCACHE_VER} >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log 2>&1
 		run_cmd "export CARGO_PROFILE_RELEASE_OPT_LEVEL=3; \\
 			export CARGO_PROFILE_RELEASE_LTO=thin; \\
@@ -191,7 +192,7 @@ function setup_sccache () {
 	CCWRAPPER="${GLOBAL_TOOLCHAIN_PATH}/bin/sccache"
 	export RUSTC_WRAPPER="${CCWRAPPER}"
 	export SCCACHE_DIR=${GLOBAL_CACHE_PATH}/sccache
-	export SCCACHE_CACHE_SIZE="10G"
+	export SCCACHE_CACHE_SIZE="20G"
 	export SCCACHE_NO_DAEMON=0
 	if [ ! -d ${SCCACHE_DIR} ]
 	then
@@ -240,7 +241,7 @@ function setup_make () {
 		)
 		run_cmd "./build.sh" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
 		run_cmd "./make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
-		run_cmd "ln -fs make ${GLOBAL_TOOLCHAIN_PATH}/bin/gmake"
+		run_cmd "ln -fs make ${GLOBAL_TOOLCHAIN_PATH}/bin/gmake" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
 		### Clean-up build environment
 		popd >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log 2>&1
 		run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/make-${MAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
@@ -1560,7 +1561,8 @@ function setup_meson () {
 		then
 			run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/meson-${MESON_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
 		fi
-		run_cmd "cp -rp ${GLOBAL_TOOLCHAIN_SRCPATH}/meson-${MESON_VER} ${GLOBAL_TOOLCHAIN_BLDPATH}/meson-${MESON_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
+		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_SRCPATH}/meson-${MESON_VER}"
+		run_cmd "cp -rp ${GLOBAL_TOOLCHAIN_SRCPATH}/meson-${MESON_VER} ${GLOBAL_TOOLCHAIN_BLDPATH}" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
 		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/meson-${MESON_VER} >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log 2>&1
 		run_cmd "python3 setup.py build" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
 		run_cmd "python3 setup.py install --prefix=${GLOBAL_TOOLCHAIN_PATH}" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
