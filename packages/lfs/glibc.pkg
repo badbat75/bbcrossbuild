@@ -76,17 +76,6 @@ case ${PKG_TARGET} in
 		fi
 		PKG_TWOSTEPSBUILD=1
 		INST_CMD="install"
-		if [ -n "${BUILD_LIBSUFFIX}" ]
-		then
-			PKG_POSTBUILD+="
-				if [ -d \${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX} ]
-				then
-					ld=\$(find ${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX} -name \"ld-*.so\")
-					ldlink=\$(find ${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX} -name \"ld-*.so.*\")
-					ln -fsv \${ld#${PKG_PKGPATH}/lib/} ${PKG_PKGPATH}/lib/\${ldlink#${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX}/}
-					ln -fsv \${ldlink#${PKG_PKGPATH}/lib${BUILD_LIBSUFFIX}/} ${PKG_PKGPATH}/lib/ld-linux.so.\$(echo \${ldlink} | sed 's/.*.so.//' )
-				fi;"
-		fi
 		PKG_POSTBUILD+="touch ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/ld.so.conf
 			cp -fv \${PKG_SRCPATH}/nscd/nscd.conf ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/nscd.conf
 			mkdir -pv ${PKG_PKGPATH}/var/cache/nscd
