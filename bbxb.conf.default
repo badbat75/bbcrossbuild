@@ -1,4 +1,4 @@
-DATA_PATH=${HOME}/.bbxb
+DATA_PATH=${DATA_PATH:-${HOME}/.bbxb}
 
 ###### Program directories
 # PATCH_DIR=patches
@@ -107,7 +107,7 @@ GCC_OPTLEVEL=3
 #MPC_VER=${MPC_VER:-1.2.1}
 #ISL_VER=${ISL_VER:-0.25}
 #### LLVM version
-#LLVM_VER=${LLVM_VER:-15.0.3}
+#LLVM_VER=${LLVM_VER:-15.0.5}
 #### Python version
 #PYTHON_VER=${PYTHON_VER:-3.11.0}
 ##### Tools version
@@ -125,6 +125,6 @@ GCC_OPTLEVEL=3
 #MESON_VER=${MESON_VER:-0.63.3}
 #export AUTOMAKE_VER
 #### Bootstrap libraries and headers versions
-#KERNEL_VER=${KERNEL_VER:-6.0.3}
+#KERNEL_VER=${KERNEL_VER:-6.0.9}
 #GLIBC_VER=${GLIBC_VER:-2.36}
 #LIBXCRYPT_VER=${LIBXCRYPT_VER:-4.4.28}

@@ -1,0 +1,59 @@
+#!/bin/bash
+
+set -e
+MYPATH=$(dirname $(realpath ${0}))
+PLATFORMS="rpi,rpi3-aarch64,generic-x64"
+DATA_PATH=${HOME}/.bbxb_test
+TOOLCHAINS="gnu,llvm"
+
+pushd ${MYPATH}/.. >/dev/null
+
+echo
+echo "This script will check if bbxb will work and if it is able to boostrap images from blank."
+echo "Platforms to test: ${PLATFORMS}"
+echo
+
+cat <<-EOF >projects/test.prj
+    ## Enable shared libraries (default) but disable static ones
+    BUILD_LIBSHARED=1
+    BUILD_LIBSTATIC=0
+
+    ## Enable LTO both for kernel and applications
+    LTOENABLE=thin
+    KERNEL_LTOENABLE=thin
+    GCC_LTOENABLE=0
+
+    build --no_save_status lfs/create-base-fs_1.0
+
+    setup_full_toolchain --with-python --with-gnu-install
+
+    # Build bash to test chroot Environment
+    build lfs/bash_5
+
+    # Test QEMU Environment and generated libraries
+    build lfs/lz4_1.9
+
+    # Test cmake
+    build lfs/zlib_1
+
+    # Test autoconf/configure/meson/ninja
+    build lfs/glib_2
+EOF
+
+IFS=,
+for TOOLCHAIN in ${TOOLCHAINS}
+do
+    [ -d ${DATA_PATH}/test ] && rm -rf ${DATA_PATH}/test || true
+    echo "### Testing ${TOOLCHAIN} toolchain... ###"
+    for PLATFORM in ${PLATFORMS}
+    do
+        echo "# Running test for ${PLATFORM}..."
+        DATA_PATH=${DATA_PATH} TOOLCHAIN=${TOOLCHAIN} ./bbxb test ${PLATFORM}
+        echo "# Test ok!!!"
+    done
+    echo "### Toolchain test ok!!! ###"
+    echo
+done
+rm -rf ${DATA_PATH} projects/test.prj
+popd >/dev/null
+set +e

@@ -831,21 +831,21 @@ function setup_gcc () {
 	}
 
 	function setup_ldconfig () {
+		if [ ! -f ${DISTOS_PATH}/etc/ld.so.conf ] && [ ! -f ${BIN_PATH}/etc/ld.so.conf ]
+		then
+			run_cmd "mkdir -pv ${BIN_PATH}/etc" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
+			run_cmd "cat > ${BIN_PATH}/etc/ld.so.conf" <<-EOF >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
+				include ld.so.conf.d/*.conf
+			EOF
+		fi
 		if [ ! -f ${TOOLCHAIN_PATH}/bin/ldconfig ] && [ -f $(gcc_sysroot)${BUILD_PREFIX}/sbin/ldconfig ]
 		then
 			run_cmd "cat >${TOOLCHAIN_PATH}/bin/ldconfig" <<-EOF >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 				#!/bin/sh
 				export QEMU_LD_PREFIX=${BIN_PATH}
-				$(gcc_sysroot)${BUILD_PREFIX}/sbin/ldconfig -f ${BIN_PATH}/etc/ld.so.conf -C ${BIN_PATH}/etc/ld.so.cache \${@}
+				$(gcc_sysroot)${BUILD_PREFIX}/sbin/ldconfig -f /etc/ld.so.conf -C /etc/ld.so.cache -r ${BIN_PATH} \${@}
 			EOF
 			chmod +x ${TOOLCHAIN_PATH}/bin/ldconfig
-		fi
-		if [ ! -f ${DISTOS_PATH}/etc/ld.so.conf ] && [ ! -f ${BIN_PATH}/etc/ld.so.conf ]
-		then
-			run_cmd "mkdir -pv $(gcc_sysroot)/etc" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
-			run_cmd "cat > $(gcc_sysroot)/etc/ld.so.conf" <<-EOF >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
-				include ld.so.conf.d/*.conf
-			EOF
 		fi
 	}
 
@@ -949,10 +949,6 @@ function setup_gcc () {
 					if [ ${GCC_INSTALL_TARGETS} -eq 1 ]
 					then
 						run_cmd "rsync -aK --devices --specials ${PACKAGES_PATH}/${PKG_NAME}/ ${BIN_PATH}"
-						if [ -f ${TOOLCHAIN_PATH}/bin/ldconfig ]
-						then
-							run_cmd "${TOOLCHAIN_PATH}/bin/ldconfig -v"
-						fi
 					fi
 				fi
 				run_cmd "create_sfx_package ${PACKAGES_PATH}/${PKG_NAME}"
@@ -1070,11 +1066,10 @@ function setup_gcc () {
 		echo -n "${SPACES}"
 		build --target stage2 lfs/glibc
 	fi
-	setup_ldconfig
 	echo -n "${SPACES}Building target libraries... "
+	setup_ldconfig
 	gcc_make_target_libs
 	echo -e "done.\n"
-
 	if [ $(gcc_sysroot) == ${BIN_PATH} ]
 	then
 		### Build & install glibc
@@ -1084,6 +1079,7 @@ function setup_gcc () {
 		echo -n "${SPACES}"
 		build --toolchain gnu lfs/libxcrypt
 	fi
+	ldconfig -v >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
 	if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ]
 	then
 		run_cmd "rm -rf ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log

@@ -27,6 +27,7 @@ CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}${BUILD_INCLUDEDIR} \
 	--disable-profile --disable-crypt --disable-build-nscd --disable-nscd \
 	--disable-werror --disable-sanity-checks --without-cvs"
 
+CONF_ENV="LD_LIBRARY_PATH= "
 CONF_VARS="libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes"
 PKG_MAKEVARS="slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} rootsbindir=${BUILD_PREFIX}/sbin \
 	complocaledir=${BUILD_LIBDIR} cross-compiling=yes"
