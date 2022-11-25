@@ -2,7 +2,7 @@
 
 set -e
 MYPATH=$(dirname $(realpath ${0}))
-PLATFORMS="rpi,rpi3-aarch64,generic-x64"
+PLATFORMS="generic-x64,rpi,rpi3-aarch64"
 DATA_PATH=${HOME}/.bbxb_test
 TOOLCHAINS="gnu,llvm"
 
@@ -40,10 +40,18 @@ cat <<-EOF >projects/test.prj
     build lfs/glib_2
 EOF
 
+case ${1} in
+    clean-start)
+        [ -d ${DATA_PATH}/test ] && rm -rf ${DATA_PATH}/test || true
+        ;;
+    clean-platform)
+        [ -d ${DATA_PATH}/test ] && eval rm -rf ${DATA_PATH}/test/{${PLATFORMS}} || true
+        ;;
+esac
+
 IFS=,
 for TOOLCHAIN in ${TOOLCHAINS}
 do
-    [ -d ${DATA_PATH}/test ] && rm -rf ${DATA_PATH}/test || true
     echo "### Testing ${TOOLCHAIN} toolchain... ###"
     for PLATFORM in ${PLATFORMS}
     do
@@ -54,6 +62,7 @@ do
     echo "### Toolchain test ok!!! ###"
     echo
 done
+IFS=
 rm -rf ${DATA_PATH} projects/test.prj
 popd >/dev/null
 set +e
