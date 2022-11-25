@@ -85,6 +85,7 @@ build lfs/wget_1.21.1
 build lfs/which_2.21
 ### Network
 build lfs/dhcp_4.4.3
+build lfs/dhcpcd
 build firmwares/wireless-regdb
 build lfs/wpa_supplicant_2
 build lfs/hostapd_2

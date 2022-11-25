@@ -21,14 +21,14 @@ CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR} --with-sysroot=/ -
     --with-mpc-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpc-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
     --with-mpfr-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpfr-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
     --with-isl-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-isl-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-    --enable-targets=${HARCH} --with-arch-directory=${HM} --with-arch=${HMARCH}  \
     --with-gmp-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-gmp-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-    --enable-checking=release --enable-multiarch --disable-multilib --enable-version-specific-runtime-libs \
-    --enable-gnu-indirect-function --enable-initfini-array --enable-gnu-unique-object --with-system-zlib --with-glibc-version=2.11 \
-    --with-gcc-major-version-only --enable-linker-build-id --enable-lto --enable-threads=posix --enable-languages=${GCC_LANGUAGES:-c,c++} \
-    --enable-clocale=gnu --enable-nls --enable-__cxa_atexit --with-default-libstdcxx-abi=new \
-    --enable-gcov --enable-libmudflap --enable-libgomp --enable-libssp --enable-install-libiberty \
-    --disable-libitm --disable-libmpx"
+    --enable-targets=${HARCH} --with-arch-directory=${HM} --with-arch=${HMARCH} --with-system-zlib \
+    --enable-languages=${GCC_LANGUAGES:-c,c++} --enable-multiarch --enable-version-specific-runtime-libs \
+    --enable-threads=posix --enable-checking=release --disable-multilib \
+    --enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object \
+    --enable-linker-build-id --with-gcc-major-version-only --enable-libstdcxx-backtrace \
+    --with-linker-hash-style=gnu --enable-plugin --enable-initfini-array \
+    --enable-gnu-indirect-function --disable-nls --disable-option-checking"
 if [ "${LTOENABLE:-0}" != "0" ]
 then
     PKG_PREBUILD="sed '/^  __asm/d;/^# define omp_lock_symver(fn) /a\  extern __typeof (g##fn##_30) _##fn##_30 __attribute__((__symver__ (#fn \"@@OMP_3.0\"))); \\\\\\n  extern __typeof (g##fn##_25) _##fn##_25 __attribute__((__symver__ (#fn \"@OMP_1.0\")));' -i libgomp/libgomp.h;"

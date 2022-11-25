@@ -21,8 +21,10 @@ CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} 
     --with-mpc-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpc-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
     --with-mpfr-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpfr-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
     --with-isl-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-isl-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-    --enable-targets=${HARCH} --with-arch-directory=${HM} --with-arch=${HMARCH}  \
-    --enable-gold --enable-plugins --enable-64-bit-bfd --enable-install-libbfd --with-system-zlib"
+    --enable-targets=${HARCH} --with-arch-directory=${HM} --with-arch=${HMARCH} --with-system-zlib \
+    --disable-werror --enable-gold=default --enable-ld --enable-gprofng=yes --enable-lto \
+    --enable-new-dtags --disable-rpath --enable-threads=yes --enable-plugins --enable-64-bit-bfd \
+    --enable-compressed-debug-sections=all --enable-separate-code=yes --enable-plugins"
 INST_CMD="-j1 install-strip"
 PKG_MAKEENV="env -u CPP -u CPPFLAGS"
 PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
