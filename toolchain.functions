@@ -49,7 +49,7 @@ function set_gnu_buildenv () {
 		do
 			realpath -m $(${GCC_CMD} --print-search-dirs 2>/dev/null | grep libraries | cut -d= -f2 | cut -d: -f${RECORD}) 2>/dev/null
 		done | xargs
-		IFS=
+		unset IFS
 	}
 	
 	function gcc_toolchain_libraries_compilerflags () {

@@ -1,0 +1,24 @@
+--- a/libcc1/configure.ac	2022-08-19 10:10:15.000000000 +0200
++++ b/libcc1/configure.ac	2022-11-28 11:56:45.797060138 +0100
+@@ -74,6 +74,21 @@
+ fi
+ AC_SUBST(libsuffix)
+ 
++# Figure out what objdump we will be using.
++AS_VAR_SET_IF(gcc_cv_objdump,, [
++if test -f $gcc_cv_binutils_srcdir/configure.ac \
++     && test -f ../binutils/Makefile \
++     && test x$build = x$host; then
++        # Single tree build which includes binutils.
++        gcc_cv_objdump=../binutils/objdump$build_exeext
++elif test -x objdump$build_exeext; then
++        gcc_cv_objdump=./objdump$build_exeext
++elif ( set dummy $OBJDUMP_FOR_TARGET; test -x $[2] ); then
++        gcc_cv_objdump="$OBJDUMP_FOR_TARGET"
++else
++        AC_PATH_PROG(gcc_cv_objdump, $OBJDUMP_FOR_TARGET)
++fi])
++
+ dnl Test for -lsocket and -lnsl.  Copied from libgo/configure.ac.
+ AC_CACHE_CHECK([for socket libraries], libcc1_cv_lib_sockets,
+   [libcc1_cv_lib_sockets=

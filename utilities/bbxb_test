@@ -62,7 +62,7 @@ do
     echo "### Toolchain test ok!!! ###"
     echo
 done
-IFS=
+unset IFS
 rm -rf ${DATA_PATH} projects/test.prj
 popd >/dev/null
 set +e

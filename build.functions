@@ -612,8 +612,10 @@ function build () {(
 				echo "${SPACES}\"series\" patch list file does not exist."
 			fi
 		fi
+		IFS=,
 		for scanpatch in ${PATCHES:-}
 		do
+			unset IFS
 			if [[ ${scanpatch} =~ ^https?://|^ftp:// ]]
 			then
 				echo -n "${SPACES}Downloading patch[set]..."	
@@ -623,14 +625,18 @@ function build () {(
 				run_cmd "mkdir -pv ${PKG_SRCPATH}/bbxb_patches"
 				run_cmd "cp -v ${PATCH_PATH}/$scanpatch ${PKG_SRCPATH}/bbxb_patches"
 			fi
-			find ${PKG_SRCPATH}/bbxb_patches -type f | xargs -I{} -d'\n' -n1 -P${NPROCS} bash -c "
+		done
+		unset IFS
+		if [ -d ${PKG_SRCPATH}/bbxb_patches ]
+		then
+			find ${PKG_SRCPATH}/bbxb_patches -type f | xargs -I{} -d'\n' -n1 bash -c "
 				PATCH=\"\$(basename {})\"
 				echo -n \"Applying \${PATCH} patch...\"
 				echo \"\$ patch -p1 < {}\"
 				patch -f -p1 < \"{}\" >> ${LOG_FILE} 2>&1
 				echo "Done."
 			"
-		done
+		fi
 		if [ -f "${PKG_SRCPATH}/${CONF_CMD}" ] && [ ! -x "${PKG_SRCPATH}/${CONF_CMD}" ]
 		then
 			run_cmd "chmod +x ${PKG_SRCPATH}/${CONF_CMD}" >> ${LOG_FILE}
@@ -919,8 +925,8 @@ function build () {(
 			export RUSTFLAGS+=" -C link-arg=${param}"
 		done
 		export RUSTFLAGS+=" ${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}"
-		echo "RUSTFLAGS=${RUSTFLAGS}"
-		run_cmd "cargo build $( [${MAKEVERBOSE:-0} -eq 1] && echo -n "--verbose" ) --release ${CONF_FLAGS} --target=${CARGO_TARGET}"
+		echo "RUSTFLAGS=${RUSTFLAGS}" | log_buffer info
+		run_cmd "cargo build $( [${MAKEVERBOSE:-0} -eq 1 ] && echo -n "--verbose" ) --release ${CONF_FLAGS} --target=${CARGO_TARGET}"
 		for file in ${CARGO_BINLIST}
 		do
 			if [ ! -d ${PKG_PKGPATH}${CARGO_BIN} ]

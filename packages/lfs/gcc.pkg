@@ -16,28 +16,28 @@ AUTOCONF_PATH=autoscan
 STD_CONF_FLAGS=0
 CONF_ENV="env -u CPP -u CPPFLAGS"
 CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
-    --build=${BARCH} --host=${HARCH} --target=${HARCH} \
-    --enable-shared --enable-static \
-    --with-mpc-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpc-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-    --with-mpfr-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpfr-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-    --with-isl-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-isl-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-    --with-gmp-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-gmp-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-    --enable-targets=${HARCH} --with-arch-directory=${HM} --with-arch=${HMARCH} --with-system-zlib \
-    --enable-languages=${GCC_LANGUAGES:-c,c++} --enable-multiarch --enable-version-specific-runtime-libs \
-    --enable-threads=posix --enable-checking=release --disable-multilib \
-    --enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object \
-    --enable-linker-build-id --with-gcc-major-version-only --enable-libstdcxx-backtrace \
-    --with-linker-hash-style=gnu --enable-plugin --enable-initfini-array \
-    --enable-gnu-indirect-function --disable-nls --disable-option-checking"
+	--build=${BARCH} --host=${HARCH} --target=${HARCH} \
+	--enable-shared --enable-static \
+	--with-mpc-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpc-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+	--with-mpfr-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpfr-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+	--with-isl-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-isl-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+	--with-gmp-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-gmp-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+	--enable-targets=${HARCH} --with-arch-directory=${HM} --with-arch=${HMARCH} --with-system-zlib \
+	--enable-languages=${GCC_LANGUAGES:-c,c++} --enable-multiarch --enable-version-specific-runtime-libs \
+	--enable-threads=posix --enable-checking=release --disable-multilib \
+	--enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object \
+	--enable-linker-build-id --with-gcc-major-version-only --enable-libstdcxx-backtrace \
+	--with-linker-hash-style=gnu --enable-plugin --enable-initfini-array \
+	--enable-gnu-indirect-function --disable-nls --disable-option-checking"
 if [ "${LTOENABLE:-0}" != "0" ]
 then
-    PKG_PREBUILD="sed '/^  __asm/d;/^# define omp_lock_symver(fn) /a\  extern __typeof (g##fn##_30) _##fn##_30 __attribute__((__symver__ (#fn \"@@OMP_3.0\"))); \\\\\\n  extern __typeof (g##fn##_25) _##fn##_25 __attribute__((__symver__ (#fn \"@OMP_1.0\")));' -i libgomp/libgomp.h;"
+	PKG_PREBUILD="sed '/^  __asm/d;/^# define omp_lock_symver(fn) /a\  extern __typeof (g##fn##_30) _##fn##_30 __attribute__((__symver__ (#fn \"@@OMP_3.0\"))); \\\\\\n  extern __typeof (g##fn##_25) _##fn##_25 __attribute__((__symver__ (#fn \"@OMP_1.0\")));' -i libgomp/libgomp.h;"
 fi
 PKG_MAKEENV="env -u CPP -u CPPFLAGS"
 PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
-    CFLAGS_FOR_TARGET=\"\${CFLAGS} -fno-lto\" \
-    CXXFLAGS_FOR_TARGET=\"\${CXXFLAGS} -fno-lto\" \
-    AR_FOR_TARGET=\"\${AR}\" \
+	CFLAGS_FOR_TARGET=\"\${CFLAGS} -fno-lto\" \
+	CXXFLAGS_FOR_TARGET=\"\${CXXFLAGS} -fno-lto\" \
+	AR_FOR_TARGET=\"\${AR}\" \
 	NM_FOR_TARGET=\"\${NM}\" \
 	RANLIB_FOR_TARGET=\"\${RANLIB}\" \
 "
@@ -46,51 +46,78 @@ PKG_TOOLCHAIN=gnu
 PKG_CXXFLAGS="-Wno-stringop-overflow -Wno-maybe-uninitialized"
 
 case ${GCC_VER} in
-    *)
-        PKG_AUTOCONF=2.69
-        PKG_AUTOMAKE=1.15.1
-        PKG_LIBTOOL=2.2.8
-        PKG_GETTEXT=0.14.6
-    ;;
+	*)
+		PKG_AUTOCONF=2.69
+		PKG_AUTOMAKE=1.15.1
+		PKG_LIBTOOL=2.2.8
+		PKG_GETTEXT=0.14.6
+	;;
 esac
 
 PKG_PREBUILD+="sed '/^AC_INIT/a LT_INIT' -i configure.ac
-    sed '/^AC_INIT/a AC_CONFIG_MACRO_DIR([../config])' \
-    -i fixincludes/configure.ac gcc/configure.ac libobjc/configure.ac libiberty/configure.ac
-    sed '/all-build-libcpp/,/TARGET-build-libcpp/ s/\\\$(BASE_FLAGS_TO_PASS) //' -i Makefile.in"
+	sed '/^AC_INIT/a AC_CONFIG_MACRO_DIR([../config])' \
+	-i fixincludes/configure.ac gcc/configure.ac libobjc/configure.ac libiberty/configure.ac
+	sed '/all-build-libcpp/,/TARGET-build-libcpp/ s/\\\$(BASE_FLAGS_TO_PASS) //' -i Makefile.in;"
+PKG_PREBUILD+='patch -p1 <<EOF
+--- a/libcc1/configure.ac	2022-08-19 10:10:15.000000000 +0200
++++ b/libcc1/configure.ac	2022-11-28 11:56:45.797060138 +0100
+@@ -74,6 +74,21 @@
+ fi
+ AC_SUBST(libsuffix)
+ 
++# Figure out what objdump we will be using.
++AS_VAR_SET_IF(gcc_cv_objdump,, [
++if test -f $gcc_cv_binutils_srcdir/configure.ac \\
++     && test -f ../binutils/Makefile \\
++     && test x$build = x$host; then
++        # Single tree build which includes binutils.
++        gcc_cv_objdump=../binutils/objdump$build_exeext
++elif test -x objdump$build_exeext; then
++        gcc_cv_objdump=./objdump$build_exeext
++elif ( set dummy $OBJDUMP_FOR_TARGET; test -x $[2] ); then
++        gcc_cv_objdump="$OBJDUMP_FOR_TARGET"
++else
++        AC_PATH_PROG(gcc_cv_objdump, $OBJDUMP_FOR_TARGET)
++fi])
++
+ dnl Test for -lsocket and -lnsl.  Copied from libgo/configure.ac.
+ AC_CACHE_CHECK([for socket libraries], libcc1_cv_lib_sockets,
+   [libcc1_cv_lib_sockets=
+EOF
+'
 
 PKG_POSTBUILD="eval export PKG_PKGPATH=${PKG_PKGPATH}
-    mkdir -pv \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
-    find \${PKG_PKGPATH}${BUILD_PREFIX}/lib/gcc/${HARCH} -type f,l \\( -name \"*.so*\" -o -name \"*.a*\" -o -name \"*.la*\" -o -name \"crt*.o\" \\) \
-    | xargs -r -I{} bash -c 'ln -fsv \$(realpath --relative-to=\${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} {}) \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/\$(basename {})'"
+	mkdir -pv \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
+	find \${PKG_PKGPATH}${BUILD_PREFIX}/lib/gcc/${HARCH} -type f,l \\( -name \"*.so*\" -o -name \"*.a*\" -o -name \"*.la*\" -o -name \"crt*.o\" \\) \
+	| xargs -r -I{} bash -c 'ln -fsv \$(realpath --relative-to=\${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} {}) \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/\$(basename {})'"
 
 ##################### Package dedicated code #########################
 PKG_MAKETARGETS=
 case "${GCC_TARGETS:-all}" in
-    all)
-        PKG_SUFFIX="-all${PKG_SUFFIX}"
-        local OBJECTS=
-        PKG_MAKETARGETS="all"
-        INST_CMD+=" install-strip"
-    ;;
-    binaries)
-        PKG_SUFFIX="-binaries${PKG_SUFFIX}"
-        local OBJECTS="host"
-    ;;
-    libraries)
-        PKG_SUFFIX="-libraries${PKG_SUFFIX}"
-        local OBJECTS="target"
-        ### Improves build time disabling LTO on host binaries would not be installed
-        PKG_OVERRIDELTO=0
-    ;;
-    *) 
-        PKG_SUFFIX="-custom${PKG_SUFFIX}"
-        local OBJECTS="${GCC_TARGETS}"
-    ;;
+	all)
+		PKG_SUFFIX="-all${PKG_SUFFIX}"
+		local OBJECTS=
+		PKG_MAKETARGETS="all"
+		INST_CMD+=" install-strip"
+	;;
+	binaries)
+		PKG_SUFFIX="-binaries${PKG_SUFFIX}"
+		local OBJECTS="host"
+	;;
+	libraries)
+		PKG_SUFFIX="-libraries${PKG_SUFFIX}"
+		local OBJECTS="target"
+		### Improves build time disabling LTO on host binaries would not be installed
+		PKG_OVERRIDELTO=0
+	;;
+	*) 
+		PKG_SUFFIX="-custom${PKG_SUFFIX}"
+		local OBJECTS="${GCC_TARGETS}"
+	;;
 esac
 for object in $( echo ${OBJECTS} | tr ',' ' ' )
 do
-    PKG_MAKETARGETS+=" all-${object}"
-    INST_CMD+=" install-strip-${object}"
+	PKG_MAKETARGETS+=" all-${object}"
+	INST_CMD+=" install-strip-${object}"
 done
 ######################################################################
