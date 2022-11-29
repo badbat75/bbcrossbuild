@@ -15,36 +15,21 @@ CONF_FLAGS="--includedir=${BUILD_INCLUDEDIR}/security \
 INST_CMD="install-strip"
 
 PKG_POSTBUILD="install -v -m755 -d ${PKG_PKGPATH}/etc/pam.d"
-case ${PAM_ENFORCE_PASSWD:-0} in
-	0) PKG_POSTBUILD+="
-		cat > ${PKG_PKGPATH}/etc/pam.d/other <<-EOF
-			auth            required        pam_unix.so     nullok
-			account         required        pam_unix.so
-			session         required        pam_unix.so
-			password        required        pam_unix.so     nullok	EOF
-		EOF
-		"
-	;;
-	1) PKG_POSTBUILD+="
-		cat > ${PKG_PKGPATH}/etc/pam.d/other << "EOF"
-			# Begin /etc/pam.d/other
-
-			auth        required        pam_warn.so
-			auth        required        pam_deny.so
-			account     required        pam_warn.so
-			account     required        pam_deny.so
-			password    required        pam_warn.so
-			password    required        pam_deny.so
-			session     required        pam_warn.so
-			session     required        pam_deny.so
-
-			# End /etc/pam.d/other
-		EOF
-		"
-	;;
-esac
-PKG_POSTBUILD+="
 	install -vdm755 ${PKG_PKGPATH}/etc/pam.d
+	cat > ${PKG_PKGPATH}/etc/pam.d/other << "EOF"
+		# Begin /etc/pam.d/other
+
+		auth        required        pam_warn.so
+		auth        required        pam_deny.so
+		account     required        pam_warn.so
+		account     required        pam_deny.so
+		password    required        pam_warn.so
+		password    required        pam_deny.so
+		session     required        pam_warn.so
+		session     required        pam_deny.so
+
+		# End /etc/pam.d/other
+	EOF
 	cat > ${PKG_PKGPATH}/etc/pam.d/system-account <<-EOF
 		# Begin /etc/pam.d/system-account
 
