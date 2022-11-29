@@ -63,11 +63,14 @@ pathappend () {
 export -f pathremove pathprepend pathappend
 
 # Set the initial path
-export PATH=/bin:/usr/bin
+export PATH=/usr/bin:/usr/sbin
 
-if [ \\\$EUID -eq 0 ] ; then
-        pathappend /sbin:/usr/sbin
-        unset HISTFILE
+if [ ! -L /bin ] ; then
+        pathappend /bin
+fi
+
+if [ ! -L /sbin ] ; then
+        pathappend /sbin
 fi
 
 # Setup some environment variables.

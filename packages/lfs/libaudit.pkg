@@ -1,0 +1,9 @@
+# libaudit
+PKG_VER=3.0.9
+PKG_SUFFIX=_${PKG_VER}
+PKG_URL="https://github.com/linux-audit/audit-userspace/archive/refs/tags/v${PKG_VER}.tar.gz"
+PKG_AUTOCONF=1
+BUILD_PROCESS=configmake
+CONF_FLAGS="--disable-zos-remote --without-python --with-python3"
+PKG_FAULTYCFLAGS=1
+INST_CMD=install-strip
