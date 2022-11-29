@@ -1,0 +1,19 @@
+# sysstat
+PKG_VER=12.7.1
+PKG_SUFFIX=_${PKG_VER}
+PKG_URL="http://sebastien.godard.pagesperso-orange.fr/sysstat-${PKG_VER}.tar.xz"
+PKG_AUTOCONF=1
+BUILD_PROCESS=configmake
+CONF_ENV="sa_lib_dir=${BUILD_PREFIX}/lib/sa \
+    sa_dir=/var/log/sa \
+    conf_dir=/etc/sysconfig"
+CONF_FLAGS="--disable-file-attr"
+INST_CMD="install-strip"
+
+PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}/lib/systemd/system
+    install -v -m644 sysstat.service ${PKG_PKGPATH}${BUILD_PREFIX}/lib/systemd/system/sysstat.service
+    install -v -m644 cron/sysstat-collect.service ${PKG_PKGPATH}${BUILD_PREFIX}/lib/systemd/system/sysstat-collect.service
+    install -v -m644 cron/sysstat-collect.timer ${PKG_PKGPATH}${BUILD_PREFIX}/lib/systemd/system/sysstat-collect.timer
+    install -v -m644 cron/sysstat-summary.service ${PKG_PKGPATH}${BUILD_PREFIX}/lib/systemd/system/sysstat-summary.service
+    install -v -m644 cron/sysstat-summary.timer ${PKG_PKGPATH}${BUILD_PREFIX}/lib/systemd/system/sysstat-summary.timer
+    sed -i '/^Also=/d' ${PKG_PKGPATH}${BUILD_PREFIX}/lib/systemd/system/sysstat.service"

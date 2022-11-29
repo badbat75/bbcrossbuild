@@ -1,0 +1,8 @@
+# libedit
+PKG_VER=20221030-3.1
+PKG_SUFFIX=_${PKG_VER}
+PKG_URL="https://www.thrysoee.dk/editline/libedit-${PKG_VER}.tar.gz"
+PKG_AUTOCONF=1
+BUILD_PROCESS=configmake
+CONF_FLAGS=
+INST_CMD="install-strip"

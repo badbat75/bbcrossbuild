@@ -1,9 +1,16 @@
 # openssh_9.1p1
 PKG_URL="http://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.1p1.tar.gz"
-PKG_DEPS="lfs/krb5_1.20 lfs/net-tools_2.10"
+PKG_DEPS="lfs/krb5_1.20 lfs/net-tools_2.10 lfs/Linux-PAM lfs/libedit lfs/sysstat"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
-CONF_FLAGS="--sysconfdir=${BUILD_SYSCONFDIR}/ssh --with-md5-passwords --with-privsep-path=/var/lib/sshd"
+CONF_FLAGS="--sysconfdir=${BUILD_SYSCONFDIR}/ssh \
+		--with-privsep-path=/var/lib/sshd \
+		--with-default-path=${BUILD_EXECPREFIX}/bin \
+		--with-superuser-path=${BUILD_EXECPREFIX}/sbin:${BUILD_EXECPREFIX}/bin \
+		--with-pid-dir=/run \
+		--with-pam \
+		--with-kerberos5=${BUILD_PREFIX} \
+		--with-libedit"
 INST_CMD="install"
 PKG_TWOSTEPSBUILD=1
 PKG_PREBUILD="sed -e '/INSTALLKEYS_SH/s/)//' -e '260a\  )' -i contrib/ssh-copy-id
