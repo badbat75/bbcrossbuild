@@ -21,5 +21,5 @@ PKG_POSTBUILD="ln -sfv /etc/machine-id ${PKG_PKGPATH}/var/lib/dbus"
 
 PKG_POSTINSTALL="chown -v root:messagebus /usr/libexec/dbus-daemon-launch-helper
 chmod -v      4750       /usr/libexec/dbus-daemon-launch-helper
-groupadd -f systemd-oom
-useradd -c \"Systemd OOM Daemon\" -g systemd-oom -s /bin/false systemd-oom"
+groupadd --system systemd-oom
+useradd --system -c \"systemd OOM Daemon\" -d /etc/dbus-1 -g systemd-oom -s /bin/false systemd-oom"
