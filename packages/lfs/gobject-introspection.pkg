@@ -1,0 +1,8 @@
+# gobject-introspection
+PKG_VER=1.74.0
+PKG_SUFFIX=_${PKG_VER}
+PKG_URL="https://download.gnome.org/sources/gobject-introspection/${PKG_VER}/gobject-introspection-${PKG_VER}.tar.xz"
+PKG_DEPS="lfs/glib_2"
+BUILD_PROCESS=mesonninja
+CONF_FLAGS=
+INST_CMD=install
