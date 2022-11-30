@@ -715,11 +715,10 @@ function build () {(
 			echo -e "\t\t${CONF_VARS}"
 			${CONF_ENV} ${RUNCONFIG_CMD} ${CONF_FLAGS} ${CONF_VARS} \${@}
 		EOF
-		eval local "PKG_MAKEVARS='${PKG_MAKEVARS}'"
 		cat >runmake.sh <<-EOF
 			#!/bin/bash
 			echo "\\\$ ${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} ${PKG_MAKEVARS} \${@}"
-			${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
+			${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} ${PKG_MAKEVARS} \${@}
 		EOF
 		run_cmd "chmod +x runconfig.sh runmake.sh"
 
@@ -737,7 +736,7 @@ function build () {(
 				run_cmd "./runmake.sh ${target}"
 			done
 		fi
-		run_cmd "./runmake.sh ${INST_CMD:-}"
+		run_cmd "./runmake.sh ${INST_CMD:-} DESTDIR=${PKG_PKGPATH}"
 		popd
 		trap - ERR
 	}
@@ -753,8 +752,8 @@ function build () {(
 		eval local "PKG_MAKEVARS='${PKG_MAKEVARS}'"
 		cat >runmake.sh <<-EOF
 			#!/bin/bash
-			echo "\\\$ ${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} ${PKG_MAKEVARS} \${@}"
-			${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
+			echo "\\\$ ${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make \${@} V=${MAKEVERBOSE:-0} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} ${PKG_MAKEVARS}"
+			${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make \${@} V=${MAKEVERBOSE:-0} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} ${PKG_MAKEVARS}
 		EOF
 		run_cmd "chmod +x runmake.sh"
 		if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
@@ -765,7 +764,7 @@ function build () {(
 				run_cmd "./runmake.sh ${target}"
 			done
 		fi
-		run_cmd "./runmake.sh PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} ${INST_CMD:-install}"
+		run_cmd "./runmake.sh ${INST_CMD:-install} DESTDIR=${PKG_PKGPATH} "
 		cd ${BB_HOME}
 		trap - ERR
 	}

@@ -84,14 +84,14 @@ build lfs/lsof_4.95
 build lfs/wget_1.21.1
 build lfs/which_2.21
 ### Network
+build lfs/bind_9.19
 build lfs/dhcp_4.4.3
-build lfs/dhcpcd
+#build lfs/dhcpcd
 build firmwares/wireless-regdb
 build lfs/wpa_supplicant_2
 build lfs/hostapd_2
 build lfs/iw_5.9
 build lfs/wireless-tools_29
-build lfs/bind_9.19
 build lfs/curl_7
 ### Development
 build lfs/strace_5.19

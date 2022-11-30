@@ -1,6 +1,7 @@
 # e2fsprogs_1.46
 PKG_URL="https://downloads.sourceforge.net/project/e2fsprogs/e2fsprogs/v1.46.5/e2fsprogs-1.46.5.tar.gz"
-PKG_DEPS="lfs/systemd_252 lfs/util-linux_2.38.1"
+PKG_DEPS="lfs/util-linux_2.38.1"
+#PKG_DEPS+=" lfs/systemd_252"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--disable-option-checking --with-root-prefix=\"\" \
     --enable-elf-shlibs --disable-libblkid --disable-libuuid --disable-uuidd --disable-fsck"
