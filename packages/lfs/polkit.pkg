@@ -1,7 +1,7 @@
 # polkit
 PKG_VER=122
 PKG_SUFFIX=_${PKG_VER}
-PKG_URL="https://gitlab.freedesktop.org/polkit/polkit/-/archive/${PKG_VER}/polkit-${PKG_VER}.tar.gz"
+PKG_URL="https://gitlab.freedesktop.org/polkit/polkit/-/archive/$(echo ${PKG_VER} | sed 's/.//g')/polkit-${PKG_VER}.tar.gz"
 PKG_DEPS="lfs/glib_2 lfs/duktape lfs/Linux-PAM lfs/libxslt_1.1.36 lfs/gobject-introspection"
 BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Dman=true \
@@ -9,7 +9,7 @@ CONF_FLAGS="-Dman=true \
       -Dtests=false \
       -Djs_engine=duktape"
 INST_CMD=install
-PKG_POSTBUILD"install -vdm755 ${PKG_PKGPATH}/etc/pam.d
+PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}/etc/pam.d
 	cat > /etc/pam.d/polkit-1 <<-EOF
 		# Begin /etc/pam.d/polkit-1
 

@@ -1,8 +1,8 @@
 # gobject-introspection
 PKG_VER=1.74.0
 PKG_SUFFIX=_${PKG_VER}
-PKG_URL="https://download.gnome.org/sources/gobject-introspection/${PKG_VER}/gobject-introspection-${PKG_VER}.tar.xz"
+PKG_URL="https://download.gnome.org/sources/gobject-introspection/$(echo ${PKG_VER} | cut -d. -f1,2)/gobject-introspection-${PKG_VER}.tar.xz"
 PKG_DEPS="lfs/glib_2"
 BUILD_PROCESS=mesonninja
-CONF_FLAGS=
+CONF_FLAGS="-Dgi_cross_pkgconfig_sysroot_path=${SYSROOT} -Dpython=$(which python3) -Dgi_cross_use_prebuilt_gi=true"
 INST_CMD=install

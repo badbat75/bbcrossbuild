@@ -3,6 +3,6 @@ PKG_VER=2.7.0
 PKG_SUFFIX=_${PKG_VER}
 PKG_URL="https://duktape.org/duktape-${PKG_VER}.tar.xz"
 BUILD_PROCESS=simplemake
-PKG_MAKEVARS=
+PKG_MAKEVARS="-f Makefile.sharedlibrary LIBDIR=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} INSTALL_PREFIX=${BUILD_PREFIX}"
 INST_CMD="install"
-#PKG_PREBUILD="sed -i '/^CC :=/ s/:=/?=/' Makefile"
+PKG_PREBUILD="sed -i 's/-Os //' Makefile.sharedlibrary"
