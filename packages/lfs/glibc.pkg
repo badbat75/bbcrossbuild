@@ -17,7 +17,7 @@ case ${GLIBC_VER} in
 		PKG_SUFFIX=_${GLIBC_VER}
 		;;
 esac
-PATCHES+=" http://www.linuxfromscratch.org/patches/lfs/development/glibc-${GLIBC_VER}-fhs-1.patch"
+PATCHES+=",http://www.linuxfromscratch.org/patches/lfs/development/glibc-${GLIBC_VER}-fhs-1.patch"
 
 PKG_OVERRIDELTO=0
 BUILD_PROCESS=configmake

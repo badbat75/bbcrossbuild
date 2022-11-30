@@ -1,6 +1,6 @@
 # rpi-kernel_5.15
-PKG_SUFFIX=.79
-PKG_URL="https://github.com/raspberrypi/linux/archive/3e2b55bf16ebcdc0cc4585e57463d32635161611.tar.gz"
+PKG_SUFFIX=.80
+PKG_URL="https://github.com/raspberrypi/linux/archive/996f28d6295ad091f7edb462b52a91c8112019d1.tar.gz"
 BUILD_PROCESS=kernelbuild
 INST_CMD="INSTALL_MOD_STRIP=1"
 

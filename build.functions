@@ -574,14 +574,14 @@ function build () {(
 	}
 
 	function preparesources () {
-		trap 'STATUS=${?}; \
-			echo "Fail."; \
-			trap - ERR
+		trap 'STATUS=${?} \
+			echo "preparesources fail."; \
+			trap - ERR; \
 			trap - SIGINT; \
 			#[ -d ${PKG_SRCPATH} ] && run_cmd "rm -rf ${PKG_SRCPATH}" || true; \
 			return ${STATUS};' ERR
 
-		trap 'trap - ERR
+		trap 'trap - ERR; \
 			trap - SIGINT; \ 
 			[ -d ${PKG_SRCPATH} ] && run_cmd "rm -rf ${PKG_SRCPATH}" || true; \
 			return 100' SIGINT
@@ -615,11 +615,10 @@ function build () {(
 		IFS=,
 		for scanpatch in ${PATCHES:-}
 		do
-			unset IFS
 			if [[ ${scanpatch} =~ ^https?://|^ftp:// ]]
 			then
 				echo -n "${SPACES}Downloading patch[set]..."	
-				download_uncompress ${scanpatch} ${PKG_SRCPATH}/bbxb_patches
+				NODELETEDESTDIR=1 download_uncompress ${scanpatch} ${PKG_SRCPATH}/bbxb_patches
 			else
 				echo -n "${SPACES}Copying $scanpatch patch..."
 				run_cmd "mkdir -pv ${PKG_SRCPATH}/bbxb_patches"
