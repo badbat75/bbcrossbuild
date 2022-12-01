@@ -2,16 +2,16 @@
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${GLIBC_VER}.tar.xz"
 case ${GLIBC_VER} in
 	2.36)
-		PKG_SUFFIX=_2.36+70410f2286
-		PATCHES=glibc/glibc_2.36+70410f2286.patch
+		PKG_SUFFIX=_2.36+3aae843e9e
+		PATCHES=glibc/glibc_2.36+3aae843e9e.patch
 		;;
 	2.35)
-		PKG_SUFFIX=_2.35+f6d4c1ac64
-		PATCHES=glibc/glibc_2.35+f6d4c1ac64.patch
+		PKG_SUFFIX=_2.35+ca97201c24
+		PATCHES=glibc/glibc_2.35+ca97201c24.patch
 		;;
 	2.34)
-		PKG_SUFFIX=_2.34+675ba1f361
-		PATCHES=glibc/glibc_2.34+675ba1f361.patch
+		PKG_SUFFIX=_2.34+a4217408a3
+		PATCHES=glibc/glibc_2.34+a4217408a3.patch
 		;;
 	*)
 		PKG_SUFFIX=_${GLIBC_VER}

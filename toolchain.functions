@@ -995,7 +995,7 @@ function setup_gcc () {
 
 	function setup_ldd () {
 		local LDD_PATH=${1:-${BIN_PATH}}
-		if [ -f "${LDD_PATH}/usr/bin/ldd" ] || [ -f "${LDD_PATH}/bin/ldd" ]
+		if ( [ -f "${LDD_PATH}/usr/bin/ldd" ] || [ -f "${LDD_PATH}/bin/ldd" ] ) && [ ! -f ${TOOLCHAIN_PATH}/bin/ldd ]
 		then
 			eval local $(grep "^RTLDLIST=" ${LDD_PATH}/usr/bin/ldd)
 			for ldso in ${RTLDLIST}
@@ -1011,7 +1011,7 @@ function setup_gcc () {
 				then
 					mkdir ${TOOLCHAIN_PATH}/bin
 				fi
-				sed "/^RTLDLIST=/ s#\".*\"#\"${RTD}\"#" ${LDD_PATH}/usr/bin/ldd > ${TOOLCHAIN_PATH}/bin/ldd
+				sed "s#^RTLDLIST=.*#RTLDLIST=\"${RTD}\"#" ${LDD_PATH}/usr/bin/ldd > ${TOOLCHAIN_PATH}/bin/ldd
 				chmod +x ${TOOLCHAIN_PATH}/bin/ldd
 			fi
 		fi
