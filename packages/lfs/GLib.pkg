@@ -1,5 +1,6 @@
-# glib_2
-PKG_SUFFIX=.74.0
+# glib
+PKG_VER=$(gapplication version)
+PKG_SUFFIX=_${PKG_VER}
 PKG_URL="https://download.gnome.org/sources/glib/2$(echo ${PKG_SUFFIX} | cut -d'.' -f1,2)/glib-2${PKG_SUFFIX}.tar.xz"
 PKG_DEPS="lfs/libxslt_1.1.36 lfs/pcre2_10.40 lfs/D-Bus-minimal_1.15"
 #PKG_DEPS+" lfs/gobject-introspection"

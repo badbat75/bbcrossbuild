@@ -3,7 +3,7 @@ PKG_URL="https://github.com/libical/libical/releases/download/v3.0.14/libical-3.
 VAR_INSTALL_LIBDIR=CMAKE_INSTALL_LIBDIR
 VAR_INSTALL_INCDIR=CMAKE_INSTALL_INCLUDEDIR
 PATCH=""
-PKG_DEPS="lfs/icu_72 lfs/glib_2 lfs/BerkeleyDB_5.3"
+PKG_DEPS="lfs/icu_72 lfs/GLib lfs/BerkeleyDB_5.3"
 BUILD_PROCESS=cmakebuild
 CONF_FLAGS="-DICAL_GLIB=True -DLIBICAL_BUILD_TESTING=False -DICAL_BUILD_DOCS=False -DGOBJECT_INTROSPECTION=False -DICAL_GLIB_VAPI=False -DENABLE_GTK_DOC=False"
 INST_CMD="install/strip"
