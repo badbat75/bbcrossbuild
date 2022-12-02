@@ -83,7 +83,7 @@ download_uncompress () {
 	then
 		run_cmd "touch ${DOWNLOAD_PATH}/url2file.map"
 	fi
-	local HASH_ROW=$(grep ${URL_HASH} "${DOWNLOAD_PATH}/url2file.map")
+	local HASH_ROW=$( test -f "${DOWNLOAD_PATH}/url2file.map" && grep ${URL_HASH} "${DOWNLOAD_PATH}/url2file.map" || true )
 	# if download file does not exists in database download package
 	if [ -z "${HASH_ROW}" ]
 	then
