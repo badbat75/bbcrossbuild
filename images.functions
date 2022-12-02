@@ -371,6 +371,7 @@ function run_on_root_dir () {
 			echo; \
 			tail -n24 ${LOG_PATH}/images_${CHROOT_DIR}.log; \
 		fi; \
+		pause; \
 		return ${STATUS};' ERR
 			
 	OPTS="--allocate_pty" OPTS_WITH_VALUE="" param2value "${@}"

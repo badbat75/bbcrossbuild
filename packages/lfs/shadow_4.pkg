@@ -12,7 +12,8 @@ PKG_PREBUILD="sed -i 's/groups\\\$(EXEEXT) //' src/Makefile.in
 	find man -name Makefile.in -exec sed -i 's/groups\.1 / /'   {} \;
 	find man -name Makefile.in -exec sed -i 's/getspnam\.3 / /' {} \;
 	find man -name Makefile.in -exec sed -i 's/passwd\.5 / /'   {} \;"
-PKG_POSTBUILD="sed -e 's:#ENCRYPT_METHOD DES:ENCRYPT_METHOD SHA512:' \
+PKG_POSTBUILD="install -v -m640 /dev/null ${PKG_PKGPATH}/etc/shadow
+	sed -e 's:#ENCRYPT_METHOD DES:ENCRYPT_METHOD SHA512:' \
 		-e 's:/var/spool/mail:/var/mail:' \
 		-i ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/login.defs
 	mkdir -pv ${PKG_PKGPATH}/var/mail
