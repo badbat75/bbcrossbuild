@@ -1509,6 +1509,7 @@ function build () {(
 		PKG_TOOLCHAIN \
 		PKG_TWOSTEPSBUILD \
 		PKG_URL \
+		PKG_VER \
 		STD_CONF_FLAGS \
 		VAR_INSTALL_LIBDIR \
 		VAR_INSTALL_LIBSUFFIX \
@@ -1544,7 +1545,7 @@ function build () {(
 		return 1
 	fi
 	
-	local PKG_NAME=$(basename ${PKG_FILE})\${PKG_SUFFIX}
+	local PKG_NAME=$(basename ${PKG_FILE})\${PKG_SUFFIX}\${PKG_VER:+_\${PKG_VER}}
 	local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_NAME}}
 	local PKG_BLDPATH=${BLD_PATH}/${PKG_NAME}${PKG_TARGET:+-${PKG_TARGET}}
 	local PKG_PKGPATH=${PACKAGES_PATH}/${PKG_NAME}${PKG_TARGET:+-${PKG_TARGET}}
@@ -1566,17 +1567,6 @@ function build () {(
 
 	echo "Package ${PKG_NAME}"
 
-	for deps in ${PKG_DEPS}
-	do
-		local NUMSPACES=$((NUMSPACES+1))
-		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
-		echo -n "${SPACES}Requires "
-		#echo "Called from ${PKG_FILE}"
-		build $( if [ ${NOSAVESTATUS} -eq 1 ] || [ "${TEMPORARY_STATUS}" == ".tmp" ]; then echo "--temporary"; fi) ${deps}
-		local NUMSPACES=$((NUMSPACES-1))
-		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
-	done
-
 	if [ -f ${STATUS_FILE} ] && [ ${FORCE} -eq 0 ]
 	then
 		if [ "$(md5sum ${PKG_PATH}/${PKG_FILE}.pkg)" == "$(cat ${STATUS_FILE})" ]
@@ -1590,6 +1580,17 @@ function build () {(
 			rm -f ${STATUS_FILE}
 		fi
 	fi
+
+	for deps in ${PKG_DEPS}
+	do
+		local NUMSPACES=$((NUMSPACES+1))
+		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
+		echo -n "${SPACES}Requires "
+		#echo "Called from ${PKG_FILE}"
+		build $( if [ ${NOSAVESTATUS} -eq 1 ] || [ "${TEMPORARY_STATUS}" == ".tmp" ]; then echo "--temporary"; fi) ${deps}
+		local NUMSPACES=$((NUMSPACES-1))
+		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
+	done
 
 	eval "> ${LOG_FILE}"
 	

@@ -1,6 +1,5 @@
 # less
 PKG_VER=608
-PKG_SUFFIX=_${PKG_VER}
 PKG_URL="http://www.greenwoodsoftware.com/less/less-${PKG_VER}.tar.gz"
 PKG_DEPS="lfs/ncurses_6"
 BUILD_PROCESS=configmake

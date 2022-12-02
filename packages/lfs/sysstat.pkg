@@ -1,6 +1,5 @@
 # sysstat
 PKG_VER=12.7.1
-PKG_SUFFIX=_${PKG_VER}
 PKG_URL="http://sebastien.godard.pagesperso-orange.fr/sysstat-${PKG_VER}.tar.xz"
 PKG_AUTOCONF=1
 PKG_COPYSRC=1

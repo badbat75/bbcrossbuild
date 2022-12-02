@@ -1,6 +1,5 @@
 # polkit
 PKG_VER=122
-PKG_SUFFIX=_${PKG_VER}
 PKG_URL="https://gitlab.freedesktop.org/polkit/polkit/-/archive/${PKG_VER}/polkit-${PKG_VER}.tar.gz"
 PKG_DEPS="lfs/GLib lfs/duktape lfs/Linux-PAM lfs/libxslt_1.1.36 lfs/gobject-introspection"
 BUILD_PROCESS=mesonninja
