@@ -365,32 +365,38 @@ function run_on_root_dir () {
 		echo; \
 		echo "fail [run_on_root_dir]."; \
 		echo; \
-		if [ -f ${LOG_PATH}/images_${_param_1}.log ]; \
+		if [ -f ${LOG_PATH}/images_${CHROOT_DIR}.log ]; \
 		then \
-			echo "Log ${LOG_PATH}/images_${_param_1}.log:"; \
+			echo "Log ${LOG_PATH}/images_${CHROOT_DIR}.log:"; \
 			echo; \
-			tail -n24 ${LOG_PATH}/images_${_param_1}.log; \
+			tail -n24 ${LOG_PATH}/images_${CHROOT_DIR}.log; \
 		fi; \
 		return ${STATUS};' ERR
 			
 	OPTS="--allocate_pty" OPTS_WITH_VALUE="" param2value "${@}"
 	[ ${_param_v:-0} -eq 1 ] && set -x || true
 
-	local CHROOT_DIR=$(echo ${_param_1} | sed 's/^//g')
-	local CHROOT_PROMPT=${_param_2}
-	local CHROOT_PWD=$(sudo chroot ${PLATFORM_PATH}/${_param_1} su - ${_param_2} -c "pwd")
-	local CHROOT_PROMPT="${_param_2}:${CHROOT_PWD}"
+	local CHROOT_DIR=${_param_1}
+	local CHROOT_USER=${_param_2}
+	local CHROOT_PWD=$(sudo chroot ${PLATFORM_PATH}/${CHROOT_DIR} su - ${CHROOT_USER} -c "pwd")
+	local CHROOT_PROMPT="${CHROOT_USER}:${CHROOT_PWD}"
+	local CHROOT_CMD=${_param_3}
 
-	if [ ${_param_2} = "root" ]
+	if [ ${CHROOT_USER} = "root" ]
 	then
 		local CHROOT_PROMPT+='# '
 	else
 		local CHROOT_PROMPT+='$ '
 	fi
-	echo "${CHROOT_PROMPT}${_param_3}" | log_buffer >> ${LOG_PATH}/images_${_param_1}.log
-	sudo chroot ${PLATFORM_PATH}/${_param_1} su - $( [ ${_param_allocate_pty:-0} -eq 1 ] && echo "--pty" || true ) \
-		${_param_2} -c "${_param_3}" 2> >(log_buffer error ${LOG_PATH}/images_${_param_1}.log) > >(log_buffer log ${LOG_PATH}/images_${_param_1}.log)
-	echo | log_buffer >> ${LOG_PATH}/images_${_param_1}.log
+	echo "${CHROOT_PROMPT}${CHROOT_CMD}" | log_buffer >> ${LOG_PATH}/images_${CHROOT_DIR}.log
+	if [ ${CHROOT_USER} = "root" ]
+	then
+		sudo chroot ${PLATFORM_PATH}/${CHROOT_DIR} bash -c "${CHROOT_CMD}" 2> >(log_buffer error ${LOG_PATH}/images_${CHROOT_DIR}.log) > >(log_buffer log ${LOG_PATH}/images_${CHROOT_DIR}.log)
+	else
+		sudo chroot ${PLATFORM_PATH}/${CHROOT_DIR} su - $( [ ${_param_allocate_pty:-0} -eq 1 ] && echo "--pty" || true ) \
+			${CHROOT_USER} -c "${CHROOT_CMD}" 2> >(log_buffer error ${LOG_PATH}/images_${CHROOT_DIR}.log) > >(log_buffer log ${LOG_PATH}/images_${CHROOT_DIR}.log)
+	fi
+	echo | log_buffer >> ${LOG_PATH}/images_${CHROOT_DIR}.log
 
 	[ ${_param_v:-0} -eq 1 ] && set +x || true
 	trap - ERR
