@@ -2,8 +2,9 @@
 PKG_VER=$(gapplication version)
 PKG_SUFFIX=_${PKG_VER}
 PKG_URL="https://download.gnome.org/sources/glib/$(echo ${PKG_VER} | cut -d'.' -f1,2)/glib-${PKG_VER}.tar.xz"
-PKG_DEPS="lfs/libxslt_1.1.36 lfs/pcre2_10.40 lfs/D-Bus-minimal_1.15"
+PKG_DEPS="lfs/libxslt_1.1.36 lfs/pcre2_10.40 lfs/D-Bus"
 #PKG_DEPS+" lfs/gobject-introspection"
+DBUS_TARGET=bootstrap
 BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Dman=true -Dtests=false"
 PKG_LD_LIBRARY_PATH=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
