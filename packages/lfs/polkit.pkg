@@ -17,7 +17,7 @@ case ${PKG_TARGET} in
 		PKG_DEPS+=" lfs/systemd_252"
 		CONF_FLAGS+=" -Dsession_tracking=libsystemd-login"
 		PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}/etc/pam.d
-			cat > /etc/pam.d/polkit-1 <<-EOF
+			cat > ${PKG_PKGPATH}/etc/pam.d/polkit-1 <<-EOF
 				# Begin /etc/pam.d/polkit-1
 
 				auth     include        system-auth
