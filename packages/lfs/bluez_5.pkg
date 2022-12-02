@@ -1,5 +1,5 @@
 # bluez_5
-PKG_SUFFIX=.65
+PKG_SUFFIX=.66
 PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-5${PKG_SUFFIX}.tar.xz"
 PKG_DEPS="lfs/readline_8.2 lfs/GLib lfs/libical_3.0.14 lfs/ell_0.52 lfs/json-c_0"
 BUILD_PROCESS=configmake
