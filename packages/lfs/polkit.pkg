@@ -9,8 +9,8 @@ CONF_FLAGS="-Dman=true \
       -Djs_engine=duktape"
 INST_CMD=install
 
-
-case ${PKG_TARGET:-${POLKIT_TARGET}} in
+PKG_TARGET=${PKG_TARGET:-${POLKIT_TARGET}}
+case ${PKG_TARGET} in
 	bootstrap)
 		;;
 	*)
