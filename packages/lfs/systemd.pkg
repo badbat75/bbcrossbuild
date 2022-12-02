@@ -1,5 +1,6 @@
-# systemd_252
-PKG_URL="https://github.com/systemd/systemd/archive/refs/tags/v252.tar.gz"
+# systemd
+PKG_VER=252.2
+PKG_URL="https://github.com/systemd/systemd-stable/archive/refs/tags/v${PKG_VER}.tar.gz"
 #PATCHES="https://www.linuxfromscratch.org/patches/lfs/development/systemd-251-glibc_2.36_fix-1.patch"
 PKG_DEPS="lfs/Linux-PAM lfs/polkit lfs/elfutils_0 lfs/GLib lfs/D-Bus \
 	lfs/libcap_2.47 lfs/kmod_30 lfs/util-linux_2.38.1 lfs/curl_7 lfs/p11-kit_0.24.1 \
@@ -26,12 +27,7 @@ CONF_FLAGS="-Db_pie=true \
 	-Duserdb=false \
 	-Dmode=release \
 	-Dpam=true \
-	-Dpamconfdir=/etc/pam.d \
-	-Dsplit-usr=true \
-	-Dopenssl=true \
-	-Dcryptolib=openssl \
-	-Ddns-over-tls=openssl \
-	-Ddocdir=/usr/share/doc/systemd-251"
+	-Dpamconfdir=/etc/pam.d"
 INST_CMD="install"
 PKG_LD_LIBRARY_PATH=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 PKG_PREBUILD="sed -i -e 's/GROUP=\"render\"/GROUP=\"video\"/' -e 's/GROUP=\"sgx\", //' rules.d/50-udev-default.rules.in"

@@ -62,7 +62,7 @@ build lfs/libpipeline_1.5.6
 build lfs/man-db_2.10.2
 build lfs/tar_1.34
 build lfs/vim_9.0
-build lfs/systemd_252
+build lfs/systemd
 build lfs/D-Bus
 build lfs/polkit
 build lfs/procps-ng_4

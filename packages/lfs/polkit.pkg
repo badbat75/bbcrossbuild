@@ -13,7 +13,7 @@ case ${PKG_TARGET} in
 	bootstrap)
 		;;
 	*)
-		PKG_DEPS+=" lfs/systemd_252"
+		PKG_DEPS+=" lfs/systemd"
 		CONF_FLAGS+=" -Dsession_tracking=libsystemd-login"
 		PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}/etc/pam.d
 			cat > ${PKG_PKGPATH}/etc/pam.d/polkit-1 <<-EOF

@@ -1,7 +1,7 @@
 # procps-ng_4
 PKG_SUFFIX=.0.1
 PKG_URL="https://gitlab.com/procps-ng/procps/-/archive/v4${PKG_SUFFIX}/procps-v4${PKG_SUFFIX}.tar.bz2"
-PKG_DEPS="lfs/ncurses_6 lfs/systemd_252"
+PKG_DEPS="lfs/ncurses_6 lfs/systemd"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--disable-kill --with-systemd"

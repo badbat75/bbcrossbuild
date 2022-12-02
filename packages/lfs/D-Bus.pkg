@@ -21,7 +21,7 @@ case ${PKG_TARGET} in
     bootstrap)
         ;;
     *)
-        PKG_DEPS+=" lfs/systemd_252 lfs/GLib"
+        PKG_DEPS+=" lfs/systemd lfs/GLib"
         CONF_FLAGS+=" --enable-systemd"
         PKG_POSTBUILD="ln -sfv /etc/machine-id ${PKG_PKGPATH}/var/lib/dbus"
         PKG_POSTINSTALL="chown -v root:messagebus /usr/libexec/dbus-daemon-launch-helper
