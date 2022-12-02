@@ -6,6 +6,7 @@ PKG_DEPS="lfs/Linux-PAM lfs/polkit lfs/elfutils_0 lfs/GLib lfs/D-Bus-minimal_1.1
 	lfs/pcre2_10.40 lfs/libxcrypt lfs/libgcrypt_1.10 lfs/openssl_3 lfs/libseccomp_2.5 \
 	lfs/zlib_1 lfs/xz_5.2.5 lfs/bzip2_1.0.8 lfs/zstd_1.5.2 lfs/lz4_1.9 \
 	lfs/libxslt_1.1.36 lfs/libxml2_2.10"
+DBUS_TARGET=bootstrap
 POLKIT_TARGET=bootstrap
 BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Db_pie=true \

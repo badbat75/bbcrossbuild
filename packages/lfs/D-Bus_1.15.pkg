@@ -1,10 +1,9 @@
 # D-Bus_1.15
 PKG_SUFFIX=.2
 PKG_URL="https://dbus.freedesktop.org/releases/dbus/dbus-1.15${PKG_SUFFIX}.tar.xz"
-PKG_DEPS="lfs/expat_2 lfs/systemd_252 lfs/GLib"
+PKG_DEPS="lfs/expat_2"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-user-session                \
-            --enable-systemd                     \
             --disable-doxygen-docs               \
             --disable-xml-docs                   \
             --localstatedir=/var                 \
@@ -17,9 +16,17 @@ CONF_FLAGS="--enable-user-session                \
 
 INST_CMD="install-strip"
 
-PKG_POSTBUILD="ln -sfv /etc/machine-id ${PKG_PKGPATH}/var/lib/dbus"
-
-PKG_POSTINSTALL="chown -v root:messagebus /usr/libexec/dbus-daemon-launch-helper
+PKG_TARGET=${PKG_TARGET:-${DBUS_TARGET}}
+case ${PKG_TARGET} in
+    bootstrap)
+        ;;
+    *)
+        PKG_DEPS+=" lfs/systemd_252 lfs/GLib"
+        CONF_FLAGS+=" --enable-systemd"
+        PKG_POSTBUILD="ln -sfv /etc/machine-id ${PKG_PKGPATH}/var/lib/dbus"
+        PKG_POSTINSTALL="chown -v root:messagebus /usr/libexec/dbus-daemon-launch-helper
 chmod -v      4750       /usr/libexec/dbus-daemon-launch-helper
 groupadd --system systemd-oom
 useradd --system -c \"systemd OOM Daemon\" -d /etc/dbus-1 -g systemd-oom -s /bin/false systemd-oom"
+        ;;
+esac
