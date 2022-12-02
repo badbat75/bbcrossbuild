@@ -463,7 +463,7 @@ function inject_into_mount_tag () {
 	echo -n "Syncing ${SOURCE_PATH} to ${TARGET_PATH}... " | log_buffer info >> ${LOG_PATH}/images_${ROOT_DIR}.log
 	cd ${SOURCE_PATH}
 	run_cmd -s "rsync -K -a ${RSYNC_EXCLUDE} --devices --specials --no-owner --no-group ${TARGET_FILE} ${TARGET_PATH}" >> ${LOG_PATH}/images_${ROOT_DIR}.log
-	cd - | log_buffer info >> ${LOG_PATH}/images_${ROOT_DIR}.log
+	cd -
 	echo -e "Done.\n" | log_buffer info >> ${LOG_PATH}/images_${ROOT_DIR}.log
 	echo -n "Setting ownership... "
 	function set_ownership () {
@@ -497,7 +497,7 @@ function inject_into_mount_tag () {
 			" >> ${LOG_PATH}/images_${ROOT_DIR}.log
 			;;
 	esac
-
+	
 	echo "Done."
 	echo | log_buffer info >> ${LOG_PATH}/images_${ROOT_DIR}.log
 
