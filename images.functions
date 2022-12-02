@@ -381,13 +381,12 @@ function run_on_root_dir () {
 	local CHROOT_CMD=${_param_3}
 	if [ ${CHROOT_USER} = "root" ]
 	then
-		local CHROOT_PROMPT="${CHROOT_USER}:${CHROOT_PWD}# "
 		local CHROOT_PWD=$(sudo chroot ${PLATFORM_PATH}/${CHROOT_DIR} "pwd")
+		local CHROOT_PROMPT="${CHROOT_USER}:${CHROOT_PWD}# "
 	else
-		local CHROOT_PROMPT="${CHROOT_USER}:${CHROOT_PWD}$ "
 		local CHROOT_PWD=$(sudo chroot ${PLATFORM_PATH}/${CHROOT_DIR} su - ${CHROOT_USER} -c "pwd")
+		local CHROOT_PROMPT="${CHROOT_USER}:${CHROOT_PWD}$ "
 	fi
-
 	echo "${CHROOT_PROMPT}${CHROOT_CMD}" | log_buffer >> ${LOG_PATH}/images_${CHROOT_DIR}.log
 	if [ ${CHROOT_USER} = "root" ]
 	then
