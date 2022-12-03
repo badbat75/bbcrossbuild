@@ -1,7 +1,7 @@
 # btrfs-progs
 PKG_VER=6.0.1
 PKG_URL="https://mirrors.edge.kernel.org/pub/linux/kernel/people/kdave/btrfs-progs/btrfs-progs-v${PKG_VER}.tar.gz"
-PKG_DEPS="lfs/util-linux_2.38.1 lfs/e2fsprogs_1.46 lfs/zlib_1 lfs/lzo_2.10 lfs/acl_2.2.53"
+PKG_DEPS="lfs/util-linux_2.38.1 lfs/e2fsprogs_1.46 lfs/zlib_1 lfs/lzo_2.10 lfs/acl_2.2.53 lfs/systemd"
 PKG_COPYSRC=1
 
 BUILD_PROCESS=configmake
