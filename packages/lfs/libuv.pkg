@@ -1,5 +1,6 @@
-# libuv_1.41.0
-PKG_URL="https://dist.libuv.org/dist/v1.41.0/libuv-v1.41.0.tar.gz"
+# libuv
+PKG_VER=1.44.2
+PKG_URL="https://dist.libuv.org/dist/v${PKG_VER}/libuv-v${PKG_VER}.tar.gz"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 INST_CMD="install-strip"

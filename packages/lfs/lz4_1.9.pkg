@@ -1,11 +1,8 @@
 # lz4_1.9
 PKG_SUFFIX=.4
 PKG_URL="https://github.com/lz4/lz4/archive/refs/tags/v1.9${PKG_SUFFIX}.tar.gz"
-#PKG_CFLAGS=
-#PKG_LDFLAGS=
 PKG_PREBUILD="sed -i 's/\$(LN_S)/\$(LN_SF)/g' programs/Makefile
     sed -i '/^export LD_LIBRARY_PATH/d' tests/Makefile"
 BUILD_PROCESS=simplemake
 INST_CMD=install
-#PKG_DEPS=
 PKG_MAKEVARS="PREFIX=${BUILD_PREFIX} LIBDIR=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"

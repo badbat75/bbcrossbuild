@@ -1,6 +1,7 @@
 # xz_5.2.5
 PKG_URL="https://tukaani.org/xz/xz-5.2.5.tar.xz"
 PKG_DEPS="lfs/zlib_1"
+PATCHES="https://www.linuxfromscratch.org/patches/downloads/xz/xz-5.2.5-upstream_fix-1.patch"
 BUILD_PROCESS=configmake
 CONF_FLAGS=""
 INST_CMD="install-strip"

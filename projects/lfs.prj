@@ -95,7 +95,7 @@ build lfs/iw_5.9
 build lfs/wireless-tools_29
 build lfs/curl_7
 ### Development
-build lfs/strace_5.19
+build lfs/strace
 
 if [ ${ENABLE_DEV:-0} -eq 1 ]
 then
