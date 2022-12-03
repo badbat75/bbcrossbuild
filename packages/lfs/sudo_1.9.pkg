@@ -7,7 +7,7 @@ CONF_FLAGS="--libexecdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
 			--with-secure-path \
 			--with-all-insults \
 			--with-env-editor \
-			--docdir=/usr/share/doc/sudo-1.9.5p2 \
+			--docdir=/usr/share/doc/sudo-1.9${PKG_SUFFIX} \
 			--with-passprompt='[sudo] password for %p: '"
 INST_CMD="install install_uid=$(id -u) install_gid=$(id -g)"
 PKG_POSTBUILD="cat > ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/sudoers.d/sudo <<-EOF
@@ -15,6 +15,7 @@ PKG_POSTBUILD="cat > ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/sudoers.d/sudo <<-EOF
 		#%wheel ALL=(ALL) ALL
 		%wheel ALL=(ALL) NOPASSWD: ALL
 	EOF
+	install -vdm755 ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/pam.d/
 	cat > ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/pam.d/sudo <<-EOF
 		# Begin /etc/pam.d/sudo
 

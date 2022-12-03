@@ -27,6 +27,7 @@ CONF_FLAGS="-Drootlibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
 	-Duserdb=false \
 	-Dmode=release \
 	-Dpam=true \
+	-Dpamlibdir=${BUILD_LIBDIR}/security \
 	-Dpamconfdir=/etc/pam.d"
 INST_CMD="install"
 PKG_LD_LIBRARY_PATH=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
