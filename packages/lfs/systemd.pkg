@@ -63,9 +63,9 @@ PKG_POSTINSTALL_PRIO=10
 PKG_FAULTYCFLAGS=1
 
 ### Compliance with debian build
-#PKG_DEPS+=" lfs/D-Bus"
-#DBUS_TARGET=bootstrap
-#CONF_FLAGS+=" -Ddbussystemservicedir=${BUILD_PREFIX}/share/dbus-1/system-services \
-#	-Ddbussessionservicedir=${BUILD_PREFIX}/share/dbus-1/share/dbus-1/services \
-#	-Ddbuspolicydir=${BUILD_PREFIX}/share/dbus-1/system.d"
+PKG_DEPS+=" lfs/D-Bus"
+DBUS_TARGET=bootstrap
+CONF_FLAGS+=" -Ddbussystemservicedir=${BUILD_PREFIX}/share/dbus-1/system-services \
+	-Ddbussessionservicedir=${BUILD_PREFIX}/share/dbus-1/services \
+	-Ddbuspolicydir=${BUILD_PREFIX}/share/dbus-1/system.d"
 #################################

@@ -47,7 +47,6 @@ PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/lib/systemd/system
 		[Service]
 		ExecStart=/usr/sbin/sshd -i
 		StandardInput=socket
-		StandardError=syslog
 	EOF
 	"
 

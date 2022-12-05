@@ -3,14 +3,18 @@ PKG_VER=1.15.2
 PKG_URL="https://dbus.freedesktop.org/releases/dbus/dbus-${PKG_VER}.tar.xz"
 PKG_DEPS="lfs/expat_2"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--enable-user-session \
-			--disable-doxygen-docs \
-			--disable-xml-docs \
-			--localstatedir=/var \
-			--runstatedir=/run \
-			--with-system-socket=/run/dbus/system_bus_socket \
-			--docdir=/usr/share/doc/dbus-${PKG_VER}"
-INST_CMD="install-strip"
+CONF_FLAGS="--enable-user-session"
+CONF_FLAGS+=" --disable-doxygen-docs"
+CONF_FLAGS+=" --disable-xml-docs"
+CONF_FLAGS+=" --localstatedir=/var"
+CONF_FLAGS+=" --runstatedir=/run"
+CONF_FLAGS+=" --with-system-socket=/run/dbus/system_bus_socket"
+CONF_FLAGS+=" --docdir=/usr/share/doc/dbus-${PKG_VER}"
+### Compliance with debian build
+CONF_FLAGS+=" --with-systemdsystemunitdir=/lib/systemd/system"
+CONF_FLAGS+=" --with-systemduserunitdir=${BUILD_PREFIX}/lib/systemd/user"
+#CONF_FLAGS+=" --with-session-socket-dir=/tmp"
+################################INST_CMD="install-strip"
 
 PKG_TARGET=${PKG_TARGET:-${DBUS_TARGET}}
 case ${PKG_TARGET} in
@@ -19,31 +23,24 @@ case ${PKG_TARGET} in
 	*)
 		PKG_DEPS+=" lfs/systemd lfs/GLib"
 		#CONF_FLAGS+=" --enable-systemd"
-		PKG_POSTBUILD='cat >>/etc/skel/.bash_profile <<-'EOF'
-
-				# Start the D-Bus session daemon
-				eval `dbus-launch`
-				export DBUS_SESSION_BUS_ADDRESS
-			EOF
-
-			cat >>/etc/skel/.bash_logout <<-'EOF'
-
-				# Kill the D-Bus session daemon
-				kill $DBUS_SESSION_BUS_PID
-			EOF
-		'
 		PKG_POSTINSTALL="chown -v root:messagebus /usr/libexec/dbus-daemon-launch-helper
 chmod -v      4750       /usr/libexec/dbus-daemon-launch-helper
 groupadd --system systemd-oom
 useradd --system -c \"systemd OOM Daemon\" -d /etc/dbus-1 -g systemd-oom -s /bin/false systemd-oom
-ln -sfv /etc/machine-id ${PKG_PKGPATH}/var/lib/dbus"
+ln -sfv /etc/machine-id /var/lib/dbus/machine-id
+cat >>/etc/skel/.bash_profile <<-'EOF'
+
+	# Start the D-Bus session daemon
+	eval \`dbus-launch\`
+	export DBUS_SESSION_BUS_ADDRESS
+EOF
+
+cat >>/etc/skel/.bash_logout <<-'EOF'
+
+	# Kill the D-Bus session daemon
+	kill \$DBUS_SESSION_BUS_PID
+EOF
+		"
 		PKG_POSTINSTALL_PRIO=11
 		;;
 esac
-
-### Compliance with debian build
-#CONF_FLAGS+=" --with-system-socket=/run/dbus/system_bus_socket \
-#			--with-systemdsystemunitdir=/lib/systemd/system \
-#			--with-systemduserunitdir=${BUILD_PREFIX}/lib/systemd/user \
-#			--with-session-socket-dir=/tmp"
-################################

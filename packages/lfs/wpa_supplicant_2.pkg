@@ -127,4 +127,5 @@ PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/sbin ${PKG_PKGPATH}/lib/systemd/system
 PKG_POSTINSTALL="# create bluetooth group if not already present
 if ! getent group netdev > /dev/null; then
 	groupadd --system netdev
-fi"
+fi
+systemctl disable wpa_supplicant"

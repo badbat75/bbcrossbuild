@@ -123,6 +123,7 @@ echo "net.ifnames=0 console=tty1 root=/dev/mmcblk0p2 fsck.repair=yes rootwait" >
 
 echo Configuring Host Name
 echo ${LFS_HOSTNAME:-lfs} > ${BIN_PATH}/etc/hostname
+echo "LANG=en_US.UTF-8" > ${BIN_PATH}/etc/locale.conf
 
 if [ ! -x ${WLAN_SSID} ] && [ ! -x ${WLAN_PSK} ] && [ ! -x ${WLAN_DEV} ]
 then
@@ -153,7 +154,7 @@ fi
 
 function build_lfs_image () {
 	set -e
-	create_image lfs --rootfstype btrfs --size 3G
+	create_image lfs --rootfstype ext4 --size 3G
 	mount_tag lfs --mountlist "2:/ 1:/boot"
 	inject_into_mount_tag lfs binaries ${LFS_REMOVE_DEVFILES}
 	run_postinstall_scripts lfs
@@ -162,7 +163,7 @@ function build_lfs_image () {
 	#run_on_root_dir lfs root "systemctl enable systemd-networkd"
 	#run_on_root_dir lfs root "systemctl enable systemd-resolved"
 	#run_on_root_dir lfs root "systemctl enable systemd-timesyncd"
-	#run_on_root_dir lfs root "systemctl mask tmp.mount"
+	run_on_root_dir lfs root "systemctl mask tmp.mount"
 	run_on_root_dir lfs root "useradd -G wheel -m lfs"
 	run_on_root_dir lfs root "echo root:changeme | chpasswd"
 	run_on_root_dir lfs root "echo lfs:lfs | chpasswd"

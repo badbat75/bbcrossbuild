@@ -125,3 +125,4 @@ PKG_POSTBUILD="install -d ${PKG_PKGPATH}${BUILD_PREFIX}/sbin
 		#DAEMON_OPTS=\"\"
 	EOF
 	"
+PKG_POSTINSTALL="systemctl disable hostapd"
