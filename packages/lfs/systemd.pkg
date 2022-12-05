@@ -2,19 +2,15 @@
 PKG_VER=252.2
 PKG_URL="https://github.com/systemd/systemd-stable/archive/refs/tags/v${PKG_VER}.tar.gz"
 #PATCHES="https://www.linuxfromscratch.org/patches/lfs/development/systemd-251-glibc_2.36_fix-1.patch"
-PKG_DEPS="lfs/Linux-PAM lfs/polkit lfs/elfutils_0 lfs/GLib lfs/D-Bus \
+PKG_DEPS="lfs/Linux-PAM lfs/polkit lfs/elfutils_0 lfs/GLib \
 	lfs/libidn2_2.3 lfs/libseccomp_2.5 lfs/make-ca_1 \
 	lfs/p11-kit_0.24.1 lfs/pcre2_10.40 lfs/libcap_2.47 lfs/kmod_30 lfs/util-linux_2.38.1  \
 	lfs/curl_7 lfs/libxcrypt lfs/libgcrypt_1.10 lfs/openssl_3  \
 	lfs/zlib_1 lfs/xz_5.2.5 lfs/bzip2_1.0.8 lfs/zstd_1.5.2 lfs/lz4_1.9 \
 	lfs/libxslt_1.1.36 lfs/libxml2_2.10"
-DBUS_TARGET=bootstrap
 POLKIT_TARGET=bootstrap
 BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Drootlibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-	-Ddbussystemservicedir=${BUILD_PREFIX}/share/dbus-1/system-services \
-	-Ddbussessionservicedir=${BUILD_PREFIX}/share/dbus-1/share/dbus-1/services \
-	-Ddbuspolicydir=${BUILD_PREFIX}/share/dbus-1/system.d \
 	-Dblkid=true \
 	-Ddefault-dnssec=no \
 	-Dfirstboot=false \
@@ -61,7 +57,15 @@ PKG_POSTBUILD="install -v -m755 -d ${PKG_PKGPATH}/etc/pam.d
 		# End /etc/pam.d/systemd-user
 	EOF
 	"
-PKG_POSTINSTALL="systemd-machine-id-setup"
+PKG_POSTINSTALL="systemd-machine-id-setup; systemctl preset-all; systemctl disable systemd-sysupdate{,-reboot}"
 PKG_POSTINSTALL_PRIO=10
 ### Python modules does not pass sysroot flags...
 PKG_FAULTYCFLAGS=1
+
+### Compliance with debian build
+#PKG_DEPS+=" lfs/D-Bus"
+#DBUS_TARGET=bootstrap
+#CONF_FLAGS+=" -Ddbussystemservicedir=${BUILD_PREFIX}/share/dbus-1/system-services \
+#	-Ddbussessionservicedir=${BUILD_PREFIX}/share/dbus-1/share/dbus-1/services \
+#	-Ddbuspolicydir=${BUILD_PREFIX}/share/dbus-1/system.d"
+#################################
