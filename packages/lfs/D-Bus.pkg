@@ -1,5 +1,5 @@
 # D-Bus
-PKG_VER=1.15.2
+PKG_VER=1.14.4
 PKG_URL="https://dbus.freedesktop.org/releases/dbus/dbus-${PKG_VER}.tar.xz"
 PKG_DEPS="lfs/expat_2"
 BUILD_PROCESS=configmake
