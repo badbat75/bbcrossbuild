@@ -1,33 +1,25 @@
 # polkit
 PKG_VER=122
 PKG_URL="https://gitlab.freedesktop.org/polkit/polkit/-/archive/${PKG_VER}/polkit-${PKG_VER}.tar.gz"
-PKG_DEPS="lfs/GLib lfs/duktape lfs/Linux-PAM lfs/libxslt_1.1.36 lfs/gobject-introspection"
-BUILD_PROCESS=mesonninja
+PKG_DEPS="lfs/GLib lfs/duktape lfs/Linux-PAM lfs/libxslt_1.1.36 lfs/gobject-introspection lfs/systemd"
+SYSTEMD_BOOTSTRAP=1
 CONF_FLAGS="-Dman=true \
       -Dtests=false \
       -Djs_engine=duktape"
+CONF_FLAGS+=" -Dsession_tracking=libsystemd-login"
+BUILD_PROCESS=mesonninja
 INST_CMD=install
+PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}/etc/pam.d
+	cat > ${PKG_PKGPATH}/etc/pam.d/polkit-1 <<-EOF
+		# Begin /etc/pam.d/polkit-1
 
-PKG_TARGET=${PKG_TARGET:-${POLKIT_TARGET}}
-case ${PKG_TARGET} in
-	bootstrap)
-		;;
-	*)
-		PKG_DEPS+=" lfs/systemd"
-		CONF_FLAGS+=" -Dsession_tracking=libsystemd-login"
-		PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}/etc/pam.d
-			cat > ${PKG_PKGPATH}/etc/pam.d/polkit-1 <<-EOF
-				# Begin /etc/pam.d/polkit-1
+		auth     include        system-auth
+		account  include        system-account
+		password include        system-password
+		session  include        system-session
 
-				auth     include        system-auth
-				account  include        system-account
-				password include        system-password
-				session  include        system-session
-
-				# End /etc/pam.d/polkit-1
-			EOF
-		"
-		PKG_POSTINSTALL="groupadd -fg 27 polkitd
-			useradd -c \"PolicyKit Daemon Owner\" -d /etc/polkit-1 -u 27 -g polkitd -s /bin/false polkitd"
-		;;
-esac
+		# End /etc/pam.d/polkit-1
+	EOF
+"
+PKG_POSTINSTALL="groupadd -fg 27 polkitd
+	useradd -c \"PolicyKit Daemon Owner\" -d /etc/polkit-1 -u 27 -g polkitd -s /bin/false polkitd"

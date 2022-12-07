@@ -1,7 +1,8 @@
 # D-Bus
 PKG_VER=1.14.4
 PKG_URL="https://dbus.freedesktop.org/releases/dbus/dbus-${PKG_VER}.tar.xz"
-PKG_DEPS="lfs/expat_2"
+PKG_DEPS="lfs/expat_2 lfs/systemd lfs/GLib"
+SYSTEMD_TARGET=bootstrap
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-user-session"
 CONF_FLAGS+=" --disable-doxygen-docs"
@@ -15,17 +16,10 @@ CONF_FLAGS+=" --with-systemdsystemunitdir=/lib/systemd/system"
 CONF_FLAGS+=" --with-systemduserunitdir=${BUILD_PREFIX}/lib/systemd/user"
 #CONF_FLAGS+=" --with-session-socket-dir=/tmp"
 ################################
+CONF_FLAGS+=" --enable-systemd"
 INST_CMD="install-strip"
-
-PKG_TARGET=${PKG_TARGET:-${DBUS_TARGET}}
-case ${PKG_TARGET} in
-	bootstrap)
-		;;
-	*)
-		PKG_DEPS+=" lfs/systemd lfs/GLib"
-		#CONF_FLAGS+=" --enable-systemd"
-		PKG_POSTINSTALL="chown -v root:messagebus /usr/libexec/dbus-daemon-launch-helper
-chmod -v      4750       /usr/libexec/dbus-daemon-launch-helper
+PKG_POSTINSTALL="chown -v root:messagebus /usr/libexec/dbus-daemon-launch-helper
+chmod -v 4750 /usr/libexec/dbus-daemon-launch-helper
 groupadd --system systemd-oom
 useradd --system -c \"systemd OOM Daemon\" -d /etc/dbus-1 -g systemd-oom -s /bin/false systemd-oom
 ln -sfv /etc/machine-id /var/lib/dbus/machine-id
@@ -41,7 +35,5 @@ cat >>/etc/skel/.bash_logout <<-'EOF'
 	# Kill the D-Bus session daemon
 	kill \$DBUS_SESSION_BUS_PID
 EOF
-		"
-		PKG_POSTINSTALL_PRIO=11
-		;;
-esac
+"
+PKG_POSTINSTALL_PRIO=11
