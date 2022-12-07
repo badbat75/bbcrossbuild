@@ -10,21 +10,29 @@ PKG_DEPS="lfs/Linux-PAM lfs/polkit lfs/elfutils_0 lfs/GLib \
 	lfs/libxslt_1.1.36 lfs/libxml2_2.10"
 POLKIT_TARGET=bootstrap
 BUILD_PROCESS=mesonninja
-CONF_FLAGS="-Drootlibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-	-Dblkid=true \
-	-Ddefault-dnssec=no \
-	-Dfirstboot=false \
-	-Dinstall-tests=false \
-	-Dldconfig=false \
-	-Dman=auto \
-	-Dsysusers=false \
-	-Drpmmacrosdir=no \
-	-Dhomed=false \
-	-Duserdb=false \
-	-Dmode=release \
-	-Dpam=true \
-	-Dpamlibdir=${BUILD_LIBDIR}/security \
-	-Dpamconfdir=/etc/pam.d"
+CONF_FLAGS="-Drootlibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
+CONF_FLAGS+=" -Dblkid=true"
+CONF_FLAGS+=" -Ddefault-dnssec=no"
+CONF_FLAGS+=" -Dfirstboot=false"
+CONF_FLAGS+=" -Dinstall-tests=false"
+CONF_FLAGS+=" -Dldconfig=false"
+CONF_FLAGS+=" -Dman=auto"
+CONF_FLAGS+=" -Dsysusers=false"
+CONF_FLAGS+=" -Drpmmacrosdir=no"
+CONF_FLAGS+=" -Dhomed=false"
+CONF_FLAGS+=" -Duserdb=false"
+CONF_FLAGS+=" -Dmode=release"
+CONF_FLAGS+=" -Dpam=true"
+CONF_FLAGS+=" -Dpamlibdir=${BUILD_LIBDIR}/security"
+CONF_FLAGS+=" -Dpamconfdir=/etc/pam.d"
+if [ ${ENABLE_DBUS:-1} -eq 1 ]
+then
+	PKG_DEPS+=" lfs/D-Bus"
+	DBUS_TARGET=bootstrap
+	CONF_FLAGS+=" -Ddbussystemservicedir=${BUILD_PREFIX}/share/dbus-1/system-services"
+	CONF_FLAGS+=" -Ddbussessionservicedir=${BUILD_PREFIX}/share/dbus-1/services"
+	CONF_FLAGS+=" -Ddbuspolicydir=${BUILD_PREFIX}/share/dbus-1/system.d"
+fi
 INST_CMD="install"
 PKG_LD_LIBRARY_PATH=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 PKG_PREBUILD="sed -i -e 's/GROUP=\"render\"/GROUP=\"video\"/' -e 's/GROUP=\"sgx\", //' rules.d/50-udev-default.rules.in"
@@ -61,11 +69,3 @@ PKG_POSTINSTALL="systemd-machine-id-setup; systemctl preset-all; systemctl disab
 PKG_POSTINSTALL_PRIO=10
 ### Python modules does not pass sysroot flags...
 PKG_FAULTYCFLAGS=1
-
-### Compliance with debian build
-PKG_DEPS+=" lfs/D-Bus"
-DBUS_TARGET=bootstrap
-CONF_FLAGS+=" -Ddbussystemservicedir=${BUILD_PREFIX}/share/dbus-1/system-services \
-	-Ddbussessionservicedir=${BUILD_PREFIX}/share/dbus-1/services \
-	-Ddbuspolicydir=${BUILD_PREFIX}/share/dbus-1/system.d"
-#################################

@@ -63,7 +63,10 @@ build lfs/man-db_2.10.2
 build lfs/tar_1.34
 build lfs/vim_9.0
 build lfs/systemd
-build lfs/D-Bus
+if [ ${ENABLE_DBUS:-1} -eq 1 ]
+then
+	build lfs/D-Bus
+fi
 build lfs/polkit
 build lfs/procps-ng_4
 build lfs/util-linux_2.38.1

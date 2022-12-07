@@ -14,7 +14,8 @@ CONF_FLAGS+=" --docdir=/usr/share/doc/dbus-${PKG_VER}"
 CONF_FLAGS+=" --with-systemdsystemunitdir=/lib/systemd/system"
 CONF_FLAGS+=" --with-systemduserunitdir=${BUILD_PREFIX}/lib/systemd/user"
 #CONF_FLAGS+=" --with-session-socket-dir=/tmp"
-################################INST_CMD="install-strip"
+################################
+INST_CMD="install-strip"
 
 PKG_TARGET=${PKG_TARGET:-${DBUS_TARGET}}
 case ${PKG_TARGET} in

@@ -1,7 +1,11 @@
 # glib
 PKG_VER=$(gapplication version)
 PKG_URL="https://download.gnome.org/sources/glib/$(echo ${PKG_VER} | cut -d'.' -f1,2)/glib-${PKG_VER}.tar.xz"
-PKG_DEPS="lfs/libxslt_1.1.36 lfs/pcre2_10.40 lfs/D-Bus"
+PKG_DEPS="lfs/libxslt_1.1.36 lfs/pcre2_10.40"
+if [ ${ENABLE_DBUS:-1} -eq 1 ]
+then
+    PKG_DEPS+=" lfs/D-Bus"
+fi
 #PKG_DEPS+" lfs/gobject-introspection"
 DBUS_TARGET=bootstrap
 BUILD_PROCESS=mesonninja
