@@ -81,7 +81,10 @@ build lfs/openssh_9.1p1
 build lfs/alsa-utils_1.2
 ### System Utilities
 build raspberrypi/pi-bluetooth_0
-build lfs/bluez_5
+if [ ${ENABLE_DBUS:-1} -eq 1 ]
+then
+	build lfs/bluez_5
+fi
 build lfs/usb-utils_014
 build lfs/pciutils_3.8.0
 build lfs/lsof_4.95

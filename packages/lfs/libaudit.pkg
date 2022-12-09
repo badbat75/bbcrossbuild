@@ -1,13 +1,18 @@
 # libaudit
 PKG_VER=3.0.9
 PKG_URL="https://github.com/linux-audit/audit-userspace/archive/refs/tags/v${PKG_VER}.tar.gz"
-PKG_DEPS="lfs/krb5_1.20 lfs/systemd"
 SYSTEMD_TARGET=bootstrap
 PKG_AUTOCONF=1
 BUILD_PROCESS=configmake
-CONF_FLAGS="--disable-zos-remote --without-python --with-python3 --with-python_prefix=${SYSROOT}${BUILD_PREFIX}"
+CONF_FLAGS="--disable-zos-remote --without-python --with-python3"
 PKG_FAULTYCFLAGS=1
 INST_CMD=install-strip
+PKG_TARGET=${PKG_TARGET:-${LIBAUDIT_TARGET}}
+case "${PKG_TARGET}" in
+	bootstrap) ;;
+	*) PKG_DEPS="lfs/krb5_1.20 lfs/systemd"	;;
+esac
+
 PKG_PREBUILD="cp -v ${SYSROOT}${BUILD_PREFIX}/include/linux/audit.h lib/audit.h
 	patch -p1 <<-'EOF'
 diff -urp audit-3.0.8.orig/bindings/swig/src/auditswig.i audit-3.0.8/bindings/swig/src/auditswig.i

@@ -1657,6 +1657,11 @@ function setup_python () {
 		run_cmd "${BUILD_PYTHON} -m crossenv ${TARGET_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH}"
 		run_cmd "rmdir -v ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include"
 		run_cmd "ln -sfv ${PYTHON_SEARCHPATH}${BUILD_INCLUDEDIR}/python${PYTHONBIN_VER} ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include"
+		cat >${TOOLCHAIN_PATH}/venv-${HARCH}/cross/bin/python3-config <<-EOF
+			#!/bin/sh
+			${PYTHON_SEARCHPATH}${BUILD_PREFIX}/bin/python3-config \${@}
+		EOF
+		run_cmd "chmod +x ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/bin/python3-config"
 		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate
 		run_cmd "build-python -m pip install --upgrade cython setuptools==60.10.0 wheel"
 		run_cmd "mkdir -p ${TOOLCHAIN_BLDPATH}/build_python_crossenv"
