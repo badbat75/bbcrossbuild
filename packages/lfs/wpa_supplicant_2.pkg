@@ -125,7 +125,7 @@ fi
 if [ ${ENABLE_DBUS:-1} -eq 1 ]
 then
 	PKG_DEPS+=" lfs/D-Bus"
-	PKG_PREBUILD="cat >> wpa_supplicant/.config <<-EOF
+	PKG_PREBUILD+="cat >> wpa_supplicant/.config <<-EOF
 		CONFIG_CTRL_IFACE_DBUS_NEW=y
 		CONFIG_CTRL_IFACE_DBUS_INTRO=y
 	EOF

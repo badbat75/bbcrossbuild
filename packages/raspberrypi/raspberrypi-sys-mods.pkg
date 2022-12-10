@@ -18,4 +18,5 @@ PKG_PREBUILD="install -d -m755 ${PKG_PKGPATH}/etc/udev/rules.d
    "
 PKG_POSTINSTALL="groupadd --system i2c
 groupadd --system spi
-groupadd --system gpio"
+groupadd --system gpio
+systemctl disable regenerate_ssh_host_keys.service apply_noobs_os_config"
