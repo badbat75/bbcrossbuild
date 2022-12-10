@@ -1,7 +1,7 @@
 # glib
 PKG_VER=$(gapplication version)
 PKG_URL="https://download.gnome.org/sources/glib/$(echo ${PKG_VER} | cut -d'.' -f1,2)/glib-${PKG_VER}.tar.xz"
-PKG_DEPS="lfs/libxslt_1.1.36 lfs/pcre2_10.40"
+PKG_DEPS="lfs/libxslt lfs/pcre2"
 PKG_TARGET=${PKG_TARGET:-${GLIB_TARGET}}
 case "${PKG_TARGET}" in
 	bootstrap) ;;

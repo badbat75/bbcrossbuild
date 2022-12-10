@@ -1,6 +1,6 @@
-# kmod_30+20220630-3
-PKG_URL="http://archive.raspbian.org/raspbian/pool/main/k/kmod/kmod_30%2B20220630.orig.tar.xz"
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/k/kmod/kmod_30%2B20220630-3.debian.tar.xz"
+# kmod+20220630-3
+PKG_URL="http://archive.raspbian.org/raspbian/pool/main/k/kmod/kmod%2B20220630.orig.tar.xz"
+PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/k/kmod/kmod%2B20220630-3.debian.tar.xz"
 PKG_DEPS="raspbian/zstd_1.5.2+dfsg-1"
 BUILD_PROCESS=configmake
 CONF_FLAGS="-with-openssl --with-xz --with-zstd"

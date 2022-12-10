@@ -1,7 +1,7 @@
 # BerkeleyDB_5.3
 PKG_SUFFIX=.28
 PKG_URL="https://anduin.linuxfromscratch.org/BLFS/bdb/db-5.3${PKG_SUFFIX}.tar.gz"
-PKG_DEPS="lfs/sharutils_4.15"
+PKG_DEPS="lfs/sharutils"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 AUTOCONF_PATH=dist

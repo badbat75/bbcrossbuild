@@ -1,0 +1,8 @@
+# libtirpc
+PKG_VER=1.3.3
+PKG_URL="https://downloads.sourceforge.net/libtirpc/libtirpc-${PKG_VER}.tar.bz2"
+PKG_DEPS="lfs/krb5"
+BUILD_PROCESS=configmake
+PKG_AUTOCONF=1
+CONF_FLAGS=""
+INST_CMD="install-strip"

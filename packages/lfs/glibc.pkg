@@ -107,16 +107,6 @@ case ${PKG_TARGET} in
 
 			EOF
 			"
-		if [ ${ENABLE_NSCD:-0} -eq 1 ]
-		then
-			CONF_FLAGS+=" --enable-build-nscd --enable-nscd"
-			PKG_POSTBUILD+="cp -fv \${PKG_SRCPATH}/nscd/nscd.conf ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/nscd.conf
-				mkdir -pv ${PKG_PKGPATH}/var/cache/nscd
-				install -v -Dm644 \${PKG_SRCPATH}/nscd/nscd.tmpfiles ${PKG_PKGPATH}${BUILD_LIBDIR}/tmpfiles.d/nscd.conf
-				install -v -Dm644 \${PKG_SRCPATH}/nscd/nscd.service ${PKG_PKGPATH}/lib/systemd/system/nscd.service"
-		else
-			CONF_FLAGS+=" --disable-build-nscd --disable-nscd"
-		fi
 		PKG_POSTINSTALL="$(cat <<-EOF
 			I18NPATH=/usr/share/i18n localedef --prefix=/ -i POSIX -f UTF-8 C.UTF-8 2>&1 || true
 			I18NPATH=/usr/share/i18n localedef --prefix=/ -i cs_CZ -f UTF-8 cs_CZ.UTF-8
@@ -146,6 +136,17 @@ case ${PKG_TARGET} in
 			I18NPATH=/usr/share/i18n localedef --prefix=/ -i zh_HK -f BIG5-HKSCS zh_HK.BIG5-HKSCS
 			EOF
 			)"
+		if [ ${ENABLE_NSCD:-0} -eq 1 ]
+		then
+			CONF_FLAGS+=" --enable-build-nscd --enable-nscd"
+			PKG_POSTBUILD+="cp -fv \${PKG_SRCPATH}/nscd/nscd.conf ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/nscd.conf
+				mkdir -pv ${PKG_PKGPATH}/var/cache/nscd
+				install -v -Dm644 \${PKG_SRCPATH}/nscd/nscd.tmpfiles ${PKG_PKGPATH}${BUILD_LIBDIR}/tmpfiles.d/nscd.conf
+				install -v -Dm644 \${PKG_SRCPATH}/nscd/nscd.service ${PKG_PKGPATH}/lib/systemd/system/nscd.service"
+			PKG_POSTINSTALL+=";systemctl disable nscd"
+		else
+			CONF_FLAGS+=" --disable-build-nscd --disable-nscd"
+		fi
 		PKG_POSTINSTALL_PRIO=01
 	;;
 esac

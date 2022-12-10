@@ -46,7 +46,7 @@ CONF_FLAGS+=" --enable-avresample  \
 PKG_DEPS="
     moode/fdk-aac_2.0.1 \
 "
-#    moode/alsa-lib_1.2 \
+#    moode/alsa-lib \
 #    moode/opus_1.3.1 \
 #    moode/libogg_1.3.5 \
 #    moode/libvorbis_1.3.7 \

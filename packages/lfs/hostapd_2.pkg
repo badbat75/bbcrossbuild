@@ -3,7 +3,7 @@ PKG_SUFFIX=.10
 PKG_SRCDIR=wpa_2${PKG_SUFFIX}
 BUILD_PROCESS=simplemake
 INST_CMD=all
-PKG_DEPS="lfs/wpa_2 lfs/libnl_3.7.0"
+PKG_DEPS="lfs/wpa_2 lfs/libnl"
 PKG_MAKEVARS="PREFIX=${BUILD_PREFIX} INCDIR=${BUILD_INCLUDEDIR} BINDIR=${BUILD_PREFIX}/sbin -C hostapd"
 PKG_PREBUILD="cat > hostapd/.config <<-EOF
 		CONFIG_DRIVER_HOSTAP=y

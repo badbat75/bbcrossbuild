@@ -1,0 +1,6 @@
+# libpipeline
+PKG_VER=1.5.7
+PKG_URL="http://download.savannah.gnu.org/releases/libpipeline/libpipeline-${PKG_VER}.tar.gz"
+BUILD_PROCESS=configmake
+CONF_FLAGS=""
+INST_CMD="install-strip"

@@ -1,6 +1,6 @@
 # usb-utils_014
 PKG_URL="https://www.kernel.org/pub/linux/utils/usb/usbutils/usbutils-014.tar.xz"
-PKG_DEPS="lfs/libusb_1.0.26"
+PKG_DEPS="lfs/libusb"
 
 #PKG_OVERRIDELTO=0
 PKG_COPYSRC=1

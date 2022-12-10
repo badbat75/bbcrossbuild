@@ -1,7 +1,7 @@
 # D-Bus
 PKG_VER=1.14.4
 PKG_URL="https://dbus.freedesktop.org/releases/dbus/dbus-${PKG_VER}.tar.xz"
-PKG_DEPS="lfs/expat_2 lfs/systemd lfs/GLib"
+PKG_DEPS="lfs/expat lfs/systemd lfs/GLib"
 SYSTEMD_TARGET=bootstrap
 GLIB_TARGET=bootstrap
 BUILD_PROCESS=configmake

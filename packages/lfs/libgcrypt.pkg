@@ -1,0 +1,11 @@
+# libgcrypt
+PKG_VER=1.10.1
+PKG_URL="https://www.gnupg.org/ftp/gcrypt/libgcrypt/libgcrypt-${PKG_VER}.tar.bz2"
+BUILD_PROCESS=configmake
+PKG_AUTOCONF=1
+CONF_FLAGS="--with-gpg-error-prefix=${BIN_PATH}${BUILD_PREFIX}"
+INST_CMD=install-strip
+PKG_DEPS="lfs/libgpg-error"
+
+# Dependencies:
+

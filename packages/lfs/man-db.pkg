@@ -1,0 +1,9 @@
+# man-db
+PKG_VER=2.11.1
+PKG_URL="http://download.savannah.gnu.org/releases/man-db/man-db-${PKG_VER}.tar.xz"
+PKG_DEPS="lfs/libpipeline lfs/gdbm_1.23 lfs/zlib_1 lfs/gzip_1.12 lfs/bzip2_1.0.8 lfs/xz lfs/zstd_1.5.2"
+BUILD_PROCESS=configmake
+CONF_FLAGS="--disable-setuid --enable-cache-owner=bin --with-browser=/usr/bin/lynx --with-vgrind=/usr/bin/vgrind --with-grap=/usr/bin/grap"
+INST_CMD="install-strip"
+
+PKG_PREBUILD="sed -i '/find/s@/usr@@' init/systemd/man-db.service.in"

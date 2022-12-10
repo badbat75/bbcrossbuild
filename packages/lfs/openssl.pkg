@@ -1,0 +1,24 @@
+# openssl
+PKG_VER=3.0.7
+PKG_URL="https://www.openssl.org/source/openssl-${PKG_VER}.tar.gz"
+PKG_DEPS="lfs/zlib_1"
+CONF_COPYRSC=1
+CONF_CMD="Configure"
+STD_CONF_FLAGS=0
+CONF_FLAGS="--prefix=${BUILD_PREFIX} --openssldir=${BUILD_SYSCONFDIR}/ssl $(
+    case x${HARCH} in
+    xarm-linux-*)
+        echo linux-generic32 
+        ;;
+    *)
+        echo ${HOS}-${HM}
+        ;;
+    esac
+    ) shared zlib-dynamic no-tests"
+BUILD_PROCESS=configmake
+INST_CMD="install"
+PKG_TWOSTEPSBUILD=1
+PKG_MAKEVARS="MANSUFFIX=ssl LIBDIR=lib${BUILD_LIBSUFFIX}"
+case ${TOOLCHAIN} in
+    llvm) PKG_CFLAGS="-std=gnu99";;
+esac

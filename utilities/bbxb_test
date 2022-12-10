@@ -28,7 +28,7 @@ cat <<-EOF >projects/test.prj
     setup_full_toolchain --with-python --with-gnu-install
 
     # Build bash to test chroot Environment
-    build lfs/bash_5
+    build lfs/bash
 
     # Test QEMU Environment and generated libraries
     build lfs/lz4_1.9

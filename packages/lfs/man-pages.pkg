@@ -1,0 +1,7 @@
+# man-pages
+PKG_VER=6.01
+PKG_URL="https://mirrors.edge.kernel.org/pub/linux/docs/man-pages/man-pages-${PKG_VER}.tar.xz"
+BUILD_PROCESS=simplemake
+PKG_MAKEVARS="prefix=${BUILD_PREFIX}"
+INST_CMD="install"
+PKG_TWOSTEPSBUILD=0

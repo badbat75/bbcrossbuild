@@ -1,7 +1,7 @@
 # libgmp
 PKG_SUFFIX=_${GMP_VER}
 PKG_URL="http://ftp.gnu.org/gnu/gmp/gmp-${GMP_VER}.tar.xz"
-PKG_DEPS="lfs/ncurses_6 lfs/readline_8.2"
+PKG_DEPS="lfs/ncurses lfs/readline"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-cxx"
 INST_CMD="install-strip"

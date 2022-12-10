@@ -1,9 +1,0 @@
-# readline_8.2
-PKG_URL="https://ftp.gnu.org/gnu/readline/readline-8.2.tar.gz"
-PKG_DEPS="lfs/ncurses_6"
-PATCHES="https://git.savannah.gnu.org/cgit/readline.git/patch/?id=7274faabe97ce53d6b464272d7e6ab6c1392837b"
-BUILD_PROCESS=configmake
-CONF_FLAGS="--with-curses --with-shared-termcap-library --docdir=/usr/share/doc/readline-8.2.0"
-INST_CMD="install"
-
-PKG_POSTBUILD="install -v -m644 \${PKG_SRCPATH}/doc/*.{ps,pdf,html,dvi} ${PKG_PKGPATH}/usr/share/doc/readline-8.2.0"

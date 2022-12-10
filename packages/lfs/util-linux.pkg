@@ -1,0 +1,25 @@
+# util-linux
+PKG_VER=2.38.1
+PKG_URL="https://github.com/util-linux/util-linux/archive/refs/tags/v${PKG_VER}.tar.gz"
+PKG_DEPS="lfs/zlib_1 lfs/bzip2_1.0.8 lfs/ncurses lfs/readline"
+BUILD_PROCESS=configmake
+PKG_AUTOCONF=1
+CONF_FLAGS="ADJTIME_PATH=/var/lib/hwclock/adjtime \
+            --disable-chfn-chsh \
+            --disable-login \
+            --disable-nologin \
+            --disable-su \
+            --disable-setpriv \
+            --disable-runuser \
+            --disable-pylibmount \
+            --disable-makeinstall-chown \
+            --without-tinfo"
+CONF_VARS="ADJTIME_PATH=/var/lib/hwclock/adjtime runstatedir=/run"
+INST_CMD="install-strip"
+PKG_MAKEVARS="NCURSES_LIBS=-lncurses"
+
+case ${TOOLCHAIN} in
+    llvm)
+        PKG_CFLAGS=" -Wno-implicit-function-declaration"
+        ;;
+esac

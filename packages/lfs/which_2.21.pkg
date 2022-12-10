@@ -1,5 +1,0 @@
-# which_2.21
-PKG_URL="https://ftp.gnu.org/gnu/which/which-2.21.tar.gz"
-BUILD_PROCESS=configmake
-CONF_FLAGS=
-INST_CMD="install-strip"

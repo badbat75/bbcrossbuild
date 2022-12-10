@@ -10,7 +10,7 @@ INST_CMD=install-strip
 PKG_TARGET=${PKG_TARGET:-${LIBAUDIT_TARGET}}
 case "${PKG_TARGET}" in
 	bootstrap) ;;
-	*) PKG_DEPS="lfs/krb5_1.20 lfs/systemd"	;;
+	*) PKG_DEPS="lfs/krb5 lfs/systemd"	;;
 esac
 
 PKG_PREBUILD="cp -v ${SYSROOT}${BUILD_PREFIX}/include/linux/audit.h lib/audit.h

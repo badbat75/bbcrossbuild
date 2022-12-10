@@ -1,0 +1,11 @@
+# groff
+PKG_VER=1.22.4
+PKG_URL="http://ftp.gnu.org/gnu/groff/groff-${PKG_VER}.tar.gz"
+BUILD_PROCESS=configmake
+PKG_AUTOCONF=1
+CONF_FLAGS="PAGE=A4"
+INST_CMD="install-strip"
+GROFFBIN=$(which groff)
+PKG_MAKEVARS="GROFFBIN=${GROFFBIN} GROFF_BIN_PATH=$(dirname ${GROFFBIN})"
+
+PKG_PREBUILD="sed -i '/^AR=ar/ s/ar/@AR@/' Makefile.am"

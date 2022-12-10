@@ -487,7 +487,7 @@ function inject_into_mount_tag () {
 	export -f set_ownership
 	case ${OBJECT} in
 		binaries)
-			run_cmd -S "$(declare -f set_ownership); export -f set_ownership; find ${BIN_PATH} -printf '%P\n' | xargs -I{} -d'\n' -n1 -P${NPROCS} bash -c \\
+			run_cmd -S "$(declare -f set_ownership); export -f set_ownership; find -P ${BIN_PATH} -printf '%P\n' | xargs -I{} -d'\n' -n1 -P${NPROCS} bash -c \\
 				'set_ownership ${TARGET_OWNER} \"${TARGET_PATH}\" \"{}\" \"${BIN_PATH}\"' \\
 			" >> ${LOG_PATH}/images_${ROOT_DIR}.log
 			;;

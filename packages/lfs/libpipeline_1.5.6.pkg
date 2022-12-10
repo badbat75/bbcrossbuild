@@ -1,5 +1,0 @@
-# libpipeline_1.5.6
-PKG_URL="http://download.savannah.gnu.org/releases/libpipeline/libpipeline-1.5.6.tar.gz"
-BUILD_PROCESS=configmake
-CONF_FLAGS=""
-INST_CMD="install-strip"

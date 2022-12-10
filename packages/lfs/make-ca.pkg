@@ -1,0 +1,10 @@
+# make-ca
+PKG_VER=1.8.1
+PKG_URL="https://github.com/djlucas/make-ca/archive/refs/tags/v${PKG_VER}.tar.gz"
+PKG_DEPS="lfs/p11-kit"
+BUILD_PROCESS=simplemake
+PKG_TWOSTEPSBUILD=0
+INST_CMD=install
+PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}/etc/ssl/local
+    ${PKG_PKGPATH}/usr/sbin/make-ca -D ${PKG_PKGPATH} -g
+    systemctl --root=${PKG_PKGPATH} enable update-pki.timer"

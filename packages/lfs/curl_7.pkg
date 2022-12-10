@@ -1,7 +1,7 @@
 # curl_7
 PKG_SUFFIX=.86.0
 PKG_URL="https://curl.haxx.se/download/curl-7${PKG_SUFFIX}.tar.xz"
-PKG_DEPS="lfs/openssl_3 lfs/make-ca_1"
+PKG_DEPS="lfs/openssl lfs/make-ca"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--enable-threaded-resolver --with-openssl --with-ca-path=${BUILD_SYSCONFDIR}/ssl/certs"

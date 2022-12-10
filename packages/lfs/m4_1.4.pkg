@@ -1,6 +1,0 @@
-# m4_1.4
-PKG_SUFFIX=.19
-PKG_URL="https://ftp.gnu.org/gnu/m4/m4-1.4${PKG_SUFFIX}.tar.xz"
-BUILD_PROCESS=configmake
-CONF_FLAGS=""
-INST_CMD="install-strip"

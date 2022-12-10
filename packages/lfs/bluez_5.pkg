@@ -1,7 +1,7 @@
 # bluez_5
 PKG_SUFFIX=.66
 PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-5${PKG_SUFFIX}.tar.xz"
-PKG_DEPS="lfs/readline_8.2 lfs/GLib lfs/libical_3.0.14 lfs/ell_0.52 lfs/json-c_0"
+PKG_DEPS="lfs/readline lfs/GLib lfs/libical lfs/ell_0.52 lfs/json-c"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--with-dbusconfdir=${BUILD_SYSCONFDIR} \
 	--with-dbussystembusdir=${BUILD_PREFIX}/share/dbus-1/system-services \
@@ -12,7 +12,7 @@ CONF_FLAGS="--with-dbusconfdir=${BUILD_SYSCONFDIR} \
   --enable-btpclient --enable-external-ell"
 if [ ${ENABLE_MIDI:-0} -eq 1 ]
 then
-  PKG_DEPS+=" lfs/alsa-lib_1.2"
+  PKG_DEPS+=" lfs/alsa-lib"
   CONF_FLAGS+=" --enable-midi"
 fi
 INST_CMD="install-strip"
