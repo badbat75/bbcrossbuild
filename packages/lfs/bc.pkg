@@ -1,5 +1,6 @@
-# bc_1.0.7
-PKG_URL="https://ftp.gnu.org/gnu/bc/bc-1.07.tar.gz"
+# bc
+PKG_VER=1.07
+PKG_URL="https://ftp.gnu.org/gnu/bc/bc-${PKG_VER}.tar.gz"
 PKG_DEPS="lfs/ncurses lfs/readline"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1

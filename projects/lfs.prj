@@ -29,7 +29,7 @@ build lfs/xz
 build lfs/zstd
 build lfs/file
 build lfs/readline
-build lfs/bc_1.0.7
+build lfs/bc
 build lfs/attr
 build lfs/acl
 build lfs/libcap2
