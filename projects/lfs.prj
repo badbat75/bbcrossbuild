@@ -22,12 +22,12 @@ build raspberrypi/rpi-kernel_$( echo ${KERNEL_VER} | cut -d'.' -f1,2 )
 #build lfs/GLibc
 build lfs/tzdata
 build lfs/man-pages
-build lfs/iana-etc_20220819
-build lfs/zlib_1
-build lfs/bzip2_1.0.8
+build lfs/iana-etc
+build lfs/zlib
+build lfs/bzip2
 build lfs/xz
-build lfs/zstd_1.5.2
-build lfs/file_5
+build lfs/zstd
+build lfs/file
 build lfs/readline
 build lfs/bc_1.0.7
 build lfs/attr
@@ -39,7 +39,7 @@ build lfs/psmisc
 build lfs/grep
 build lfs/ncurses
 build lfs/bash
-build lfs/gdbm_1.23
+build lfs/gdbm
 build lfs/expat
 build lfs/inetutils
 build perl/XML::Parser_2.46
@@ -50,14 +50,14 @@ build lfs/elfutils
 build lfs/libffi
 build lfs/openssl
 build lfs/coreutils
-build lfs/diffutils_3.8
+build lfs/diffutils
 build lfs/gawk
 build lfs/findutils
 build lfs/groff
 build lfs/less
-build lfs/gzip_1.12
+build lfs/gzip
 build lfs/iproute2
-build lfs/kbd_2.5.1
+build lfs/kbd
 build lfs/libpipeline
 build lfs/man-db
 build lfs/tar
@@ -70,12 +70,12 @@ fi
 build lfs/polkit
 build lfs/procps-ng
 build lfs/util-linux
-build lfs/e2fsprogs_1.46
+build lfs/e2fsprogs
 build lfs/btrfs-progs
-build lfs/dosfstools_4.2
+build lfs/dosfstools
 ### Security
 build lfs/sudo
-build lfs/net-tools_2.10
+build lfs/net-tools
 build lfs/openssh
 ### Multimedia
 build lfs/alsa-utils
@@ -83,23 +83,23 @@ build lfs/alsa-utils
 build raspberrypi/pi-bluetooth_0
 if [ ${ENABLE_DBUS:-1} -eq 1 ]
 then
-	build lfs/bluez_5
+	build lfs/bluez
 fi
-build lfs/usb-utils_014
+build lfs/usb-utils
 build lfs/pciutils
 build lfs/lsof
 build lfs/wget
 build lfs/which
 ### Network
 build lfs/bind9
-build lfs/dhcp_4.4.3
+build lfs/dhcp
 #build lfs/dhcpcd
 build firmwares/wireless-regdb
 build lfs/wpa_supplicant_2
 build lfs/hostapd_2
 build lfs/iw
-build lfs/wireless-tools_29
-build lfs/curl_7
+build lfs/wireless-tools
+build lfs/curl
 ### Development
 build lfs/strace
 

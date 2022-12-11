@@ -3,7 +3,7 @@ PKG_VER=252.2
 PKG_URL="https://github.com/systemd/systemd-stable/archive/refs/tags/v${PKG_VER}.tar.gz"
 #PATCHES="https://www.linuxfromscratch.org/patches/lfs/development/systemd-251-glibc_2.36_fix-1.patch"
 PKG_DEPS="lfs/libxcrypt \
-	lfs/zlib_1 lfs/xz lfs/bzip2_1.0.8 lfs/zstd_1.5.2 lfs/lz4_1.9 \
+	lfs/zlib lfs/xz lfs/bzip2 lfs/zstd lfs/lz4 \
 	lfs/libxslt lfs/libxml2 lfs/libcap2"
 BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Drootlibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
@@ -24,7 +24,7 @@ case "${PKG_TARGET}" in
 			lfs/Linux-PAM lfs/polkit lfs/elfutils lfs/GLib \
 			lfs/libidn2 lfs/libseccomp lfs/make-ca \
 			lfs/p11-kit lfs/pcre2 lfs/kmod \
-			lfs/util-linux lfs/curl_7"
+			lfs/util-linux lfs/curl"
 		CONF_FLAGS+=" -Dblkid=true"
 		CONF_FLAGS+=" -Dman=auto"
 		CONF_FLAGS+=" -Dpam=true"

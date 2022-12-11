@@ -1,0 +1,9 @@
+# file
+PKG_VER=$(file -v | head -n1 | cut -d- -f2)
+PKG_URL="http://ftp.astron.com/pub/file/file-${PKG_VER}.tar.gz"
+PKG_DEPS="lfs/zlib lfs/bzip2"
+#PATCHES=
+BUILD_PROCESS=configmake
+CONF_FLAGS=""
+INST_CMD="install-strip"
+PKG_AUTOCONF=1

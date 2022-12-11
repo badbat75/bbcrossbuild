@@ -31,10 +31,10 @@ cat <<-EOF >projects/test.prj
     build lfs/bash
 
     # Test QEMU Environment and generated libraries
-    build lfs/lz4_1.9
+    build lfs/lz4
 
     # Test cmake
-    build lfs/zlib_1
+    build lfs/zlib
 
     # Test autoconf/configure/meson/ninja
     build lfs/GLib

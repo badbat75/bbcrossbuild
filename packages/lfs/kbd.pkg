@@ -1,6 +1,7 @@
-# kbd_2.5.1
-PKG_URL="https://www.kernel.org/pub/linux/utils/kbd/kbd-2.5.1.tar.xz"
-PKG_DEPS="lfs/gzip_1.12"
+# kbd
+PKG_VER=2.5.1
+PKG_URL="https://www.kernel.org/pub/linux/utils/kbd/kbd-${PKG_VER}.tar.xz"
+PKG_DEPS="lfs/gzip"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--disable-vlock"

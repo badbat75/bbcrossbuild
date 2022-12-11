@@ -1,7 +1,7 @@
 # openssh
 PKG_VER=9.1p1
 PKG_URL="http://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${PKG_VER}.tar.gz"
-PKG_DEPS="lfs/krb5 lfs/net-tools_2.10 lfs/Linux-PAM lfs/libedit lfs/sysstat"
+PKG_DEPS="lfs/krb5 lfs/net-tools lfs/Linux-PAM lfs/libedit lfs/sysstat"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--sysconfdir=${BUILD_SYSCONFDIR}/ssh \

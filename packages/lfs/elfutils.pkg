@@ -1,7 +1,7 @@
 # elfutils
 PKG_VER=0.188
 PKG_URL="https://sourceware.org/ftp/elfutils/${PKG_VER}/elfutils-${PKG_VER}.tar.bz2"
-PKG_DEPS="lfs/zlib_1 lfs/gzip_1.12 lfs/bzip2_1.0.8 lfs/zstd_1.5.2"
+PKG_DEPS="lfs/zlib lfs/gzip lfs/bzip2 lfs/zstd"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--disable-debuginfod --disable-werror --enable-libdebuginfod=dummy --program-prefix="

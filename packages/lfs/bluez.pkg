@@ -1,7 +1,7 @@
-# bluez_5
-PKG_SUFFIX=.66
-PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-5${PKG_SUFFIX}.tar.xz"
-PKG_DEPS="lfs/readline lfs/GLib lfs/libical lfs/ell_0.52 lfs/json-c"
+# bluez
+PKG_VER=5.66
+PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-${PKG_VER}.tar.xz"
+PKG_DEPS="lfs/readline lfs/GLib lfs/libical lfs/ell lfs/json-c"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--with-dbusconfdir=${BUILD_SYSCONFDIR} \
 	--with-dbussystembusdir=${BUILD_PREFIX}/share/dbus-1/system-services \
