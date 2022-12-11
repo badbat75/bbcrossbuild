@@ -1,9 +1,9 @@
-# wpa_supplicant_2
-PKG_SUFFIX=.10
-PKG_SRCDIR=wpa_2${PKG_SUFFIX}
+# wpa_supplicant
+PKG_VER=2.10
+PKG_SRCDIR=wpa_${PKG_VER}
 BUILD_PROCESS=simplemake
 INST_CMD=all
-PKG_DEPS="lfs/wpa_2 lfs/ncurses lfs/readline lfs/libnl lfs/openssl lfs/pcsc-lite firmwares/wireless-regdb"
+PKG_DEPS="lfs/wpa lfs/ncurses lfs/readline lfs/libnl lfs/openssl lfs/pcsc-lite firmwares/wireless-regdb"
 PKG_MAKEVARS="PREFIX=${BUILD_PREFIX} INCDIR=${BUILD_INCLUDEDIR} BINDIR=/sbin -C wpa_supplicant"
 PKG_CFLAGS="-I${SYSROOT}${BUILD_INCLUDEDIR}/PCSC"
 PKG_CFLAGS+=" -Wno-deprecated-declarations"

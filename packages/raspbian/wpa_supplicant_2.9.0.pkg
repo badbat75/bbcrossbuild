@@ -1,5 +1,5 @@
 # wpa_supplicant_2.9.0
-PKG_SRCDIR=wpa_2.9.0
+PKG_SRCDIR=wpa.9.0
 PKG_CFLAGS="-MMD -fPIC -I${BIN_PATH}${BUILD_INCLUDEDIR}/libnl3 -I${BIN_PATH}${BUILD_INCLUDEDIR}/PCSC"
 [ ${TOOLCHAIN} == gnu ] && PKG_CFLAGS+=" -Wno-stringop-overflow"
 BUILD_PROCESS=simplemake

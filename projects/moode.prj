@@ -80,8 +80,8 @@ build raspberrypi/raspberrypi-net-mods
 build moode/alsa-utils
 build raspbian/iw_5.19
 build firmwares/wireless-regdb
-build lfs/hostapd_2
-build lfs/wpa_supplicant_2
+build lfs/hostapd
+build lfs/wpa_supplicant
 build moode/mediainfo_22.06
 build moode/alsacap
 build moode/udisks-glue_1.3.5               	

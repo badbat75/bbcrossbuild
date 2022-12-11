@@ -43,7 +43,7 @@ build lfs/gdbm
 build lfs/expat
 build lfs/inetutils
 build perl/XML::Parser_2.46
-build lfs/perl_5
+build lfs/perl5
 build lfs/intltool
 build lfs/kmod
 build lfs/elfutils
@@ -95,8 +95,8 @@ build lfs/bind9
 build lfs/dhcp
 #build lfs/dhcpcd
 build firmwares/wireless-regdb
-build lfs/wpa_supplicant_2
-build lfs/hostapd_2
+build lfs/wpa_supplicant
+build lfs/hostapd
 build lfs/iw
 build lfs/wireless-tools
 build lfs/curl

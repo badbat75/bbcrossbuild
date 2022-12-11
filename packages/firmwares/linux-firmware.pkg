@@ -1,6 +1,6 @@
 #linux-firmware
-PKG_SUFFIX=20221109
-PKG_URL="https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/snapshot/linux-firmware-${PKG_SUFFIX}.tar.gz"
+PKG_VER=20221109
+PKG_URL="https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git/snapshot/linux-firmware-${PKG_VER}.tar.gz"
 BUILD_PROCESS=downloadonly
 PKG_PREBUILD="set -x
     make install DESTDIR=${PKG_PKGPATH}

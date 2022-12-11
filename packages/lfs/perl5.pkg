@@ -1,11 +1,9 @@
-# perl_5
-PKG_PERL_MIDVER=36
-PKG_PERL_SUBVER=0
-PKG_SUFFIX=.${PKG_PERL_MIDVER}.${PKG_PERL_SUBVER}
-PKG_PERL_LIBVER=5.${PKG_PERL_MIDVER}
+# perl5
+PKG_VER=5.36.0
+PKG_PERL_LIBVER=$(echo ${PKG_VER} | cut -d. -f1,2)
 # perl-cross_1.4+f842531
 PKG_PERLCROSS_VER=f842531ca3198ac30dddfd36f881b947cbffebdd
-PKG_URL="https://www.cpan.org/src/5.0/perl-5${PKG_SUFFIX}.tar.xz"
+PKG_URL="https://www.cpan.org/src/5.0/perl-${PKG_VER}.tar.xz"
 PKG_DEPS="lfs/gdbm lfs/expat"
 BUILD_PROCESS=downloadonly
 PKG_COPYSRC=1

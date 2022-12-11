@@ -1,6 +1,6 @@
 #wireless-regdb
-PKG_SUFFIX=_2022.08.12
-PKG_URL="https://mirrors.edge.kernel.org/pub/software/network/wireless-regdb/wireless-regdb$(echo ${PKG_SUFFIX} | sed 's/_/-/').tar.xz"
+PKG_VER=2022.08.12
+PKG_URL="https://mirrors.edge.kernel.org/pub/software/network/wireless-regdb/wireless-regdb-${PKG_VER}.tar.xz"
 BUILD_PROCESS=downloadonly
 PKG_PREBUILD="set -x
     install -v -d -m755 ${PKG_PKGPATH}/lib/firmware
