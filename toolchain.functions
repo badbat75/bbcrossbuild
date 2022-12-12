@@ -1037,48 +1037,50 @@ function setup_gcc () {
 	local GCC_IS_MAIN=${_param_main_gcc:-0}
 
 	local SPACES="   "
-	if [ $(gcc_sysroot) == ${BIN_PATH} ]
-	then
-		### Install kernel headers
-		echo -n "${SPACES}"
-		build --target headers --no_gcc_check ${BS_KERNEL:-lfs/kernel}
-		### Install glibc headers
-		echo -n "${SPACES}"
-		build --target headers --no_gcc_check lfs/glibc
-	fi
 	if [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc ] || [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-g++ ]
 	then
+		if [ $(gcc_sysroot) == ${BIN_PATH} ]
+		then
+			echo -n "${SPACES}"
+			build --target headers --no_gcc_check lfs/glibc
+		fi
 		echo -n "${SPACES}"
 		echo -n "Building ${GCC_LANGUAGES:-c,c++} compilers... "
 		gcc_make_host ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 		echo -e "done.\n"
 	fi
-	if [ $(gcc_sysroot) == ${BIN_PATH} ]
+	if [ $(gcc_sysroot) == ${BIN_PATH} ] && [ ! -f ${STATUS_PATH}/gcc-libgcc_${GCC_VER}-bootstrap ]
 	then
 		### Bootstrapping sysroot
 		echo "${SPACES}Bootstrapping foundation libraries... "
 		### Install glibc headers and raw libraries
 		echo -n "${SPACES}"
-		build --target stage1 lfs/glibc
+		NUMSPACES=1 build --target stage1 lfs/glibc
 		echo -n "${SPACES}Bootstrapping target libgcc... "
 		GCC_BOOTSTRAP=1 GCC_TARGETS="libgcc" gcc_make_target_libs
 		echo -e "done.\n"
+	fi
+	if [ ! -f ${STATUS_PATH}/gcc-libsanitizer_${GCC_VER} ]
+	then
 		### Build & install glibc lib
 		echo -n "${SPACES}"
-		build --target stage2 lfs/glibc
+		NUMSPACES=1 build --target stage2 lfs/glibc
+		setup_ldconfig
+		### Build & install libxcrypt
+		echo -n "${SPACES}"
+		build --toolchain gnu --target headers lfs/libxcrypt
+		echo -n "${SPACES}Building target libraries... "
+		gcc_make_target_libs
+		echo -e "done.\n"
 	fi
-	echo -n "${SPACES}Building target libraries... "
-	setup_ldconfig
-	gcc_make_target_libs
-	echo -e "done.\n"
 	if [ $(gcc_sysroot) == ${BIN_PATH} ]
 	then
 		### Build & install glibc
 		echo -n "${SPACES}"
-		build lfs/glibc
+		NUMSPACES=1 build lfs/glibc
 		### Build & install libxcrypt
 		echo -n "${SPACES}"
-		build --toolchain gnu lfs/libxcrypt
+		NUMSPACES=1 build --toolchain gnu lfs/libxcrypt
 	fi
 	ldconfig -v >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log 2>&1
 	if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ]

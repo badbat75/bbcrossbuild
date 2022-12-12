@@ -2,7 +2,6 @@
 PKG_VER=$(gapplication version)
 PKG_URL="https://download.gnome.org/sources/glib/$(echo ${PKG_VER} | cut -d'.' -f1,2)/glib-${PKG_VER}.tar.xz"
 PKG_DEPS="lfs/libxslt lfs/pcre2"
-PKG_TARGET=${PKG_TARGET:-${GLIB_TARGET}}
 case "${PKG_TARGET}" in
 	bootstrap) ;;
     *)  if [ ${ENABLE_DBUS:-1} -eq 1 ]

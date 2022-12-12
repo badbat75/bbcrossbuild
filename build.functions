@@ -1563,31 +1563,41 @@ function build () {(
 	eval export PKG_PKGPATH=${PKG_PKGPATH}
 
 	local STATUS_FILE=${STATUS_PATH}/${PKG_NAME}${PKG_TARGET:+-${PKG_TARGET}}${TEMPORARY_STATUS}
+	local STATUS_FILE_DEFAULT_TARGET=${STATUS_PATH}/${PKG_NAME}
 	local LOG_FILE=${LOG_PATH}/${PKG_NAME}${PKG_TARGET:+-${PKG_TARGET}}.log
 
-	echo "Package ${PKG_NAME}"
+	echo "Package ${PKG_NAME}${PKG_TARGET:+:${PKG_TARGET}}"
 
-	if [ -f ${STATUS_FILE} ] && [ ${FORCE} -eq 0 ]
+	### Check if target package or default package has already built
+	local PKG_CHKSUM="$( md5sum ${PKG_PATH}/${PKG_FILE}.pkg )"
+	if [ -f ${STATUS_FILE_DEFAULT_TARGET} ]
 	then
-		if [ "$(md5sum ${PKG_PATH}/${PKG_FILE}.pkg)" == "$(cat ${STATUS_FILE})" ]
+		local STATUS_CHK_FILE=${STATUS_FILE_DEFAULT_TARGET}
+	else
+		local STATUS_CHK_FILE=${STATUS_FILE}
+	fi
+	if [ -f ${STATUS_CHK_FILE} ] && [ ${FORCE} -eq 0 ]
+	then
+		if [ "${PKG_CHKSUM}" == "$( cat ${STATUS_CHK_FILE} )" ]
 		then
-			echo "${SPACES}Package ${PKG_NAME} already built."
+			echo "${SPACES}Package ${PKG_NAME}${PKG_TARGET:+:${PKG_TARGET}} already built."
 			echo
-			set +x
 			trap - ERR
 			return 0
 		else
 			rm -f ${STATUS_FILE}
 		fi
 	fi
-
-	for deps in ${PKG_DEPS}
+	for dep in ${PKG_DEPS}
 	do
 		local NUMSPACES=$((NUMSPACES+1))
 		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
 		echo -n "${SPACES}Requires "
 		#echo "Called from ${PKG_FILE}"
-		build $( if [ ${NOSAVESTATUS} -eq 1 ] || [ "${TEMPORARY_STATUS}" == ".tmp" ]; then echo "--temporary"; fi) ${deps}
+		# Split dependency in Package name and its Target
+		local DEP_PKG=$(cut -d':' -f1 <<<${dep})
+		local DEP_TGT=$(cut -s -d':' -f2 <<<${dep})
+		build $( if [ ${NOSAVESTATUS} -eq 1 ] || [ "${TEMPORARY_STATUS}" == ".tmp" ]; then echo "--temporary"; fi) ${DEP_TGT:+--target ${DEP_TGT}} ${DEP_PKG}
 		local NUMSPACES=$((NUMSPACES-1))
 		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
 	done

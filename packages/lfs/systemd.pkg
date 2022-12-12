@@ -16,7 +16,6 @@ CONF_FLAGS+=" -Drpmmacrosdir=no"
 CONF_FLAGS+=" -Dhomed=false"
 CONF_FLAGS+=" -Duserdb=false"
 CONF_FLAGS+=" -Dmode=release"
-PKG_TARGET=${PKG_TARGET:-${SYSTEMD_TARGET}}
 case "${PKG_TARGET}" in
 	bootstrap) LIBAUDIT_TARGET=bootstrap ;;
 	*)

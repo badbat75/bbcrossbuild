@@ -6,4 +6,7 @@ BUILD_PROCESS=configmake
 PKG_OVERRIDELTO=0
 CONF_FLAGS="--disable-werror --disable-failure-tokens --disable-valgrind \
 	--enable-hashes=all --enable-obsolete-api=glibc --enable-obsolete-api-enosys=no"
-INST_CMD=install-strip
+case ${PKG_TARGET} in
+	boostrap) INST_CMD=install-headers;;
+	*) INST_CMD=install-strip;;
+esac

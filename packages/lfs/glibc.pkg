@@ -1,5 +1,6 @@
 # glibc
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${GLIBC_VER}.tar.xz"
+PKG_DEPS="lfs/kernel:headers"
 case ${GLIBC_VER} in
 	2.36)
 		PKG_SUFFIX=_2.36+3aae843e9e
@@ -50,11 +51,6 @@ case ${PKG_TARGET} in
 		PKG_TWOSTEPSBUILD=0
 		PKG_MAKEVARS="install-bootstrap-headers=yes"
 		INST_CMD="install-headers"
-		PKG_POSTBUILD+="if [ ! -f \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h ]
-		then
-			mkdir -pv \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu
-			touch \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h
-		fi;"
 	;;
 	stage1)
 		PKG_TWOSTEPSBUILD=0
@@ -62,7 +58,7 @@ case ${PKG_TARGET} in
 		INST_CMD="install-headers"
 		PKG_POSTBUILD+="mkdir -pv \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 			install csu/crt1.o csu/crti.o csu/crtn.o \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
-			\${CC} \${CFLAGS} \${LDFLAGS} -nostdlib -nostartfiles -shared -x c /dev/null -o \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libc.so"
+			\${CC} \${CFLAGS} \${LDFLAGS} -nostdlib -nostartfiles -shared -x c /dev/null -o \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libc.so;"
 	;;
 	stage2)
 		PKG_TWOSTEPSBUILD=1
@@ -140,15 +136,20 @@ case ${PKG_TARGET} in
 			I18NPATH=/usr/share/i18n localedef --prefix=/ -i zh_CN -f GB18030 zh_CN.GB18030
 			I18NPATH=/usr/share/i18n localedef --prefix=/ -i zh_HK -f BIG5-HKSCS zh_HK.BIG5-HKSCS
 			EOF
-			)"
+			);"
 		if [ ${ENABLE_NSCD:-0} -eq 1 ]
 		then
 			PKG_POSTBUILD+="cp -fv \${PKG_SRCPATH}/nscd/nscd.conf ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/nscd.conf
 				mkdir -pv ${PKG_PKGPATH}/var/cache/nscd
 				install -v -Dm644 \${PKG_SRCPATH}/nscd/nscd.tmpfiles ${PKG_PKGPATH}${BUILD_LIBDIR}/tmpfiles.d/nscd.conf
-				install -v -Dm644 \${PKG_SRCPATH}/nscd/nscd.service ${PKG_PKGPATH}/lib/systemd/system/nscd.service"
-			PKG_POSTINSTALL+=";systemctl disable nscd"
+				install -v -Dm644 \${PKG_SRCPATH}/nscd/nscd.service ${PKG_PKGPATH}/lib/systemd/system/nscd.service;"
+			PKG_POSTINSTALL+="systemctl disable nscd"
 		fi
-		PKG_POSTINSTALL_PRIO=01
 	;;
 esac
+PKG_POSTBUILD+="if [ ! -f \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h ]
+then
+	mkdir -pv \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu
+	touch \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h
+fi"
+PKG_POSTINSTALL_PRIO=01
