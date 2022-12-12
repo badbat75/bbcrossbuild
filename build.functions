@@ -1516,14 +1516,15 @@ function build () {(
 		VAR_INSTALL_INCDIR \
 		VAR_INSTALL_CONFDIR \
 
-	OPTS="--force --no_gcc_check --no_save_status --temporary --keep_builddir" OPTS_WITH_VALUE="--target --toolchain --with_extra_modules" param2value "${@}"
+	OPTS="--force --no_gcc_check --no_save_status --temporary --keep_builddir" OPTS_WITH_VALUE="--toolchain --with_extra_modules" param2value "${@}"
 	[ ${_param_v:-0} -eq 1 ] && set -x || true
-	local PKG_FILE="${_param_1}"
+	# Split dependency in Package name and its Target separated by ':'
+	local PKG_FILE=$(cut -d':' -f1 <<<${_param_1})
+	local PKG_TARGET=$(cut -s -d':' -f2 <<<${_param_1})
 	local GCC_CHECK=${_param_no_gcc_check:-0}
 	local FORCE=${_param_force:-0}
 	local NOSAVESTATUS=${_param_no_save_status:-0}
 	local KEEPBUILDDIR=${_param_keep_builddir:-0}
-	local PKG_TARGET=${_param_target:-${PKG_TARGET}}
 	local TEMPORARY_STATUS=
 
 	if [ ${_param_temporary:-0} -eq 1 ]
@@ -1535,7 +1536,7 @@ function build () {(
 	then
 		local NUMSPACES=0
 	fi
-	
+
 	if [ ! -f ${PKG_PATH}/${PKG_FILE}.pkg ]
 	then
 		echo "Package ${PKG_FILE} does not exists."
@@ -1594,10 +1595,7 @@ function build () {(
 		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
 		echo -n "${SPACES}Requires "
 		#echo "Called from ${PKG_FILE}"
-		# Split dependency in Package name and its Target
-		local DEP_PKG=$(cut -d':' -f1 <<<${dep})
-		local DEP_TGT=$(cut -s -d':' -f2 <<<${dep})
-		build $( if [ ${NOSAVESTATUS} -eq 1 ] || [ "${TEMPORARY_STATUS}" == ".tmp" ]; then echo "--temporary"; fi) ${DEP_TGT:+--target ${DEP_TGT}} ${DEP_PKG}
+		build $( if [ ${NOSAVESTATUS} -eq 1 ] || [ "${TEMPORARY_STATUS}" == ".tmp" ]; then echo "--temporary"; fi) ${dep}
 		local NUMSPACES=$((NUMSPACES-1))
 		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
 	done

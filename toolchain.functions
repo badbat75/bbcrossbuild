@@ -1042,12 +1042,17 @@ function setup_gcc () {
 		if [ $(gcc_sysroot) == ${BIN_PATH} ]
 		then
 			echo -n "${SPACES}"
-			build --target headers --no_gcc_check lfs/glibc
+			build --temporary --target headers --no_gcc_check lfs/glibc
 		fi
 		echo -n "${SPACES}"
 		echo -n "Building ${GCC_LANGUAGES:-c,c++} compilers... "
 		gcc_make_host ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
-		echo -e "done.\n"
+		if [ $(gcc_sysroot) == ${BIN_PATH} ]
+		then
+			echo -n "removing temporary binaries..."
+			run_cmd "rm -rf ${BIN_PATH}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
+		fi
+	echo -e "done.\n"
 	fi
 	if [ $(gcc_sysroot) == ${BIN_PATH} ] && [ ! -f ${STATUS_PATH}/gcc-libgcc_${GCC_VER}-bootstrap ]
 	then
@@ -1055,7 +1060,7 @@ function setup_gcc () {
 		echo "${SPACES}Bootstrapping foundation libraries... "
 		### Install glibc headers and raw libraries
 		echo -n "${SPACES}"
-		NUMSPACES=1 build --target stage1 lfs/glibc
+		NUMSPACES=1 build lfs/glibc:stage1
 		echo -n "${SPACES}Bootstrapping target libgcc... "
 		GCC_BOOTSTRAP=1 GCC_TARGETS="libgcc" gcc_make_target_libs
 		echo -e "done.\n"
@@ -1064,11 +1069,11 @@ function setup_gcc () {
 	then
 		### Build & install glibc lib
 		echo -n "${SPACES}"
-		NUMSPACES=1 build --target stage2 lfs/glibc
+		NUMSPACES=1 build lfs/glibc:stage2
 		setup_ldconfig
 		### Build & install libxcrypt
 		echo -n "${SPACES}"
-		build --toolchain gnu --target headers lfs/libxcrypt
+		build --toolchain gnu lfs/libxcrypt:headers
 		echo -n "${SPACES}Building target libraries... "
 		gcc_make_target_libs
 		echo -e "done.\n"
