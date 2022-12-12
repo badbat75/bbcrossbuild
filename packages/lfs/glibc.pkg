@@ -101,8 +101,10 @@ case ${PKG_TARGET} in
 			cat > ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/ld.so.conf <<-EOF
 			# Begin /etc/ld.so.conf
 			# Add an include directory
+
 			include /etc/ld.so.conf.d/*.conf
 
+			# End /etc/ld.so.conf
 			EOF
 			"
 		PKG_POSTINSTALL="$(cat <<-EOF
