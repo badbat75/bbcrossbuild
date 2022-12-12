@@ -1054,30 +1054,37 @@ function setup_gcc () {
 		fi
 	echo -e "done.\n"
 	fi
-	if [ $(gcc_sysroot) == ${BIN_PATH} ] && [ ! -f ${STATUS_PATH}/gcc-libgcc_${GCC_VER}-bootstrap ]
+	if [ $(gcc_sysroot) == ${BIN_PATH} ]
 	then
-		### Bootstrapping sysroot
-		echo "${SPACES}Bootstrapping foundation libraries... "
-		### Install glibc headers and raw libraries
-		echo -n "${SPACES}"
-		NUMSPACES=1 build lfs/glibc:stage1
-		echo -n "${SPACES}Bootstrapping target libgcc... "
-		GCC_BOOTSTRAP=1 GCC_TARGETS="libgcc" gcc_make_target_libs
-		echo -e "done.\n"
+		if [ ! -f ${STATUS_PATH}/gcc-libgcc_${GCC_VER}-bootstrap ]
+		then
+			### Bootstrapping sysroot
+			echo "${SPACES}Bootstrapping foundation libraries... "
+			### Install glibc headers and raw libraries
+			echo -n "${SPACES}"
+			NUMSPACES=1 build lfs/glibc:stage1
+			echo -n "${SPACES}Bootstrapping target libgcc... "
+			GCC_BOOTSTRAP=1 GCC_TARGETS="libgcc" gcc_make_target_libs
+			echo -e "done.\n"
+		fi
+		if [ ! -f ${STATUS_PATH}/gcc-libsanitizer_${GCC_VER} ]
+		then
+			### Build & install glibc lib
+			echo -n "${SPACES}"
+			NUMSPACES=1 build lfs/glibc:stage2
+			### Build & install libxcrypt
+			echo -n "${SPACES}"
+			build --toolchain gnu lfs/libxcrypt:headers
+		fi
 	fi
 	if [ ! -f ${STATUS_PATH}/gcc-libsanitizer_${GCC_VER} ]
 	then
-		### Build & install glibc lib
-		echo -n "${SPACES}"
-		NUMSPACES=1 build lfs/glibc:stage2
 		setup_ldconfig
-		### Build & install libxcrypt
-		echo -n "${SPACES}"
-		build --toolchain gnu lfs/libxcrypt:headers
 		echo -n "${SPACES}Building target libraries... "
 		gcc_make_target_libs
 		echo -e "done.\n"
 	fi
+	setup_ldconfig
 	if [ $(gcc_sysroot) == ${BIN_PATH} ]
 	then
 		### Build & install glibc
