@@ -1595,7 +1595,10 @@ function build () {(
 		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
 		echo -n "${SPACES}Requires "
 		#echo "Called from ${PKG_FILE}"
-		build $( if [ ${NOSAVESTATUS} -eq 1 ] || [ "${TEMPORARY_STATUS}" == ".tmp" ]; then echo "--temporary"; fi) ${dep}
+		build \
+			$( if [ ${NOSAVESTATUS} -eq 1 ] || [ "${TEMPORARY_STATUS}" == ".tmp" ]; then echo "--temporary"; fi) \
+			$( if [ ${GCC_CHECK} -eq 1 ]; then echo "--no_gcc_check"; fi ) \
+			${dep}
 		local NUMSPACES=$((NUMSPACES-1))
 		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
 	done

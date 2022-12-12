@@ -1042,15 +1042,15 @@ function setup_gcc () {
 		if [ $(gcc_sysroot) == ${BIN_PATH} ]
 		then
 			echo -n "${SPACES}"
-			build --temporary --target headers --no_gcc_check lfs/glibc
+			NUMSPACES=1 build --temporary --no_gcc_check lfs/glibc:headers
 		fi
 		echo -n "${SPACES}"
 		echo -n "Building ${GCC_LANGUAGES:-c,c++} compilers... "
 		gcc_make_host ${HARCH} >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 		if [ $(gcc_sysroot) == ${BIN_PATH} ]
 		then
-			echo -n "removing temporary binaries..."
-			run_cmd "rm -rf ${BIN_PATH}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
+			echo -n "removing temporary headers..."
+			run_cmd "rm -rf ${BIN_PATH}${BUILD_INCLUDEDIR}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 		fi
 	echo -e "done.\n"
 	fi
