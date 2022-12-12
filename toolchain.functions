@@ -1077,14 +1077,13 @@ function setup_gcc () {
 			build --toolchain gnu lfs/libxcrypt:headers
 		fi
 	fi
+	setup_ldconfig
 	if [ ! -f ${STATUS_PATH}/gcc-libsanitizer_${GCC_VER} ]
 	then
-		setup_ldconfig
 		echo -n "${SPACES}Building target libraries... "
 		gcc_make_target_libs
 		echo -e "done.\n"
 	fi
-	setup_ldconfig
 	if [ $(gcc_sysroot) == ${BIN_PATH} ]
 	then
 		### Build & install glibc
