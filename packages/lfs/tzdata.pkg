@@ -1,7 +1,7 @@
 	# tzdata
 	PKG_VER=2022g
-    PKG_URL="https://www.iana.org/time-zones/repository/releases/tzdata${PKG_VER}.tar.gz"
-	PKG_SRCDIR=glibc_2.36/timezone
+    PKG_URL="https://data.iana.org/time-zones/releases/tzdata${PKG_VER}.tar.gz"
+	PKG_SRCDIR=glibc_timezone
 	NODELETEDESTDIR=1
 	MAKEDIR=1
 	BUILD_PROCESS="downloadonly"
