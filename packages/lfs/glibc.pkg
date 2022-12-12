@@ -103,9 +103,6 @@ case ${PKG_TARGET} in
 			# Add an include directory
 			include /etc/ld.so.conf.d/*.conf
 
-			/usr/local/lib
-			/opt/lib
-
 			EOF
 			"
 		PKG_POSTINSTALL="$(cat <<-EOF
