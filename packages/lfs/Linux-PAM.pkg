@@ -63,5 +63,5 @@ PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}/etc/pam.d
 		# End /etc/pam.d/system-password
 	EOF
 
-	chmod -v 4755 ${PKG_PKGPATH}${BUILD_EXECPREFIX}/sbin/unix_chkpwd
+	chmod -v 4755 ${PKG_PKGPATH}/sbin/unix_chkpwd
 "

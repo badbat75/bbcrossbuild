@@ -685,7 +685,7 @@ function build () {(
 		if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 		then
 			CONF_FLAGS="--prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} \
-				--with-systemdsystemunitdir=${BUILD_SYSTEMDDIR} --with-systemduserunitdir=${BUILD_USERSYSTEMDDIR} --localstatedir=${BUILD_LOCALSTATEDIR} ${CONF_FLAGS}"
+				--localstatedir=${BUILD_LOCALSTATEDIR} ${CONF_FLAGS}"
 			CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH} ${CONF_FLAGS}"
 			if [ ${BUILD_LIBSHARED} -eq 1 ]
 			then
@@ -1650,7 +1650,7 @@ function build () {(
 			fi
 			if [ ! ${BUILD_PROCESS:-none} == none ]
 			then
-				echo -n "Building ${PKG_NAME} target ${PKG_TARGET:-default}..."
+				echo -n "Building ${PKG_NAME}${PKG_TARGET:+:${PKG_TARGET}}..."
 				${BUILD_PROCESS} >> ${LOG_FILE} 2>&1
 			fi
 			if [ ! -z "${PKG_POSTBUILD}" ]
@@ -1716,7 +1716,7 @@ function build () {(
 				run_cmd "rm -rf ${PKG_BLDPATH}" >> ${LOG_FILE}
 			fi
 			run_cmd "cp -R ${PKG_SRCPATH} ${PKG_BLDPATH}" >> ${LOG_FILE}
-			echo -n "Building ${PKG_NAME} target ${PKG_TARGET:-default}..."
+			echo -n "Building ${PKG_NAME}${PKG_TARGET:+:${PKG_TARGET}}..."
 			${BUILD_PROCESS} >> ${LOG_FILE} 2>&1
 			;;
 		x*)
@@ -1754,7 +1754,7 @@ function build () {(
 			fi
 			if [ ! ${BUILD_PROCESS:-none} == none ]
 			then
-				echo -n "${SPACES}Building ${PKG_NAME} target ${PKG_TARGET:-default} [${BUILD_PROCESS}]..."
+				echo -n "${SPACES}Building ${PKG_NAME}${PKG_TARGET:+:${PKG_TARGET}} [${BUILD_PROCESS}]..."
 				${BUILD_PROCESS} >> ${LOG_FILE} 2>&1
 			fi
 			if [ -n "${PKG_POSTBUILD}" ]
