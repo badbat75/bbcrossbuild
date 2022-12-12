@@ -1,49 +1,20 @@
 # bluez
 PKG_VER=5.66
 PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-${PKG_VER}.tar.xz"
+PATCHES="https://www.linuxfromscratch.org/patches/blfs/svn/bluez-${PKG_VER}-obexd_without_systemd-1.patch"
 PKG_DEPS="lfs/readline lfs/GLib lfs/libical lfs/ell lfs/json-c"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-library --enable-pie --enable-deprecated --enable-tools --enable-threads --enable-backtrace --enable-nfc --enable-sap --enable-monitor --enable-udev \
-  --enable-obex --enable-client --enable-systemd --enable-sixaxis --enable-health --enable-mesh --enable-hid2hci --enable-experimental \
-  --enable-btpclient --enable-external-ell"
+	--enable-obex --enable-client --enable-systemd --enable-sixaxis --enable-health --enable-mesh --enable-hid2hci --enable-experimental \
+	--enable-btpclient --enable-external-ell"
 if [ ${ENABLE_MIDI:-0} -eq 1 ]
 then
-  PKG_DEPS+=" lfs/alsa-lib"
-  CONF_FLAGS+=" --enable-midi"
+	PKG_DEPS+=" lfs/alsa-lib"
+	CONF_FLAGS+=" --enable-midi"
 fi
 INST_CMD="install-strip"
-#PATCHDEB=""
-# Moode directory location search for bluetoothd and obexd
 
-PKG_PREBUILD="patch -p1 <<EOF
-diff --git a/src/bluetooth.conf b/src/bluetooth.conf
-index 8a1e25801..d6e1c7a03 100644
---- a/src/bluetooth.conf
-+++ b/src/bluetooth.conf
-@@ -22,6 +22,11 @@
-     <allow send_interface=\"org.mpris.MediaPlayer2.Player\"/>
-   </policy>
- 
-+  <!-- allow users of bluetooth group to communicate -->
-+  <policy group=\"bluetooth\">
-+    <allow send_destination=\"org.bluez\"/>
-+  </policy>
-+
-   <policy context=\"default\">
-     <allow send_destination=\"org.bluez\"/>
-   </policy>
---
-EOF
-"
-
-PKG_POSTBUILD="mkdir -p ${PKG_PKGPATH}/bin
-mv ${PKG_PKGPATH}/usr/bin/hciconfig ${PKG_PKGPATH}/bin
-install -dm0700 ${PKG_PKGPATH}/var/lib/bluetooth
-mkdir -p ${PKG_PKGPATH}/etc/bluetooth/
-cp -pv \${PKG_SRCPATH}/{src/main.conf,profiles/input/input.conf,profiles/network/network.conf} ${PKG_PKGPATH}/etc/bluetooth/
-ln -s bluetooth.service ${PKG_PKGPATH}/lib/systemd/system/dbus-org.bluez.service"
-
-PKG_POSTINSTALL="# create bluetooth group if not already present
-if ! getent group bluetooth > /dev/null; then
-	groupadd --system bluetooth
-fi"
+PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}${BUILD_PREFIX}/sbin/
+	ln -svf ../libexec/bluetooth/bluetoothd ${PKG_PKGPATH}${BUILD_PREFIX}/sbin/
+	install -vdm755 ${PKG_PKGPATH}/etc/bluetooth/
+	install -vm644 \${PKG_SRCPATH}/{src/main.conf,profiles/input/input.conf,profiles/network/network.conf} ${PKG_PKGPATH}/etc/bluetooth/"

@@ -1,5 +1,6 @@
-# XML::Parser_2.46
-PKG_URL="https://cpan.metacpan.org/authors/id/T/TO/TODDR/XML-Parser-2.46.tar.gz"
+# XML-Parser
+PKG_VER=2.46
+PKG_URL="https://cpan.metacpan.org/authors/id/T/TO/TODDR/XML-Parser-${PKG_VER}.tar.gz"
 PKG_SEPS="lfs/perl5"
 BUILD_PROCESS=downloadonly
 PKG_COPYSRC=1

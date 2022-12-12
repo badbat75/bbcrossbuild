@@ -66,7 +66,7 @@ build lfs/bash
 build lfs/gdbm
 build lfs/expat
 build lfs/inetutils
-build perl/XML::Parser_2.46
+build perl/XML-Parser
 build lfs/perl5
 build lfs/intltool
 build lfs/kmod
