@@ -67,7 +67,6 @@ PKG_POSTBUILD="set -x
 		PRETTY_NAME=\"Linux From Scratch 20220919-systemd\"
 		VERSION_CODENAME=\"Gabriele\"
 	EOF
-	echo '127.0.0.1 localhost' > ${PKG_PKGPATH}/etc/hosts
 	cat > ${PKG_PKGPATH}/etc/shells <<-EOF
 		# Begin /etc/shells
 

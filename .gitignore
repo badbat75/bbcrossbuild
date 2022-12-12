@@ -1,5 +1,6 @@
 .vscode
 bbxb.conf
 images
+projects/*.conf
 projects/test*.prj
 patches/mpd*

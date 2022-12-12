@@ -1,12 +1,36 @@
+if [ -f ${PRJ_PATH}/lfs.conf ]
+then
+	. ${PRJ_PATH}/lfs.conf
+fi
+
+## Sets default values:
+TOOLCHAIN=${TOOLCHAIN:-gnu}
+ENABLE_DBUS=${ENABLE_DBUS:-1}
+ENABLE_SSH=${ENABLE_SSH:-1}
+ENABLE_DEV=${ENABLE_DEV:-0}
+LFS_HOSTNAME=${LFS_HOSTNAME:-lfs}
+LFS_FSTYPE=${LFS_FSTYPE:-ext4}
+WLAN_DEV=${WLAN_DEV:-wlan0}
+
+echo "Tool chain: ${TOOLCHAIN}"
+echo "Is dbus enabled: $( [ ${ENABLE_DBUS} -eq 1 ] && echo yes || no )"
+echo "Is ssh enabled: $( [ ${ENABLE_SSH} -eq 1 ] && echo yes || no )"
+echo "LFS hostname: ${LFS_HOSTNAME}"
+echo "LFS filesystem type: ${LFS_FSTYPE}"
+if [ ! -x ${WLAN_SSID} ] && [ ! -x ${WLAN_PSK} ] && [ ! -x ${WLAN_DEV} ]
+then
+	echo "SSID: ${WLAN_SSID}"
+	echo "WLAN device: ${WLAN_DEV}"
+fi
+echo
+
 ## Enable shared libraries (default) but disable static ones
 BUILD_LIBSHARED=1
-BUILD_LIBSTATIC=0
+BUILD_LIBSTATIC=1
 
 ## Enable LTO both for kernel and applications
 LTOENABLE=thin
 KERNEL_LTOENABLE=thin
-
-TOOLCHAIN=gnu
 
 build --no_save_status lfs/create-base-fs_1.0
 
@@ -63,7 +87,7 @@ build lfs/man-db
 build lfs/tar
 build lfs/vim
 build lfs/systemd
-if [ ${ENABLE_DBUS:-1} -eq 1 ]
+if [ ${ENABLE_DBUS} -eq 1 ]
 then
 	build lfs/D-Bus
 fi
@@ -81,7 +105,7 @@ build lfs/openssh
 build lfs/alsa-utils
 ### System Utilities
 build raspberrypi/pi-bluetooth_0
-if [ ${ENABLE_DBUS:-1} -eq 1 ]
+if [ ${ENABLE_DBUS} -eq 1 ]
 then
 	build lfs/bluez
 fi
@@ -103,7 +127,7 @@ build lfs/curl
 ### Development
 build lfs/strace
 
-if [ ${ENABLE_DEV:-0} -eq 1 ]
+if [ ${ENABLE_DEV} -eq 1 ]
 then
 	build lfs/binutils
 	GCC_TARGETS="binaries" build lfs/gcc
@@ -128,7 +152,8 @@ esac
 echo "net.ifnames=0 console=tty1 root=/dev/mmcblk0p2 fsck.repair=yes rootwait" >${BIN_PATH}/boot/cmdline.txt
 
 echo Configuring Host Name
-echo ${LFS_HOSTNAME:-lfs} > ${BIN_PATH}/etc/hostname
+echo ${LFS_HOSTNAME} > ${BIN_PATH}/etc/hostname
+echo "127.0.1.1 ${LFS_HOSTNAME}. ${LFS_HOSTNAME}" >> ${BIN_PATH}/etc/hosts
 echo "LANG=en_US.UTF-8" > ${BIN_PATH}/etc/locale.conf
 
 if [ ! -x ${WLAN_SSID} ] && [ ! -x ${WLAN_PSK} ] && [ ! -x ${WLAN_DEV} ]
@@ -146,7 +171,7 @@ then
 	EOF
 	echo
 fi
-if [ "${ENABLE_SSH:-1}" = "1" ]
+if [ ${ENABLE_SSH} -eq 1 ]
 then
 	echo Enabling SSHd
 	ssh-keygen -A -f ${BIN_PATH}
@@ -160,7 +185,7 @@ fi
 
 function build_lfs_image () {
 	set -e
-	create_image lfs --rootfstype ext4 --size 3G
+	create_image lfs --rootfstype ${LFS_FSTYPE} --size 3G
 	mount_tag lfs --mountlist "2:/ 1:/boot"
 	inject_into_mount_tag lfs binaries ${LFS_REMOVE_DEVFILES}
 	run_postinstall_scripts lfs

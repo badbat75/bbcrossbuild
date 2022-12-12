@@ -13,21 +13,24 @@ CONF_FLAGS+=" --runstatedir=/run"
 CONF_FLAGS+=" --with-system-socket=/run/dbus/system_bus_socket"
 CONF_FLAGS+=" --docdir=/usr/share/doc/dbus-${PKG_VER}"
 ### Compliance with debian build
-CONF_FLAGS+=" --with-systemdsystemunitdir=/lib/systemd/system"
-CONF_FLAGS+=" --with-systemduserunitdir=${BUILD_PREFIX}/lib/systemd/user"
+#CONF_FLAGS+=" --with-systemdsystemunitdir=/lib/systemd/system"
+#CONF_FLAGS+=" --with-systemduserunitdir=${BUILD_PREFIX}/lib/systemd/user"
 #CONF_FLAGS+=" --with-session-socket-dir=/tmp"
 ################################
-CONF_FLAGS+=" --enable-systemd"
+#CONF_FLAGS+=" --enable-systemd"
 INST_CMD="install-strip"
+
 PKG_POSTINSTALL="chown -v root:messagebus /usr/libexec/dbus-daemon-launch-helper
 chmod -v 4750 /usr/libexec/dbus-daemon-launch-helper
+
 groupadd --system systemd-oom
 useradd --system -c \"systemd OOM Daemon\" -d /etc/dbus-1 -g systemd-oom -s /bin/false systemd-oom
 ln -sfv /etc/machine-id /var/lib/dbus/machine-id
+
 cat >>/etc/skel/.bash_profile <<-'EOF'
 
 	# Start the D-Bus session daemon
-	eval \`dbus-launch\`
+	eval \`dbus-launch\` 2>/dev/null
 	export DBUS_SESSION_BUS_ADDRESS
 EOF
 

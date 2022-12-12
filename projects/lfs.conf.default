@@ -1,0 +1,10 @@
+### Default values for lfs project
+# TOOLCHAIN=gnu
+# ENABLE_DBUS=1
+# ENABLE_SSH=1
+# ENABLE_DEV=0
+# LFS_HOSTNAME=lfs
+# LFS_FSTYPE=ext4
+# WLAN_SSID=<SSID>
+# WLAN_PSK=<Passphrase>
+# WLAN_DEV=wlan0
