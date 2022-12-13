@@ -14,7 +14,6 @@ function check_build_functions () {
 function setbuildenv () {
 	OPTS="" OPTS_WITH_VALUE="--target" param2value "${@}"
 	local TARGET_ENV=${_param_target:-target}
-	echo "Build environment: ${TARGET_ENV}" | log_buffer info
 	case ${TARGET_ENV} in
 		native|cross)
 			unset QEMU_LD_PREFIX COMMON_CPPFLAGS SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH
