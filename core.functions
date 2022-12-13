@@ -22,11 +22,11 @@ param2value () {
 	while(($#)) ; do
 		if [[ ${1} == -* ]]
 		then
-			if [ "${1} " == "$(echo ${OPTS} ${OPTS_WITH_VALUE} | grep -o -- "${1} ")" ]
+			if [ "${1} " == "$(echo "${OPTS} ${OPTS_WITH_VALUE} " | grep -o -- "${1} ")" ]
 				then
 					local OPTION=${1}
 					local PARAMETER=$(echo ${1} | sed -e 's/^--\?//;s/-/_/g')
-					if [ "${1} " == "$(echo ${OPTS_WITH_VALUE} | grep -o -- "${1} ")" ]
+					if [ "${1} " == "$(echo "${OPTS_WITH_VALUE} " | grep -o -- "${1} ")" ]
 					then
 						shift
 						if [ ! "x${1}" == "x" ]

@@ -1,18 +1,19 @@
-# glib
+# GLib
 PKG_VER=$(gapplication version)
 PKG_URL="https://download.gnome.org/sources/glib/$(echo ${PKG_VER} | cut -d'.' -f1,2)/glib-${PKG_VER}.tar.xz"
 PKG_DEPS="lfs/libxslt lfs/pcre2"
 case "${PKG_TARGET}" in
 	bootstrap) ;;
+    cross) ;;
     *)  if [ ${ENABLE_DBUS:-1} -eq 1 ]
         then   
-            PKG_DEPS+=" lfs/D-Bus"
+            PKG_DEPS+=" lfs/D-Bus lfs/GLib:cross"
         fi
+        PKG_LD_LIBRARY_PATH=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
     ;;
 esac
 #PKG_DEPS+" lfs/gobject-introspection"
 DBUS_TARGET=bootstrap
 BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Dman=true -Dtests=false"
-PKG_LD_LIBRARY_PATH=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
 INST_CMD="install"

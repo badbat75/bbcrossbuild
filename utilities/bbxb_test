@@ -38,6 +38,9 @@ cat <<-EOF >projects/test.prj
 
     # Test autoconf/configure/meson/ninja
     build lfs/GLib
+
+    # Test build for cross
+    build lfs/file
 EOF
 
 case ${1} in
