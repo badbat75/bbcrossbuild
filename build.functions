@@ -850,7 +850,20 @@ function mesonninja () {
 		}
 		if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 		then
-			CONF_FLAGS+=" --prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} --sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR}"
+			case ${PKG_TARGET_ENV} in
+				native)
+					CONF_FLAGS="--prefix=${GLOBAL_TOOLCHAIN_PATH} --libdir=${GLOBAL_TOOLCHAIN_PATH}/lib --includedir=${GLOBAL_TOOLCHAIN_PATH}/include \
+						--sysconfdir=${GLOBAL_TOOLCHAIN_PATH}/etc --localstatedir=${GLOBAL_TOOLCHAIN_PATH}/var ${CONF_FLAGS}"
+				;;
+				cross)
+					CONF_FLAGS="--prefix=${TOOLCHAIN_PATH} --libdir=${TOOLCHAIN_PATH}/lib --includedir=${TOOLCHAIN_PATH}/include \
+						--sysconfdir=${TOOLCHAIN_PATH}/etc --localstatedir=${TOOLCHAIN_PATH}/var ${CONF_FLAGS}"
+				;;
+				target)
+					CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} \
+						--sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} ${CONF_FLAGS}"
+				;;
+			esac
 			if [ ${BUILD_LIBSHARED} -eq 0 ] && [ ${BUILD_LIBSTATIC} -eq 1 ]
 			then
 				CONF_FLAGS+=" --default-library=static"
@@ -911,7 +924,7 @@ function mesonninja () {
 
 	run_cmd "mkdir -p ${PKG_BLDPATH}"
 	cd ${PKG_BLDPATH}
-	run_cmd "create_environment_source"
+	create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
 	createmesoncross
 	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS}"

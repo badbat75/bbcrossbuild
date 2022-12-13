@@ -1951,4 +1951,6 @@ fi
 set_gnu_buildenv
 
 pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/bin"
+pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_PATH}/lib"
 pathadd PATH "${TOOLCHAIN_PATH}/bin"
+pathadd LD_LIBRARY_PATH "${TOOLCHAIN_PATH}/lib"
