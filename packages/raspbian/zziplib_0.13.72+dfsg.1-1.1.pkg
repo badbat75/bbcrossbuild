@@ -3,7 +3,7 @@ PKG_URL="http://archive.raspbian.org/raspbian/pool/main/z/zziplib/zziplib_0.13.7
 BUILD_PROCESS=cmakebuild
 INST_CMD="install/strip"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/z/zziplib/zziplib_0.13.72%2Bdfsg.1-1.1.debian.tar.xz"
-CONF_FLAGS="-DZLIB_LIBRARY=${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libz.so"
+CONF_FLAGS="-DZLIB_LIBRARY=${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libz.so"
 VAR_INSTALL_LIBDIR=CMAKE_INSTALL_LIBDIR
 
 case ${TOOLCHAIN} in

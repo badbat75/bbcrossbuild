@@ -38,45 +38,45 @@ function setbuildenv () {
 			PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
 			PLATFORM_RUSTFLAGS="${HMCPU:+-C target-cpu=${HMCPU}}${HMARCH_RUST:+ -C target-feature=${HMARCH_RUST} }"
 
-			COMMON_CFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
-			COMMON_CXXFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
-			COMMON_FCFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
-			COMMON_CPPFLAGS="-I${BIN_PATH}${BUILD_INCLUDEDIR}"
-			COMMON_LDFLAGS="-Wl,-rpath-link,${BIN_PATH}/lib${BUILD_LIBSUFFIX} -L${BIN_PATH}/lib${BUILD_LIBSUFFIX}"
-			COMMON_LDFLAGS+=" -Wl,-rpath-link,${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -L${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
-			COMMON_PKG_CONFIG_LIBDIR="${BIN_PATH}/lib${BUILD_LIBSUFFIX}/pkgconfig"
-			COMMON_PKG_CONFIG_LIBDIR+=":${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig:${BIN_PATH}${BUILD_PREFIX}/share/pkgconfig"
+			COMMON_CFLAGS="-I${BIN_PATH}${TARGET_INCLUDEDIR}"
+			COMMON_CXXFLAGS="-I${BIN_PATH}${TARGET_INCLUDEDIR}"
+			COMMON_FCFLAGS="-I${BIN_PATH}${TARGET_INCLUDEDIR}"
+			COMMON_CPPFLAGS="-I${BIN_PATH}${TARGET_INCLUDEDIR}"
+			COMMON_LDFLAGS="-Wl,-rpath-link,${BIN_PATH}/lib${TARGET_LIBSUFFIX} -L${BIN_PATH}/lib${TARGET_LIBSUFFIX}"
+			COMMON_LDFLAGS+=" -Wl,-rpath-link,${BIN_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX} -L${BIN_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}"
+			COMMON_PKG_CONFIG_LIBDIR="${BIN_PATH}/lib${TARGET_LIBSUFFIX}/pkgconfig"
+			COMMON_PKG_CONFIG_LIBDIR+=":${BIN_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/pkgconfig:${BIN_PATH}${TARGET_PREFIX}/share/pkgconfig"
 			COMMON_PKG_CONFIG_SYSROOT="${BIN_PATH}"
 			unset SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH
 			# Construct build tools flags
 			# Build Include search paths
-			if [ -d ${DISTOS_PATH}${BUILD_INCLUDEDIR} ]
+			if [ -d ${DISTOS_PATH}${TARGET_INCLUDEDIR} ]
 			then
-				SYSROOT_GCCVER="$(find ${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/ -mindepth 1 -maxdepth 1 -type d -printf '%P\n' | sort -hr | head -n1)"
+				SYSROOT_GCCVER="$(find ${DISTOS_PATH}${TARGET_LIBDIR}/gcc/${HARCH}/ -mindepth 1 -maxdepth 1 -type d -printf '%P\n' | sort -hr | head -n1)"
 				SYSROOT="${DISTOS_PATH}"
-				COMMON_CFLAGS+=" -I${DISTOS_PATH}${BUILD_INCLUDEDIR} ${STD_CFLAGS} -I${DISTOS_PATH}${BUILD_INCLUDEDIR}${BUILD_LIBSUFFIX}"
-				COMMON_CXXFLAGS+=" -I${DISTOS_PATH}${BUILD_INCLUDEDIR} ${STD_CXXFLAGS} -I${DISTOS_PATH}${BUILD_INCLUDEDIR}${BUILD_LIBSUFFIX}"
-				COMMON_FCFLAGS+=" -I${DISTOS_PATH}${BUILD_INCLUDEDIR} ${STD_CXXFLAGS} -I${DISTOS_PATH}${BUILD_INCLUDEDIR}${BUILD_LIBSUFFIX}"
-				COMMON_CPPFLAGS+=" -I${DISTOS_PATH}${BUILD_INCLUDEDIR} ${STD_CPPFLAGS} -I${DISTOS_PATH}${BUILD_INCLUDEDIR}${BUILD_LIBSUFFIX}"
-				COMMON_LDFLAGS+=" -Wl,-rpath-link,${DISTOS_PATH}/lib${BUILD_LIBSUFFIX} -L${DISTOS_PATH}/lib${BUILD_LIBSUFFIX}"
-				COMMON_LDFLAGS+=" -Wl,-rpath-link,${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -L${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
-				COMMON_PKG_CONFIG_LIBDIR+=":${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig:${DISTOS_PATH}/usr/share/pkgconfig"
+				COMMON_CFLAGS+=" -I${DISTOS_PATH}${TARGET_INCLUDEDIR} ${STD_CFLAGS} -I${DISTOS_PATH}${TARGET_INCLUDEDIR}${TARGET_LIBSUFFIX}"
+				COMMON_CXXFLAGS+=" -I${DISTOS_PATH}${TARGET_INCLUDEDIR} ${STD_CXXFLAGS} -I${DISTOS_PATH}${TARGET_INCLUDEDIR}${TARGET_LIBSUFFIX}"
+				COMMON_FCFLAGS+=" -I${DISTOS_PATH}${TARGET_INCLUDEDIR} ${STD_CXXFLAGS} -I${DISTOS_PATH}${TARGET_INCLUDEDIR}${TARGET_LIBSUFFIX}"
+				COMMON_CPPFLAGS+=" -I${DISTOS_PATH}${TARGET_INCLUDEDIR} ${STD_CPPFLAGS} -I${DISTOS_PATH}${TARGET_INCLUDEDIR}${TARGET_LIBSUFFIX}"
+				COMMON_LDFLAGS+=" -Wl,-rpath-link,${DISTOS_PATH}/lib${TARGET_LIBSUFFIX} -L${DISTOS_PATH}/lib${TARGET_LIBSUFFIX}"
+				COMMON_LDFLAGS+=" -Wl,-rpath-link,${DISTOS_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX} -L${DISTOS_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}"
+				COMMON_PKG_CONFIG_LIBDIR+=":${DISTOS_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/pkgconfig:${DISTOS_PATH}/usr/share/pkgconfig"
 				COMMON_PKG_CONFIG_SYSROOT="${DISTOS_PATH}"
 				# Try to find if gcc libraries are installed and not yet defined in binary dir, if so set search path on that path
 				if [ "$(gcc_sysroot)" == "${DISTOS_PATH}" ]
 				then
 					if [ -n "${SYSROOT_GCCVER}" ]
 					then
-						COMMON_CXXFLAGS+=" -I${DISTOS_PATH}${BUILD_INCLUDEDIR}/c++/${SYSROOT_GCCVER} -I${DISTOS_PATH}${BUILD_INCLUDEDIR}/${HARCH}/c++/${SYSROOT_GCCVER}"
-						COMMON_CPPFLAGS+=" -I${DISTOS_PATH}${BUILD_INCLUDEDIR}/c++/${SYSROOT_GCCVER} -I${DISTOS_PATH}${BUILD_INCLUDEDIR}/${HARCH}/c++/${SYSROOT_GCCVER}"
-						COMMON_LDFLAGS+=" -Wl,-rpath-link,${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER} -L${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
+						COMMON_CXXFLAGS+=" -I${DISTOS_PATH}${TARGET_INCLUDEDIR}/c++/${SYSROOT_GCCVER} -I${DISTOS_PATH}${TARGET_INCLUDEDIR}/${HARCH}/c++/${SYSROOT_GCCVER}"
+						COMMON_CPPFLAGS+=" -I${DISTOS_PATH}${TARGET_INCLUDEDIR}/c++/${SYSROOT_GCCVER} -I${DISTOS_PATH}${TARGET_INCLUDEDIR}/${HARCH}/c++/${SYSROOT_GCCVER}"
+						COMMON_LDFLAGS+=" -Wl,-rpath-link,${DISTOS_PATH}${TARGET_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER} -L${DISTOS_PATH}${TARGET_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
 						#echo "TOOLCHAIN: ${TOOLCHAIN}"
 						#echo "PKG_TOOLCHAIN: ${PKG_TOOLCHAIN}"
 						case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
 							gnu)
-								COMMON_CFLAGS+=" -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
-								COMMON_CXXFLAGS+=" -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
-								COMMON_LDFLAGS+=" -B${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} -B${DISTOS_PATH}${BUILD_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
+								COMMON_CFLAGS+=" -B${DISTOS_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX} -B${DISTOS_PATH}${TARGET_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
+								COMMON_CXXFLAGS+=" -B${DISTOS_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX} -B${DISTOS_PATH}${TARGET_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
+								COMMON_LDFLAGS+=" -B${DISTOS_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX} -B${DISTOS_PATH}${TARGET_LIBDIR}/gcc/${HARCH}/${SYSROOT_GCCVER}"
 								;;
 						esac			
 					fi
@@ -112,7 +112,7 @@ function setbuildenv () {
 					esac
 				fi
 			fi
-			QEMU_LD_LIBRARY_PATH+=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
+			QEMU_LD_LIBRARY_PATH+=${SYSROOT}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}
 			case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
 				gnu)
 				;;
@@ -693,34 +693,31 @@ function configmake () {
 	pushd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 	if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 	then
+		CONF_FLAGS="--prefix=${INSTALL_PREFIX} --exec-prefix=${INSTALL_EXECPREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBPREFIX} \
+					--includedir=${INSTALL_INCLUDEDIR} --sysconfdir=${INSTALL_SYSCONFDIR} --localstatedir=${INSTALL_LOCALSTATEDIR} \
+					${CONF_FLAGS}"
 		case ${PKG_TARGET_ENV} in
 			native)
-				CONF_FLAGS="--build=${BARCH} --host=${BARCH} \
-					--prefix=${GLOBAL_TOOLCHAIN_PATH} --exec-prefix=${GLOBAL_TOOLCHAIN_PATH} --libdir=${GLOBAL_TOOLCHAIN_PATH}/lib --includedir=${GLOBAL_TOOLCHAIN_PATH}/include \
-					 --sysconfdir=${GLOBAL_TOOLCHAIN_PATH}/etc --localstatedir=${GLOBAL_TOOLCHAIN_PATH}/var ${CONF_FLAGS}"
+				CONF_FLAGS="--build=${BARCH} --host=${BARCH} ${CONF_FLAGS}"
 			;;
 			cross)
-				CONF_FLAGS="--build=${BARCH} --host=${BARCH} --target=${HARCH} \
-					--prefix=${TOOLCHAIN_PATH} --exec-prefix=${TOOLCHAIN_PATH} --libdir=${TOOLCHAIN_PATH}/lib --includedir=${TOOLCHAIN_PATH}/include \
-					--sysconfdir=${TOOLCHAIN_PATH}/etc --localstatedir=${TOOLCHAIN_PATH}/var ${CONF_FLAGS}"
+				CONF_FLAGS="--build=${BARCH} --host=${BARCH} ${CONF_FLAGS}"
 			;;
 			target)
-				CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH} \
-					--prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} \
-					--sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} ${CONF_FLAGS}"
+				CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH} ${CONF_FLAGS}"
 			;;
 		esac
 		if [ ${BUILD_LIBSHARED} -eq 1 ]
 		then
-			CONF_FLAGS=" --enable-shared ${CONF_FLAGS}"
+			CONF_FLAGS+=" --enable-shared"
 		else
-			CONF_FLAGS=" --disable-shared ${CONF_FLAGS}"
+			CONF_FLAGS+=" --disable-shared"
 		fi
 		if [ ${BUILD_LIBSTATIC} -eq 1 ]
 		then
-			CONF_FLAGS=" --enable-static ${CONF_FLAGS}"
+			CONF_FLAGS+=" --enable-static"
 		else
-			CONF_FLAGS=" --disable-static ${CONF_FLAGS}"
+			CONF_FLAGS+=" --disable-static"
 		fi
 	fi
 	create_environment_source --target ${PKG_TARGET_ENV}
@@ -775,8 +772,8 @@ function simplemake () {
 	eval local "PKG_MAKEVARS='${PKG_MAKEVARS}'"
 	cat >runmake.sh <<-EOF
 		#!/bin/bash
-		echo "\\\$ ${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make \${@} V=${MAKEVERBOSE:-0} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} ${PKG_MAKEVARS}"
-		${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make \${@} V=${MAKEVERBOSE:-0} PREFIX=${BUILD_PREFIX} LIBSUFFIX=${BUILD_LIBSUFFIX} ${PKG_MAKEVARS}
+		echo "\\\$ ${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make \${@} V=${MAKEVERBOSE:-0} PREFIX=${INSTALL_PREFIX} LIBSUFFIX=${INSTALL_LIBSUFFIX} ${PKG_MAKEVARS}"
+		${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make \${@} V=${MAKEVERBOSE:-0} PREFIX=${INSTALL_PREFIX} LIBSUFFIX=${INSTALL_LIBSUFFIX} ${PKG_MAKEVARS}
 	EOF
 	run_cmd "chmod +x runmake.sh"
 	if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
@@ -820,11 +817,11 @@ function cmakebuild () {
 		-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \\
 		-DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \\
 		-DCMAKE_CROSSCOMPILING="TRUE" \\
-		-DCMAKE_INSTALL_PREFIX=${BUILD_PREFIX} \\
-		-D${VAR_INSTALL_LIBDIR:-\"LIB_INSTALL_DIR\"}=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \\
-		-D${VAR_INSTALL_LIBSUFFIX:-\"LIB_SUFFIX\"}=${BUILD_LIBSUFFIX} \\
-		-D${VAR_INSTALL_INCDIR:-\"INCLUDE_INSTALL_DIR\"}=${BUILD_INCLUDEDIR} \\
-		-D${VAR_INSTALL_CONFDIR:-\"SYSCONF_INSTALL_DIR\"}=${BUILD_SYSCONFDIR} \\
+		-DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \\
+		-D${VAR_INSTALL_LIBDIR:-\"LIB_INSTALL_DIR\"}=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \\
+		-D${VAR_INSTALL_LIBSUFFIX:-\"LIB_SUFFIX\"}=${INSTALL_LIBSUFFIX} \\
+		-D${VAR_INSTALL_INCDIR:-\"INCLUDE_INSTALL_DIR\"}=${INSTALL_INCLUDEDIR} \\
+		-D${VAR_INSTALL_CONFDIR:-\"SYSCONF_INSTALL_DIR\"}=${INSTALL_SYSCONFDIR} \\
 		${CONF_FLAGS}"
 	local NINJA_FLAGS="-j${NPROCS}$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v')"
 	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS}"
@@ -850,20 +847,8 @@ function mesonninja () {
 		}
 		if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 		then
-			case ${PKG_TARGET_ENV} in
-				native)
-					CONF_FLAGS="--prefix=${GLOBAL_TOOLCHAIN_PATH} --libdir=${GLOBAL_TOOLCHAIN_PATH}/lib --includedir=${GLOBAL_TOOLCHAIN_PATH}/include \
-						--sysconfdir=${GLOBAL_TOOLCHAIN_PATH}/etc --localstatedir=${GLOBAL_TOOLCHAIN_PATH}/var ${CONF_FLAGS}"
-				;;
-				cross)
-					CONF_FLAGS="--prefix=${TOOLCHAIN_PATH} --libdir=${TOOLCHAIN_PATH}/lib --includedir=${TOOLCHAIN_PATH}/include \
-						--sysconfdir=${TOOLCHAIN_PATH}/etc --localstatedir=${TOOLCHAIN_PATH}/var ${CONF_FLAGS}"
-				;;
-				target)
-					CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --includedir=${BUILD_INCLUDEDIR} \
-						--sysconfdir=${BUILD_SYSCONFDIR} --localstatedir=${BUILD_LOCALSTATEDIR} ${CONF_FLAGS}"
-				;;
-			esac
+			CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} --includedir=${INSTALL_INCLUDEDIR} \
+				--sysconfdir=${INSTALL_SYSCONFDIR} --localstatedir=${INSTALL_LOCALSTATEDIR} ${CONF_FLAGS}"
 			if [ ${BUILD_LIBSHARED} -eq 0 ] && [ ${BUILD_LIBSTATIC} -eq 1 ]
 			then
 				CONF_FLAGS+=" --default-library=static"
@@ -944,8 +929,8 @@ function cargobuild () {
 	cd ${PKG_BLDPATH}
 	create_environment_source
 	source environment.source
-	local CARGO_BIN=${CARGO_BIN:-${BUILD_EXECPREFIX}/bin}
-	local CARGO_LIB=${CARGO_LIB:-${BUILD_LIBDIR}${BUILD_LIBSUFFIX}}
+	local CARGO_BIN=${CARGO_BIN:-${INSTALL_EXECPREFIX}/bin}
+	local CARGO_LIB=${CARGO_LIB:-${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}}
 	local CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
 	export CARGO_PROFILE_RELEASE_OPT_LEVEL=${OPTLEVEL}
 	case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
@@ -1092,7 +1077,7 @@ function kernelbuild () {
 	echo "Build ${PKG_FILE} with extra modules ${PKG_KERNEL_BUILD_MODULES}"
 	echo "Kernel target: ${PKG_TARGET:all}"
 	# Install headers
-	run_cmd "./make4kern.sh INSTALL_HDR_PATH=${PKG_PKGPATH}${BUILD_PREFIX} headers_install"
+	run_cmd "./make4kern.sh INSTALL_HDR_PATH=${PKG_PKGPATH}${INSTALL_PREFIX} headers_install"
 
 	# Break if only headers installation required
 	if [ "${PKG_TARGET}" == "headers" ]
@@ -1218,11 +1203,11 @@ function pythonbuild () {
 		COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
 		COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
 	fi
-	if [ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libpython${PYTHONBIN_VER}m ]
+	if [ -f ${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libpython${PYTHONBIN_VER}m ]
 	then
 		COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
 	fi
-	if [ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libpython${PYTHONBIN_VER} ]
+	if [ -f ${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libpython${PYTHONBIN_VER} ]
 	then
 		COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}"
 	fi
@@ -1236,13 +1221,13 @@ function pythonbuild () {
 	else
 		local PYTHON_PKGDIR="site-packages"
 	fi
-	local INSTALL_TARGET="--install-lib=${BUILD_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
-	PYTHONPATH=${BIN_PATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}
+	local INSTALL_TARGET="--install-lib=${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
+	PYTHONPATH=${BIN_PATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}
 	for pythonpkgdir in python${PYTHONBIN_MAJVER} python${PYTHONBIN_VER}
 	do
-		if [ -d ${DISTOS_PATH}${BUILD_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR} ]
+		if [ -d ${DISTOS_PATH}${INSTALL_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR} ]
 		then
-			PYTHONPATH+=:${DISTOS_PATH}${BUILD_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR}
+			PYTHONPATH+=:${DISTOS_PATH}${INSTALL_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR}
 		fi
 		export PYTHONPATH
 	done
@@ -1250,7 +1235,7 @@ function pythonbuild () {
 	source environment.source
 	run_cmd "cross-python -m site"
 	run_cmd "${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}"
-	run_cmd "${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} --prefix=${BUILD_PREFIX} --exec-prefix=${BUILD_EXECPREFIX} ${INSTALL_TARGET}"
+	run_cmd "${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} --prefix=${INSTALL_PREFIX} --exec-prefix=${INSTALL_EXECPREFIX} ${INSTALL_TARGET}"
 	cd ${BB_HOME}
 	trap - ERR
 }
@@ -1274,11 +1259,11 @@ function pythonpip () {
 		COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
 		COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
 	fi
-	if [ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libpython${PYTHONBIN_VER}m ]
+	if [ -f ${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libpython${PYTHONBIN_VER}m ]
 	then
 		COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
 	fi
-	if [ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libpython${PYTHONBIN_VER} ]
+	if [ -f ${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libpython${PYTHONBIN_VER} ]
 	then
 		COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}"
 	fi
@@ -1292,15 +1277,15 @@ function pythonpip () {
 	else
 		local PYTHON_PKGDIR="site-packages"
 	fi
-	PYTHONPATH="${BIN_PATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
+	PYTHONPATH="${BIN_PATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
 	for pythonpkgdir in python${PYTHONBIN_MAJVER} python${PYTHONBIN_VER}
 	do
-		if [ -d ${DISTOS_PATH}${BUILD_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR} ]
+		if [ -d ${DISTOS_PATH}${INSTALL_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR} ]
 		then
-			PYTHONPATH+=":${DISTOS_PATH}${BUILD_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR}"
+			PYTHONPATH+=":${DISTOS_PATH}${INSTALL_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR}"
 		fi
 	done
-	#PYTHONUSERBASE="${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
+	#PYTHONUSERBASE="${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
 	#export PYTHONUSERBASE
 	export PYTHONPATH
 	create_environment_source
@@ -1311,10 +1296,10 @@ function pythonpip () {
 		local PYTHONBUILD="--no-binary :all:"
 	fi
 	#build-python -m pip ${VERBOSE} install --upgrade ${PKG_NAME}
-	run_cmd "cross-python -m pip ${VERBOSE} install -I ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${BUILD_PREFIX} ${PKG_NAME}"
+	run_cmd "cross-python -m pip ${VERBOSE} install -I ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${INSTALL_PREFIX} ${PKG_NAME}"
 	if [ ${PYTHON_PKGDIR} == dist-packages ]
 	then
-		run_cmd "mv ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
+		run_cmd "mv ${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
 	fi
 	cd ${BB_HOME}
 	trap - ERR
@@ -1327,11 +1312,11 @@ function boostbuild () {
 
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
 	cd ${PKG_BLDPATH}
-	if [ -d ${DISTOS_PATH}${BUILD_INCLUDEDIR} ]
+	if [ -d ${DISTOS_PATH}${INSTALL_INCLUDEDIR} ]
 	then
-		local ICU_INCLUDEDIR=${DISTOS_PATH}${BUILD_INCLUDEDIR}
+		local ICU_INCLUDEDIR=${DISTOS_PATH}${INSTALL_INCLUDEDIR}
 	else
-		local ICU_INCLUDEDIR=${BIN_PATH}${BUILD_INCLUDEDIR}
+		local ICU_INCLUDEDIR=${BIN_PATH}${INSTALL_INCLUDEDIR}
 	fi
 	if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
 	then
@@ -1423,10 +1408,10 @@ function boostbuild () {
 	#create_environment_source
 	#source environment.source
 	run_cmd "./bootstrap.sh \\
-		--prefix=${PKG_PKGPATH}${BUILD_PREFIX} \\
-		--exec-prefix=${PKG_PKGPATH}${BUILD_EXECPREFIX} \\
-		--libdir=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \\
-		--includedir=${PKG_PKGPATH}${BUILD_INCLUDEDIR} \\
+		--prefix=${PKG_PKGPATH}${INSTALL_PREFIX} \\
+		--exec-prefix=${PKG_PKGPATH}${INSTALL_EXECPREFIX} \\
+		--libdir=${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \\
+		--includedir=${PKG_PKGPATH}${INSTALL_INCLUDEDIR} \\
 		--with-icu=${ICU_INCLUDEDIR} \\
 		--with-python-version=${PYTHONBIN_VER} \\
 		--with-toolset=${BBTC}"
@@ -1587,13 +1572,41 @@ function build () {(
 	local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_NAME}}
 	local PKG_BLDPATH=${BLD_PATH}/${PKG_NAME}${PKG_TARGET:+-${PKG_TARGET}}
 	case ${PKG_TARGET} in
-		native|cross)
-			local PKG_TARGET_ENV=${PKG_TARGET}
+		native)
+			local PKG_TARGET_ENV=native
 			local PKG_PKGPATH=
+			local INSTALL_PREFIX=${NATIVE_PREFIX}
+			local INSTALL_EXECPREFIX=${NATIVE_EXECPREFIX}
+			local INSTALL_LIBDIR=${NATIVE_LIBDIR}
+			local INSTALL_LIBSUFFIX=
+			local INSTALL_INCLUDEDIR=${NATIVE_INCLUDEDIR}
+			local INSTALL_SYSCONFDIR=${NATIVE_SYSCONFDIR}
+			local INSTALL_LOCALSTATEDIR=${NATIVE_LCALSTATEDIR}
+			local INSTALL_SHAREDIR=${NATIVE_SHAREDIR}
+		;;
+		cross)
+			local PKG_TARGET_ENV=cross
+			local PKG_PKGPATH=
+			local INSTALL_PREFIX=${CROSS_PREFIX}
+			local INSTALL_EXECPREFIX=${CROSS_EXECPREFIX}
+			local INSTALL_LIBDIR=${CROSS_LIBDIR}
+			local INSTALL_LIBSUFFIX=
+			local INSTALL_INCLUDEDIR=${CROSS_INCLUDEDIR}
+			local INSTALL_SYSCONFDIR=${CROSS_SYSCONFDIR}
+			local INSTALL_LOCALSTATEDIR=${CROSS_LOCALSTATEDIR}
+			local INSTALL_SHAREDIR=${CROSS_SHAREDIR}
 		;;
 		*)
 			local PKG_TARGET_ENV=target
 			local PKG_PKGPATH=${PACKAGES_PATH}/${PKG_NAME}${PKG_TARGET:+-${PKG_TARGET}}
+			local INSTALL_PREFIX=${TARGET_PREFIX}
+			local INSTALL_EXECPREFIX=${TARGET_EXECPREFIX}
+			local INSTALL_LIBDIR=${TARGET_LIBDIR}
+			local INSTALL_LIBSUFFIX=${TARGET_LIBSUFFIX}
+			local INSTALL_INCLUDEDIR=${TARGET_INCLUDEDIR}
+			local INSTALL_SYSCONFDIR=${TARGET_SYSCONFDIR}
+			local INSTALL_LOCALSTATEDIR=${TARGET_LOCALSTATEDIR}
+			local INSTALL_SHAREDIR=${TARGET_SHAREDIR}
 		;;
 	esac
 

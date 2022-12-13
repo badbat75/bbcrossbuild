@@ -13,7 +13,7 @@ case "${PKG_TARGET}" in
 		then   
 			PKG_DEPS+=" lfs/D-Bus lfs/GLib:cross"
 		fi
-		PKG_LD_LIBRARY_PATH=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
+		PKG_LD_LIBRARY_PATH=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
 	;;
 esac
 DBUS_TARGET=bootstrap

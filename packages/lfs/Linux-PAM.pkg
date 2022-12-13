@@ -7,8 +7,8 @@ PKG_PREBUILD="sed -e 's/dummy elinks/dummy lynx/'                               
 	-e 's/-no-numbering -no-references/-force-html -nonumbers -stdin/' \
 	-i configure"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--includedir=${BUILD_INCLUDEDIR}/security \
-			--enable-securedir=${BUILD_LIBDIR}/security \
+CONF_FLAGS="--includedir=${INSTALL_INCLUDEDIR}/security \
+			--enable-securedir=${INSTALL_LIBDIR}/security \
 			--docdir=/usr/share/doc/Linux-PAM-${PKG_VER}"
 INST_CMD="install-strip"
 

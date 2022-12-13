@@ -1,6 +1,6 @@
 # pcsc-lite.9.9-1
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/p/pcsc-lite/pcsc-lite.9.9.orig.tar.bz2"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--disable-usb --with-systemdsystemunitdir=/lib/systemd/system --enable-usbdropdir=${BUILD_LIBDIR}/pcsc/drivers"
+CONF_FLAGS="--disable-usb --with-systemdsystemunitdir=/lib/systemd/system --enable-usbdropdir=${INSTALL_LIBDIR}/pcsc/drivers"
 INST_CMD=install-strip
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/p/pcsc-lite/pcsc-lite.9.9-1.debian.tar.xz"

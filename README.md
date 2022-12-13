@@ -193,10 +193,10 @@ Define make parameters or variabes to pass to Makefile
 
 **CARGO_BIN/CARGO_LIB/CARGO_BINLIST/CARGO_STRIP:**
 Override installation path for binary  
-`CARGO_BIN=${BUILD_EXECPREFIX}/sbin`
+`CARGO_BIN=${INSTALL_EXECPREFIX}/sbin`
 
 Override installation path for library  
-`CARGO_LIB=${BUILD_EXECPREFIX}/lib64`
+`CARGO_LIB=${INSTALL_EXECPREFIX}/lib64`
 
 Define the list of binaries to build and install  
 `CARGO_BINLIST="binary1 binary2 binary3"`
@@ -224,12 +224,12 @@ The following environemnt variables can be used to create your package and defau
 
 `BIN_PATH`: ${HOME}/.bbxb/< projectname >/< platformname >/binaries (destination of build)  
 `DISTOS_PATH`: ${HOME}/.bbxb/< projectname >/< platformname >/distos (source of distribution libraries)  
-`BUILD_PREFIX`: /usr  
-`BUILD_EXECPREFIX`: /usr  
-`BUILD_INCLUDEDIR`: /usr/include  
-`BUILD_LIBDIR`: /usr/lib or /usr/lib/(MULTIARCH suffix)  
-`BUILD_SYSCONFDIR`: /usr/etc  
-`BUILD_LOCALSTATEDIR`:/var  
+`INSTALL_PREFIX`: /usr  
+`INSTALL_EXECPREFIX`: /usr  
+`INSTALL_INCLUDEDIR`: /usr/include  
+`INSTALL_LIBDIR`: /usr/lib or /usr/lib/(MULTIARCH suffix)  
+`INSTALL_SYSCONFDIR`: /usr/etc  
+`INSTALL_LOCALSTATEDIR`:/var  
 
 **: mandatory information*
 

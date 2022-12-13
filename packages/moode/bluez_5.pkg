@@ -4,10 +4,10 @@ PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-5${PKG_SUFFIX}.tar.xz"
 PKG_DEPS="raspbian/ell_0.53-1"
 #PKG_DEPS+=" lfs/elfutils"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--with-dbusconfdir=${BUILD_SYSCONFDIR} \
-	--with-dbussystembusdir=${BUILD_PREFIX}/share/dbus-1/system-services \
-	--with-dbussessionbusdir=${BUILD_PREFIX}/share/dbus-1/services \
-	--with-udevdir=${BUILD_LIBDIR}/udev \
+CONF_FLAGS="--with-dbusconfdir=${INSTALL_SYSCONFDIR} \
+	--with-dbussystembusdir=${INSTALL_PREFIX}/share/dbus-1/system-services \
+	--with-dbussessionbusdir=${INSTALL_PREFIX}/share/dbus-1/services \
+	--with-udevdir=${INSTALL_LIBDIR}/udev \
 	--enable-library --enable-deprecated --enable-tools --enable-threads --enable-backtrace --enable-nfc --enable-sap --enable-monitor --enable-udev --enable-obex --enable-client --enable-systemd --enable-sixaxis --enable-health --enable-hid2hci --enable-experimental --enable-external-ell"
 INST_CMD="install-strip"
 #PATCHDEB=""

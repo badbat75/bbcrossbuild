@@ -4,7 +4,7 @@ PKG_URL="https://github.com/pali/libopenaptx/releases/download/0.2.1/libopenaptx
 BUILD_PROCESS=simplemake
 #INST_CMD=install
 PKG_DEPS=
-PKG_MAKEVARS="PREFIX=${BUILD_PREFIX} LIBDIR=lib${BUILD_LIBSUFFIX}"
+PKG_MAKEVARS="PREFIX=${INSTALL_PREFIX} LIBDIR=lib${INSTALL_LIBSUFFIX}"
 PKG_LDFLAGS="-s"
 PKG_PREBUILD="
     sed -i 's/CFLAGS = /CFLAGS ?= /g' Makefile

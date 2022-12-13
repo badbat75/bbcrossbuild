@@ -12,7 +12,7 @@ CONF_FLAGS+=" --with-system-socket=/run/dbus/system_bus_socket"
 CONF_FLAGS+=" --docdir=/usr/share/doc/dbus-${PKG_VER}"
 ### Compliance with debian build
 #CONF_FLAGS+=" --with-systemdsystemunitdir=/lib/systemd/system"
-#CONF_FLAGS+=" --with-systemduserunitdir=${BUILD_PREFIX}/lib/systemd/user"
+#CONF_FLAGS+=" --with-systemduserunitdir=${INSTALL_PREFIX}/lib/systemd/user"
 #CONF_FLAGS+=" --with-session-socket-dir=/tmp"
 ################################
 #CONF_FLAGS+=" --enable-systemd"

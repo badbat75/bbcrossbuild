@@ -27,17 +27,17 @@ PKG_POSTBUILD="
 		-Dccflags=\"\${PLATFORM_CFLAGS}\"\ \
 		-Doptimize=\"\${OPTCOMP_FLAGS}\" \
 		-Dldflags=\"\${OPTLINK_FLAGS}\" \
-		-Dpager='${BUILD_PREFIX}/bin/less -isR' \
+		-Dpager='${INSTALL_PREFIX}/bin/less -isR' \
 		-Duseshrplib \
 		-Dusethreads \
 		-Dmyhostname=localhost \
 		-Dperladmin=root@localhost \
-        -Dprivlib=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/core_perl      \
-        -Darchlib=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/core_perl      \
-        -Dsitelib=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/site_perl      \
-        -Dsitearch=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/site_perl     \
-        -Dvendorlib=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/vendor_perl  \
-        -Dvendorarch=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/vendor_perl
+        -Dprivlib=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/core_perl      \
+        -Darchlib=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/core_perl      \
+        -Dsitelib=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/site_perl      \
+        -Dsitearch=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/site_perl     \
+        -Dvendorlib=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/vendor_perl  \
+        -Dvendorarch=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/vendor_perl
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} crosspatch miniperl dynaloader perl cflags nonxs_ext utilities
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} -j1 extensions pods
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} install

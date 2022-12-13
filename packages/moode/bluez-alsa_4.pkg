@@ -3,9 +3,9 @@ PKG_SUFFIX=".0.0"
 PKG_URL="https://github.com/Arkq/bluez-alsa/archive/refs/tags/v4${PKG_SUFFIX}.tar.gz"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
-CONF_FLAGS="--with-alsaplugindir=\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX}/alsa-lib --with-bash-completion --enable-a2dpconf --enable-cli --enable-rfcomm --enable-hcitop --enable-aac --enable-ldac --enable-mpg123 --enable-manpages --enable-systemd"
+CONF_FLAGS="--with-alsaplugindir=\${INSTALL_LIBDIR}\${INSTALL_LIBSUFFIX}/alsa-lib --with-bash-completion --enable-a2dpconf --enable-cli --enable-rfcomm --enable-hcitop --enable-aac --enable-ldac --enable-mpg123 --enable-manpages --enable-systemd"
 CONF_FLAGS+=" --disable-payloadcheck"
-PKG_CFLAGS="-I${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/dbus-1.0/include -I${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/glib-2.0/include"
+PKG_CFLAGS="-I${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/dbus-1.0/include -I${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/glib-2.0/include"
 INST_CMD=install-strip
 PKG_DEPS="moode/alsa-lib moode/bluez_5 raspbian/sbc-1.4 moode/fdk-aac_2.0.1 moode/libldac_2.0.2.3+af2dd23 moode/mpg123_1.29.2"
 PATCHES=

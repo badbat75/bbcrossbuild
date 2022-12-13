@@ -18,5 +18,5 @@
 		cp -v zone.tab zone1970.tab iso3166.tab \$ZONEINFO
 		zic -d \$ZONEINFO -p America/New_York
 		unset ZONEINFO
-		mkdir -pv ${PKG_PKGPATH}${BUILD_SYSCONFDIR}
-		ln -sfv /usr/share/zoneinfo/Europe/Rome ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/localtime"
+		mkdir -pv ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}
+		ln -sfv /usr/share/zoneinfo/Europe/Rome ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/localtime"

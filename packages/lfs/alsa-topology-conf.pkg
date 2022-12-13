@@ -5,6 +5,6 @@ BUILD_PROCESS=downloadonly
 PKG_DEPS=""
 CONF_FLAGS=""
 PKG_PREBUILD="set -x
-    install -v -d -m0755 ${PKG_PKGPATH}${BUILD_PREFIX}/share/alsa
-	cp -RPv topology ${PKG_PKGPATH}${BUILD_PREFIX}/share/alsa/
+    install -v -d -m0755 ${PKG_PKGPATH}${INSTALL_PREFIX}/share/alsa
+	cp -RPv topology ${PKG_PKGPATH}${INSTALL_PREFIX}/share/alsa/
 	set +x"

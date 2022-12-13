@@ -35,33 +35,33 @@ function remove_devfiles () {
 	local TMP_PATH=$(mktemp -d)
 	chmod 755 ${TMP_PATH}
 	cd ${BIN_PATH}
-	#mkdir -p ${TMP_PATH}/${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
+	#mkdir -p ${TMP_PATH}/${TARGET_LIBDIR}${TARGET_LIBSUFFIX}
 	TMP_PATH=${TMP_PATH} find . -type f \( -name '*.la' -o -name '*.a' \) -exec sh -c \
 		'mkdir -p ${TMP_PATH}/$(dirname ${1}) && mv ${1} ${TMP_PATH}/${1}' \
 		sh {} \;
-	if [ -d .${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig ]
+	if [ -d .${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/pkgconfig ]
 	then
-		if [ ! -d ${TMP_PATH}/${BUILD_LIBDIR}${BUILD_LIBSUFFIX} ]
+		if [ ! -d ${TMP_PATH}/${TARGET_LIBDIR}${TARGET_LIBSUFFIX} ]
 		then
-			mkdir -p ${TMP_PATH}/${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
+			mkdir -p ${TMP_PATH}/${TARGET_LIBDIR}${TARGET_LIBSUFFIX}
 		fi
-		mv .${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig ${TMP_PATH}/${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig
+		mv .${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/pkgconfig ${TMP_PATH}/${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/pkgconfig
 	fi
-	if [ -d .${BUILD_INCLUDEDIR} ]
+	if [ -d .${TARGET_INCLUDEDIR} ]
 	then
-		if [ ! -d ${TMP_PATH}/$(dirname .${BUILD_INCLUDEDIR}) ]
+		if [ ! -d ${TMP_PATH}/$(dirname .${TARGET_INCLUDEDIR}) ]
 		then
-			mkdir -p ${TMP_PATH}/$(dirname .${BUILD_INCLUDEDIR})
+			mkdir -p ${TMP_PATH}/$(dirname .${TARGET_INCLUDEDIR})
 		fi
-		mv .${BUILD_INCLUDEDIR} ${TMP_PATH}/$(dirname .${BUILD_INCLUDEDIR})
+		mv .${TARGET_INCLUDEDIR} ${TMP_PATH}/$(dirname .${TARGET_INCLUDEDIR})
 	fi
-	if [ -d .${BUILD_PREFIX}/src ]
+	if [ -d .${TARGET_PREFIX}/src ]
 	then
-		if [ ! -d ${TMP_PATH}/$(dirname .${BUILD_PREFIX}/src) ]
+		if [ ! -d ${TMP_PATH}/$(dirname .${TARGET_PREFIX}/src) ]
 		then
-			mkdir -p ${TMP_PATH}/$(dirname .${BUILD_PREFIX}/src)
+			mkdir -p ${TMP_PATH}/$(dirname .${TARGET_PREFIX}/src)
 		fi
-		mv .${BUILD_PREFIX}/src ${TMP_PATH}/$(dirname .${BUILD_PREFIX}/src)
+		mv .${TARGET_PREFIX}/src ${TMP_PATH}/$(dirname .${TARGET_PREFIX}/src)
 	fi
 	cd ${TMP_PATH}
 	tar -cf - . | xz -T0 > ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/devfiles.tar.xz
@@ -116,8 +116,8 @@ function create_sfx_package () {
 	cat >${PKG_OBJ}.sfx <<-EOF
 		#!/usr/bin/env bash
 		set -e
-		DEV_FILES="--exclude=.${BUILD_INCLUDEDIR} --exclude=.${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/*.a --exclude=.${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/*.la --exclude=.${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/cmake --exclude=.${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig"
-		CONF_FILES="--exclude=.${BUILD_SYSCONFDIR}"
+		DEV_FILES="--exclude=.${TARGET_INCLUDEDIR} --exclude=.${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/*.a --exclude=.${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/*.la --exclude=.${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/cmake --exclude=.${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/pkgconfig"
+		CONF_FILES="--exclude=.${TARGET_SYSCONFDIR}"
 		DEST=
 
 		echo ""

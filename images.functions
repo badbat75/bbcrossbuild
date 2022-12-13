@@ -453,7 +453,7 @@ function inject_into_mount_tag () {
 	# [ ${_param_remove_devfiles:-0} -eq 1 ] && remove_devfiles no-exitstatus || true
 	if [ ${_param_remove_devfiles:-0} -eq 1 ]
 	then
-		local RSYNC_EXCLUDE="--exclude ${BUILD_INCLUDEDIR} --exclude ${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/cmake --exclude ${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig --exclude *.a --exclude *.la"
+		local RSYNC_EXCLUDE="--exclude ${TARGET_INCLUDEDIR} --exclude ${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/cmake --exclude ${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/pkgconfig --exclude *.a --exclude *.la"
 	fi
 	if [ ! -d ${TARGET_PATH} ]
 	then

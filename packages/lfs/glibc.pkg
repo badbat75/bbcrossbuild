@@ -22,7 +22,7 @@ PATCHES+=",http://www.linuxfromscratch.org/patches/lfs/development/glibc-${GLIBC
 
 PKG_OVERRIDELTO=0
 BUILD_PROCESS=configmake
-CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}${BUILD_INCLUDEDIR} \
+CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}${INSTALL_INCLUDEDIR} \
 	--enable-kernel=5.0.0 \
 	--enable-pt_chown --enable-tunables --enable-bind-now \
 	--disable-profile --disable-crypt \
@@ -36,8 +36,8 @@ fi
 CONF_ENV="LD_LIBRARY_PATH= "
 CONF_VARS="libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes"
 PKG_MAKEENV="LD_LIBRARY_PATH= "
-PKG_MAKEVARS="slibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} rootsbindir=${BUILD_PREFIX}/sbin \
-	complocaledir=${BUILD_LIBDIR} cross-compiling=yes"
+PKG_MAKEVARS="slibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} rootsbindir=${INSTALL_PREFIX}/sbin \
+	complocaledir=${INSTALL_LIBDIR} cross-compiling=yes"
 PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd
 #PKG_PREBUILD="sed '/MAKEFLAGS :=/s/)r/) -r/' -i Makerules"
@@ -45,8 +45,8 @@ PKG_OVERRIDELD=bfd
 case ${PKG_TARGET} in
 	headers)
 		STD_CONF_FLAGS=0
-		CONF_FLAGS="--build=${BARCH} --host=${HARCH} --target=${HARCH} --prefix=${BUILD_PREFIX} --includedir=${BUILD_INCLUDEDIR} \
-			--with-headers=${BIN_PATH}${BUILD_INCLUDEDIR}"
+		CONF_FLAGS="--build=${BARCH} --host=${HARCH} --target=${HARCH} --prefix=${INSTALL_PREFIX} --includedir=${INSTALL_INCLUDEDIR} \
+			--with-headers=${BIN_PATH}${INSTALL_INCLUDEDIR}"
 		CONF_ENV="unset CXX CXXFLAGS; CC=\"${CC_FOR_BUILD}\" CFLAGS=\"${CFLAGS_FOR_BUILD}\" CC=\"${CPP_FOR_BUILD}\" CPPFLAGS=\"${CPPLAGS_FOR_BUILD}\""
 		PKG_TWOSTEPSBUILD=0
 		PKG_MAKEVARS="install-bootstrap-headers=yes"
@@ -56,9 +56,9 @@ case ${PKG_TARGET} in
 		PKG_TWOSTEPSBUILD=0
 		PKG_MAKETARGETS="csu/subdir_lib"
 		INST_CMD="install-headers"
-		PKG_POSTBUILD+="mkdir -pv \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
-			install csu/crt1.o csu/crti.o csu/crtn.o \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
-			\${CC} \${CFLAGS} \${LDFLAGS} -nostdlib -nostartfiles -shared -x c /dev/null -o \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libc.so;"
+		PKG_POSTBUILD+="mkdir -pv \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
+			install csu/crt1.o csu/crti.o csu/crtn.o \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
+			\${CC} \${CFLAGS} \${LDFLAGS} -nostdlib -nostartfiles -shared -x c /dev/null -o \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libc.so;"
 	;;
 	stage2)
 		PKG_TWOSTEPSBUILD=1
@@ -79,8 +79,8 @@ case ${PKG_TARGET} in
 		fi
 		PKG_TWOSTEPSBUILD=1
 		INST_CMD="install"
-		PKG_POSTBUILD+="touch ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/ld.so.conf
-			cat > ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/nsswitch.conf <<-EOF
+		PKG_POSTBUILD+="touch ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/ld.so.conf
+			cat > ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/nsswitch.conf <<-EOF
 				# Begin /etc/nsswitch.conf
 
 				passwd: files
@@ -98,7 +98,7 @@ case ${PKG_TARGET} in
 				# End /etc/nsswitch.conf
 			EOF
 
-			cat > ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/ld.so.conf <<-EOF
+			cat > ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/ld.so.conf <<-EOF
 			# Begin /etc/ld.so.conf
 			# Add an include directory
 
@@ -138,17 +138,17 @@ case ${PKG_TARGET} in
 			);"
 		if [ ${ENABLE_NSCD:-0} -eq 1 ]
 		then
-			PKG_POSTBUILD+="cp -fv \${PKG_SRCPATH}/nscd/nscd.conf ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/nscd.conf
+			PKG_POSTBUILD+="cp -fv \${PKG_SRCPATH}/nscd/nscd.conf ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/nscd.conf
 				mkdir -pv ${PKG_PKGPATH}/var/cache/nscd
-				install -v -Dm644 \${PKG_SRCPATH}/nscd/nscd.tmpfiles ${PKG_PKGPATH}${BUILD_LIBDIR}/tmpfiles.d/nscd.conf
+				install -v -Dm644 \${PKG_SRCPATH}/nscd/nscd.tmpfiles ${PKG_PKGPATH}${INSTALL_LIBDIR}/tmpfiles.d/nscd.conf
 				install -v -Dm644 \${PKG_SRCPATH}/nscd/nscd.service ${PKG_PKGPATH}/lib/systemd/system/nscd.service;"
 			PKG_POSTINSTALL+="systemctl disable nscd"
 		fi
 	;;
 esac
-PKG_POSTBUILD+="if [ ! -f \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h ]
+PKG_POSTBUILD+="if [ ! -f \${PKG_PKGPATH}${INSTALL_INCLUDEDIR}/gnu/stubs.h ]
 then
-	mkdir -pv \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu
-	touch \${PKG_PKGPATH}${BUILD_INCLUDEDIR}/gnu/stubs.h
+	mkdir -pv \${PKG_PKGPATH}${INSTALL_INCLUDEDIR}/gnu
+	touch \${PKG_PKGPATH}${INSTALL_INCLUDEDIR}/gnu/stubs.h
 fi"
 PKG_POSTINSTALL_PRIO=01

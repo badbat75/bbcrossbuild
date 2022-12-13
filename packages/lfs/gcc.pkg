@@ -15,13 +15,13 @@ AUTOCONF_PATH=autoscan
 #AUTOCONF_THREADS=1
 STD_CONF_FLAGS=0
 CONF_ENV="env -u CPP -u CPPFLAGS"
-CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
+CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
 	--build=${BARCH} --host=${HARCH} --target=${HARCH} \
 	--enable-shared --enable-static \
-	--with-mpc-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpc-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-	--with-mpfr-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpfr-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-	--with-isl-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-isl-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-	--with-gmp-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-gmp-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+	--with-mpc-include=${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpc-lib=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
+	--with-mpfr-include=${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpfr-lib=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
+	--with-isl-include=${SYSROOT}${INSTALL_INCLUDEDIR} --with-isl-lib=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
+	--with-gmp-include=${SYSROOT}${INSTALL_INCLUDEDIR} --with-gmp-lib=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
 	--enable-targets=${HARCH} --with-arch-directory=${HM} --with-arch=${HMARCH} --with-system-zlib \
 	--enable-languages=${GCC_LANGUAGES:-c,c++} --enable-multiarch --enable-version-specific-runtime-libs \
 	--enable-threads=posix --enable-checking=release --disable-multilib \
@@ -87,9 +87,9 @@ EOF
 '
 
 PKG_POSTBUILD="eval export PKG_PKGPATH=${PKG_PKGPATH}
-	mkdir -pv \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
-	find \${PKG_PKGPATH}${BUILD_PREFIX}/lib/gcc/${HARCH} -type f,l \\( -name \"*.so*\" -o -name \"*.a*\" -o -name \"*.la*\" -o -name \"crt*.o\" \\) \
-	| xargs -r -I{} bash -c 'ln -fsv \$(realpath --relative-to=\${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} {}) \${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/\$(basename {})'"
+	mkdir -pv \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
+	find \${PKG_PKGPATH}${INSTALL_PREFIX}/lib/gcc/${HARCH} -type f,l \\( -name \"*.so*\" -o -name \"*.a*\" -o -name \"*.la*\" -o -name \"crt*.o\" \\) \
+	| xargs -r -I{} bash -c 'ln -fsv \$(realpath --relative-to=\${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} {}) \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/\$(basename {})'"
 
 ##################### Package dedicated code #########################
 PKG_MAKETARGETS=

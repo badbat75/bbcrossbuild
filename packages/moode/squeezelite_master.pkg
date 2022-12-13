@@ -14,10 +14,10 @@ PKG_DEPS="moode/alsa-lib \
     moode/mpg123_1.29.2 \
     moode/libmad_0.15.1b \
     moode/faad2_2.10.0"
-PKG_CFLAGS="-fPIC -I${BIN_PATH}${BUILD_INCLUDEDIR}/opus -I${BIN_PATH}${BUILD_INCLUDEDIR}/alac"
+PKG_CFLAGS="-fPIC -I${BIN_PATH}${INSTALL_INCLUDEDIR}/opus -I${BIN_PATH}${INSTALL_INCLUDEDIR}/alac"
 PKG_LDFLAGS="-lgomp -lasound"
-PKG_MAKEVARS='OPTS="-DOPUS -DALAC -DRESAMPLE -DFFMPEG -DVISEXPORT -DDSD -DGPIO -DRPI -DUSE_SSL -DLINKALL" PREFIX=${BUILD_PREFIX} EXECUTABLE=squeezelite'
-PKG_POSTBUILD="install -m 0755 -d ${PKG_PKGPATH}\${BUILD_EXECPREFIX}/bin
-install -m 0755 squeezelite ${PKG_PKGPATH}\${BUILD_EXECPREFIX}/bin/squeezelite
+PKG_MAKEVARS='OPTS="-DOPUS -DALAC -DRESAMPLE -DFFMPEG -DVISEXPORT -DDSD -DGPIO -DRPI -DUSE_SSL -DLINKALL" PREFIX=${INSTALL_PREFIX} EXECUTABLE=squeezelite'
+PKG_POSTBUILD="install -m 0755 -d ${PKG_PKGPATH}\${INSTALL_EXECPREFIX}/bin
+install -m 0755 squeezelite ${PKG_PKGPATH}\${INSTALL_EXECPREFIX}/bin/squeezelite
 install -d ${PKG_PKGPATH}/usr/local/bin
 ln -fs /usr/bin/squeezelite ${PKG_PKGPATH}/usr/local/bin/squeezelite"

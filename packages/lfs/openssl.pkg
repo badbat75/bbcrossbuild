@@ -5,7 +5,7 @@ PKG_DEPS="lfs/zlib"
 CONF_COPYRSC=1
 CONF_CMD="Configure"
 STD_CONF_FLAGS=0
-CONF_FLAGS="--prefix=${BUILD_PREFIX} --openssldir=${BUILD_SYSCONFDIR}/ssl $(
+CONF_FLAGS="--prefix=${INSTALL_PREFIX} --openssldir=${INSTALL_SYSCONFDIR}/ssl $(
     case x${HARCH} in
     xarm-linux-*)
         echo linux-generic32 
@@ -18,7 +18,7 @@ CONF_FLAGS="--prefix=${BUILD_PREFIX} --openssldir=${BUILD_SYSCONFDIR}/ssl $(
 BUILD_PROCESS=configmake
 INST_CMD="install"
 PKG_TWOSTEPSBUILD=1
-PKG_MAKEVARS="MANSUFFIX=ssl LIBDIR=lib${BUILD_LIBSUFFIX}"
+PKG_MAKEVARS="MANSUFFIX=ssl LIBDIR=lib${INSTALL_LIBSUFFIX}"
 case ${TOOLCHAIN} in
     llvm) PKG_CFLAGS="-std=gnu99";;
 esac

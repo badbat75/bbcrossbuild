@@ -14,13 +14,13 @@ BUILD_PROCESS=configmake
 AUTOCONF_PATH=".,bfd,binutils,gas,gold,gprof,gprofng,intl,ld,libctf,libiberty,opcodes"
 STD_CONF_FLAGS=0
 CONF_ENV="env -u CPP -u CPPFLAGS"
-CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
+CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
     --build=${BARCH} --host=${HARCH} --target=${HARCH} \
     --disable-werror \
     --enable-shared --enable-static \
-    --with-mpc-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpc-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-    --with-mpfr-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-mpfr-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
-    --with-isl-include=${SYSROOT}${BUILD_INCLUDEDIR} --with-isl-lib=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+    --with-mpc-include=${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpc-lib=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
+    --with-mpfr-include=${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpfr-lib=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
+    --with-isl-include=${SYSROOT}${INSTALL_INCLUDEDIR} --with-isl-lib=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
     --enable-targets=${HARCH} --with-arch-directory=${HM} --with-arch=${HMARCH} --with-system-zlib \
     --disable-werror --enable-gold=default --enable-ld --enable-gprofng=yes --enable-lto \
     --enable-new-dtags --disable-rpath --enable-threads=yes --enable-plugins --enable-64-bit-bfd \

@@ -16,8 +16,8 @@ esac
 
 PKG_PREBUILD="sed -i 's/(INSTALL_PROGRAM) -s/(INSTALL_PROGRAM) --strip-program=\\\${STRIP} -s/' Makefile.in"
 
-PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}${BUILD_SYSCONFDIR} ${PKG_PKGPATH}/root
-ln -sfv bash ${PKG_PKGPATH}${BUILD_PREFIX}/bin/sh
+PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}${INSTALL_SYSCONFDIR} ${PKG_PKGPATH}/root
+ln -sfv bash ${PKG_PKGPATH}${INSTALL_PREFIX}/bin/sh
 #####################################################################################
 echo /etc/profile
 cat > ${PKG_PKGPATH}/etc/profile <<EOF

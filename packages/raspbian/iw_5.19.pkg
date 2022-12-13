@@ -8,6 +8,6 @@ PKG_LDFLAGS=
 BUILD_PROCESS=simplemake
 INST_CMD=install
 PKG_DEPS="raspbian/libnl3_3.7.0"
-PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} SBINDIR=/sbin"
+PKG_MAKEVARS="PREFIX=\${INSTALL_PREFIX} SBINDIR=/sbin"
 
 # Note: Build-Depends: libnl-3-dev (>= 3.2.3-2~), libnl-genl-3-dev (>= 3.2.3-2~), pkg-config

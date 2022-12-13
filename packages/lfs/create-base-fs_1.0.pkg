@@ -1,8 +1,8 @@
 BUILD_PROCESS=none
 PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/{dev,proc,sys,run,etc,var}
-	if [ ! -z "${BUILD_PREFIX}" ]
+	if [ ! -z "${INSTALL_PREFIX}" ]
 	then
-		local PREFIX=$(echo ${BUILD_PREFIX} | sed 's|^/||')
+		local PREFIX=$(echo ${INSTALL_PREFIX} | sed 's|^/||')
 		mkdir -pv ${PKG_PKGPATH}/{\${PREFIX}/bin,\${PREFIX}/lib,\${PREFIX}/sbin}
 		ln -sfv \${PREFIX}/bin ${PKG_PKGPATH}
 		ln -sfv \${PREFIX}/lib ${PKG_PKGPATH}

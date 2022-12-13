@@ -5,9 +5,9 @@ PKG_DEPS=lfs/m4
 BUILD_PROCESS=configmake
 CONF_FLAGS="--docdir=/usr/share/doc/automake-1.16.4"
 INST_CMD="install-strip"
-PKG_POSTBUILD="mv -v \${PKG_PKGPATH}${BUILD_PREFIX}/share/aclocal \${PKG_PKGPATH}${BUILD_PREFIX}/share/aclocal.2bmoved"
-PKG_POSTINSTALL="if [ -d ${BUILD_PREFIX}/share/aclocal.2bmoved ]
+PKG_POSTBUILD="mv -v \${PKG_PKGPATH}${INSTALL_PREFIX}/share/aclocal \${PKG_PKGPATH}${INSTALL_PREFIX}/share/aclocal.2bmoved"
+PKG_POSTINSTALL="if [ -d ${INSTALL_PREFIX}/share/aclocal.2bmoved ]
 then
-    cp -fprv ${BUILD_PREFIX}/share/aclocal.2bmoved/* ${BUILD_PREFIX}/share/aclocal/
-    rm -rfv ${BUILD_PREFIX}/share/aclocal.2bmoved
+    cp -fprv ${INSTALL_PREFIX}/share/aclocal.2bmoved/* ${INSTALL_PREFIX}/share/aclocal/
+    rm -rfv ${INSTALL_PREFIX}/share/aclocal.2bmoved
 fi"

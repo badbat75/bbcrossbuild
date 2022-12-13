@@ -14,7 +14,7 @@ then
 fi
 INST_CMD="install-strip"
 
-PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}${BUILD_PREFIX}/sbin/
-	ln -svf ../libexec/bluetooth/bluetoothd ${PKG_PKGPATH}${BUILD_PREFIX}/sbin/
+PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}${INSTALL_PREFIX}/sbin/
+	ln -svf ../libexec/bluetooth/bluetoothd ${PKG_PKGPATH}${INSTALL_PREFIX}/sbin/
 	install -vdm755 ${PKG_PKGPATH}/etc/bluetooth/
 	install -vm644 \${PKG_SRCPATH}/{src/main.conf,profiles/input/input.conf,profiles/network/network.conf} ${PKG_PKGPATH}/etc/bluetooth/"

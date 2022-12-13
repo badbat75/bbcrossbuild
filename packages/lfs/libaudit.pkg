@@ -12,7 +12,7 @@ case "${PKG_TARGET}" in
 	*) PKG_DEPS="lfs/krb5 lfs/systemd:bootstrap"	;;
 esac
 
-PKG_PREBUILD="cp -v ${SYSROOT}${BUILD_PREFIX}/include/linux/audit.h lib/audit.h
+PKG_PREBUILD="cp -v ${SYSROOT}${INSTALL_PREFIX}/include/linux/audit.h lib/audit.h
 	patch -p1 <<-'EOF'
 diff -urp audit-3.0.8.orig/bindings/swig/src/auditswig.i audit-3.0.8/bindings/swig/src/auditswig.i
 --- audit-3.0.8.orig/bindings/swig/src/auditswig.i	2022-03-29 16:52:34.000000000 -0400
@@ -53,7 +53,7 @@ diff -urp audit-3.0.8.orig/lib/libaudit.h audit-3.0.8/lib/libaudit.h
 Only in audit-3.0.8/lib: libaudit.h.orig
 	EOF
 "
-PKG_POSTBUILD="pushd ${PKG_PKGPATH}${BUILD_PREFIX}
+PKG_POSTBUILD="pushd ${PKG_PKGPATH}${INSTALL_PREFIX}
 patch -p1 <<-EOF
 diff -urp usr.orig/include/libaudit.h.orig usr/include/libaudit.h
 --- usr.orig/include/libaudit.h.orig	2022-02-14 14:14:08.000000000 -0500

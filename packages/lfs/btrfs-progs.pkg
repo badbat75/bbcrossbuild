@@ -7,5 +7,5 @@ PKG_COPYSRC=1
 BUILD_PROCESS=configmake
 CONF_FLAGS="--disable-documentation"
 PKG_TWOSTEPSBUILD=1
-PKG_MAKEVARS="bindir=${BUILD_EXECPREFIX}/sbin"
+PKG_MAKEVARS="bindir=${INSTALL_EXECPREFIX}/sbin"
 INST_CMD="install"

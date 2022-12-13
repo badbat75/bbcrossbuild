@@ -4,7 +4,7 @@ PKG_SRCDIR=wpa_${PKG_VER}
 BUILD_PROCESS=simplemake
 INST_CMD=all
 PKG_DEPS="lfs/wpa lfs/libnl"
-PKG_MAKEVARS="PREFIX=${BUILD_PREFIX} INCDIR=${BUILD_INCLUDEDIR} BINDIR=${BUILD_PREFIX}/sbin -C hostapd"
+PKG_MAKEVARS="PREFIX=${INSTALL_PREFIX} INCDIR=${INSTALL_INCLUDEDIR} BINDIR=${INSTALL_PREFIX}/sbin -C hostapd"
 PKG_PREBUILD="cat > hostapd/.config <<-EOF
 		CONFIG_DRIVER_HOSTAP=y
 		CONFIG_DRIVER_WIRED=y
@@ -51,17 +51,17 @@ PKG_PREBUILD="cat > hostapd/.config <<-EOF
 		CONFIG_VLAN_NETLINK=y
 		EOF
 	"
-PKG_POSTBUILD="install -d ${PKG_PKGPATH}${BUILD_PREFIX}/sbin
-	install -d ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man1
-	install -d ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man8
-	install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D hostapd/hostapd ${PKG_PKGPATH}${BUILD_EXECPREFIX}/sbin/
-	install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D hostapd/hostapd_cli ${PKG_PKGPATH}${BUILD_EXECPREFIX}/sbin/
-	install -d ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man{5,8}
-	cp hostapd/hostapd.8 ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man8/ && gzip -f ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man8/hostapd.8
-	cp hostapd/hostapd_cli.1 ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man5/ && gzip -f ${PKG_PKGPATH}${BUILD_PREFIX}/share/man/man5/hostapd_cli.1
+PKG_POSTBUILD="install -d ${PKG_PKGPATH}${INSTALL_PREFIX}/sbin
+	install -d ${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man1
+	install -d ${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man8
+	install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D hostapd/hostapd ${PKG_PKGPATH}${INSTALL_EXECPREFIX}/sbin/
+	install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D hostapd/hostapd_cli ${PKG_PKGPATH}${INSTALL_EXECPREFIX}/sbin/
+	install -d ${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man{5,8}
+	cp hostapd/hostapd.8 ${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man8/ && gzip -f ${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man8/hostapd.8
+	cp hostapd/hostapd_cli.1 ${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man5/ && gzip -f ${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man5/hostapd_cli.1
 
-	mkdir -pv ${PKG_PKGPATH}${BUILD_PREFIX}/lib/systemd/system
-	cat > ${PKG_PKGPATH}${BUILD_PREFIX}/lib/systemd/system/hostapd.service <<-EOF
+	mkdir -pv ${PKG_PKGPATH}${INSTALL_PREFIX}/lib/systemd/system
+	cat > ${PKG_PKGPATH}${INSTALL_PREFIX}/lib/systemd/system/hostapd.service <<-EOF
 		[Unit]
 		Description=Access point and authentication server for Wi-Fi and Ethernet
 		Documentation=man:hostapd(8)
@@ -79,7 +79,7 @@ PKG_POSTBUILD="install -d ${PKG_PKGPATH}${BUILD_PREFIX}/sbin
 		[Install]
 		WantedBy=multi-user.target
 	EOF
-	cat > ${PKG_PKGPATH}${BUILD_PREFIX}/lib/systemd/system/hostapd\@.service <<-EOF
+	cat > ${PKG_PKGPATH}${INSTALL_PREFIX}/lib/systemd/system/hostapd\@.service <<-EOF
 		[Unit]
 		Description=Access point and authentication server for Wi-Fi and Ethernet (%I)
 		Documentation=man:hostapd(8)
@@ -98,8 +98,8 @@ PKG_POSTBUILD="install -d ${PKG_PKGPATH}${BUILD_PREFIX}/sbin
 		WantedBy=multi-user.target sys-subsystem-net-devices-%i.device
 	EOF
 
-	mkdir -pv ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/default
-	cat > ${PKG_PKGPATH}${BUILD_SYSCONFDIR}/default/hostapd <<-EOF
+	mkdir -pv ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/default
+	cat > ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/default/hostapd <<-EOF
 		# Defaults for hostapd initscript
 		#
 		# WARNING: The DAEMON_CONF setting has been deprecated and will be removed

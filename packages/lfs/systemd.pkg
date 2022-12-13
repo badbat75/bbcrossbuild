@@ -6,7 +6,7 @@ PKG_DEPS="lfs/libxcrypt \
 	lfs/zlib lfs/xz lfs/bzip2 lfs/zstd lfs/lz4 \
 	lfs/libxslt lfs/libxml2 lfs/libcap2"
 BUILD_PROCESS=mesonninja
-CONF_FLAGS="-Drootlibdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
+CONF_FLAGS="-Drootlibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 CONF_FLAGS+=" -Ddefault-dnssec=no"
 CONF_FLAGS+=" -Dfirstboot=false"
 CONF_FLAGS+=" -Dinstall-tests=false"
@@ -27,14 +27,14 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Dblkid=true"
 		CONF_FLAGS+=" -Dman=auto"
 		CONF_FLAGS+=" -Dpam=true"
-		CONF_FLAGS+=" -Dpamlibdir=${BUILD_LIBDIR}/security"
+		CONF_FLAGS+=" -Dpamlibdir=${INSTALL_LIBDIR}/security"
 		CONF_FLAGS+=" -Dpamconfdir=no"
 		if [ ${ENABLE_DBUS:-1} -eq 1 ]
 		then
 			PKG_DEPS+=" lfs/D-Bus"
-			#CONF_FLAGS+=" -Ddbussystemservicedir=${BUILD_PREFIX}/share/dbus-1/system-services"
-			#CONF_FLAGS+=" -Ddbussessionservicedir=${BUILD_PREFIX}/share/dbus-1/services"
-			#CONF_FLAGS+=" -Ddbuspolicydir=${BUILD_PREFIX}/share/dbus-1/system.d"
+			#CONF_FLAGS+=" -Ddbussystemservicedir=${INSTALL_PREFIX}/share/dbus-1/system-services"
+			#CONF_FLAGS+=" -Ddbussessionservicedir=${INSTALL_PREFIX}/share/dbus-1/services"
+			#CONF_FLAGS+=" -Ddbuspolicydir=${INSTALL_PREFIX}/share/dbus-1/system.d"
 		fi
 		PKG_POSTBUILD="install -v -m755 -d ${PKG_PKGPATH}/etc/pam.d
 			cat >> ${PKG_PKGPATH}/etc/pam.d/system-session <<-EOF
@@ -71,7 +71,7 @@ case "${PKG_TARGET}" in
 	;;
 esac
 INST_CMD="install"
-PKG_LD_LIBRARY_PATH=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}
+PKG_LD_LIBRARY_PATH=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
 PKG_PREBUILD="sed -i -e 's/GROUP=\"render\"/GROUP=\"video\"/' -e 's/GROUP=\"sgx\", //' rules.d/50-udev-default.rules.in"
 ### Python modules does not pass sysroot flags...
 PKG_FAULTYCFLAGS=1

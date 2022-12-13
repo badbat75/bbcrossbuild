@@ -1,7 +1,7 @@
 # lirc_0.10.1-5
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/l/lirc/lirc_0.10.1.orig.tar.gz"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--enable-uinput --enable-devinput DEVINPUT_HEADER=\${BIN_PATH}\${BUILD_INCLUDEDIR}/linux/input.h"
+CONF_FLAGS="--enable-uinput --enable-devinput DEVINPUT_HEADER=\${BIN_PATH}\${INSTALL_INCLUDEDIR}/linux/input.h"
 INST_CMD=install-strip
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/l/lirc/lirc_0.10.1-5.debian.tar.xz"
 #PATCHES=

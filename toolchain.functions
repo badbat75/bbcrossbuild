@@ -287,7 +287,7 @@ function setup_autotools () {
 		local ACINCLUDE=
 		local AUTOPOINTINCLUDE=
 		### If PATH include a AUTOTOOLS build or PKG_AUTOCONF is a particular version
-		[ -d ${BIN_PATH}${BUILD_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${BIN_PATH}${BUILD_PREFIX}/share/aclocal"
+		[ -d ${BIN_PATH}${TARGET_PREFIX}/share/aclocal ] && local ACINCLUDE+=" --include=${BIN_PATH}${TARGET_PREFIX}/share/aclocal"
 		[ -d ${GLOBAL_TOOLCHAIN_PATH}/share/aclocal ] && local ACINCLUDE+=" --include=${GLOBAL_TOOLCHAIN_PATH}/share/aclocal"
 		[ -d ${TOOLCHAIN_PATH}/share/aclocal ] && local ACINCLUDE+=" --include=${TOOLCHAIN_PATH}/share/aclocal"
 		if [ ! -z ${AUTOTOOLS_PATH} ] && [ -d ${AUTOTOOLS_PATH} ]
@@ -537,9 +537,9 @@ function setup_pkgconfig () {
 					${GLOBAL_TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}/configure --prefix=${TOOLCHAIN_PATH} \
 					--disable-host-tool \
 					--program-prefix=${HARCH}- \
-					--with-pc-path=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/pkgconfig:${SYSROOT}${BUILD_PREFIX}/share \
-					--with-system-include-path=${SYSROOT}${BUILD_INCLUDEDIR} \
-					--with-system-library-path=${SYSROOT}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
+					--with-pc-path=${SYSROOT}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/pkgconfig:${SYSROOT}${TARGET_PREFIX}/share \
+					--with-system-include-path=${SYSROOT}${TARGET_INCLUDEDIR} \
+					--with-system-library-path=${SYSROOT}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
 		)
 		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
 		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
@@ -605,9 +605,9 @@ function setup_bison () {
 function setup_gcc () {
 	function gcc_sysroot () {
 		# Check where glibc is installed
-		if [ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/crtn.o ] && \
-			[ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/crti.o ] && \
-			[ -f ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/crt1.o ]
+		if [ -f ${DISTOS_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/crtn.o ] && \
+			[ -f ${DISTOS_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/crti.o ] && \
+			[ -f ${DISTOS_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/crt1.o ]
 		then
 			echo "${DISTOS_PATH}"
 		else
@@ -822,10 +822,10 @@ function setup_gcc () {
 		echo "Install aclocal files" | log_buffer info
 		run_cmd "mkdir -pv ${TOOLCHAIN_PATH}/share/aclocal"
 
-		if [ ! -d $(gcc_sysroot)${BUILD_PREFIX}/lib ] && [ "${HARCH_LIB}" == "64" ]
+		if [ ! -d $(gcc_sysroot)${TARGET_PREFIX}/lib ] && [ "${HARCH_LIB}" == "64" ]
 		then
-			echo "Workaround for $(gcc_sysroot)${BUILD_PREFIX}/lib/../lib64" | log_buffer info
-			run_cmd "mkdir -pv \"$(gcc_sysroot)${BUILD_PREFIX}/lib\""
+			echo "Workaround for $(gcc_sysroot)${TARGET_PREFIX}/lib/../lib64" | log_buffer info
+			run_cmd "mkdir -pv \"$(gcc_sysroot)${TARGET_PREFIX}/lib\""
 		fi
 		popd
 		trap ERR
@@ -839,12 +839,12 @@ function setup_gcc () {
 				include ld.so.conf.d/*.conf
 			EOF
 		fi
-		if [ ! -f ${TOOLCHAIN_PATH}/bin/ldconfig ] && [ -f $(gcc_sysroot)${BUILD_PREFIX}/sbin/ldconfig ]
+		if [ ! -f ${TOOLCHAIN_PATH}/bin/ldconfig ] && [ -f $(gcc_sysroot)${TARGET_PREFIX}/sbin/ldconfig ]
 		then
 			run_cmd "cat >${TOOLCHAIN_PATH}/bin/ldconfig" <<-EOF >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 				#!/bin/sh
 				export QEMU_LD_PREFIX=${BIN_PATH}
-				$(gcc_sysroot)${BUILD_PREFIX}/sbin/ldconfig -f /etc/ld.so.conf -C /etc/ld.so.cache -r ${BIN_PATH} \${@}
+				$(gcc_sysroot)${TARGET_PREFIX}/sbin/ldconfig -f /etc/ld.so.conf -C /etc/ld.so.cache -r ${BIN_PATH} \${@}
 			EOF
 			chmod +x ${TOOLCHAIN_PATH}/bin/ldconfig
 		fi
@@ -865,15 +865,15 @@ function setup_gcc () {
 			export -f relink_library
 
 			echo "Relinking libraries with their relative paths in ${1}" | log_buffer info
-			[ ! -d ${1}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} ] && run_cmd "mkdir -v ${1}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
-			run_cmd "find ${1}${BUILD_PREFIX}/lib/gcc/${HARCH} -type f,l \
+			[ ! -d ${1}${TARGET_LIBDIR}${TARGET_LIBSUFFIX} ] && run_cmd "mkdir -v ${1}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}"
+			run_cmd "find ${1}${TARGET_PREFIX}/lib/gcc/${HARCH} -type f,l \
 				\\( -name \"*.so*\" -a ! -name \"*.so*.py\" -o -name \"*.a*\" -o -name \"*.la*\" -o -name \"crt*.o\" \\) | xargs -r -I{} bash -c \
-				\"relink_library \\\"${1}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}\\\" {}\""
+				\"relink_library \\\"${1}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}\\\" {}\""
 		}
 
 		function relink_la_libraries () {
 			echo "Adapting .la libraries to ${1}" | log_buffer info
-			export LIB_LA_SEDTRANS="s&^dependency_libs=' -L${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/./ld&dependency_libs='&; s&^libdir='${TOOLCHAIN_PATH}&libdir='${BUILD_PREFIX}&"
+			export LIB_LA_SEDTRANS="s&^dependency_libs=' -L${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/./ld&dependency_libs='&; s&^libdir='${TOOLCHAIN_PATH}&libdir='${TARGET_PREFIX}&"
 			echo "Sed command: ${LIB_LA_SEDTRANS}" | log_buffer info
 			if [ -d ${1} ]
 			then
@@ -927,23 +927,23 @@ function setup_gcc () {
 				then
 					run_cmd "rm -rf ${PACKAGES_PATH}/gcc-${OBJECT}_${GCC_VER}"
 				fi
-				run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" DESTDIR="${PACKAGES_PATH}/${PKG_NAME}" prefix=${BUILD_PREFIX} install-strip-target-${OBJECT}"
-				relink_la_libraries "${PACKAGES_PATH}/${PKG_NAME}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}"
+				run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" DESTDIR="${PACKAGES_PATH}/${PKG_NAME}" prefix=${TARGET_PREFIX} install-strip-target-${OBJECT}"
+				relink_la_libraries "${PACKAGES_PATH}/${PKG_NAME}${TARGET_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}"
 				if [ ${GCC_BOOTSTRAP} -eq 0 ]
 				then
 					if [ ${GCC_IS_MAIN} -eq 1 ]
 					then
-						echo "### Linking GCC target libraries in ${BUILD_PREFIX}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} from ${BIN_PATH}${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" | log_buffer info
-						if [ -d ${PACKAGES_PATH}/${PKG_NAME}${BUILD_PREFIX}/lib/gcc/${HARCH} ]
+						echo "### Linking GCC target libraries in ${TARGET_PREFIX}${TARGET_LIBDIR}${TARGET_LIBSUFFIX} from ${BIN_PATH}${TARGET_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" | log_buffer info
+						if [ -d ${PACKAGES_PATH}/${PKG_NAME}${TARGET_PREFIX}/lib/gcc/${HARCH} ]
 						then
 							relink_libraries "${PACKAGES_PATH}/${PKG_NAME}"
 						fi
 					else
 						run_cmd "mkdir -pv ${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d ${PACKAGES_PATH}/${PKG_NAME}/postinst_scripts"
-						run_cmd "echo ${BUILD_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER} >${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d/gcc-${GCC_MAJVER}.conf"
+						run_cmd "echo ${TARGET_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER} >${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d/gcc-${GCC_MAJVER}.conf"
 						if [ -d "${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/lib64" ]
 						then
-							run_cmd "echo ${BUILD_PREFIX}/lib/gcc/${HARCH}/lib64 >>${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d/gcc-${GCC_MAJVER}.conf"
+							run_cmd "echo ${TARGET_PREFIX}/lib/gcc/${HARCH}/lib64 >>${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d/gcc-${GCC_MAJVER}.conf"
 						fi
 						run_cmd "echo \"ldconfig -v\" >>${PACKAGES_PATH}/${PKG_NAME}/postinst_scripts/00_gcc-libs_${GCC_MAJVER}"
 					fi
@@ -1050,7 +1050,7 @@ function setup_gcc () {
 		if [ $(gcc_sysroot) == ${BIN_PATH} ]
 		then
 			echo -n "removing temporary headers..."
-			run_cmd "rm -rf ${BIN_PATH}${BUILD_INCLUDEDIR}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
+			run_cmd "rm -rf ${BIN_PATH}${TARGET_INCLUDEDIR}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 		fi
 	echo -e "done.\n"
 	fi
@@ -1410,7 +1410,7 @@ function setup_llvm () {
 		then
 			run_cmd "rm -rf ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}"
 		fi
-		run_cmd "DESTDIR=${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}${BUILD_PREFIX} \\
+		run_cmd "DESTDIR=${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}${TARGET_PREFIX} \\
 			ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} install/strip"
 		#tar cfp - --owner=0 --group=0 -C ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER} . | xz -T${NPROCS} - > ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}.tar.xz
 		create_sfx_package ${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}
@@ -1418,7 +1418,7 @@ function setup_llvm () {
 
 		if [ ${LLVM_BUILTINS_INSTALL} -eq 1 ]
 		then
-			run_cmd "DESTDIR=${BIN_PATH}${BUILD_PREFIX} \\
+			run_cmd "DESTDIR=${BIN_PATH}${TARGET_PREFIX} \\
 				ninja $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -v || true ) -j${NPROCS} install/strip"
 		fi
 
@@ -1669,10 +1669,10 @@ function setup_python () {
 		fi
 		run_cmd "${BUILD_PYTHON} -m crossenv ${TARGET_PYTHON} ${TOOLCHAIN_PATH}/venv-${HARCH}"
 		run_cmd "rmdir -v ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include"
-		run_cmd "ln -sfv ${PYTHON_SEARCHPATH}${BUILD_INCLUDEDIR}/python${PYTHONBIN_VER} ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include"
+		run_cmd "ln -sfv ${PYTHON_SEARCHPATH}${TARGET_INCLUDEDIR}/python${PYTHONBIN_VER} ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include"
 		cat >${TOOLCHAIN_PATH}/venv-${HARCH}/cross/bin/python3-config <<-EOF
 			#!/bin/sh
-			${PYTHON_SEARCHPATH}${BUILD_PREFIX}/bin/python3-config \${@}
+			${PYTHON_SEARCHPATH}${TARGET_PREFIX}/bin/python3-config \${@}
 		EOF
 		run_cmd "chmod +x ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/bin/python3-config"
 		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate

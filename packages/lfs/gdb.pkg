@@ -15,13 +15,13 @@ BUILD_PROCESS=configmake
 AUTOCONF_PATH=".,libbacktrace,gdb,gdbserver,gdbsupport,gnulib,bfd,opcodes,sim,libctf"
 STD_CONF_FLAGS=0
 CONF_ENV="env -u CPP -u CPPFLAGS"
-CONF_FLAGS="--prefix=${BUILD_PREFIX} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
+CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
     --build=${BARCH} --host=${HARCH} --target=${HARCH} \
     --enable-shared --enable-static \
     --with-system-zlib --with-system-readline --disable-install-libbfd \
-    --with-mpc-include=\${SYSROOT}\${BUILD_INCLUDEDIR} --with-mpc-lib=\${SYSROOT}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX} \
-    --with-mpfr-include=\${SYSROOT}\${BUILD_INCLUDEDIR} --with-mpfr-lib=\${SYSROOT}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX} \
-    --with-gmp-include=\${SYSROOT}\${BUILD_INCLUDEDIR} --with-gmp-lib=\${SYSROOT}\${BUILD_LIBDIR}\${BUILD_LIBSUFFIX} \
+    --with-mpc-include=\${SYSROOT}\${INSTALL_INCLUDEDIR} --with-mpc-lib=\${SYSROOT}\${INSTALL_LIBDIR}\${INSTALL_LIBSUFFIX} \
+    --with-mpfr-include=\${SYSROOT}\${INSTALL_INCLUDEDIR} --with-mpfr-lib=\${SYSROOT}\${INSTALL_LIBDIR}\${INSTALL_LIBSUFFIX} \
+    --with-gmp-include=\${SYSROOT}\${INSTALL_INCLUDEDIR} --with-gmp-lib=\${SYSROOT}\${INSTALL_LIBDIR}\${INSTALL_LIBSUFFIX} \
     --enable-static"
 # --with-python=\$(which python3)
 if [ "${LTOENABLE:-0}" != "0" ]

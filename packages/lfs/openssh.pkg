@@ -4,13 +4,13 @@ PKG_URL="http://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${PKG_VER}.
 PKG_DEPS="lfs/krb5 lfs/net-tools lfs/Linux-PAM lfs/libedit lfs/sysstat"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
-CONF_FLAGS="--sysconfdir=${BUILD_SYSCONFDIR}/ssh \
+CONF_FLAGS="--sysconfdir=${INSTALL_SYSCONFDIR}/ssh \
 		--with-privsep-path=/var/lib/sshd \
-		--with-default-path=${BUILD_EXECPREFIX}/bin \
-		--with-superuser-path=${BUILD_EXECPREFIX}/sbin:${BUILD_EXECPREFIX}/bin \
+		--with-default-path=${INSTALL_EXECPREFIX}/bin \
+		--with-superuser-path=${INSTALL_EXECPREFIX}/sbin:${INSTALL_EXECPREFIX}/bin \
 		--with-pid-dir=/run \
 		--with-pam \
-		--with-kerberos5=${BUILD_PREFIX} \
+		--with-kerberos5=${INSTALL_PREFIX} \
 		--with-libedit"
 INST_CMD="install"
 PKG_TWOSTEPSBUILD=1

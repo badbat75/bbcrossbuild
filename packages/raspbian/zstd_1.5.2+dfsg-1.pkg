@@ -7,7 +7,7 @@ BUILD_PROCESS=simplemake
 INST_CMD="install"
 PKG_DEPS="raspbian/lz4_1.9.3-2"
 PKG_MAKETARGETS="default"
-PKG_MAKEVARS="PREFIX=${BUILD_PREFIX} libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
+PKG_MAKEVARS="PREFIX=${INSTALL_PREFIX} libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 
 # Note: Build-Depends: d-shlibs, debhelper-compat (= 13), help2man, liblz4-dev, liblzma-dev, zlib1g-dev
 
