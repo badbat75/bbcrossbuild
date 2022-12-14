@@ -48,7 +48,7 @@ case ${PKG_TARGET} in
 			--disable-werror --disable-sanity-checks --without-cvs"
 		PKG_DEPS=
 		PKG_TWOSTEPSBUILD=1
-		PKG_MAKEVARS="slibdir=/usr/lib64"
+		PKG_MAKEVARS="datadir=${TARGET_SHAREDIR}"
 		PKG_MAKETARGETS="lib locale/others"
 		INST_CMD="locale/subdir_install"
 	;;
