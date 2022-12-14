@@ -692,7 +692,7 @@ function configmake () {
 	pushd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 	if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
 	then
-		CONF_FLAGS="--prefix=${INSTALL_PREFIX} --exec-prefix=${INSTALL_EXECPREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBPREFIX} \
+		CONF_FLAGS="--prefix=${INSTALL_PREFIX} --exec-prefix=${INSTALL_EXECPREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
 					--includedir=${INSTALL_INCLUDEDIR} --sysconfdir=${INSTALL_SYSCONFDIR} --localstatedir=${INSTALL_LOCALSTATEDIR} \
 					${CONF_FLAGS}"
 		case ${PKG_TARGET_ENV} in
