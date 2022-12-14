@@ -218,6 +218,7 @@ function settcenv () {
 		TOOLCHAIN_OBJDUMP \
 		TOOLCHAIN_READELF \
 		TOOLCHAIN_LINKER \
+		TOOLCHAIN_LD \
 		TOOLCHAIN_CC_FOR_BUILD \
 		TOOLCHAIN_CXX_FOR_BUILD \
 		TOOLCHAIN_CPP_FOR_BUILD \
@@ -232,6 +233,7 @@ function settcenv () {
 		TOOLCHAIN_OBJDUMP_FOR_BUILD \
 		TOOLCHAIN_READELF_FOR_BUILD \
 		TOOLCHAIN_LINKER_FOR_BUILD \
+		TOOLCHAIN_LD_FOR_BUILD \
 		TOOLCHAIN_LINKERFLAGS \
 		TOOLCHAIN_COMPFLAGS \
 		TOOLCHAIN_EXTRA_C_CMD \
@@ -278,7 +280,7 @@ function settcenv () {
 			TOOLCHAIN_OBJDUMP_FOR_BUILD=$(which objdump)
 			TOOLCHAIN_READELF_FOR_BUILD=$(which readelf)
 			TOOLCHAIN_LINKER_FOR_BUILD=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
-			TOOLCHAIN_LD_FOR_BUILD=$(which ld.${TOOLCHAIN_LINKER_FOR_BUILD})
+			TOOLCHAIN_LINKER_EXE_FOR_BUILD=$(which ld.${TOOLCHAIN_LINKER_FOR_BUILD})
 			TOOLCHAIN_LINKERFLAGS_FOR_BUILD="-fuse-ld=${TOOLCHAIN_LINKER_FOR_BUILD}"
 
 			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
@@ -307,7 +309,7 @@ function settcenv () {
 					TOOLCHAIN_OBJDUMP=${TOOLCHAIN_OBJDUMP_FOR_BUILD}
 					TOOLCHAIN_READELF=${TOOLCHAIN_READELF_FOR_BUILD}
 					TOOLCHAIN_LINKER=${TOOLCHAIN_LINKER_FOR_BUILD}
-					TOOLCHAIN_LD=${TOOLCHAIN_LD_FOR_BUILD}
+					TOOLCHAIN_LINKER_EXE=${TOOLCHAIN_LINKER_EXE_FOR_BUILD}
 					TOOLCHAIN_COMPFLAGS="${GNU_EXTRAGCCFLAGS}"
 					TOOLCHAIN_EXTRA_C_CMD=""
 					TOOLCHAIN_LINKERFLAGS="-fuse-ld=${TOOLCHAIN_LINKER} ${GNU_EXTRALDFLAGS}"
@@ -335,7 +337,7 @@ function settcenv () {
 						TOOLCHAIN_OBJDUMP=$(which ${HARCH}-objdump)
 						TOOLCHAIN_READELF=$(which ${HARCH}-readelf)
 						TOOLCHAIN_LINKER=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
-						TOOLCHAIN_LD=$(which ${HARCH}-ld.${TOOLCHAIN_LINKER})
+						TOOLCHAIN_LINKER_EXE=$(which ${HARCH}-ld.${TOOLCHAIN_LINKER})
 					fi
 					if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
 					then
@@ -368,8 +370,8 @@ function settcenv () {
 			TOOLCHAIN_OBJDUMP_FOR_BUILD=$(which llvm-objdump)
 			TOOLCHAIN_READELF_FOR_BUILD=$(which llvm-readelf)
 			TOOLCHAIN_LINKER_FOR_BUILD=${PKG_OVERRIDELD:-${LLVM_DEFAULT_LD:-lld}}
+			TOOLCHAIN_LINKER_EXE_FOR_BUILD=$(which ld.${TOOLCHAIN_LINKER})
 			TOOLCHAIN_LINKERFLAGS_FOR_BUILD="-fuse-ld=${TOOLCHAIN_LINKER} -Wl,--threads=${NPROCS}"
-			TOOLCHAIN_LD=$(which ld.${TOOLCHAIN_LINKER})
 			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 				1|fat)
 					TOOLCHAIN_COMPFLAGS+=" -flto=full"
@@ -398,7 +400,7 @@ function settcenv () {
 					TOOLCHAIN_OBJDUMP=${TOOLCHAIN_OBJDUMP_FOR_BUILD}
 					TOOLCHAIN_READELF=${TOOLCHAIN_READELF_FOR_BUILD}
 					TOOLCHAIN_LINKER=${TOOLCHAIN_LINKER_FOR_BUILD}
-					TOOLCHAIN_LD=${TOOLCHAIN_LD_FOR_BUILD}
+					TOOLCHAIN_LINKER_EXE=${TOOLCHAIN_LINKER_EXE_FOR_BUILD}
 					if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
 					then
 						TOOLCHAIN_COMPFLAGS="${LLVM_EXTRACLANGFLAGS}"
@@ -427,6 +429,7 @@ function settcenv () {
 					TOOLCHAIN_OBJDUMP=$(which llvm-objdump)
 					TOOLCHAIN_READELF=$(which llvm-readelf)
 					TOOLCHAIN_LINKER=${PKG_OVERRIDELD:-${LLVM_DEFAULT_LD:-lld}}
+					TOOLCHAIN_LINKER_EXE=$(which ld.${TOOLCHAIN_LINKER})
 					if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
 					then
 						TOOLCHAIN_COMPFLAGS="${LLVM_EXTRACLANGFLAGS}"
@@ -505,7 +508,7 @@ function create_environment_source () {
 		EOF
 	fi
 	cat <<-EOF >> environment.source
-		export LD_FOR_BUILD='${TOOLCHAIN_LD_FOR_BUILD}'
+		export LINKER_EXE_FOR_BUILD='${TOOLCHAIN_LINKER_EXE_FOR_BUILD}'
 		export LDFLAGS_FOR_BUILD='${TOOLCHAIN_LINKERFLAGS_FOR_BUILD}'
 		export AR_FOR_BUILD='${TOOLCHAIN_AR_FOR_BUILD}'
 		export AS_FOR_BUILD='${TOOLCHAIN_AS_FOR_BUILD}'
@@ -543,7 +546,7 @@ function create_environment_source () {
 		EOF
 	fi
 	cat <<-EOF >> environment.source
-		export LD='${TOOLCHAIN_LD}'
+		export LINKER_EXE='${TOOLCHAIN_LINKER_EXE}'
 		export LDFLAGS='${TOOLCHAIN_LINKERFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}'
 
 		export AR='${TOOLCHAIN_AR}'
@@ -1022,7 +1025,7 @@ function kernelbuild () {
 			make \\
 				V=${MAKEVERBOSE:-0} \\
 				CC="\${CC}" \\
-				LD="\${LD}" \\
+				LD="\${LINKER_EXE}" \\
 				AS="\${CC}" \\
 				NM="\${NM}" \\
 				AR="\${AR}" \\
@@ -1037,7 +1040,7 @@ function kernelbuild () {
 				HOSTCC="\${CC_FOR_BUILD}" \\
 				HOSTCXX="\${CXX_FOR_BUILD}" \\
 				HOSTAR="\${AR_FOR_BUILD}" \\
-				HOSTLD="\${LD_FOR_BUILD}" \\
+				HOSTLD="\${LINKER_EXE_FOR_BUILD}" \\
 				EXTRAVERSION=${KERNEL_EXTRAVERSION} \\
 				LOCALVERSION=${KERNEL_LOCALVERSION} \\
 				${EXTRA_PARMS} ${PKG_MAKEVARS} \${@}
@@ -1054,7 +1057,7 @@ function kernelbuild () {
 	cd ${PKG_BLDPATH}
 
 	GCC_DEFAULT_LD=bfd create_environment_source --target ${PKG_TARGET_ENV}
-	sed 's/FLAGS=.*/FLAGS=/g' -e 's/PKG_CONFIG\(.*\)=.*/PKG_CONFIG\1=/' -i environment.source
+	sed -e 's/FLAGS=.*/FLAGS=/g' -e 's/PKG_CONFIG\(.*\)=.*/PKG_CONFIG\1=/' -i environment.source
 	source environment.source
 
 	make4kern
