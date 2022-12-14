@@ -37,7 +37,7 @@ CONF_ENV="LD_LIBRARY_PATH= "
 CONF_VARS="libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes"
 PKG_MAKEENV="LD_LIBRARY_PATH= "
 PKG_MAKEVARS="slibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} rootsbindir=${INSTALL_PREFIX}/sbin \
-	complocaledir=${INSTALL_LIBDIR} cross-compiling=yes"
+	complocaledir=${INSTALL_LIBDIR}/locale cross-compiling=yes"
 PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd
 #PKG_PREBUILD="sed '/MAKEFLAGS :=/s/)r/) -r/' -i Makerules"
@@ -51,7 +51,7 @@ case ${PKG_TARGET} in
 		PKG_DEPS=
 		PKG_TWOSTEPSBUILD=1
 		PKG_MAKEVARS="slibdir=${INSTALL_LIBDIR}/glibc-${GLIBC_VER} \
-			complocaledir=${TARGET_LIBDIR} datadir=${TARGET_SHAREDIR}"
+			complocaledir=${TARGET_LIBDIR}/locale datadir=${TARGET_SHAREDIR}"
 		PKG_MAKETARGETS="lib elf/subdir_lib locale/others"
 		INST_CMD="elf/ldso_install locale/subdir_install"
 		PKG_POSTBUILD="install -vm755 libc.so ${INSTALL_LIBDIR}/glibc-${GLIBC_VER}/
