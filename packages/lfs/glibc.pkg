@@ -43,6 +43,15 @@ PKG_OVERRIDELD=bfd
 #PKG_PREBUILD="sed '/MAKEFLAGS :=/s/)r/) -r/' -i Makerules"
 
 case ${PKG_TARGET} in
+	cross)
+		CONF_FLAGS="--disable-profile --disable-crypt \
+			--disable-werror --disable-sanity-checks --without-cvs"
+		PKG_DEPS=
+		PKG_TWOSTEPSBUILD=1
+		PKG_MAKEVARS="slibdir=/usr/lib64"
+		PKG_MAKETARGETS="lib locale/others"
+		INST_CMD="locale/subdir_install"
+	;;
 	headers)
 		STD_CONF_FLAGS=0
 		CONF_FLAGS="--build=${BARCH} --host=${HARCH} --target=${HARCH} --prefix=${INSTALL_PREFIX} --includedir=${INSTALL_INCLUDEDIR} \
@@ -65,6 +74,7 @@ case ${PKG_TARGET} in
 		INST_CMD="install"
 	;;
 	*)
+		PKG_DEPS+=" lfs/glibc:cross"
 		CONF_FLAGS+=" --enable-stackguard-randomization --enable-stack-protector=strong"
 		if [ ${GLIBC_SYSTEMTAP:-0} -eq 1 ]
 		then

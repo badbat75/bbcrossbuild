@@ -91,6 +91,7 @@ function setbuildenv () {
 					then
 						QEMU_LD_LIBRARY_PATH="$(gcc_toolchain_print_searchdirs):"
 					fi
+					echo "QEMU_LD_LIBRARY_PATH: ${QEMU_LD_LIBRARY_PATH}" | log_buffer info
 					### Search path in the toolchain gcc libs
 					# -enable-version-specific-runtime-libs workaround to fing libgcc_s under lib64 path instead of ${GCC_VER}
 					local GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE="$(realpath -m $(gcc_toolchain_print_searchdirs)/../lib64)"
@@ -216,7 +217,7 @@ function settcenv () {
 		TOOLCHAIN_OBJCOPY \
 		TOOLCHAIN_OBJDUMP \
 		TOOLCHAIN_READELF \
-		TOOLCHAIN_LD \
+		TOOLCHAIN_LINKER \
 		TOOLCHAIN_CC_FOR_BUILD \
 		TOOLCHAIN_CXX_FOR_BUILD \
 		TOOLCHAIN_CPP_FOR_BUILD \
@@ -230,7 +231,7 @@ function settcenv () {
 		TOOLCHAIN_OBJCOPY_FOR_BUILD \
 		TOOLCHAIN_OBJDUMP_FOR_BUILD \
 		TOOLCHAIN_READELF_FOR_BUILD \
-		TOOLCHAIN_LD_FOR_BUILD \
+		TOOLCHAIN_LINKER_FOR_BUILD \
 		TOOLCHAIN_LINKERFLAGS \
 		TOOLCHAIN_COMPFLAGS \
 		TOOLCHAIN_EXTRA_C_CMD \
@@ -253,6 +254,7 @@ function settcenv () {
 			setllvmpollyenv ${PKG_LLVMPOLLYFEATURES}
 		fi
 	fi
+	echo "Target Environment: ${TARGET_ENV}"
 	case ${TOOLCHAIN} in
 		gnu)
 			TOOLCHAIN_CC_FOR_BUILD=$(which gcc)
@@ -275,8 +277,9 @@ function settcenv () {
 			TOOLCHAIN_OBJCOPY_FOR_BUILD=$(which objcopy)
 			TOOLCHAIN_OBJDUMP_FOR_BUILD=$(which objdump)
 			TOOLCHAIN_READELF_FOR_BUILD=$(which readelf)
-			TOOLCHAIN_LD_FOR_BUILD=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
-			TOOLCHAIN_LINKERFLAGS_FOR_BUILD="-fuse-ld=${TOOLCHAIN_LD_FOR_BUILD}"
+			TOOLCHAIN_LINKER_FOR_BUILD=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
+			TOOLCHAIN_LD_FOR_BUILD=$(which ld.${TOOLCHAIN_LINKER_FOR_BUILD})
+			TOOLCHAIN_LINKERFLAGS_FOR_BUILD="-fuse-ld=${TOOLCHAIN_LINKER_FOR_BUILD}"
 
 			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 				1|2|fat|thin)
@@ -285,7 +288,6 @@ function settcenv () {
 					;;
 			esac
 
-			echo "Target Environment: ${TARGET_ENV}"
 			case ${TARGET_ENV} in
 				native|cross)
 					TOOLCHAIN_CC=${TOOLCHAIN_CC_FOR_BUILD}
@@ -304,10 +306,11 @@ function settcenv () {
 					TOOLCHAIN_OBJCOPY=${TOOLCHAIN_OBJCOPY_FOR_BUILD}
 					TOOLCHAIN_OBJDUMP=${TOOLCHAIN_OBJDUMP_FOR_BUILD}
 					TOOLCHAIN_READELF=${TOOLCHAIN_READELF_FOR_BUILD}
+					TOOLCHAIN_LINKER=${TOOLCHAIN_LINKER_FOR_BUILD}
 					TOOLCHAIN_LD=${TOOLCHAIN_LD_FOR_BUILD}
 					TOOLCHAIN_COMPFLAGS="${GNU_EXTRAGCCFLAGS}"
 					TOOLCHAIN_EXTRA_C_CMD=""
-					TOOLCHAIN_LINKERFLAGS="-fuse-ld=${TOOLCHAIN_LD} ${GNU_EXTRALDFLAGS}"
+					TOOLCHAIN_LINKERFLAGS="-fuse-ld=${TOOLCHAIN_LINKER} ${GNU_EXTRALDFLAGS}"
 				;;
 				target)
 					if ${HARCH}-gcc --version > /dev/null 2>&1
@@ -331,7 +334,8 @@ function settcenv () {
 						TOOLCHAIN_OBJCOPY=$(which ${HARCH}-objcopy)
 						TOOLCHAIN_OBJDUMP=$(which ${HARCH}-objdump)
 						TOOLCHAIN_READELF=$(which ${HARCH}-readelf)
-						TOOLCHAIN_LD=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
+						TOOLCHAIN_LINKER=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
+						TOOLCHAIN_LD=$(which ${HARCH}-ld.${TOOLCHAIN_LINKER})
 					fi
 					if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
 					then
@@ -342,7 +346,7 @@ function settcenv () {
 						TOOLCHAIN_COMPFLAGS="${SYSROOT_FLAGS} ${GNU_EXTRAGCCFLAGS}"
 						TOOLCHAIN_EXTRA_C_CMD=""
 					fi
-					TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LD} ${GNU_EXTRALDFLAGS}"
+					TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LINKER} ${GNU_EXTRALDFLAGS}"
 				;;
 			esac
 			;;
@@ -363,9 +367,9 @@ function settcenv () {
 			TOOLCHAIN_OBJCOPY_FOR_BUILD=$(which llvm-objcopy)
 			TOOLCHAIN_OBJDUMP_FOR_BUILD=$(which llvm-objdump)
 			TOOLCHAIN_READELF_FOR_BUILD=$(which llvm-readelf)
-			TOOLCHAIN_LD_FOR_BUILD=${PKG_OVERRIDELD:-${LLVM_DEFAULT_LD:-lld}}
-			TOOLCHAIN_LINKERFLAGS_FOR_BUILD="-fuse-ld=${TOOLCHAIN_LD} -Wl,--threads=${NPROCS}"
-
+			TOOLCHAIN_LINKER_FOR_BUILD=${PKG_OVERRIDELD:-${LLVM_DEFAULT_LD:-lld}}
+			TOOLCHAIN_LINKERFLAGS_FOR_BUILD="-fuse-ld=${TOOLCHAIN_LINKER} -Wl,--threads=${NPROCS}"
+			TOOLCHAIN_LD=$(which ld.${TOOLCHAIN_LINKER})
 			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 				1|fat)
 					TOOLCHAIN_COMPFLAGS+=" -flto=full"
@@ -393,6 +397,7 @@ function settcenv () {
 					TOOLCHAIN_OBJCOPY=${TOOLCHAIN_OBJCOPY_FOR_BUILD}
 					TOOLCHAIN_OBJDUMP=${TOOLCHAIN_OBJDUMP_FOR_BUILD}
 					TOOLCHAIN_READELF=${TOOLCHAIN_READELF_FOR_BUILD}
+					TOOLCHAIN_LINKER=${TOOLCHAIN_LINKER_FOR_BUILD}
 					TOOLCHAIN_LD=${TOOLCHAIN_LD_FOR_BUILD}
 					if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
 					then
@@ -402,7 +407,7 @@ function settcenv () {
 						TOOLCHAIN_COMPFLAGS="${LLVM_EXTRACLANGFLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
 						TOOLCHAIN_EXTRA_C_CMD=""
 					fi
-					TOOLCHAIN_LINKERFLAGS="-fuse-ld=${TOOLCHAIN_LD} -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
+					TOOLCHAIN_LINKERFLAGS="-fuse-ld=${TOOLCHAIN_LINKER} -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
 				;;
 				target)
 					TOOLCHAIN_CC=$(which clang)
@@ -421,7 +426,7 @@ function settcenv () {
 					TOOLCHAIN_OBJCOPY=$(which llvm-objcopy)
 					TOOLCHAIN_OBJDUMP=$(which llvm-objdump)
 					TOOLCHAIN_READELF=$(which llvm-readelf)
-					TOOLCHAIN_LD=${PKG_OVERRIDELD:-${LLVM_DEFAULT_LD:-lld}}
+					TOOLCHAIN_LINKER=${PKG_OVERRIDELD:-${LLVM_DEFAULT_LD:-lld}}
 					if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
 					then
 						TOOLCHAIN_COMPFLAGS="${LLVM_EXTRACLANGFLAGS}"
@@ -430,12 +435,12 @@ function settcenv () {
 						TOOLCHAIN_COMPFLAGS="${SYSROOT_FLAGS} ${LLVM_EXTRACLANGFLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
 						TOOLCHAIN_EXTRA_C_CMD="--target=${HARCH}"
 					fi
-					TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LD} -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
+					TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LINKER} -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
 				;;
 			esac
 			;;
 	esac
-	case ${TOOLCHAIN_LD} in
+	case ${TOOLCHAIN_LINKER} in
 		gold)
 			TOOLCHAIN_LINKERFLAGS+=" -Wl,--threads -Wl,--thread-count,${NPROCS}"
 			TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--threads -Wl,--thread-count,${NPROCS}"
@@ -479,28 +484,28 @@ function create_environment_source () {
 		#################################################################################
 
 		export CC_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC_FOR_BUILD}'
-		export CFLAGS_FOR_BUILD='-march=native -O${OPTCOMP_FLAGS}'
+		export CFLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS}'
 		export CPP_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CPP_FOR_BUILD}'
-		export CPPFLAGS_FOR_BUILD='-march=native -O${OPTCOMP_FLAGS}'
+		export CPPFLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS}'
 	EOF
 	if [ ! -z "${TOOLCHAIN_CXX_FOR_BUILD}" ]
 	then
 		cat <<-EOF >> environment.source
 			export CXX_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX_FOR_BUILD}'
-			export CXXFLAGS_FOR_BUILD='-march=native -O${OPTCOMP_FLAGS}'
+			export CXXFLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS}'
 		EOF
 	fi
 	if [ ! -z "${TOOLCHAIN_FC_FOR_BUILD}" ]
 	then
 		cat <<-EOF >> environment.source
 			export FC_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_FC_FOR_BUILD}'
-			export FFLAGS_FOR_BUILD='-march=native -O${OPTCOMP_FLAGS}'
+			export FFLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS}'
 			export F90_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_F90_FOR_BUILD}'
-			export F90FLAGS_FOR_BUILD='-march=native -O${OPTCOMP_FLAGS}'
+			export F90FLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS}'
 		EOF
 	fi
 	cat <<-EOF >> environment.source
-		#export LD_FOR_BUILD='${TOOLCHAIN_LD_FOR_BUILD}'
+		export LD_FOR_BUILD='${TOOLCHAIN_LD_FOR_BUILD}'
 		export LDFLAGS_FOR_BUILD='${TOOLCHAIN_LINKERFLAGS_FOR_BUILD}'
 		export AR_FOR_BUILD='${TOOLCHAIN_AR_FOR_BUILD}'
 		export AS_FOR_BUILD='${TOOLCHAIN_AS_FOR_BUILD}'
@@ -538,7 +543,7 @@ function create_environment_source () {
 		EOF
 	fi
 	cat <<-EOF >> environment.source
-		#export LD='${TOOLCHAIN_LD}'
+		export LD='${TOOLCHAIN_LD}'
 		export LDFLAGS='${TOOLCHAIN_LINKERFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}'
 
 		export AR='${TOOLCHAIN_AR}'
@@ -552,19 +557,26 @@ function create_environment_source () {
 
 	EOF
 
-	cat <<-EOF >> environment.source
-		export PKG_CONFIG='${HARCH}-pkg-config'
-		export PKG_CONFIG_LIBDIR='${COMMON_PKG_CONFIG_LIBDIR}'
-		export PKG_CONFIG_SYSROOT_DIR='${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}'
-		export PKG_CONFIG_ALLOW_CROSS='${PKG_CONFIG_ALLOW_CROSS}'
+	case ${TARGET_ENV} in
+		target)
+			cat <<-EOF >> environment.source
+				export PKG_CONFIG='${HARCH}-pkg-config'
+				export PKG_CONFIG_LIBDIR='${COMMON_PKG_CONFIG_LIBDIR}'
+				export PKG_CONFIG_SYSROOT_DIR='${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}'
+				export PKG_CONFIG_ALLOW_CROSS='${PKG_CONFIG_ALLOW_CROSS}'
+			EOF
+		;;
+	esac
 
-		export LD_LIBRARY_PATH='${LD_LIBRARY_PATH}${QEMU_LD_LIBRARY_PATH:+:${QEMU_LD_LIBRARY_PATH}}${PKG_LD_LIBRARY_PATH:+:${PKG_LD_LIBRARY_PATH}}'
+	cat <<-EOF >> environment.source
+		export LD_LIBRARY_PATH='${LD_LIBRARY_PATH}${PKG_LD_LIBRARY_PATH:+:${PKG_LD_LIBRARY_PATH}}'
 		export PATH='${PATH}'
 
 		export CARGO_HOME='${CARGO_HOME}'
 		export RUSTUP_HOME='${RUSTUP_HOME}'
 
 		export QEMU_LD_PREFIX='${SYSROOT}'
+		export QEMU_LD_LIBRARY_PATH='${QEMU_LD_LIBRARY_PATH}'
 
 		export ENVIRONMENT_SOURCE_PATH='${PWD}'
 	EOF
@@ -766,7 +778,7 @@ function simplemake () {
 	return ${STATUS};' ERR
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
 	cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
-	create_environment_source
+	create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
 	eval local "PKG_MAKEVARS='${PKG_MAKEVARS}'"
 	cat >runmake.sh <<-EOF
@@ -807,7 +819,7 @@ function cmakebuild () {
 	else
 		CONF_FLAGS+=" -DBUILD_STATIC_LIBS=OFF"
 	fi
-	CCWRAPPER="" create_environment_source
+	CCWRAPPER="" create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
 	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/cmake ${PKG_SRCPATH} \\
 		-G Ninja \\
@@ -926,7 +938,7 @@ function cargobuild () {
 
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
 	cd ${PKG_BLDPATH}
-	create_environment_source
+	create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
 	local CARGO_BIN=${CARGO_BIN:-${INSTALL_EXECPREFIX}/bin}
 	local CARGO_LIB=${CARGO_LIB:-${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}}
@@ -1005,57 +1017,27 @@ function kernelmodbuild () {
 
 function kernelbuild () {
 	function make4kern () {
-		settcenv
-		case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
-			gnu)
-				local HOSTCC=$(which gcc)
-				local HOSTCXX=$(which g++)
-				local HOSTAR=$(which gcc-ar)
-				local HOSTLD=$(which ld.bfd)
-				;;
-			llvm)
-				if clang -v 2>&1 > /dev/null && ld.lld -v 2>&1
-				then
-					local HOSTCC=$(which clang)
-					local HOSTCXX=$(which clang++)
-					local HOSTAR=$(which llvm-ar)
-					local HOSTLD=$(which ld.lld)
-				else
-					local HOSTCC=$(which gcc)
-					local HOSTCXX=$(which g++)
-					local HOSTAR=$(which gcc-ar)
-					local HOSTLD=$(which ld.bfd)
-				fi
-				;;
-		esac
 		cat <<-EOF > make4kern.sh
-			export PATH="${PATH}"
-			export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}"
 			KBUILD_BUILD_TIMESTAMP='' \\
 			make \\
 				V=${MAKEVERBOSE:-0} \\
-				CC="${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}" \\
-				LD="$(
-					case ${TOOLCHAIN_LD} in
-						gold|bfd) echo $(which ${HARCH}-ld.bfd);;
-						lld) echo $(which ld.lld);;
-					esac
-					)" \\
-				AS="${TOOLCHAIN_CC}" \\
-				NM="${TOOLCHAIN_NM}" \\
-				AR="${TOOLCHAIN_AR}" \\
-				OBJCOPY="${TOOLCHAIN_OBJCOPY}" \\
-				OBJDUMP="${TOOLCHAIN_OBJDUMP}" \\
-				READELF="${TOOLCHAIN_READELF}" \\
-				STRIP="${TOOLCHAIN_STRIP}" \\
+				CC="\${CC}" \\
+				LD="\${LD}" \\
+				AS="\${CC}" \\
+				NM="\${NM}" \\
+				AR="\${AR}" \\
+				OBJCOPY="\${OBJCOPY}" \\
+				OBJDUMP="\${OBJDUMP}" \\
+				READELF="\${READELF}" \\
+				STRIP="\${STRIP}" \\
 				KCFLAGS="\${KCFLAGS}${LLVM_KERNELPOLLYFLAGS:+ ${LLVM_KERNELPOLLYFLAGS}}${PKG_CFLAGS:+ ${PKG_CFLAGS}}" \\
 				KBUILD_LDFLAGS="${KERNEL_OPTLINK_FLAGS}${PKG_LDFLAGS:+ ${PKG_LDFLAGS}}" \\
 				ARCH=${KERNEL_ARCH} \\
 				CROSS_COMPILE=${HARCH}- \\
-				HOSTCC="${CCWRAPPER:+${CCWRAPPER} }${HOSTCC}" \\
-				HOSTCXX="${CCWRAPPER:+${CCWRAPPER} }${HOSTCXX}" \\
-				HOSTAR="${HOSTAR}" \\
-				HOSTLD="${HOSTLD}" \\
+				HOSTCC="\${CC_FOR_BUILD}" \\
+				HOSTCXX="\${CXX_FOR_BUILD}" \\
+				HOSTAR="\${AR_FOR_BUILD}" \\
+				HOSTLD="\${LD_FOR_BUILD}" \\
 				EXTRAVERSION=${KERNEL_EXTRAVERSION} \\
 				LOCALVERSION=${KERNEL_LOCALVERSION} \\
 				${EXTRA_PARMS} ${PKG_MAKEVARS} \${@}
@@ -1069,8 +1051,12 @@ function kernelbuild () {
 		return ${STATUS};' ERR
 
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
-
 	cd ${PKG_BLDPATH}
+
+	GCC_DEFAULT_LD=bfd create_environment_source --target ${PKG_TARGET_ENV}
+	sed 's/FLAGS=.*/FLAGS=/g' -e 's/PKG_CONFIG\(.*\)=.*/PKG_CONFIG\1=/' -i environment.source
+	source environment.source
+
 	make4kern
 
 	echo "Build ${PKG_FILE} with extra modules ${PKG_KERNEL_BUILD_MODULES}"
@@ -1230,7 +1216,7 @@ function pythonbuild () {
 		fi
 		export PYTHONPATH
 	done
-	run_cmd "create_environment_source"
+	create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
 	run_cmd "cross-python -m site"
 	run_cmd "${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}"
@@ -1287,7 +1273,7 @@ function pythonpip () {
 	#PYTHONUSERBASE="${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
 	#export PYTHONUSERBASE
 	export PYTHONPATH
-	create_environment_source
+	create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
 	run_cmd "cross-python -m site"
 	if [ ${PKG_PYTHONBUILD:-1} -eq 1 ]
