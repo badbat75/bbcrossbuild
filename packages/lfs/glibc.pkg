@@ -44,11 +44,14 @@ PKG_OVERRIDELD=bfd
 
 case ${PKG_TARGET} in
 	cross)
-		CONF_FLAGS="--libdir=${INSTALL_LIBDIR}/glibc-${GLIBC_VER} --disable-profile --disable-crypt \
+		CONF_FLAGS="--libdir=${INSTALL_LIBDIR}/glibc-${GLIBC_VER} \
+			--disable-profile --disable-crypt \
+			--disable-build-nscd --disable-nscd \
 			--disable-werror --disable-sanity-checks --without-cvs"
 		PKG_DEPS=
 		PKG_TWOSTEPSBUILD=1
-		PKG_MAKEVARS="datadir=${TARGET_SHAREDIR} complocaledir=${TARGET_LIBDIR} slibdir=${INSTALL_LIBDIR}/glibc-${GLIBC_VER}"
+		PKG_MAKEVARS="slibdir=${INSTALL_LIBDIR}/glibc-${GLIBC_VER} \
+			complocaledir=${TARGET_LIBDIR} datadir=${TARGET_SHAREDIR}"
 		PKG_MAKETARGETS="lib elf/subdir_lib locale/others"
 		INST_CMD="elf/ldso_install locale/subdir_install"
 		PKG_POSTBUILD="install -vm755 libc.so ${INSTALL_LIBDIR}/glibc-${GLIBC_VER}/
