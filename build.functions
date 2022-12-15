@@ -558,22 +558,36 @@ function create_environment_source () {
 		export OBJDUMP='${TOOLCHAIN_OBJDUMP}'
 		export READELF='${TOOLCHAIN_READELF}'
 
+		export LD_LIBRARY_PATH='${LD_LIBRARY_PATH}${PKG_LD_LIBRARY_PATH:+:${PKG_LD_LIBRARY_PATH}}'
+		export PATH='${PATH}'
 	EOF
 
 	case ${TARGET_ENV} in
+		cross|native)
+			cat <<-EOF >> environment.source
+				export PKG_CONFIG='$(which pkg-config)'
+				export PKG_CONFIG_LIBDIR=/usr/lib64/pkgconfig:${TOOLCHAIN_PATH}/lib/pkgconfig:${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig
+				export PKG_CONFIG_SYSROOT_DIR=
+				export PKG_CONFIG_ALLOW_CROSS=
+			EOF
+		;;
 		target)
 			cat <<-EOF >> environment.source
-				export PKG_CONFIG='${HARCH}-pkg-config'
+				export PKG_CONFIG='$(which ${HARCH}-pkg-config)'
 				export PKG_CONFIG_LIBDIR='${COMMON_PKG_CONFIG_LIBDIR}'
 				export PKG_CONFIG_SYSROOT_DIR='${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}'
 				export PKG_CONFIG_ALLOW_CROSS='${PKG_CONFIG_ALLOW_CROSS}'
 			EOF
+			if [ -f ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate ]
+			then
+				echo -e "\nsource ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate\n" >> environment.source
+			fi
 		;;
 	esac
 
 	cat <<-EOF >> environment.source
-		export LD_LIBRARY_PATH='${LD_LIBRARY_PATH}${PKG_LD_LIBRARY_PATH:+:${PKG_LD_LIBRARY_PATH}}'
-		export PATH='${PATH}'
+
+		export PYTHONPATH=${PYTHONPATH}
 
 		export CARGO_HOME='${CARGO_HOME}'
 		export RUSTUP_HOME='${RUSTUP_HOME}'
@@ -859,19 +873,6 @@ function mesonninja () {
 			done
 			echo
 		}
-		if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
-		then
-			CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} --includedir=${INSTALL_INCLUDEDIR} \
-				--sysconfdir=${INSTALL_SYSCONFDIR} --localstatedir=${INSTALL_LOCALSTATEDIR} ${CONF_FLAGS}"
-			if [ ${BUILD_LIBSHARED} -eq 0 ] && [ ${BUILD_LIBSTATIC} -eq 1 ]
-			then
-				CONF_FLAGS+=" --default-library=static"
-			fi
-			if [ ${BUILD_LIBSHARED} -eq 1 ] && [ ${BUILD_LIBSTATIC} -eq 0 ]
-			then
-				CONF_FLAGS+=" --default-library=shared"
-			fi
-		fi
 		local C=$(buildmesonargs "${CC}")
 		local C_ARGS=$(buildmesonargs "${CFLAGS}")
 		local C_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
@@ -925,11 +926,43 @@ function mesonninja () {
 	cd ${PKG_BLDPATH}
 	create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
-	createmesoncross
-	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release -Db_ndebug=true --cross-file cross-${PLATFORM_NAME} ${CONF_FLAGS}"
-	local NINJA_FLAGS="-j${NPROCS}$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v')"
-	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS}"
-	run_cmd "DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} ${INST_CMD:-install}"
+	if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
+	then
+		CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} --includedir=${INSTALL_INCLUDEDIR} \
+			--sysconfdir=${INSTALL_SYSCONFDIR} --localstatedir=${INSTALL_LOCALSTATEDIR} ${CONF_FLAGS}"
+		if [ ${BUILD_LIBSHARED} -eq 0 ] && [ ${BUILD_LIBSTATIC} -eq 1 ]
+		then
+			CONF_FLAGS+=" --default-library=static"
+		fi
+		if [ ${BUILD_LIBSHARED} -eq 1 ] && [ ${BUILD_LIBSTATIC} -eq 0 ]
+		then
+			CONF_FLAGS+=" --default-library=shared"
+		fi
+	fi
+	local RUNCONFIG_CMD="${GLOBAL_TOOLCHAIN_PATH}/bin/meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release -Db_ndebug=true"
+	local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v')"
+	case ${PKG_TARGET} in
+		cross|native) ;;
+		*)
+			createmesoncross
+			RUNCONFIG_CMD+=" --cross-file cross-${PLATFORM_NAME}"
+		;;
+	esac
+	cat > runconfig.sh <<-EOF
+		#!/bin/bash
+		echo "\\\$ ${CONF_ENV} \\\\"
+		echo -e "\t${RUNCONFIG_CMD} ${CONF_FLAGS}"
+		${CONF_ENV} ${RUNCONFIG_CMD} ${CONF_FLAGS} \${@}	
+	EOF
+	cat >runmake.sh <<-EOF
+		#!/bin/bash
+		echo "\\\$ DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}"
+		DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}
+	EOF
+	run_cmd "chmod +x runconfig.sh runmake.sh"
+	run_cmd "./runconfig.sh"
+	run_cmd "./runmake.sh -j${NPROCS}"
+	run_cmd "./runmake.sh -j${NPROCS} ${INST_CMD:-install}"
 	cd ${BB_HOME}
 	trap - ERR
 }
@@ -1645,7 +1678,7 @@ function build () {(
 		build \
 			$( if [ ${NOSAVESTATUS} -eq 1 ] || [ "${TEMPORARY_STATUS}" == ".tmp" ]; then echo "--temporary"; fi) \
 			$( if [ ${GCC_CHECK} -eq 1 ]; then echo "--no_gcc_check"; fi ) \
-			${dep}$( if [ "${PKG_TARGET_ENV}" == "native" ] || [ "${PKG_TARGET_ENV}" == "cross" ]; then echo":${PKG_TARGET_ENV}"; fi )
+			${dep}$( if [ "${PKG_TARGET_ENV}" == "native" ] || [ "${PKG_TARGET_ENV}" == "cross" ]; then echo ":${PKG_TARGET_ENV}"; fi )
 		local NUMSPACES=$((NUMSPACES-1))
 		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
 	done

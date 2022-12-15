@@ -475,23 +475,23 @@ function setup_pkgconfig () {
 	trap 'local STATUS=${?}; \
 		echo "fail."; \
 		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log ]; \
+		if [ -f ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log ]; \
 		then \
-			echo "Log ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log:"; \
+			echo "Log ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log:"; \
 			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log; \
+			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log; \
 		fi; \
 		set +x; \
 		trap - ERR; \
 		return ${STATUS}' ERR
 
-	echo -n "Setting up pkg-config-${PKGCONFIG_VER}... "
+	echo -n "Setting up pkgconf-${PKGCONFIG_VER}... "
 	if [ "$( [ -f ${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config ] && ${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config --version)" != "${PKGCONFIG_VER}" ] || \
 		[ "$( [ -f ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config ] && ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config --version)" != "${PKGCONFIG_VER}" ]
 	then
-		local PKGCONFIG_URL="https://pkgconfig.freedesktop.org/releases/pkg-config-${PKGCONFIG_VER}.tar.gz"
-		download_uncompress "${PKGCONFIG_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER} > ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
-		smart_autoreconf "${GLOBAL_TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
+		local PKGCONFIG_URL="https://github.com/pkgconf/pkgconf/archive/refs/tags/pkgconf-${PKGCONFIG_VER}.tar.gz"
+		download_uncompress "${PKGCONFIG_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/pkgconf-${PKGCONFIG_VER} > ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
+		smart_autoreconf "${GLOBAL_TOOLCHAIN_SRCPATH}/pkgconf-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
 	else
 		echo -n "already there."
 	fi
@@ -499,58 +499,59 @@ function setup_pkgconfig () {
 	if [ "$( [ -f ${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config ] && ${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config --version)" != "${PKGCONFIG_VER}" ]
 	then
 		echo -n "building for host..."
-		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER} ]
+		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER} ]
 		then
-			run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
+			run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
 		fi
-		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
-		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER} >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
+		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
+		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER} >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
 		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
 				CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
 				LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
-					${GLOBAL_TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH} \
-					--with-pc-path=${LIBRARY_PATH_FOR_BUILD}/pkgconfig:/usr/share/pkgconfig \
+					${GLOBAL_TOOLCHAIN_SRCPATH}/pkgconf-${PKGCONFIG_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH} \
+					--with-pkg-config-dir=${LIBRARY_PATH_FOR_BUILD}/pkgconfig:/usr/share/pkgconfig \
 					--with-system-include-path=${INCLUDE_PATH_FOR_BUILD} \
-					--with-system-library-path=${LIBRARY_PATH_FOR_BUILD}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
+					--with-system-library-path=${LIBRARY_PATH_FOR_BUILD}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
+		run_cmd "ln -fsv pkgconf ${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
 		### Clean-up build environment
-		popd >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log 2>&1
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
+		popd >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log 2>&1
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
 		echo -n "done. "
 	fi
 	### Build for target
-	if [ "$( [ -f ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config ] && ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config --version)" != "${PKGCONFIG_VER}" ]
+	if [ "$( [ -f ${TOOLCHAIN_PATH}/bin/${HARCH}-pkgconf ] && ${TOOLCHAIN_PATH}/bin/${HARCH}-pkgconf --version)" != "${PKGCONFIG_VER}" ]
 	then
 		echo -n "building for target... "
-		if [ -d ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER} ]
+		if [ -d ${TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER} ]
 		then
-			run_cmd "rm -rf ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
+			run_cmd "rm -rf ${TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
 		fi
-		run_cmd "mkdir -pv ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
-		pushd ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER} >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
+		run_cmd "mkdir -pv ${TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
+		pushd ${TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER} >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
 		#### Build for target
 		(	setbuildenv
 			run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
 				CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
 				LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
-					${GLOBAL_TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}/configure --prefix=${TOOLCHAIN_PATH} \
-					--disable-host-tool \
+					${GLOBAL_TOOLCHAIN_SRCPATH}/pkgconf-${PKGCONFIG_VER}/configure --prefix=${TOOLCHAIN_PATH} \
 					--program-prefix=${HARCH}- \
-					--with-pc-path=${SYSROOT}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/pkgconfig:${SYSROOT}${TARGET_PREFIX}/share \
+					--with-pkg-config-dir=${SYSROOT}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/pkgconfig:${SYSROOT}${TARGET_PREFIX}/share \
 					--with-system-include-path=${SYSROOT}${TARGET_INCLUDEDIR} \
-					--with-system-library-path=${SYSROOT}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
+					--with-system-library-path=${SYSROOT}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
 		)
-		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
+		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
+		run_cmd "ln -fsv ${HARCH}-pkgconf ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
 		### Clean-up build environment
-		popd >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log 2>&1
-		run_cmd "rm -rf ${TOOLCHAIN_BLDPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
+		popd >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log 2>&1
+		run_cmd "rm -rf ${TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
 		echo -n "done."
 	fi
-	if [ -d ${GLOBAL_TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER} ]
+	if [ -d ${GLOBAL_TOOLCHAIN_SRCPATH}/pkgconf-${PKGCONFIG_VER} ]
 	then
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/pkg-config-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkg-config-${PKGCONFIG_VER}.log
+		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/pkgconf-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
 	fi
 	echo
 	trap ERR
@@ -995,14 +996,25 @@ function setup_gcc () {
 
 	function setup_ldd () {
 		local LDD_PATH=${1:-${BIN_PATH}}
-		if ( [ -f "${LDD_PATH}/usr/bin/ldd" ] || [ -f "${LDD_PATH}/bin/ldd" ] ) && [ ! -f ${TOOLCHAIN_PATH}/bin/ldd ]
+		if [ ! -f "${TOOLCHAIN_PATH}/bin/ldd" ]
 		then
-			eval local $(grep "^RTLDLIST=" ${LDD_PATH}/usr/bin/ldd)
+			if [ -f "${LDD_PATH}${TARGET_PREFIX}/bin/ldd" ]
+			then
+				eval local $(grep "^RTLDLIST=" ${LDD_PATH}${TARGET_PREFIX}/bin/ldd)
+				for ldso in ${RTLDLIST}
+				do
+					if [ -f ${LDD_PATH}${ldso} ]
+					then
+						local RTD=${RTD:+${RTD} }${LDD_PATH}${ldso}
+					fi
+				done
+			fi
+			eval local $(grep "^RTLDLIST=" /usr/bin/ldd)
 			for ldso in ${RTLDLIST}
 			do
-				if [ -f ${LDD_PATH}${ldso} ]
+				if [ -f ${ldso} ]
 				then
-					local RTD=${RTD:+ }${LDD_PATH}${ldso}
+					local RTD=${RTD:+${RTD} }${ldso}
 				fi
 			done
 			if [ -n "${RTD}" ]
@@ -1574,7 +1586,7 @@ function setup_meson () {
 		then
 			run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/meson-${MESON_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
 		fi
-		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_SRCPATH}/meson-${MESON_VER}"
+		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_SRCPATH}/meson-${MESON_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
 		run_cmd "cp -rp ${GLOBAL_TOOLCHAIN_SRCPATH}/meson-${MESON_VER} ${GLOBAL_TOOLCHAIN_BLDPATH}" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
 		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/meson-${MESON_VER} >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log 2>&1
 		run_cmd "python3 setup.py build" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
@@ -1675,16 +1687,20 @@ function setup_python () {
 			${PYTHON_SEARCHPATH}${TARGET_PREFIX}/bin/python3-config \${@}
 		EOF
 		run_cmd "chmod +x ${TOOLCHAIN_PATH}/venv-${HARCH}/cross/bin/python3-config"
-		source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate
-		run_cmd "build-python -m pip install --upgrade cython setuptools==60.10.0 wheel"
-		run_cmd "mkdir -p ${TOOLCHAIN_BLDPATH}/build_python_crossenv"
-		pushd ${TOOLCHAIN_BLDPATH}/build_python_crossenv
-		TOOLCHAIN=gnu create_environment_source
-		source environment.source
-		run_cmd "cross-pip -v install --upgrade setuptools cython"
-		run_cmd "build-pip -v install --upgrade setuptools jinja2"
-		popd
-		run_cmd "rm -rf ${TOOLCHAIN_BLDPATH}/build_python_crossenv"
+		(
+			set -e
+			source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate
+			run_cmd "build-python -m pip install --upgrade cython setuptools==60.10.0 wheel"
+			run_cmd "mkdir -p ${TOOLCHAIN_BLDPATH}/build_python_crossenv"
+			pushd ${TOOLCHAIN_BLDPATH}/build_python_crossenv
+			TOOLCHAIN=gnu create_environment_source
+			source environment.source
+			run_cmd "cross-pip -v install --upgrade setuptools cython"
+			run_cmd "build-pip -v install --upgrade setuptools jinja2"
+			popd
+			run_cmd "rm -rf ${TOOLCHAIN_BLDPATH}/build_python_crossenv"
+			set +e
+		)
 		trap ERR
 	}
 
@@ -1781,7 +1797,7 @@ function setup_python () {
 		else
 			echo "already there."
 			echo
-			source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate >> ${LOG_PATH}/toolchain_python-crossenv.log 2>&1
+			#source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate >> ${LOG_PATH}/toolchain_python-crossenv.log 2>&1
 		fi
 	fi
 	trap ERR
