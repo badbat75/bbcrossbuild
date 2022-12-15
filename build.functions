@@ -486,6 +486,7 @@ function create_environment_source () {
 		### PKG_BLDDIR=${PKG_BLDDIR}
 		#################################################################################
 
+		export SYSROOT='${SYSROOT}'
 		export CC_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC_FOR_BUILD}'
 		export CFLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS}'
 		export CPP_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CPP_FOR_BUILD}'
