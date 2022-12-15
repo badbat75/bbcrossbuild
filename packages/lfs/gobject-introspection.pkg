@@ -12,5 +12,7 @@ case ${PKG_TARGET} in
     *)
         PKG_DEPS="lfs/gobject-introspection:cross"
         CONF_FLAGS="-Dgi_cross_pkgconfig_sysroot_path=${SYSROOT} -Dpython=cross-python3 -Dgi_cross_use_prebuilt_gi=true"
+        PKG_POSTBUILD="sed 's/^g_ir_/#g_ir_/g' -i ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/pkgconfig/gobject-introspection-1.0.pc"
+        PKG_POSTINSTALL="sed 's/^#g_ir_/g_ir_/g' -i ${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/pkgconfig/gobject-introspection-1.0.pc"
     ;;
 esac

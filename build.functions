@@ -897,6 +897,7 @@ function mesonninja () {
 			nm = '${NM}'
 			ranlib = '${RANLIB}'
 			pkgconfig = '${PKG_CONFIG}'
+			python = '$(which cross-python3)'
 			exe_wrapper = 'qemu-${HM}-static'
 
 			[host_machine]
@@ -956,8 +957,8 @@ function mesonninja () {
 	EOF
 	cat >runmake.sh <<-EOF
 		#!/bin/bash
-		echo "\\\$ DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}"
-		DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}
+		echo "\\\$ ${PKG_MAKEENV} DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}"
+		${PKG_MAKEENV} DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}
 	EOF
 	run_cmd "chmod +x runconfig.sh runmake.sh"
 	run_cmd "./runconfig.sh"
