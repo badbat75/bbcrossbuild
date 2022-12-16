@@ -28,6 +28,7 @@ ln -sfv /etc/machine-id /var/lib/dbus/machine-id
 cat >>/etc/skel/.bash_profile <<-'EOF'
 
 	# Start the D-Bus session daemon
+	export XDG_RUNTIME_DIR=/run/user/$(id -u)
 	eval \`dbus-launch\` 2>/dev/null
 	export DBUS_SESSION_BUS_ADDRESS
 EOF
