@@ -21,6 +21,7 @@ PKG_POSTBUILD="
 		BusName=org.freedesktop.PolicyKit1
 		ExecStart=${INSTALL_LIBDIR}/polkit-1/polkitd --no-debug
 	EOF
+	ln -sv polkit.service ${PKG_PKGPATH}${INSTALL_LIBDIR}/systemd/system/dbus-org.freedesktop.PolicyKit1.service
 	install -vdm755 ${PKG_PKGPATH}${INSTALL_CONFDIR}/pam.d
 	cat > ${PKG_PKGPATH}${INSTALL_CONFDIR}/pam.d/polkit-1 <<-EOF
 		# Begin ${INSTALL_CONFDIR}/pam.d/polkit-1
