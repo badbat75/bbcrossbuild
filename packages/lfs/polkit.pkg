@@ -2,9 +2,11 @@
 PKG_VER=122
 PKG_URL="https://gitlab.freedesktop.org/polkit/polkit/-/archive/${PKG_VER}/polkit-${PKG_VER}.tar.gz"
 PKG_DEPS="lfs/GLib lfs/duktape lfs/Linux-PAM lfs/libxslt lfs/gobject-introspection lfs/systemd:bootstrap"
-CONF_FLAGS="-Dman=true \
-      -Dtests=false \
-      -Djs_engine=duktape"
+CONF_FLAGS="-Dintrospection=true \
+		-Dman=true \
+		-Dtests=false \
+		-Dexamples=false \
+		-Djs_engine=duktape"
 CONF_FLAGS+=" -Dsession_tracking=libsystemd-login"
 BUILD_PROCESS=mesonninja
 INST_CMD=install

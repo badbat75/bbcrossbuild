@@ -1,21 +1,17 @@
 # D-Bus
 PKG_VER=1.14.4
 PKG_URL="https://dbus.freedesktop.org/releases/dbus/dbus-${PKG_VER}.tar.xz"
-PKG_DEPS="lfs/expat lfs/systemd:bootstrap lfs/GLib:bootstrap"
+PKG_DEPS="lfs/expat lfs/libaudit:bootstrap lfs/libcap2 lfs/systemd:bootstrap lfs/GLib:bootstrap"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-user-session"
+CONF_FLAGS+=" --enable-libaudit"
+CONF_FLAGS+=" --enable-systemd"
 CONF_FLAGS+=" --disable-doxygen-docs"
 CONF_FLAGS+=" --disable-xml-docs"
 CONF_FLAGS+=" --localstatedir=/var"
 CONF_FLAGS+=" --runstatedir=/run"
 CONF_FLAGS+=" --with-system-socket=/run/dbus/system_bus_socket"
 CONF_FLAGS+=" --docdir=/usr/share/doc/dbus-${PKG_VER}"
-### Compliance with debian build
-#CONF_FLAGS+=" --with-systemdsystemunitdir=/lib/systemd/system"
-#CONF_FLAGS+=" --with-systemduserunitdir=${INSTALL_PREFIX}/lib/systemd/user"
-#CONF_FLAGS+=" --with-session-socket-dir=/tmp"
-################################
-#CONF_FLAGS+=" --enable-systemd"
 INST_CMD="install-strip"
 
 PKG_POSTINSTALL="chown -v root:messagebus /usr/libexec/dbus-daemon-launch-helper

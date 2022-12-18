@@ -11,15 +11,30 @@ CONF_FLAGS+=" -Ddefault-dnssec=no"
 CONF_FLAGS+=" -Dfirstboot=false"
 CONF_FLAGS+=" -Dinstall-tests=false"
 CONF_FLAGS+=" -Dldconfig=false"
-CONF_FLAGS+=" -Dsysusers=false"
+CONF_FLAGS+=" -Dsysusers=true"
 CONF_FLAGS+=" -Drpmmacrosdir=no"
 CONF_FLAGS+=" -Dhomed=false"
-CONF_FLAGS+=" -Duserdb=false"
+CONF_FLAGS+=" -Duserdb=true"
+CONF_FLAGS+=" -Dsysupdate=false"
+CONF_FLAGS+=" -Dnscd=false"
 CONF_FLAGS+=" -Dmode=release"
 case "${PKG_TARGET}" in
-	bootstrap) LIBAUDIT_TARGET=bootstrap ;;
+	bootstrap) LIBAUDIT_TARGET=bootstrap
+		CONF_FLAGS+=" -Daudit=false"
+		CONF_FLAGS+=" -Dcoredump=false"
+		CONF_FLAGS+=" -Delfutils=false"
+		CONF_FLAGS+=" -Dlibidn2=false"
+		CONF_FLAGS+=" -Dlibiptc=false"
+		CONF_FLAGS+=" -Dlibcurl=false"
+		CONF_FLAGS+=" -Dimportd=false"
+		CONF_FLAGS+=" -Dmicrohttpd=false"
+		CONF_FLAGS+=" -Dopenssl=false"
+		CONF_FLAGS+=" -Dhomed=false"
+		CONF_FLAGS+=" -Duserdb=false"
+		CONF_FLAGS+=" -Dpcre2=false"
+	;;
 	*)
-		PKG_DEPS+=" lfs/libgcrypt lfs/openssl \
+		PKG_DEPS+=" lfs/libgcrypt lfs/audit:bootstrap lfs/openssl \
 			lfs/Linux-PAM lfs/polkit lfs/elfutils lfs/GLib \
 			lfs/libidn2 lfs/libseccomp lfs/make-ca \
 			lfs/p11-kit lfs/pcre2 lfs/kmod \
@@ -66,7 +81,7 @@ case "${PKG_TARGET}" in
 				# End /etc/pam.d/systemd-user
 			EOF
 			"
-		PKG_POSTINSTALL="systemd-machine-id-setup; systemctl preset-all; systemctl disable systemd-sysupdate{,-reboot}"
+		PKG_POSTINSTALL="systemd-machine-id-setup; systemctl preset-all"
 		PKG_POSTINSTALL_PRIO=10
 	;;
 esac
