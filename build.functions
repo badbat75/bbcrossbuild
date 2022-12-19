@@ -91,7 +91,6 @@ function setbuildenv () {
 					then
 						QEMU_LD_LIBRARY_PATH="$(gcc_toolchain_print_searchdirs):"
 					fi
-					echo "QEMU_LD_LIBRARY_PATH: ${QEMU_LD_LIBRARY_PATH}" | log_buffer info
 					### Search path in the toolchain gcc libs
 					# -enable-version-specific-runtime-libs workaround to fing libgcc_s under lib64 path instead of ${GCC_VER}
 					local GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE="$(realpath -m $(gcc_toolchain_print_searchdirs)/../lib64)"
