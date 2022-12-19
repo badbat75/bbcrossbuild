@@ -1,7 +1,6 @@
 # systemd
-PKG_VER=252.2
+PKG_VER=252.3
 PKG_URL="https://github.com/systemd/systemd-stable/archive/refs/tags/v${PKG_VER}.tar.gz"
-#PATCHES="https://www.linuxfromscratch.org/patches/lfs/development/systemd-251-glibc_2.36_fix-1.patch"
 PKG_DEPS="lfs/libxcrypt \
 	lfs/zlib lfs/xz lfs/bzip2 lfs/zstd lfs/lz4 \
 	lfs/libxslt lfs/libxml2 lfs/libcap2"
