@@ -37,6 +37,6 @@ PKG_POSTBUILD="
 	EOF
 "
 PKG_POSTINSTALL="groupadd -fg 27 polkitd
-useradd -c \"PolicyKit Daemon Owner\" -d ${INSTALL_CONFDIR}polkit-1 -u 27 -g polkitd -s /bin/false polkitd
+useradd -c \"PolicyKit Daemon Owner\" -d ${INSTALL_SYSCONFDIR}polkit-1 -u 27 -g polkitd -s /bin/false polkitd
 chown -R polkitd:polkitd ${INSTALL_SHAREDIR}/polkit-1/rules.d
-chown -R polkitd:polkitd ${INSTALL_CONFDIR}/polkit-1/rules.d"
+chown -R polkitd:polkitd ${INSTALL_SYSCONFDIR}/polkit-1/rules.d"
