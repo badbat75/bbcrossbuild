@@ -33,7 +33,7 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Dpcre2=false"
 	;;
 	*)
-		PKG_DEPS+=" lfs/libgcrypt lfs/audit:bootstrap lfs/openssl \
+		PKG_DEPS+=" lfs/libgcrypt lfs/libaudit:bootstrap lfs/openssl \
 			lfs/Linux-PAM lfs/polkit lfs/elfutils lfs/GLib \
 			lfs/libidn2 lfs/libseccomp lfs/make-ca \
 			lfs/p11-kit lfs/pcre2 lfs/kmod \
