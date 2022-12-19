@@ -13,7 +13,6 @@ CONF_FLAGS+=" -Dldconfig=false"
 CONF_FLAGS+=" -Dsysusers=true"
 CONF_FLAGS+=" -Drpmmacrosdir=no"
 CONF_FLAGS+=" -Dhomed=false"
-CONF_FLAGS+=" -Duserdb=true"
 CONF_FLAGS+=" -Dsysupdate=false"
 CONF_FLAGS+=" -Dnscd=false"
 CONF_FLAGS+=" -Dmode=release"
@@ -43,6 +42,7 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Dpam=true"
 		CONF_FLAGS+=" -Dpamlibdir=${INSTALL_LIBDIR}/security"
 		CONF_FLAGS+=" -Dpamconfdir=no"
+		CONF_FLAGS+=" -Duserdb=true"
 		if [ ${ENABLE_DBUS:-1} -eq 1 ]
 		then
 			PKG_DEPS+=" lfs/D-Bus"
