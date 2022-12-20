@@ -65,3 +65,7 @@ PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}/etc/pam.d
 
 	chmod -v 4755 ${PKG_PKGPATH}/sbin/unix_chkpwd
 "
+if [ ${ENABLE_LIBPWQUALITY:-0} -eq 1 ]
+then
+	PKG_DEPS+=" lfs/libpwquality"
+fi

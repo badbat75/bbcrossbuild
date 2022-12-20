@@ -41,7 +41,7 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Dman=auto"
 		CONF_FLAGS+=" -Dpam=true"
 		CONF_FLAGS+=" -Dpamlibdir=${INSTALL_LIBDIR}/security"
-		CONF_FLAGS+=" -Dpamconfdir=no"
+		CONF_FLAGS+=" -Dpamconfdir=/etc/pam.d"
 		CONF_FLAGS+=" -Duserdb=true"
 		if [ ${ENABLE_DBUS:-1} -eq 1 ]
 		then
