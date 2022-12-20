@@ -101,10 +101,11 @@ PKG_POSTBUILD+="install -vdm755 ${PKG_PKGPATH}/etc/pam.d
 	EOF
 	sed -e 's/#UsePAM no/UsePAM yes/' \
 		-e 's/#PermitRootLogin prohibit-password/PermitRootLogin prohibit-password/' \
-		-e 's/#PasswordAuthentication yes/PasswordAuthentication no/' \
 		-e 's/#KbdInteractiveAuthentication yes/KbdInteractiveAuthentication no/' \
 		-i ${PKG_PKGPATH}/etc/ssh/sshd_config
 	"
+### This is too restrictive
+## -e 's/#PasswordAuthentication yes/PasswordAuthentication no/' \
 
 PKG_POSTINSTALL="# create bluetooth group if not already present
 # OpenSSH
