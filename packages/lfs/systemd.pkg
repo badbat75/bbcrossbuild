@@ -80,10 +80,12 @@ case "${PKG_TARGET}" in
 
 				# End /etc/pam.d/systemd-user
 			EOF
+
+			systemd-machine-id-setup --root=${PKG_PKGPATH}
+			systemctl --root=${PKG_PKGPATH} preset-all
+			#systemctl --root=${PKG_PKGPATH} disable systemd-sysupdate{,-reboot}
 			"
-		PKG_POSTINSTALL="systemd-machine-id-setup; systemctl preset-all; systemctl disable systemd-sysupdate{,-reboot}"
-		PKG_POSTINSTALL_PRIO=10
-	;;
+		;;
 esac
 INST_CMD="install"
 PKG_LD_LIBRARY_PATH=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}

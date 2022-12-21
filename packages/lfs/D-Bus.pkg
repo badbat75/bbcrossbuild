@@ -18,23 +18,32 @@ INST_CMD="install-strip"
 
 PKG_POSTINSTALL="chown -v root:messagebus /usr/libexec/dbus-daemon-launch-helper
 chmod -v 4750 /usr/libexec/dbus-daemon-launch-helper
-
-groupadd --system systemd-oom
-useradd --system -c \"systemd OOM Daemon\" -d /etc/dbus-1 -g systemd-oom -s /bin/false systemd-oom
 ln -sfv /etc/machine-id /var/lib/dbus/machine-id
 
-cat >>/etc/skel/.bash_profile <<-'EOF'
+if ! getent group systemd-oom; then
+	groupadd --system systemd-oom
+fi
 
-	# Start the D-Bus session daemon
-	export XDG_RUNTIME_DIR=/run/user/$(id -u)
-	eval \`dbus-launch\` 2>/dev/null
-	export DBUS_SESSION_BUS_ADDRESS
-EOF
+if ! getent passwd systemd-oom; then
+	useradd --system -c \"systemd OOM Daemon\" -d /etc/dbus-1 -g systemd-oom -s /bin/false systemd-oom
+fi
 
-cat >>/etc/skel/.bash_logout <<-'EOF'
+if ! grep 'dbus-launch' /etc/skel/.bash_profile 2>&1; then
+	cat >>/etc/skel/.bash_profile <<-'EOF'
 
-	# Kill the D-Bus session daemon
-	kill \$DBUS_SESSION_BUS_PID
-EOF
+		# Start the D-Bus session daemon
+		export XDG_RUNTIME_DIR=/run/user/\$(id -u)
+		eval \`dbus-launch\`
+		export DBUS_SESSION_BUS_ADDRESS
+	EOF
+fi
+
+if ! grep kill '\$DBUS_SESSION_BUS_PID' 2>&1; then
+	cat >>/etc/skel/.bash_logout <<-'EOF'
+
+		# Kill the D-Bus session daemon
+		kill \$DBUS_SESSION_BUS_PID
+	EOF
+fi
 "
 PKG_POSTINSTALL_PRIO=11
