@@ -16,6 +16,7 @@ CONF_FLAGS+=" -Dhomed=false"
 CONF_FLAGS+=" -Dsysupdate=false"
 CONF_FLAGS+=" -Dnscd=false"
 CONF_FLAGS+=" -Dmode=release"
+CONF_FLAGS+=" -Dsplit-usr=true"
 case "${PKG_TARGET}" in
 	bootstrap) LIBAUDIT_TARGET=bootstrap
 		CONF_FLAGS+=" -Daudit=false"
