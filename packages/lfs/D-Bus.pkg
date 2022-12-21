@@ -1,5 +1,5 @@
 # D-Bus
-PKG_VER=1.14.4
+PKG_VER=1.15.2
 PKG_URL="https://dbus.freedesktop.org/releases/dbus/dbus-${PKG_VER}.tar.xz"
 PKG_DEPS="lfs/expat lfs/libaudit:bootstrap lfs/libcap2 lfs/systemd:bootstrap lfs/GLib:bootstrap"
 BUILD_PROCESS=configmake
@@ -11,6 +11,8 @@ CONF_FLAGS+=" --disable-xml-docs"
 CONF_FLAGS+=" --localstatedir=/var"
 CONF_FLAGS+=" --runstatedir=/run"
 CONF_FLAGS+=" --with-system-socket=/run/dbus/system_bus_socket"
+CONF_FLAGS+=" --with-systemdsystemunitdir=/lib/systemd/system"
+CONF_FLAGS+=" --with-systemduserunitdir=${INSTALL_LIBDIR}/systemd/system"
 CONF_FLAGS+=" --docdir=/usr/share/doc/dbus-${PKG_VER}"
 INST_CMD="install-strip"
 

@@ -8,6 +8,7 @@ CONF_FLAGS="-Dintrospection=true \
 		-Dexamples=false \
 		-Djs_engine=duktape"
 CONF_FLAGS+=" -Dsession_tracking=libsystemd-login"
+CONF_FLAGS+=" -Dsystemdsystemunitdir=/lib/systemd/system"
 BUILD_PROCESS=mesonninja
 INST_CMD=install
 PKG_POSTBUILD="
