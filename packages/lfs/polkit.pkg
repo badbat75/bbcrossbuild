@@ -13,18 +13,6 @@ BUILD_PROCESS=mesonninja
 INST_CMD=install
 PKG_POSTBUILD="
 	chmod -v 04755 ${PKG_PKGPATH}${INSTALL_LIBDIR}/polkit-1/polkit-agent-helper-1
-	install -vdm755 ${PKG_PKGPATH}${INSTALL_LIBDIR}/systemd/system
-	cat > ${PKG_PKGPATH}${INSTALL_LIBDIR}/systemd/system/polkit.service <<-EOF
-		[Unit]
-		Description=Authorization Manager
-		Documentation=man:polkit(8)
-
-		[Service]
-		Type=dbus
-		BusName=org.freedesktop.PolicyKit1
-		ExecStart=${INSTALL_LIBDIR}/polkit-1/polkitd --no-debug
-	EOF
-	ln -sv polkit.service ${PKG_PKGPATH}${INSTALL_LIBDIR}/systemd/system/dbus-org.freedesktop.PolicyKit1.service
 	install -vdm755 ${PKG_PKGPATH}${INSTALL_CONFDIR}/pam.d
 	cat > ${PKG_PKGPATH}${INSTALL_CONFDIR}/pam.d/polkit-1 <<-EOF
 		# Begin ${INSTALL_CONFDIR}/pam.d/polkit-1
@@ -38,6 +26,6 @@ PKG_POSTBUILD="
 	EOF
 "
 PKG_POSTINSTALL="groupadd -fg 27 polkitd
-useradd -c \"PolicyKit Daemon Owner\" -d ${INSTALL_SYSCONFDIR}polkit-1 -u 27 -g polkitd -s /bin/false polkitd
+useradd -c \"PolicyKit Daemon Owner\" -d ${INSTALL_SYSCONFDIR}/polkit-1 -u 27 -g polkitd -s /bin/false polkitd
 chown -R polkitd:polkitd ${INSTALL_SHAREDIR}/polkit-1/rules.d
 chown -R polkitd:polkitd ${INSTALL_SYSCONFDIR}/polkit-1/rules.d"

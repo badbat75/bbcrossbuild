@@ -12,7 +12,7 @@ CONF_FLAGS+=" --localstatedir=/var"
 CONF_FLAGS+=" --runstatedir=/run"
 CONF_FLAGS+=" --with-system-socket=/run/dbus/system_bus_socket"
 CONF_FLAGS+=" --with-systemdsystemunitdir=/lib/systemd/system"
-CONF_FLAGS+=" --with-systemduserunitdir=${INSTALL_LIBDIR}/systemd/system"
+CONF_FLAGS+=" --with-systemduserunitdir=${INSTALL_LIBDIR}/systemd/user"
 CONF_FLAGS+=" --docdir=/usr/share/doc/dbus-${PKG_VER}"
 INST_CMD="install-strip"
 

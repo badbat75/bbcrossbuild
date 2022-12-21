@@ -146,10 +146,19 @@ fi
 
 ### Final configurations ###
 case x${PLATFORM_NAME} in
-	xrpi|xrpi2|xrpi3) 	echo "arm_64bit=0" >${BIN_PATH}/boot/config.txt ;;
-	xrpi3-aarch64) 		echo "arm_64bit=1" >${BIN_PATH}/boot/config.txt ;;
+	xrpi|xrpi2|xrpi3)
+		echo "arm_64bit=0" >${BIN_PATH}/boot/config.txt
+		echo "net.ifnames=0 console=tty1 root=/dev/mmcblk0p2 fsck.repair=yes rootwait systemd.gpt_auto=no" >${BIN_PATH}/boot/cmdline.txt
+		systemctl --root=${BIN_PATH} disable systemd-oomd.socket
+		systemctl --root=${BIN_PATH} disable systemd-oomd.service
+	;;
+	xrpi3-aarch64)
+		echo "arm_64bit=1" >${BIN_PATH}/boot/config.txt
+		echo "net.ifnames=0 console=tty1 root=/dev/mmcblk0p2 fsck.repair=yes rootwait systemd.gpt_auto=no" >${BIN_PATH}/boot/cmdline.txt
+		systemctl --root=${BIN_PATH} disable systemd-oomd.socket
+		systemctl --root=${BIN_PATH} disable systemd-oomd.service
+	;;
 esac
-echo "net.ifnames=0 console=tty1 root=/dev/mmcblk0p2 fsck.repair=yes rootwait" >${BIN_PATH}/boot/cmdline.txt
 
 echo Configuring Host Name
 echo ${LFS_HOSTNAME} > ${BIN_PATH}/etc/hostname
