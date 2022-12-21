@@ -40,9 +40,17 @@ setup_full_toolchain --with-python --with-gnu-install --with-main-gcc
 # GCC_TARGETS="libraries" build lfs/gcc
 
 build lfs/create-base-config_1.0
-build raspberrypi/rpi-firmware_1
+case ${PLATFORM_NAME} in
+	rpi*)
+		build raspberrypi/rpi-firmware_1
+		build raspberrypi/rpi-kernel_$( echo ${KERNEL_VER} | cut -d'.' -f1,2 )
+		build raspberrypi/pi-bluetooth_0
+	;;
+	*)
+		build lfs/kernel
+	;;
+esac
 build firmwares/linux-firmware
-build raspberrypi/rpi-kernel_$( echo ${KERNEL_VER} | cut -d'.' -f1,2 )
 #build lfs/GLibc
 build lfs/tzdata
 build lfs/man-pages
@@ -104,7 +112,6 @@ build lfs/openssh
 ### Multimedia
 build lfs/alsa-utils
 ### System Utilities
-build raspberrypi/pi-bluetooth_0
 if [ ${ENABLE_DBUS} -eq 1 ]
 then
 	build lfs/bluez
@@ -144,25 +151,12 @@ else
 	LFS_REMOVE_DEVFILES="--remove_devfiles"
 fi
 
-### Final configurations ###
-case x${PLATFORM_NAME} in
-	xrpi|xrpi2|xrpi3)
-		echo "arm_64bit=0" >${BIN_PATH}/boot/config.txt
-		echo "net.ifnames=0 console=tty1 root=/dev/mmcblk0p2 fsck.repair=yes rootwait systemd.gpt_auto=no" >${BIN_PATH}/boot/cmdline.txt
-		systemctl --root=${BIN_PATH} disable systemd-oomd.socket
-		systemctl --root=${BIN_PATH} disable systemd-oomd.service
-	;;
-	xrpi3-aarch64)
-		echo "arm_64bit=1" >${BIN_PATH}/boot/config.txt
-		echo "net.ifnames=0 console=tty1 root=/dev/mmcblk0p2 fsck.repair=yes rootwait systemd.gpt_auto=no" >${BIN_PATH}/boot/cmdline.txt
-		systemctl --root=${BIN_PATH} disable systemd-oomd.socket
-		systemctl --root=${BIN_PATH} disable systemd-oomd.service
-	;;
-esac
-
 echo Configuring Host Name
 echo ${LFS_HOSTNAME} > ${BIN_PATH}/etc/hostname
-echo "127.0.1.1 ${LFS_HOSTNAME}. ${LFS_HOSTNAME}" >> ${BIN_PATH}/etc/hosts
+if ! grep "127.0.1.1" ${BIN_PATH}/etc/hosts
+then
+	echo "127.0.1.1 ${LFS_HOSTNAME}. ${LFS_HOSTNAME}" >> ${BIN_PATH}/etc/hosts
+fi
 echo "LANG=en_US.UTF-8" > ${BIN_PATH}/etc/locale.conf
 
 if [ ! -x ${WLAN_SSID} ] && [ ! -x ${WLAN_PSK} ] && [ ! -x ${WLAN_DEV} ]
@@ -186,9 +180,30 @@ then
 	ssh-keygen -A -f ${BIN_PATH}
 	systemctl --root=${BIN_PATH} enable sshd
 	generate_ssh_keys --install binaries
-	systemctl --root=${BIN_PATH} disable regenerate_ssh_host_keys
 	echo
 fi
+
+### Final configurations ###
+case ${PLATFORM_NAME} in
+	rpi*)
+		if ! grep "arm_64bit=" ${BIN_PATH}/boot/config.txt
+		then
+			case ${PLATFORM_NAME} in
+				rpi*-aarch64)
+					echo "arm_64bit=1" >${BIN_PATH}/boot/config.txt
+				;;
+				*)
+					echo "arm_64bit=0" >${BIN_PATH}/boot/config.txt
+				;;
+			esac
+		fi
+		echo "net.ifnames=0 console=tty1 root=/dev/mmcblk0p2 fsck.repair=yes rootwait systemd.gpt_auto=no" >${BIN_PATH}/boot/cmdline.txt
+		systemctl --root=${BIN_PATH} disable systemd-oomd.socket
+		systemctl --root=${BIN_PATH} disable systemd-oomd.service
+		systemctl --root=${BIN_PATH} disable regenerate_ssh_host_keys
+	;;
+	*) ;;
+esac
 
 ############################
 
