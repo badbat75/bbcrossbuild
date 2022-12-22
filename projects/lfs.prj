@@ -42,8 +42,8 @@ setup_full_toolchain --with-python --with-gnu-install --with-main-gcc
 build lfs/create-base-config_1.0
 case ${PLATFORM_NAME} in
 	rpi*)
-		build raspberrypi/rpi-firmware_1
 		build raspberrypi/rpi-kernel_$( echo ${KERNEL_VER} | cut -d'.' -f1,2 )
+		build raspberrypi/rpi-firmware_1
 		build raspberrypi/pi-bluetooth_0
 	;;
 	*)

@@ -15,18 +15,6 @@ CONF_FLAGS+=" -Dexamples=false"
 BUILD_PROCESS=mesonninja
 INST_CMD=install
 PKG_POSTBUILD="chmod -v 04755 ${PKG_PKGPATH}${INSTALL_LIBDIR}/polkit-1/polkit-agent-helper-1"
-#PKG_POSTBUILD=";install -vdm755 ${PKG_PKGPATH}${INSTALL_CONFDIR}/pam.d
-#	cat > ${PKG_PKGPATH}${INSTALL_CONFDIR}/pam.d/polkit-1 <<-EOF
-#		# Begin ${INSTALL_CONFDIR}/pam.d/polkit-1
-#
-#		auth     include        system-auth
-#		account  include        system-account
-#		password include        system-password
-#		session  include        system-session
-#
-#		# End ${INSTALL_CONFDIR}/pam.d/polkit-1
-#	EOF
-#	"
 PKG_POSTINSTALL="if ! getent group polkitd; then
 	groupadd -fg 27 polkitd
 fi
