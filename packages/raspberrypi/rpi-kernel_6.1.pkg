@@ -1,6 +1,6 @@
 # rpi-kernel_6.1
-PKG_SUFFIX=.0
-PKG_URL="https://github.com/raspberrypi/linux/archive/bf08ac916b102db3cb436587628c1ef8ce6274dd.tar.gz"
+PKG_SUFFIX=.1
+PKG_URL="https://github.com/raspberrypi/linux/archive/5ca32de0ebe55160306e498199a942bc9b38795a.tar.gz"
 BUILD_PROCESS=kernelbuild
 INST_CMD="INSTALL_MOD_STRIP=1"
 
