@@ -1,9 +1,10 @@
 # man-db
 PKG_VER=2.11.1
-PKG_URL="http://download.savannah.gnu.org/releases/man-db/man-db-${PKG_VER}.tar.xz"
+PKG_URL="https://gitlab.com/man-db/man-db/-/archive/${PKG_VER}/man-db-${PKG_VER}.tar.bz2"
 PKG_DEPS="lfs/libpipeline lfs/gdbm lfs/zlib lfs/gzip lfs/bzip2 lfs/xz lfs/zstd"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--disable-setuid --enable-cache-owner=bin --with-browser=/usr/bin/lynx --with-vgrind=/usr/bin/vgrind --with-grap=/usr/bin/grap"
 INST_CMD="install-strip"
 
-PKG_PREBUILD="sed -i '/find/s@/usr@@' init/systemd/man-db.service.in"
+PKG_PREBUILD="ACLOCAL_FLAGS=--include=${GLOBAL_TOOLCHAIN_PATH}/share/aclocal ./bootstrap || true
+    sed -i '/find/s@/usr@@' -i init/systemd/man-db.service.in"

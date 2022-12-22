@@ -2,7 +2,9 @@
 PKG_VER=4.13
 PKG_URL="https://github.com/shadow-maint/shadow/releases/download/${PKG_VER}/shadow-${PKG_VER}.tar.xz"
 PKG_DEPS="lfs/Linux-PAM"
-#PKG_DEPS+=" lfs/cracklib_2.9.7"
+### Optional packages
+#PKG_DEPS+=" lfs/CrackLib"
+###
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--with-group-name-max-length=32"

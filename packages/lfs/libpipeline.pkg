@@ -1,6 +1,9 @@
 # libpipeline
 PKG_VER=1.5.7
-PKG_URL="http://download.savannah.gnu.org/releases/libpipeline/libpipeline-${PKG_VER}.tar.gz"
+PKG_URL="https://gitlab.com/libpipeline/libpipeline/-/archive/${PKG_VER}/libpipeline-${PKG_VER}.tar.bz2"
 BUILD_PROCESS=configmake
+PKG_AUTOCONF=1
 CONF_FLAGS=""
 INST_CMD="install-strip"
+
+PKG_PREBUILD="./bootstrap"

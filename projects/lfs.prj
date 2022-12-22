@@ -64,7 +64,6 @@ build lfs/readline
 build lfs/bc
 build lfs/attr
 build lfs/acl
-build lfs/libcap2
 build lfs/shadow
 build lfs/sed
 build lfs/psmisc
@@ -90,7 +89,6 @@ build lfs/less
 build lfs/gzip
 build lfs/iproute2
 build lfs/kbd
-build lfs/libpipeline
 build lfs/man-db
 build lfs/tar
 build lfs/vim

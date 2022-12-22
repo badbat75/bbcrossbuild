@@ -1,26 +1,31 @@
 # libcap2
 PKG_VER=2.66
 PKG_URL="https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-${PKG_VER}.tar.xz"
-PKG_DEPS="lfs/Linux-PAM"
-#PKG_CFLAGS=""
-#PKG_LDFLAGS=
 BUILD_PROCESS=simplemake
 PKG_MAKEVARS="lib=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} BUILD_CC=\"\${CC_FOR_BUILD}\""
 INST_CMD="install"
 
 PKG_PREBUILD="sed -i 's/:= \$(CROSS_COMPILE)/?= \$(CROSS_COMPILE)/g' Make.Rules"
-PKG_POSTBUILD="./runmake.sh -C pam_cap
-	install -v -m755 -d ${PKG_PKGPATH}/usr/lib/security
-	install -v -m755 pam_cap/pam_cap.so ${PKG_PKGPATH}/usr/lib/security
-	install -v -m755 -d ${PKG_PKGPATH}/etc/security
-	install -v -m644 pam_cap/capability.conf ${PKG_PKGPATH}/etc/security
-	install -v -m755 -d ${PKG_PKGPATH}/etc/pam.d
-	cat > ${PKG_PKGPATH}/etc/pam.d/system-auth <<-EOF
-		# Begin /etc/pam.d/system-auth
 
-		auth      optional    pam_cap.so
-		auth      required    pam_unix.so
+case ${PKG_TARGET} in
+	bootstrap)
+	;;
+	*)
+		PKG_DEPS="lfs/Linux-PAM"
+		PKG_POSTBUILD="./runmake.sh -C pam_cap
+			install -v -m755 -d ${PKG_PKGPATH}/usr/lib/security
+			install -v -m755 pam_cap/pam_cap.so ${PKG_PKGPATH}/usr/lib/security
+			install -v -m755 -d ${PKG_PKGPATH}/etc/security
+			install -v -m644 pam_cap/capability.conf ${PKG_PKGPATH}/etc/security
+			install -v -m755 -d ${PKG_PKGPATH}/etc/pam.d
+			cat > ${PKG_PKGPATH}/etc/pam.d/system-auth <<-EOF
+				# Begin /etc/pam.d/system-auth
 
-		# End /etc/pam.d/system-auth
-	EOF
-"
+				auth      optional    pam_cap.so
+				auth      required    pam_unix.so
+
+				# End /etc/pam.d/system-auth
+			EOF
+			"
+	;;
+esac

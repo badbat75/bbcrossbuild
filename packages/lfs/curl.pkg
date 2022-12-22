@@ -1,23 +1,8 @@
 # curl
-PKG_VER=7.86.0
+PKG_VER=7.87.0
 PKG_URL="https://curl.haxx.se/download/curl-${PKG_VER}.tar.xz"
-PKG_DEPS="lfs/openssl lfs/make-ca"
+PKG_DEPS="lfs/openssl lfs/make-ca lfs/libidn2 lfs/krb5"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
-CONF_FLAGS="--enable-threaded-resolver --with-openssl --with-ca-path=${INSTALL_SYSCONFDIR}/ssl/certs"
+CONF_FLAGS="--enable-threaded-resolver --with-openssl --with-ca-path=${INSTALL_SYSCONFDIR}/ssl/certs --with-gssapi"
 INST_CMD="install-strip"
-
-PKG_PREBUILD="cat <<EOF | patch -p1
---- a/lib/easy_lock.h
-+++ b/lib/easy_lock.h
-@@ -36,6 +36,9 @@
-
- #elif defined (HAVE_ATOMIC)
- #include <stdatomic.h>
-+#if defined(HAVE_SCHED_YIELD)
-+#include <sched.h>
-+#endif
-
- #define curl_simple_lock atomic_bool
- #define CURL_SIMPLE_LOCK_INIT false
- EOF"

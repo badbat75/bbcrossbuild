@@ -5,7 +5,13 @@ BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="PAGE=A4"
 INST_CMD="install-strip"
-GROFFBIN=$(which groff)
-PKG_MAKEVARS="GROFFBIN=${GROFFBIN} GROFF_BIN_PATH=$(dirname ${GROFFBIN})"
+case ${PKG_TARGET} in
+    cross)
+    ;;
+    *)
+        PKG_DEPS="lfs/groff:cross"
+        PKG_MAKEVARS="GROFFBIN=${TOOLCHAIN_PATH}/bin/groff GROFF_BIN_PATH=${TOOLCHAIN_PATH}/bin"
+    ;;
+esac
 
 PKG_PREBUILD="sed -i '/^AR=ar/ s/ar/@AR@/' Makefile.am"

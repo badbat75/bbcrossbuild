@@ -1,0 +1,18 @@
+# lvm2
+PKG_VER=2.03.17
+PKG_URL="https://sourceware.org/ftp/lvm2/LVM2.${PKG_VER}.tgz"
+PKG_DEPS="lfs/libaio"
+### Optional packages
+# PKG_DEPS+=" lfs/thin-provisioning"
+# PKG_DEPS+=" lfs/vdo"
+###
+BUILD_PROCESS=configmake
+PKG_AUTOCONF=1
+CONF_FLAGS="--enable-cmdlib"
+CONF_FLAGS+=" --enable-pkgconfig"
+CONF_FLAGS+=" --enable-udev_sync"
+INST_CMD="install-strip install_systemd_units"
+PKG_OVERRIDELTO=1
+
+PKG_POSTBUILD="sed -e '/locking_dir =/{s/#//;s/var/run/}' \
+    -i ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/lvm/lvm.conf"
