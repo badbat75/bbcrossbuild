@@ -6,5 +6,5 @@ BUILD_PROCESS=configmake
 CONF_FLAGS="--disable-setuid --enable-cache-owner=bin --with-browser=/usr/bin/lynx --with-vgrind=/usr/bin/vgrind --with-grap=/usr/bin/grap"
 INST_CMD="install-strip"
 
-PKG_PREBUILD="ACLOCAL_FLAGS=--include=${GLOBAL_TOOLCHAIN_PATH}/share/aclocal ./bootstrap || true
+PKG_PREBUILD="ACLOCAL_FLAGS=\"--include=${AUTOTOOLS_PATH}/share/autoconf --include=${TOOLCHAIN_PATH}/share/aclocal\" ./bootstrap || true
     sed -i '/find/s@/usr@@' -i init/systemd/man-db.service.in"
