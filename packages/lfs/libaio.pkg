@@ -2,12 +2,10 @@
 PKG_VER=0.3.113
 PKG_URL="https://pagure.io/libaio/archive/libaio-${PKG_VER}/libaio-${PKG_VER}.tar.gz"
 BUILD_PROCESS=simplemake
+PKG_MAKEVARS="libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 INST_CMD="install"
 PKG_OVERRIDELTO=0
 
-############ enable libsuffix support
-
 PKG_PREBUILD="sed 's/-Werror//' -i harness/Makefile"
 
-#PKG_POSTBUILD="sed -e '/locking_dir =/{s/#//;s/var/run/}' \
-#	-i ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/lvm/lvm.conf"
+PKG_POSTBUILD="\${STRIP} --strip-unneeded ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libaio.so"

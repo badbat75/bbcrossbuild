@@ -14,8 +14,8 @@ CONF_FLAGS="--with-randomdev=/dev/urandom \
 	--with-srv-lease-file=/var/lib/dhcpd/dhcpd.leases \
 	--with-srv6-lease-file=/var/lib/dhcpd/dhcpd6.leases \
 	--with-cli-lease-file=/var/lib/dhclient/dhclient.leases \
-	--with-cli6-lease-file=/var/lib/dhclient/dhclient6.leases"
-CONF_VARS="BUILD_CC=\"\${CC_FOR_BUILD}\""
+	--with-cli6-lease-file=/var/lib/dhclient/dhclient6.leases \
+	--with-bind-extra-config=\"--build=${BARCH}\" BUILD_CC=\"\${CC_FOR_BUILD}\" BUILD_CFLAGS=\"\${CFLAGS_FOR_BUILD}\""
 PKG_MAKEVARS="AR=\"\${AR_FOR_BUILD}\""
 INST_CMD="install-strip"
 PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}/sbin

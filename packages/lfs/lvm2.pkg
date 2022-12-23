@@ -8,11 +8,19 @@ PKG_DEPS="lfs/libaio"
 ###
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
-CONF_FLAGS="--enable-cmdlib"
+CONF_FLAGS="--with-usrlibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
+CONF_FLAGS+=" --enable-cmdlib"
 CONF_FLAGS+=" --enable-pkgconfig"
 CONF_FLAGS+=" --enable-udev_sync"
-INST_CMD="install-strip install_systemd_units"
-PKG_OVERRIDELTO=1
+INST_CMD="install install_systemd_units"
+PKG_COPYSRC=1
+
+PKG_PREBUILD="sed 's@../../include/cmds.h@../include/cmds.h@' -i lib/commands/cmd_enum.h"
 
 PKG_POSTBUILD="sed -e '/locking_dir =/{s/#//;s/var/run/}' \
     -i ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/lvm/lvm.conf"
+
+if [ ${TOOLCHAIN} == gnu ]
+then
+    PKG_OVERRIDELD=bfd
+fi
