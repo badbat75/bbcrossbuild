@@ -9,10 +9,7 @@ case "${PKG_TARGET}" in
 	*) 
 		PKG_DEPS="lfs/libxslt lfs/pcre2"
 		#PKG_DEPS+" lfs/gobject-introspection"
-		if [ ${ENABLE_DBUS:-1} -eq 1 ]
-		then   
-			PKG_DEPS+=" lfs/D-Bus lfs/GLib:cross"
-		fi
+		PKG_DEPS+=" lfs/D-Bus lfs/GLib:cross"
 		PKG_LD_LIBRARY_PATH=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
 	;;
 esac

@@ -5,7 +5,6 @@ fi
 
 ## Sets default values:
 TOOLCHAIN=${TOOLCHAIN:-gnu}
-ENABLE_DBUS=${ENABLE_DBUS:-1}
 ENABLE_SSH=${ENABLE_SSH:-1}
 ENABLE_DEV=${ENABLE_DEV:-0}
 LFS_HOSTNAME=${LFS_HOSTNAME:-lfs}
@@ -13,7 +12,6 @@ LFS_FSTYPE=${LFS_FSTYPE:-ext4}
 WLAN_DEV=${WLAN_DEV:-wlan0}
 
 echo "Tool chain: ${TOOLCHAIN}"
-echo "Is dbus enabled: $( [ ${ENABLE_DBUS} -eq 1 ] && echo yes || no )"
 echo "Is ssh enabled: $( [ ${ENABLE_SSH} -eq 1 ] && echo yes || no )"
 echo "LFS hostname: ${LFS_HOSTNAME}"
 echo "LFS filesystem type: ${LFS_FSTYPE}"
@@ -93,10 +91,7 @@ build lfs/man-db
 build lfs/tar
 build lfs/vim
 build lfs/systemd
-if [ ${ENABLE_DBUS} -eq 1 ]
-then
-	build lfs/D-Bus
-fi
+build lfs/D-Bus
 build lfs/polkit
 build lfs/procps-ng
 build lfs/util-linux
@@ -110,10 +105,7 @@ build lfs/openssh
 ### Multimedia
 build lfs/alsa-utils
 ### System Utilities
-if [ ${ENABLE_DBUS} -eq 1 ]
-then
-	build lfs/bluez
-fi
+build lfs/bluez
 build lfs/usb-utils
 build lfs/pciutils
 build lfs/lsof

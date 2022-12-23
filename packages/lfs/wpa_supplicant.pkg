@@ -113,27 +113,25 @@ then
 		cp wpa_supplicant/doc/docbook/wpa_supplicant.conf.5 ${PKG_PKGPATH}\${INSTALL_PREFIX}/share/man/man5/ && gzip -f ${PKG_PKGPATH}\${INSTALL_PREFIX}/share/man/man5/wpa_supplicant.conf.5"
 fi
 
-	# Bug in Fedora OpenJade
-	if test_version $(cat /dev/null | openjade -vh 2>&1 | head -n 1 | awk '{print $4}' | sed 's|\"||g') -le 1.3.2
-	then
-		PKG_PREBUILD+="
-			sed -i 's/mv index.html/mv r1.html/' wpa_supplicant/doc/docbook/Makefile
-			${PKG_PREBUILD}"
-	fi
-
-if [ ${ENABLE_DBUS:-1} -eq 1 ]
+# Bug in Fedora OpenJade
+if test_version $(cat /dev/null | openjade -vh 2>&1 | head -n 1 | awk '{print $4}' | sed 's|\"||g') -le 1.3.2
 then
-	PKG_DEPS+=" lfs/D-Bus"
-	PKG_PREBUILD+="cat >> wpa_supplicant/.config <<-EOF
-		CONFIG_CTRL_IFACE_DBUS_NEW=y
-		CONFIG_CTRL_IFACE_DBUS_INTRO=y
-	EOF
-	"
-	PKG_POSTBUILD+=";install -vdm755 ${PKG_PKGPATH}${INSTALL_PREFIX}/share/dbus-1/system-services
-		install -v -m644 -D wpa_supplicant/dbus/fi.*.service ${PKG_PKGPATH}${INSTALL_PREFIX}/share/dbus-1/system-services/
-		install -vdm755 ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/dbus-1/system.d
-		install -v -m644 -D wpa_supplicant/dbus/dbus-wpa_supplicant.conf ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/dbus-1/system.d/wpa_supplicant.conf"
+	PKG_PREBUILD+="
+		sed -i 's/mv index.html/mv r1.html/' wpa_supplicant/doc/docbook/Makefile
+		${PKG_PREBUILD}"
 fi
+
+### DBus Configuration
+PKG_DEPS+=" lfs/D-Bus"
+PKG_PREBUILD+="cat >> wpa_supplicant/.config <<-EOF
+	CONFIG_CTRL_IFACE_DBUS_NEW=y
+	CONFIG_CTRL_IFACE_DBUS_INTRO=y
+EOF
+"
+PKG_POSTBUILD+=";install -vdm755 ${PKG_PKGPATH}${INSTALL_PREFIX}/share/dbus-1/system-services
+	install -v -m644 -D wpa_supplicant/dbus/fi.*.service ${PKG_PKGPATH}${INSTALL_PREFIX}/share/dbus-1/system-services/
+	install -vdm755 ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/dbus-1/system.d
+	install -v -m644 -D wpa_supplicant/dbus/dbus-wpa_supplicant.conf ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/dbus-1/system.d/wpa_supplicant.conf"
 
 PKG_POSTINSTALL="# create bluetooth group if not already present
 if ! getent group netdev > /dev/null; then
