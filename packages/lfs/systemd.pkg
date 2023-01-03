@@ -1,5 +1,9 @@
 # systemd
-PKG_VER=252.3
+case ${SYSTEMD_VER:-252} in
+	252) PKG_VER=252.3 ;;
+	251) PKG_VER=251.10 ;;
+	*) PKG_VER=${SYSTEMD_VER} ;;
+esac
 PKG_URL="https://github.com/systemd/systemd-stable/archive/refs/tags/v${PKG_VER}.tar.gz"
 PKG_DEPS="lfs/zlib lfs/xz lfs/bzip2 lfs/zstd"
 BUILD_PROCESS=mesonninja
