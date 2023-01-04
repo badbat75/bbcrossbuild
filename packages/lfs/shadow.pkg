@@ -8,6 +8,7 @@ PKG_DEPS="lfs/Linux-PAM"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--with-group-name-max-length=32"
+PKG_MAKEVARS="exec_prefix=${INSTALL_EXECPREFIX}"
 INST_CMD="install-strip"
 
 PKG_PREBUILD="sed -i 's/groups\\\$(EXEEXT) //' src/Makefile.in

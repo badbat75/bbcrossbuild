@@ -5,7 +5,7 @@ PKG_DEPS="lfs/util-linux lfs/e2fsprogs lfs/zlib lfs/lzo lfs/acl lfs/systemd:boot
 PKG_COPYSRC=1
 
 BUILD_PROCESS=configmake
-CONF_FLAGS="--disable-documentation"
+CONF_FLAGS="--with-systemdsystemunitdir=/lib/systemd/system --with-systemduserunitdir=${INSTALL_LIBDIR}/systemd/user --disable-documentation"
 PKG_TWOSTEPSBUILD=1
 PKG_MAKEVARS="bindir=${INSTALL_EXECPREFIX}/sbin"
 INST_CMD="install"

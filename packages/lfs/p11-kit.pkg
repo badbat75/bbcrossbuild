@@ -4,7 +4,8 @@ PKG_URL="https://github.com/p11-glue/p11-kit/releases/download/${PKG_VER}/p11-ki
 PKG_DEPS="lfs/libtasn1"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
-CONF_FLAGS="--with-trust-paths=/etc/pki/anchors"
+CONF_FLAGS="--with-trust-paths=${INSTALL_SYSCONFDIR}/pki/anchors"
+CONF_VARS="systemduserunitdir=${INSTALL_LIBDIR}/systemd/user"
 INST_CMD="install-strip"
 PKG_PREBUILD="if [ -f trust/trust-extract-compat.orig ]
 		then

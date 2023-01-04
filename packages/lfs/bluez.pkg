@@ -4,7 +4,8 @@ PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-${PKG_VER}.tar.xz"
 PATCHES="https://www.linuxfromscratch.org/patches/blfs/svn/bluez-${PKG_VER}-obexd_without_systemd-1.patch"
 PKG_DEPS="lfs/readline lfs/GLib lfs/libical lfs/ell lfs/json-c"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--enable-library --enable-pie --enable-deprecated --enable-tools --enable-threads --enable-backtrace --enable-nfc --enable-sap --enable-monitor --enable-udev \
+CONF_FLAGS="--with-systemdsystemunitdir=/lib/systemd/system --with-systemduserunitdir=${INSTALL_LIBDIR}/systemd/user \
+	--enable-library --enable-pie --enable-deprecated --enable-tools --enable-threads --enable-backtrace --enable-nfc --enable-sap --enable-monitor --enable-udev \
 	--enable-obex --enable-client --enable-systemd --enable-sixaxis --enable-health --enable-mesh --enable-hid2hci --enable-experimental \
 	--enable-btpclient --enable-external-ell"
 if [ ${ENABLE_MIDI:-0} -eq 1 ]

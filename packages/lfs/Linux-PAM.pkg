@@ -13,7 +13,7 @@ PKG_PREBUILD="sed -e 's/dummy elinks/dummy lynx/'                               
 BUILD_PROCESS=configmake
 CONF_FLAGS="--includedir=${INSTALL_INCLUDEDIR}/security \
 			--enable-securedir=${INSTALL_LIBDIR}/security \
-			--docdir=/usr/share/doc/Linux-PAM-${PKG_VER}"
+			--docdir=${INSTALL_SHAREDIR}/doc/Linux-PAM-${PKG_VER}"
 INST_CMD="install-strip"
 
 PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}/etc/pam.d
