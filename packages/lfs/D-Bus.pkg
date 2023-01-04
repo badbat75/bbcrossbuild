@@ -27,24 +27,5 @@ fi
 
 if ! getent passwd systemd-oom; then
 	useradd --system -c \"systemd OOM Daemon\" -d /etc/dbus-1 -g systemd-oom -s /bin/false systemd-oom
-fi
-
-if ! grep 'dbus-launch' /etc/skel/.bash_profile 2>&1; then
-	cat >>/etc/skel/.bash_profile <<-'EOF'
-
-		# Start the D-Bus session daemon
-		export XDG_RUNTIME_DIR=/run/user/\$(id -u)
-		eval \`dbus-launch\`
-		export DBUS_SESSION_BUS_ADDRESS
-	EOF
-fi
-
-if ! grep 'kill \$DBUS_SESSION_BUS_PID' 2>&1; then
-	cat >>/etc/skel/.bash_logout <<-'EOF'
-
-		# Kill the D-Bus session daemon
-		kill \$DBUS_SESSION_BUS_PID
-	EOF
-fi
-"
+fi"
 PKG_POSTINSTALL_PRIO=11
