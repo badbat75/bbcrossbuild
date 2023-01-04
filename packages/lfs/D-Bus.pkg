@@ -39,7 +39,7 @@ if ! grep 'dbus-launch' /etc/skel/.bash_profile 2>&1; then
 	EOF
 fi
 
-if ! grep kill '\$DBUS_SESSION_BUS_PID' 2>&1; then
+if ! grep 'kill \$DBUS_SESSION_BUS_PID' 2>&1; then
 	cat >>/etc/skel/.bash_logout <<-'EOF'
 
 		# Kill the D-Bus session daemon

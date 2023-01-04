@@ -3,6 +3,7 @@ PKG_VER=122
 PKG_URL="https://gitlab.freedesktop.org/polkit/polkit/-/archive/${PKG_VER}/polkit-${PKG_VER}.tar.gz"
 PKG_DEPS="lfs/GLib lfs/duktape lfs/Linux-PAM lfs/libxslt lfs/gobject-introspection lfs/systemd:bootstrap"
 CONF_FLAGS="-Dintrospection=true"
+CONF_FLAGS+=" -Dauthfw=pam"
 CONF_FLAGS+=" -Dman=true"
 CONF_FLAGS+=" -Djs_engine=duktape"
 CONF_FLAGS+=" -Dsession_tracking=libsystemd-login"
