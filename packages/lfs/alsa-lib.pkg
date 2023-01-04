@@ -4,7 +4,7 @@ PKG_URL="https://github.com/alsa-project/alsa-lib/archive/refs/tags/v${PKG_VER}.
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 PKG_DEPS="lfs/alsa-ucmconf"
-CONF_FLAGS="--with-systemdsystemunitdir=/lib/systemd/system --with-systemduserunitdir=${INSTALL_LIBDIR}/systemd/user"
+CONF_FLAGS=""
 INST_CMD=install-strip
 [ "${LTOENABLE:-0}" != "0" ] && PKG_OVERRIDELTO=fat || true
 PKG_PREBUILD="sed -i 's/ln -s/ln -fs/g' include/Makefile.am"
