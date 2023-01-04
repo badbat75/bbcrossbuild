@@ -4,11 +4,33 @@ PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-${PKG_VER}.tar.xz"
 PATCHES="https://www.linuxfromscratch.org/patches/blfs/svn/bluez-${PKG_VER}-obexd_without_systemd-1.patch"
 PKG_DEPS="lfs/readline lfs/GLib lfs/libical lfs/ell lfs/json-c"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--with-systemdsystemunitdir=/lib/systemd/system --with-systemduserunitdir=${INSTALL_LIBDIR}/systemd/user \
-	--with-dbusconfdir=${INSTALL_SYSCONFDIR} --with-dbussystembusdir=${INSTALL_SHAREDIR}/dbus-1/system-services --with-dbussessionbusdir=${INSTALL_SHAREDIR}/dbus-1/services --with-udevdir=/lib/udev \
-	--enable-library --enable-pie --enable-deprecated --enable-tools --enable-threads --enable-backtrace --enable-nfc --enable-sap --enable-monitor --enable-udev \
-	--enable-obex --enable-client --enable-systemd --enable-sixaxis --enable-health --enable-mesh --enable-hid2hci --enable-experimental \
-	--enable-btpclient --enable-external-ell"
+CONF_FLAGS="--enable-backtrace"
+CONF_FLAGS+=" --enable-btpclient"
+CONF_FLAGS+=" --enable-client"
+CONF_FLAGS+=" --enable-deprecated"
+CONF_FLAGS+=" --enable-external-ell"
+CONF_FLAGS+=" --enable-experimental"
+CONF_FLAGS+=" --enable-health"
+CONF_FLAGS+=" --enable-hid2hci"
+CONF_FLAGS+=" --enable-library"
+CONF_FLAGS+=" --enable-mesh"
+CONF_FLAGS+=" --enable-monitor"
+CONF_FLAGS+=" --enable-obex"
+CONF_FLAGS+=" --enable-nfc"
+CONF_FLAGS+=" --enable-pie" 
+CONF_FLAGS+=" --enable-sap"
+CONF_FLAGS+=" --enable-sixaxis"
+CONF_FLAGS+=" --enable-systemd"
+	CONF_FLAGS+=" --with-systemdsystemunitdir=/lib/systemd/system"
+	CONF_FLAGS+=" --with-systemduserunitdir=${INSTALL_LIBDIR}/systemd/user"
+	CONF_FLAGS+=" --with-dbusconfdir=${INSTALL_SYSCONFDIR}"
+	CONF_FLAGS+=" --with-dbussystembusdir=${INSTALL_SHAREDIR}/dbus-1/system-services"
+	CONF_FLAGS+=" --with-dbussessionbusdir=${INSTALL_SHAREDIR}/dbus-1/services"
+CONF_FLAGS+=" --enable-threads"
+CONF_FLAGS+=" --enable-tools"
+CONF_FLAGS+=" --enable-udev"
+	CONF_FLAGS+=" --with-udevdir=/lib/udev"
+
 if [ ${ENABLE_MIDI:-0} -eq 1 ]
 then
 	PKG_DEPS+=" lfs/alsa-lib"
