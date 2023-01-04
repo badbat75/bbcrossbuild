@@ -941,6 +941,10 @@ function mesonninja () {
 		fi
 	fi
 	local RUNCONFIG_CMD="${GLOBAL_TOOLCHAIN_PATH}/bin/meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release -Db_ndebug=true"
+	case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
+		0) ;;
+		*) RUNCONFIG_CMD+=" -Db_lto=true" ;;
+	esac
 	local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v')"
 	case ${PKG_TARGET} in
 		cross|native) ;;
