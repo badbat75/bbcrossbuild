@@ -122,7 +122,6 @@ build lfs/iw
 build lfs/wireless-tools
 build lfs/curl
 ### X11
-build lfs/libX11
 ### Development
 build lfs/strace
 
