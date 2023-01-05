@@ -65,6 +65,7 @@ case "${PKG_TARGET}" in
 		PKG_DEPS+=" lfs/lz4"
 		PKG_DEPS+=" lfs/libxslt"
 		PKG_DEPS+=" lfs/libxml2" 
+		PKG_DEPS+=" lfs/libxkbcommon"
 		###
 		CONF_FLAGS+=" -Dblkid=true"
 		CONF_FLAGS+=" -Dman=auto"
