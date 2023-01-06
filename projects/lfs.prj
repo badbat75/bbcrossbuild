@@ -120,6 +120,7 @@ build lfs/wpa_supplicant
 build lfs/hostapd
 build lfs/iw
 build lfs/wireless-tools
+build lfs/Avahi
 build lfs/curl
 ### X11
 ### Development
