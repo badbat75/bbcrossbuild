@@ -14,7 +14,7 @@ CONF_FLAGS+=" -Dslow-tests=false"
 CONF_FLAGS+=" -Dfuzz-tests=false"
 CONF_FLAGS+=" -Dinstall-tests=false"
 CONF_FLAGS+=" -Dldconfig=false"
-CONF_FLAGS+=" -Dsysusers=true"
+CONF_FLAGS+=" -Dsysusers=false"
 CONF_FLAGS+=" -Drpmmacrosdir=no"
 CONF_FLAGS+=" -Dhomed=false"
 CONF_FLAGS+=" -Dsysupdate=false"
@@ -43,7 +43,6 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Dimportd=false"
 		CONF_FLAGS+=" -Dmicrohttpd=false"
 		CONF_FLAGS+=" -Dopenssl=false"
-		CONF_FLAGS+=" -Dhomed=false"
 		CONF_FLAGS+=" -Dpcre2=false"
 	;;
 	*)
