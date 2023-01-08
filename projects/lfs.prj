@@ -30,119 +30,115 @@ BUILD_LIBSTATIC=0
 LTOENABLE=thin
 KERNEL_LTOENABLE=thin
 
-build --no_save_status lfs/create-base-fs_1.0
-
-setup_full_toolchain --with-python --with-gnu-install --with-main-gcc
-
-#### Gcc libraries built on gcc cross building should be almost the same
-# GCC_TARGETS="libraries" build lfs/gcc
-
-build lfs/create-base-config_1.0
-build lfs/iana-etc
-### Kernel core and utilities and firmwares
-case ${PLATFORM_NAME} in
-	rpi*)
-		build raspberrypi/rpi-kernel_$( echo ${KERNEL_VER} | cut -d'.' -f1,2 )
-		build raspberrypi/rpi-firmware_1
-		build raspberrypi/pi-bluetooth_0
-	;;
-	*)
-		build lfs/kernel
-	;;
-esac
-build lfs/kmod
-build firmwares/linux-firmware
-build firmwares/wireless-regdb
+### Basic filesystem
+	build lfs/create-base-config_1.0
+### Basic toolchain and core libraries
+	setup_full_toolchain --with-python --with-gnu-install --with-main-gcc
+### Kernel core, utilities and firmwares
+	case ${PLATFORM_NAME} in
+		rpi*)
+			build raspberrypi/rpi-kernel_$( echo ${KERNEL_VER} | cut -d'.' -f1,2 )
+			build raspberrypi/rpi-firmware_1
+			build raspberrypi/pi-bluetooth_0
+		;;
+		*)
+			build lfs/kernel
+		;;
+	esac
+	build lfs/kmod
+	build firmwares/linux-firmware
+	build firmwares/wireless-regdb
 ### Core Libraries
-#build lfs/GLibc
-build lfs/tzdata
-build lfs/shadow
+	#build lfs/glibc
+	build lfs/tzdata
+	build lfs/shadow
 ### Core services
-build lfs/systemd
-build lfs/D-Bus
-build lfs/polkit
+	build lfs/systemd
+	build lfs/D-Bus
+	build lfs/polkit
 ### Minimal
-build lfs/bluez
-build lfs/bash
-build lfs/man-pages
-build lfs/man-db
-build perl/XML-Parser
-build lfs/perl5
+	build lfs/bash
+	build lfs/man-pages
+	build lfs/man-db
+	build perl/XML-Parser
+	build lfs/perl5
 ### Filesystem progs
-build lfs/e2fsprogs
-build lfs/btrfs-progs
-build lfs/dosfstools
-build lfs/Fuse
-build lfs/attr
-build lfs/acl
-### Network Utilities
-build lfs/inetutils
-build lfs/net-tools
-build lfs/iproute2
-build lfs/iw
-build lfs/wireless-tools
-build lfs/curl
-build lfs/tcpdump
-### Security
-build lfs/sudo
-build lfs/openssh
-### Multimedia
-build lfs/alsa-utils
+	build lfs/e2fsprogs
+	build lfs/btrfs-progs
+	build lfs/dosfstools
+	build lfs/Fuse
+	build lfs/attr
+	build lfs/acl
 ### System Utilities
-build lfs/file
-build lfs/bc
-build lfs/sed
-build lfs/psmisc
-build lfs/grep
-build lfs/coreutils
-build lfs/diffutils
-build lfs/gawk
-build lfs/findutils
-build lfs/groff
-build lfs/less
-build lfs/kbd
-build lfs/tar
-build lfs/vim
-build lfs/procps-ng
-build lfs/util-linux
-build lfs/elfutils
-build lfs/usb-utils
-build lfs/pciutils
-build lfs/lsof
-build lfs/wget
-build lfs/which
-build lfs/intltool
+	build lfs/file
+	build lfs/bc
+	build lfs/sed
+	build lfs/psmisc
+	build lfs/grep
+	build lfs/coreutils
+	build lfs/diffutils
+	build lfs/gawk
+	build lfs/findutils
+	build lfs/groff
+	build lfs/less
+	build lfs/kbd
+	build lfs/tar
+	build lfs/vim
+	build lfs/procps-ng
+	build lfs/util-linux
+	build lfs/elfutils
+	build lfs/usb-utils
+	build lfs/pciutils
+	build lfs/lsof
+	build lfs/which
+	build lfs/intltool
+### Network Utilities
+	build lfs/iana-etc
+	build lfs/inetutils
+	build lfs/net-tools
+	build lfs/iproute2
+	build lfs/curl
+	build lfs/wget
+	build lfs/tcpdump
+### Wireless
+	build lfs/wpa_supplicant
+	build lfs/hostapd
+	build lfs/iw
+	build lfs/wireless-tools
+	build lfs/bluez
+### Security
+	build lfs/sudo
 ### Network Servers/Clients
-build lfs/bind9
-build lfs/dhcp
-#build lfs/dhcpcd
-build lfs/wpa_supplicant
-build lfs/hostapd
-build lfs/Avahi
+	build lfs/bind9
+	build lfs/dhcp
+	#build lfs/dhcpcd
+	build lfs/openssh
+	build lfs/Avahi
 ### X11
+### Multimedia
+	build lfs/alsa-utils
 ### Development
-build lfs/strace
-
-if [ ${ENABLE_DEV} -eq 1 ]
-then
-	build lfs/binutils
-	GCC_TARGETS="binaries" build lfs/gcc
-	build lfs/gdb
-	build lfs/make
-	build lfs/bison
-	build lfs/libtool
-	build lfs/autoconf
-	build lfs/automake
-	build lfs/gettext
-	build lfs/pkg-config
-	build lfs/sccache
-else
-	LFS_REMOVE_DEVFILES="--remove_devfiles"
-fi
+	build lfs/strace
+	if [ ${ENABLE_DEV} -eq 1 ]
+	then
+		build lfs/binutils
+		GCC_TARGETS="binaries" build lfs/gcc
+		build lfs/gdb
+		build lfs/make
+		build lfs/bison
+		build lfs/libtool
+		build lfs/autoconf
+		build lfs/automake
+		build lfs/gettext
+		build lfs/pkg-config
+		build lfs/sccache
+	else
+		LFS_REMOVE_DEVFILES="--remove_devfiles"
+	fi
 
 echo Configuring Host Name
 echo ${LFS_HOSTNAME} > ${BIN_PATH}/etc/hostname
-if ! grep "127.0.1.1" ${BIN_PATH}/etc/hosts
+if ! grep "127.0.1.1" ${BIN_PATH}/etc/hosts > /dev/null
 then
 	echo "127.0.1.1 ${LFS_HOSTNAME}. ${LFS_HOSTNAME}" >> ${BIN_PATH}/etc/hosts
 fi
