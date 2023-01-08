@@ -120,7 +120,9 @@ build lfs/wpa_supplicant
 build lfs/hostapd
 build lfs/iw
 build lfs/wireless-tools
+build lfs/Avahi
 build lfs/curl
+### X11
 ### Development
 build lfs/strace
 
@@ -176,7 +178,7 @@ fi
 ### Final configurations ###
 case ${PLATFORM_NAME} in
 	rpi*)
-		if ! grep "arm_64bit=" ${BIN_PATH}/boot/config.txt
+		if [ -f ${BIN_PATH}/boot/config.txt ] && ! grep "arm_64bit=" ${BIN_PATH}/boot/config.txt > /dev/null 2>&1
 		then
 			case ${PLATFORM_NAME} in
 				rpi*-aarch64)

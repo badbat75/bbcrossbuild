@@ -1,0 +1,7 @@
+# util-macros
+PKG_VER=1.19.3
+PKG_URL="https://www.x.org/pub/individual/util/util-macros-${PKG_VER}.tar.bz2"
+BUILD_PROCESS=configmake
+PKG_AUTOCONF=1
+CONF_FLAGS=""
+INST_CMD="install"

@@ -1,0 +1,34 @@
+# Avahi
+PKG_VER=0.8
+PKG_URL="https://github.com/lathiat/avahi/releases/download/v${PKG_VER}/avahi-${PKG_VER}.tar.gz"
+PATCHES="https://www.linuxfromscratch.org/patches/blfs/svn/avahi-0.8-ipv6_race_condition_fix-1.patch"
+PKG_DEPS="lfs/GLib lfs/gobject-introspection lfs/libdaemon"
+BUILD_PROCESS=configmake
+PKG_AUTOCONF=1
+CONF_FLAGS="--disable-libevent \
+    --disable-mono \
+    --disable-monodoc \
+    --disable-python \
+    --disable-qt3 \
+    --disable-qt4 \
+    --disable-qt5 \
+    --disable-gtk \
+    --disable-gtk3 \
+    --disable-tests \
+    --enable-core-docs \
+    --with-distro=none \
+    --with-dbus-system-address="'unix:path=/run/dbus/system_bus_socket'
+#PKG_MAKEVARS="INTROSPECTION_SCANNER=${TOOLCHAIN_PATH}/bin/g-ir-scanner INTROSPECTION_COMPILER=${TOOLCHAIN_PATH}/bin/g-ir-compiler"
+INST_CMD="install-strip"
+
+PKG_PREBUILD="sed '426a if (events & AVAHI_WATCH_HUP) { \\
+client_free(c); \\
+return; \\
+}' -i avahi-daemon/simple-protocol.c"
+
+PKG_POSTINSTALL="if ! getent group avahi; then
+    groupadd -fg 84 avahi
+fi
+if ! getent passwd avahi; then
+    useradd -c \"Avahi Daemon Owner\" -d /run/avahi-daemon -u 84 -g avahi -s /bin/false avahi
+fi"

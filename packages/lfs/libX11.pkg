@@ -1,0 +1,8 @@
+# libX11
+PKG_VER=1.8.3
+PKG_URL="https://www.x.org/archive/individual/lib/libX11-${PKG_VER}.tar.xz"
+PKG_DEPS="lfs/fontconfig lfs/libxcb lfs/xtrans"
+BUILD_PROCESS=configmake
+PKG_AUTOCONF=1
+CONF_FLAGS="--disable-malloc0returnsnull"
+INST_CMD="install-strip"

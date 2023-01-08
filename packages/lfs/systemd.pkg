@@ -1,5 +1,5 @@
 # systemd
-case ${SYSTEMD_VER:-252} in
+case ${SYSTEMD_VER:-251} in
 	252) PKG_VER=252.3 ;;
 	251) PKG_VER=251.10 ;;
 	*) PKG_VER=${SYSTEMD_VER} ;;
@@ -64,6 +64,7 @@ case "${PKG_TARGET}" in
 		PKG_DEPS+=" lfs/lz4"
 		PKG_DEPS+=" lfs/libxslt"
 		PKG_DEPS+=" lfs/libxml2" 
+		PKG_DEPS+=" lfs/libxkbcommon"
 		###
 		CONF_FLAGS+=" -Dblkid=true"
 		CONF_FLAGS+=" -Dman=auto"
