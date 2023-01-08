@@ -1,0 +1,24 @@
+# Fuse
+PKG_VER=3.12.0
+PKG_URL="https://github.com/libfuse/libfuse/releases/download/fuse-${PKG_VER}/fuse-${PKG_VER}.tar.xz"
+BUILD_PROCESS=mesonninja
+CONF_FLAGS="-Dtests=disabled"
+INST_CMD="install"
+
+
+PKG_PREBUILD="sed '/^udev/,\$ s/^/#/' -i util/meson.build"
+PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}${INSTALL_SHAREDIR}/doc/fuse-${PKG_VER}
+	install -v -m644 doc/{README.NFS,kernel.txt} ${PKG_PKGPATH}${INSTALL_SHAREDIR}/doc/fuse-${PKG_VER}
+	cp -Rv doc/html ${PKG_PKGPATH}${INSTALL_SHAREDIR}/doc/fuse-${PKG_VER}
+	cat > ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/fuse.conf << -EOF
+		# Set the maximum number of FUSE mounts allowed to non-root users.
+		# The default is 1000.
+		#
+		#mount_max = 1000
+
+		# Allow non-root users to specify the 'allow_other' or 'allow_root'
+		# mount options.
+		#
+		#user_allow_other
+	EOF
+	"

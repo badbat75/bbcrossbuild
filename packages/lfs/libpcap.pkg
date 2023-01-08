@@ -1,0 +1,10 @@
+# libpcap
+PKG_VER=1.10.2
+PKG_URL="https://www.tcpdump.org/release/libpcap-${PKG_VER}.tar.gz"
+#VAR_INSTALL_LIBDIR=CMAKE_INSTALL_LIBDIR
+#VAR_INSTALL_INCDIR=CMAKE_INSTALL_INCLUDEDIR
+PATCH=""
+PKG_DEPS=""
+BUILD_PROCESS=cmakebuild
+CONF_FLAGS="
+INST_CMD="install/strip"

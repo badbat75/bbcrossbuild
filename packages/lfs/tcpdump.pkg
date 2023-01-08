@@ -1,0 +1,11 @@
+# tcpdump
+PKG_VER=4.99.2
+PKG_URL="https://www.tcpdump.org/release/tcpdump-${PKG_VER}.tar.gz"
+PKG_DEPS="lfs/libpcap lfs/openssl"
+#VAR_INSTALL_LIBDIR=CMAKE_INSTALL_LIBDIR
+#VAR_INSTALL_INCDIR=CMAKE_INSTALL_INCLUDEDIR
+PATCH=""
+PKG_DEPS=""
+BUILD_PROCESS=cmakebuild
+CONF_FLAGS="
+INST_CMD="install/strip"
