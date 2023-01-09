@@ -17,6 +17,7 @@ CONF_FLAGS="--disable-libevent \
     --disable-tests \
     --enable-core-docs \
     --with-distro=none \
+    --with-systemdsystemunitdir=/lib/systemd/system \
     --with-dbus-system-address="'unix:path=/run/dbus/system_bus_socket'
 #PKG_MAKEVARS="INTROSPECTION_SCANNER=${TOOLCHAIN_PATH}/bin/g-ir-scanner INTROSPECTION_COMPILER=${TOOLCHAIN_PATH}/bin/g-ir-compiler"
 INST_CMD="install-strip"

@@ -2,15 +2,16 @@
 PKG_VER=3.12.0
 PKG_URL="https://github.com/libfuse/libfuse/releases/download/fuse-${PKG_VER}/fuse-${PKG_VER}.tar.xz"
 BUILD_PROCESS=mesonninja
-CONF_FLAGS="-Dtests=disabled"
+CONF_FLAGS="-Dtests=false -Dexamples=false"
 INST_CMD="install"
 
-
 PKG_PREBUILD="sed '/^udev/,\$ s/^/#/' -i util/meson.build"
-PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}${INSTALL_SHAREDIR}/doc/fuse-${PKG_VER}
-	install -v -m644 doc/{README.NFS,kernel.txt} ${PKG_PKGPATH}${INSTALL_SHAREDIR}/doc/fuse-${PKG_VER}
-	cp -Rv doc/html ${PKG_PKGPATH}${INSTALL_SHAREDIR}/doc/fuse-${PKG_VER}
-	cat > ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/fuse.conf << -EOF
+PKG_POSTBUILD="chmod u+s ${PKG_PKGPATH}${INSTALL_EXECPREFIX}/bin/fusermount3
+	install -vdm755 ${PKG_PKGPATH}${INSTALL_SHAREDIR}/doc/fuse-${PKG_VER}
+	install -v -m644 \${PKG_SRCPATH}/doc/{README.NFS,kernel.txt} ${PKG_PKGPATH}${INSTALL_SHAREDIR}/doc/fuse-${PKG_VER}
+	cp -Rv \${PKG_SRCPATH}/doc/html ${PKG_PKGPATH}${INSTALL_SHAREDIR}/doc/fuse-${PKG_VER}
+	install -vdm755 ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}
+	cat > ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/fuse.conf <<-EOF
 		# Set the maximum number of FUSE mounts allowed to non-root users.
 		# The default is 1000.
 		#
