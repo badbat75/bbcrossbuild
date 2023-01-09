@@ -1,4 +1,4 @@
-# Fuse
+# fuse
 PKG_VER=3.12.0
 PKG_URL="https://github.com/libfuse/libfuse/releases/download/fuse-${PKG_VER}/fuse-${PKG_VER}.tar.xz"
 BUILD_PROCESS=mesonninja
