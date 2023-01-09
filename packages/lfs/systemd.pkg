@@ -46,7 +46,7 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Dpcre2=false"
 	;;
 	*)
-		PKG_DEPS+=" lfs/D-Bus lfs/libcap2 lfs/libaudit lfs/openssl lfs/Linux-PAM lfs/polkit lfs/GLib lfs/kmod lfs/util-linux"
+		PKG_DEPS+=" lfs/D-Bus lfs/gnu-efi lfs/libcap2 lfs/libaudit lfs/openssl lfs/Linux-PAM lfs/polkit lfs/GLib lfs/kmod lfs/util-linux"
 		### Optional packages
 		PKG_DEPS+=" lfs/gnutls"
 		PKG_DEPS+=" lfs/btrfs-progs"
@@ -78,6 +78,8 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Ddbussessionservicedir=${INSTALL_SHAREDIR}/dbus-1/services"
 		CONF_FLAGS+=" -Ddbuspolicydir=${INSTALL_SHAREDIR}/dbus-1/system.d"
 		CONF_FLAGS+=" -Ddbus-interfaces-dir=${INSTALL_SHAREDIR}/dbus-1/interfaces"
+		CONF_FLAGS+=" -Defi-includedir=${BIN_PATH}${INSTALL_INCLUDEDIR}/efi"
+		CONF_FLAGS+=" -Defi-libdir=${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 		PKG_POSTBUILD="install -v -m755 -d ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/pam.d
 			cat >> ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/pam.d/system-session <<-EOF
 				# Begin Systemd addition

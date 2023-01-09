@@ -797,11 +797,10 @@ function simplemake () {
 	cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
 	create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
-	eval local "PKG_MAKEVARS='${PKG_MAKEVARS}'"
 	cat >runmake.sh <<-EOF
 		#!/bin/bash
-		echo "\\\$ ${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make \${@} V=${MAKEVERBOSE:-0} PREFIX=${INSTALL_PREFIX} LIBSUFFIX=${INSTALL_LIBSUFFIX} ${PKG_MAKEVARS}"
-		${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make \${@} V=${MAKEVERBOSE:-0} PREFIX=${INSTALL_PREFIX} LIBSUFFIX=${INSTALL_LIBSUFFIX} ${PKG_MAKEVARS}
+		echo "\\\$ ${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} PREFIX=${INSTALL_PREFIX} LIBSUFFIX=${INSTALL_LIBSUFFIX} ${PKG_MAKEVARS} \${@}"
+		${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} PREFIX=${INSTALL_PREFIX} LIBSUFFIX=${INSTALL_LIBSUFFIX} ${PKG_MAKEVARS} \${@}
 	EOF
 	run_cmd "chmod +x runmake.sh"
 	if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
