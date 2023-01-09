@@ -4,12 +4,16 @@ PKG_URL="https://github.com/libpwquality/libpwquality/releases/download/libpwqua
 PKG_DEPS="lfs/CrackLib"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
-CONF_FLAGS="--with-securedir=/usr/lib/security"
+CONF_FLAGS="--with-securedir=${INSTALL_LIBDIR}/security"
 CONF_FLAGS+=" --with-python-binary=cross-python3"
 INST_CMD="install-strip"
 
+PKG_PREBUILD="install -vdm755 \${PKG_BLDPATH}/src install -vdm755 \${PKG_BLDPATH}/python
+	ln -fsv \${PKG_SRCPATH}/src/pwquality.h \${PKG_BLDPATH}/src/pwquality.h
+	ln -fsv \${PKG_SRCPATH}/python/pwquality.c \${PKG_BLDPATH}/python/pwquality.c"
+
 PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/pam.d
-		cat > ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/pam.d/system-password << -EOF
+		cat > ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/pam.d/system-password <<-EOF
 		# Begin ${INSTALL_SYSCONFDIR}/pam.d/system-password
 
 		# check new passwords for strength (man pam_pwquality)
