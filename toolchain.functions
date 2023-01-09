@@ -179,7 +179,7 @@ function setup_sccache () {
 			export CARGO_PROFILE_RELEASE_LTO=thin; \\
 			cargo build $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -n "--verbose" ) --release" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
 		run_cmd "cp -fv target/release/sccache ${GLOBAL_TOOLCHAIN_PATH}/bin" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
-		run_cmd "ln -s sccache ${GLOBAL_TOOLCHAIN_PATH}/bin/ccache" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
+		run_cmd "ln -fsv sccache ${GLOBAL_TOOLCHAIN_PATH}/bin/ccache" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
 		### Clean-up build environment
 		popd >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log 2>&1
 		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/sccache-${SCCACHE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
