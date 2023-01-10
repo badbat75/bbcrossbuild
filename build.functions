@@ -709,7 +709,12 @@ function configmake () {
 		setup_autotools ${PKG_AUTOCONF:-${AUTOCONF_VER}} ${PKG_AUTOMAKE:-${AUTOMAKE_VER}} ${PKG_LIBTOOL:-${LIBTOOL_VER}} ${PKG_GETTEXT:-${GETTEXT_VER}}
 		if [ "${AUTOCONF_PATH}" == "autoscan" ]
 		then
-			pushd ${PKG_SRCPATH}
+			if [ ${PKG_COPYSRC:-0} -eq 0 ]
+			then
+				pushd ${PKG_SRCPATH}
+			else
+				pushd ${PKG_BLDPATH}
+			fi
 			AUTOCONF_PATH="$(find . -name "configure.ac" -printf '%P\n' | xargs dirname | sort | tr '\n' ',' | sed 's/,$//' )"
 			echo "Scanned AUTOCONF_PATH: ${AUTOCONF_PATH}"
 			popd
@@ -753,8 +758,13 @@ function configmake () {
 	if [[ "${CONF_CMD}" =~ ^\./.* ]]
 	then
 		local RUNCONFIG_CMD="${CONF_CMD}"
-	else 
-		local RUNCONFIG_CMD="${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure}"
+	else
+		if [ ${PKG_COPYSRC:-0} -eq 0 ]
+		then
+			local RUNCONFIG_CMD="${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure}"
+		else
+			local RUNCONFIG_CMD="${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure}"
+		fi
 	fi
 	cat >runconfig.sh <<-EOF
 		#!/bin/bash

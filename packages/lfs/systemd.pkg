@@ -52,22 +52,21 @@ case "${PKG_TARGET}" in
 		PKG_DEPS+=" lfs/btrfs-progs"
 		PKG_DEPS+=" lfs/curl"
 		PKG_DEPS+=" lfs/cryptsetup"
+		PKG_DEPS+=" lfs/elfutils"
 		PKG_DEPS+=" lfs/libgcrypt"
 		PKG_DEPS+=" lfs/libidn2"
+		# PKG_DEPS+=" lfs/libmicrohttp"
 		if [ ${LFS_LIBPWQUALITY:-1} -eq 1 ]
 		then
 			PKG_DEPS+=" lfs/libpwquality"
 		fi
 		PKG_DEPS+=" lfs/libseccomp"
+		PKG_DEPS+=" lfs/libxkbcommon"
+		PKG_DEPS+=" lfs/lz4"
 		PKG_DEPS+=" lfs/make-ca"
 		PKG_DEPS+=" lfs/p11-kit"
 		PKG_DEPS+=" lfs/pcre2"
-		PKG_DEPS+=" lfs/elfutils"
-		# PKG_DEPS+=" lfs/libmicrohttp"
-		PKG_DEPS+=" lfs/lz4"
-		PKG_DEPS+=" lfs/libxslt"
-		PKG_DEPS+=" lfs/libxml2" 
-		PKG_DEPS+=" lfs/libxkbcommon"
+		PKG_DEPS+=" lfs/quota-tools"
 		###
 		CONF_FLAGS+=" -Dblkid=true"
 		CONF_FLAGS+=" -Dman=auto"
@@ -80,6 +79,8 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Ddbus-interfaces-dir=${INSTALL_SHAREDIR}/dbus-1/interfaces"
 		CONF_FLAGS+=" -Defi-includedir=${BIN_PATH}${INSTALL_INCLUDEDIR}/efi"
 		CONF_FLAGS+=" -Defi-libdir=${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
+		CONF_FLAGS+=" -Dquotaon-path=${INSTALL_EXECPREFIX}/sbin/quotaon"
+		CONF_FLAGS+=" -Dquotacheck-path=${INSTALL_EXECPREFIX}/sbin/quotacheck"
 		PKG_POSTBUILD="install -v -m755 -d ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/pam.d
 			cat >> ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/pam.d/system-session <<-EOF
 				# Begin Systemd addition

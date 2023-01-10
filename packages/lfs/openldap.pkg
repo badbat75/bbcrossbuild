@@ -1,0 +1,36 @@
+# openldap
+PKG_VER=2.6.3
+PKG_URL="https://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-${PKG_VER}.tgz"
+PATCHES="https://www.linuxfromscratch.org/patches/blfs/svn/openldap-${PKG_VER}-consolidated-1.patch"
+PKG_DEPS="lfs/openssl"
+BUILD_PROCESS=configmake
+PKG_AUTOCONF=1
+		CONF_FLAGS="--enable-dynamic"
+		CONF_FLAGS+=" --enable-versioning=yes"
+		CONF_FLAGS+=" --disable-debug"
+		CONF_FLAGS+=" --with-tls=openssl"
+		CONF_FLAGS+=" --with-yielding_select=yes"
+case ${HM} in
+	arm) CONF_VARS="ac_cv_func_memcmp_working=1" ;;
+esac
+case ${PKG_TARGET} in
+	client)
+		CONF_FLAGS+=" --disable-slapd"
+	;;
+	*)
+		PKG_DEPS+=" lfs/cyrus-sasl"
+		CONF_FLAGS+=" --with-cyrus-sasl"
+		CONF_FLAGS+=" --enable-crypt"
+		CONF_FLAGS+=" --enable-spasswd"
+		CONF_FLAGS+=" --enable-slapd"
+		CONF_FLAGS+=" --enable-modules"
+		CONF_FLAGS+=" --enable-rlookups"
+		CONF_FLAGS+=" --enable-backends=mod"
+		CONF_FLAGS+=" --disable-sql"
+		CONF_FLAGS+=" --disable-wt"
+		CONF_FLAGS+=" --enable-overlays=mod"
+		PKG_POSTINSTALL="groupadd -g 83 ldap
+useradd  -c \"OpenLDAP Daemon Owner\" -d /var/lib/openldap -u 83 -g ldap -s /bin/false ldap"
+	;;
+esac
+INST_CMD=install
