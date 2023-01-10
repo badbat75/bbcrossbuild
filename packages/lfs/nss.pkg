@@ -1,0 +1,20 @@
+# nss
+PKG_VER=3.87
+PKG_URL="https://archive.mozilla.org/pub/security/nss/releases/NSS_$(echo ${PKG_VER} | sed 's/\./_/g')_RTM/src/nss-${PKG_VER}.tar.gz"
+PATCHES="https://www.linuxfromscratch.org/patches/blfs/svn/nss-3.87-standalone-1.patch"
+PKG_DEPS="lfs/zlib lfs/nspr lfs/p11-kit:bootstrap"
+BUILD_PROCESS=simplemake
+PKG_MAKEVARS="-C nss BUILD_OPT=1 NSPR_INCLUDE_DIR=${INSTALL_INCLUDEDIR}/nspr USE_SYSTEM_ZLIB=1 ZLIB_LIBS=-lz NSS_ENABLE_WERROR=0 NSS_DISABLE_GTESTS=1"
+PKG_MAKEVARS+=" OS_TEST=${HARCH} OS_TARGET=Linux OS_TARGET_RELEASE=$(echo ${KERNEL_VER} | cut -d. -f1,2) CROSS_COMPILE=1"
+PKG_MAKEVARS+=" NATIVE_CC=\"\${CC}\" NATIVE_FLAGS=\"${CFLAGS}\" NATIVE_LDFLAGS=\"${LDFLAGS}\" OS_FLAGS=\"\${CFLAGS}\""
+PKG_MAKEVARS+=" CC=\"\${CC}\" CCC=\"\${CXX}\" RANLIB=\"\${RANLIB}\""
+#PKG_MAKEVARS+=" CFLAGS=\"\${CFLAGS} -DLINUX\""
+if [ "${HARCH_BITWIDTH}" == "64" ]
+then
+    PKG_MAKEVARS+=" USE_64=1"
+fi
+#PKG_DEPS+=" lfs/SQLite"
+#PKG_MAKEVARS+=" NSS_USE_SYSTEM_SQLITE=1"
+INST_CMD="nss_build_all"
+
+PKG_FAULTYCFLAGS=1

@@ -20,4 +20,10 @@ PKG_PREBUILD="if [ -f trust/trust-extract-compat.orig ]
 		# Generate a new trust store
 		/usr/sbin/make-ca -f -g
 	EOF"
-PKG_POSTBUILD="ln -sfv /usr/libexec/p11-kit/trust-extract-compat ${PKG_PKGPATH}/usr/bin/update-ca-certificates"
+case ${PKG_TARGET} in
+	bootstrap) ;;
+	*)
+		#PKG_DEPS+=" lfs/nss"
+		PKG_POSTBUILD="ln -sfv /usr/libexec/p11-kit/trust-extract-compat ${PKG_PKGPATH}/usr/bin/update-ca-certificates"
+	;;
+esac
