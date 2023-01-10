@@ -24,7 +24,7 @@ case ${PKG_TARGET} in
 	*)
 		PKG_DEPS="lfs/e2fsprogs"
 		PKG_DEPS+=" lfs/libedit"
-		PKG_DEPS+=" lfs/openldap:client"
+		PKG_DEPS+=" lfs/openldap:bootstrap"
 		PKG_DEPS+=" lfs/bind9"
 		CONF_FLAGS+=" --with-ldap"
 		PKG_POSTBUILD="install -v -dm755 ${PKG_PKGPATH}${INSTALL_SHAREDIR}/doc/krb5-${PKG_VER} &&

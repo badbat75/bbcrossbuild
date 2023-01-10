@@ -14,7 +14,11 @@ case ${HM} in
 	arm) CONF_VARS="ac_cv_func_memcmp_working=1" ;;
 esac
 case ${PKG_TARGET} in
+	bootstrap)
+		CONF_FLAGS+=" --disable-slapd"
+	;;
 	client)
+		PKG_DEPS+=" lfs/cyrus-sasl"
 		CONF_FLAGS+=" --disable-slapd"
 	;;
 	*)
