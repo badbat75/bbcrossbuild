@@ -853,6 +853,8 @@ function cmakebuild () {
 		-DTOOLCHAIN_PREFIX=${HARCH}- \\
 		-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \\
 		-DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \\
+		-DCMAKE_AR=${AR} \\
+		-DCMAKE_RANLIB=${RANLIB} \\
 		-DCMAKE_CROSSCOMPILING="TRUE" \\
 		-DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \\
 		-D${VAR_INSTALL_LIBDIR:-\"LIB_INSTALL_DIR\"}=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \\
@@ -1464,6 +1466,71 @@ function boostbuild () {
 	trap - ERR
 }
 
+function custom () {
+	trap 'local CMDERR="${BASH_COMMAND}" STATUS=${?}; \
+		echo "fail. [configmake]"; \
+		echo ${CMDERR}; \
+		echo; \
+		trap - ERR; \
+		return ${STATUS}' ERR
+
+	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
+	pushd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
+	create_environment_source --target ${PKG_TARGET_ENV}
+	source environment.source
+	cat >runmake.sh <<-EOF
+		#!/bin/bash -ex
+
+	EOF
+	echo "${PKG_BUILDSCRIPT}" >>runmake.sh
+	run_cmd "chmod +x runmake.sh"
+	run_cmd "./runmake.sh"
+	popd
+	trap - ERR
+}
+
+function perlmodule () {
+	trap 'local CMDERR="${BASH_COMMAND}" STATUS=${?}; \
+		echo "fail. [configmake]"; \
+		echo ${CMDERR}; \
+		echo; \
+		trap - ERR; \
+		return ${STATUS}' ERR
+
+	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
+	pushd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
+	create_environment_source --target ${PKG_TARGET_ENV}
+	source environment.source
+	pwd
+	cat > runconfig.sh <<-EOF
+		#!/bin/bash
+
+		perl Makefile.PL \\
+		AR='${AR}' CC='${CC}' CPPRUN='${CPP}' FULL_AR='${AR}' LD='${CC}' \\
+		PERL_INC='${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/5.36/CORE' \\
+	EOF
+	sudo chroot ${SYSROOT} \
+		perl -V | \
+		grep -o '[^ ].*=.*' | \
+		sed -e 's/ =/=/g' -e 's/^[a-z0-9_]*=/\U&/' -e '/=\x27/! s/=/=\x27/' -e '/\x27$/! s/$/\x27/' | \
+		grep -e 'CCFLAGS=' -e 'CCCDLFLAGS=' -e 'CCDLFLAGS=' -e 'LDDLFLAGS=' -e 'LDFLAGS=' -e 'OFF_T=' | \
+		xargs -d'\n' >> runconfig.sh
+	run_cmd "chmod +x runconfig.sh"
+	run_cmd "./runconfig.sh"
+	cat > runmake.sh <<-EOF
+		#!/bin/bash
+		make PERL_INC='${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/5.36/core_perl/CORE'
+	EOF
+	run_cmd "chmod +x runmake.sh"
+	run_cmd "./runmake.sh"
+
+	pause
+
+	popd
+	trap - ERR
+}
+
+
 function build () {(
 	function downloadsources () {
 		trap 'STATUS=${?}; \
@@ -1535,6 +1602,7 @@ function build () {(
 		PATCHES \
 		PKG_AUTOCONF \
 		PKG_AUTOMAKE \
+		PKG_BUILDSCRIPT \
 		PKG_CFLAGS \
 		PKG_COPYSRC \
 		PKG_CXXFLAGS \

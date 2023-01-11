@@ -3,8 +3,8 @@ PKG_URL="https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz"
 PKG_DEPS="lfs/libgmp lfs/libmpfr lfs/libmpc lfs/libisl"
 case ${BINUTILS_VER} in
 	2.39)
-		PKG_SUFFIX=_2.39+c99043535d1
-		PATCHES=binutils/binutils_2.39+c99043535d1.patch
+		PKG_SUFFIX=_2.39+4e3ee240162
+		PATCHES=binutils/binutils_2.39+4e3ee240162.patch
 		;;
 	*)
 		PKG_SUFFIX=_${BINUTILS_VER}

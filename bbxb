@@ -11,10 +11,10 @@ trap 'STATUS=${?}; \
 	exit ${STATUS}' ERR
 trap 'set +x; \
 	echo "SIGINT received. [bbxb]"; \
-	trap - ERR SIGINT; \
 	echo; \
 	set +o pipefail; \
-	check_images_functions && unmount_tag --all --kill || true; \
+	unmount_tag --all --kill || true; \
+	trap - ERR SIGINT; \
 	exit 0' SIGINT
 
 set -o pipefail

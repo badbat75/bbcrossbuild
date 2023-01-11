@@ -3,16 +3,16 @@ PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${GLIBC_VER}.tar.xz"
 PKG_DEPS="lfs/kernel:headers"
 case ${GLIBC_VER} in
 	2.36)
-		PKG_SUFFIX=_2.36+3aae843e9e
-		PATCHES=glibc/glibc_2.36+3aae843e9e.patch
+		PKG_SUFFIX=_2.36+e05036b194
+		PATCHES=glibc/glibc_2.36+e05036b194.patch
 		;;
 	2.35)
-		PKG_SUFFIX=_2.35+ca97201c24
-		PATCHES=glibc/glibc_2.35+ca97201c24.patch
+		PKG_SUFFIX=_2.35+82663d3c03
+		PATCHES=glibc/glibc_2.35+82663d3c03.patch
 		;;
 	2.34)
-		PKG_SUFFIX=_2.34+a4217408a3
-		PATCHES=glibc/glibc_2.34+a4217408a3.patch
+		PKG_SUFFIX=_2.34+bbe4bbb6e8
+		PATCHES=glibc/glibc_2.34+bbe4bbb6e8.patch
 		;;
 	*)
 		PKG_SUFFIX=_${GLIBC_VER}
@@ -44,6 +44,10 @@ fi
 CONF_VARS="libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes"
 PKG_MAKEVARS="slibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} rootsbindir=${INSTALL_PREFIX}/sbin \
 	complocaledir=${INSTALL_LIBDIR}/locale cross-compiling=yes"
+if [ ${MAKEVERBOSE:-0} -eq 0 ]
+then
+	PKG_MAKEVARS+=" -s"
+fi
 PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd
 #PKG_PREBUILD="sed '/MAKEFLAGS :=/s/)r/) -r/' -i Makerules"

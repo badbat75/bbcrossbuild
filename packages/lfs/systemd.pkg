@@ -116,6 +116,7 @@ case "${PKG_TARGET}" in
 			"
 		;;
 esac
+PKG_CFLAGS="-Wno-error=return-type"
 INST_CMD="install"
 PKG_LD_LIBRARY_PATH=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
 PKG_PREBUILD="sed -i -e 's/GROUP=\"render\"/GROUP=\"video\"/' -e 's/GROUP=\"sgx\", //' rules.d/50-udev-default.rules.in"
