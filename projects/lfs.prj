@@ -31,6 +31,7 @@ LTOENABLE=thin
 KERNEL_LTOENABLE=thin
 
 ### Basic filesystem
+	build lfs/create-base-fs_1.0
 	build lfs/create-base-config_1.0
 ### Basic toolchain and core libraries
 	setup_full_toolchain --with-python --with-gnu-install --with-main-gcc
