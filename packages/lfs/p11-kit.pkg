@@ -6,7 +6,6 @@ BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--with-trust-paths=${INSTALL_SYSCONFDIR}/pki/anchors"
 CONF_VARS="systemduserunitdir=${INSTALL_LIBDIR}/systemd/user"
-INST_CMD="install-strip"
 PKG_PREBUILD="if [ -f trust/trust-extract-compat.orig ]
 		then
 			mv trust/trust-extract-compat.orig rust/trust-extract-compat 
@@ -21,9 +20,12 @@ PKG_PREBUILD="if [ -f trust/trust-extract-compat.orig ]
 		/usr/sbin/make-ca -f -g
 	EOF"
 case ${PKG_TARGET} in
-	bootstrap) ;;
+	bootstrap)
+		PKG_TWOSTEPSBUILD=0
+		INST_CMD="install-exec";;
 	*)
 		PKG_DEPS+=" lfs/nss"
+		INST_CMD="install-strip"
 		PKG_POSTBUILD="ln -sfv /usr/libexec/p11-kit/trust-extract-compat ${PKG_PKGPATH}/usr/bin/update-ca-certificates"
 	;;
 esac
