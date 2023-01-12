@@ -1,7 +1,7 @@
 # lvm2
 PKG_VER=2.03.17
 PKG_URL="https://sourceware.org/ftp/lvm2/LVM2.${PKG_VER}.tgz"
-PKG_DEPS="lfs/libaio"
+PKG_DEPS="lfs/libaio lfs/systemd:bootstrap"
 ### Optional packages
 # PKG_DEPS+=" lfs/thin-provisioning"
 # PKG_DEPS+=" lfs/vdo"

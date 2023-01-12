@@ -1,6 +1,7 @@
 # libcap2
 PKG_VER=2.66
 PKG_URL="https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-${PKG_VER}.tar.xz"
+PKG_DEPS="lfs/Linux-PAM"
 BUILD_PROCESS=simplemake
 PKG_MAKEVARS="lib=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} BUILD_CC=\"\${CC_FOR_BUILD}\""
 INST_CMD="install"

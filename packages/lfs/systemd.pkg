@@ -5,7 +5,7 @@ case ${SYSTEMD_VER:-251} in
 	*) PKG_VER=${SYSTEMD_VER} ;;
 esac
 PKG_URL="https://github.com/systemd/systemd-stable/archive/refs/tags/v${PKG_VER}.tar.gz"
-PKG_DEPS="lfs/zlib lfs/xz lfs/bzip2 lfs/zstd"
+PKG_DEPS="lfs/zlib lfs/xz lfs/bzip2 lfs/zstd lfs/libxml2"
 BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Drootlibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 CONF_FLAGS+=" -Dfirstboot=false"

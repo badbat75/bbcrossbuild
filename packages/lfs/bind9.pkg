@@ -1,7 +1,7 @@
 # bind9
 PKG_VER=9.19.7
 PKG_URL="https://downloads.isc.org/isc/bind9/${PKG_VER}/bind-${PKG_VER}.tar.xz"
-PKG_DEPS="lfs/ncurses lfs/readline lfs/libuv lfs/openssl"
+PKG_DEPS="lfs/ncurses lfs/readline lfs/libuv lfs/openssl lfs/libxml2"
 BUILD_PROCESS=configmake
 case ${PKG_TARGET} in
     bootstrap)

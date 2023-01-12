@@ -1,7 +1,7 @@
 # cracklib
 PKG_VER=2.9.8
 PKG_URL="https://github.com/cracklib/cracklib/releases/download/v${PKG_VER}/cracklib-${PKG_VER}.tar.bz2"
-PKG_DEPS="lfs/cracklib-words"
+PKG_DEPS="lfs/cracklib-words lfs/zlib"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_ENVS="PYTHON=cross-python3"

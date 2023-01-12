@@ -2,7 +2,7 @@
 PYTHON_BINVER=$(echo ${PYTHON_VER} | cut -d"." -f1,2)
 PKG_SUFFIX=_${PYTHON_VER}
 PKG_URL="https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PYTHON_VER}.tar.xz"
-PKG_DEPS="lfs/ncurses lfs/zlib lfs/zlib lfs/bzip2 lfs/expat lfs/libffi lfs/libmpdec lfs/gdbm lfs/readline lfs/openssl"
+PKG_DEPS="lfs/ncurses lfs/zlib lfs/bzip2 lfs/expat lfs/libffi lfs/libmpdec lfs/gdbm lfs/readline lfs/openssl"
 PKG_AUTOCONF=1
 BUILD_PROCESS=configmake
 PKG_TWOSTEPSBUILD=1
