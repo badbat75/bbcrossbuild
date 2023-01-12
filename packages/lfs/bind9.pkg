@@ -2,12 +2,13 @@
 PKG_VER=9.19.7
 PKG_URL="https://downloads.isc.org/isc/bind9/${PKG_VER}/bind-${PKG_VER}.tar.xz"
 PKG_DEPS="lfs/ncurses lfs/readline lfs/libuv lfs/openssl lfs/libxml2"
+PKG_DEPS+=" lfs/libnghttp2 lfs/krb5:bootstrap lfs/libcap2:bootstrap"
 BUILD_PROCESS=configmake
 case ${PKG_TARGET} in
     bootstrap)
     ;;
     *)
-        PKG_DEPS+=" lfs/libnghttp2 lfs/krb5:bootstrap lfs/libcap2:bootstrap lfs/json-c lfs/libidn2 lfs/libxml2"
+        PKG_DEPS+=" lfs/json-c lfs/libidn2"
         PKG_DEPS+=" lfs/curl lfs/BerkeleyDB lfs/openldap:bootstrap"
         CONF_FLAGS="--with-libsystemd"
         PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}${INSTALL_SHAREDIR}/man/man1
