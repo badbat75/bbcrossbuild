@@ -201,8 +201,7 @@ PKG_POSTBUILD="cat > gen_build.sh <<-EOF
 
 	CC= CXX=\"${CCWRAPPER:+${CCWRAPPER} }clang++\" CFLAGS= CXXFLAGS=\"-O3 -march=native\" LDFLAGS=\"-fuse-ld=lld\" \
 		python3 tools/gn/bootstrap/bootstrap.py --skip-generate-buildfiles
-	./gen_build.sh
-	pause"
+	./gen_build.sh"
 
 	#### python3 /home/desimonie/.bbxb/raspios/rpi3/builds/chromium_97.0.4692.77/build/config/linux/pkg-config.py -s /home/desimonie/.bbxb/raspios/rpi3/distos -a arm libdrm --system_libdir=lib/arm-linux-gnueabihf
 	#### missing --system_libdir during pkg-config

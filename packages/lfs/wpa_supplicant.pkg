@@ -137,5 +137,4 @@ PKG_POSTINSTALL="# create bluetooth group if not already present
 if ! getent group netdev > /dev/null; then
 	groupadd --system netdev
 fi
-systemctl disable wpa_supplicant
-systemctl disable hostapd"
+systemctl disable wpa_supplicant"

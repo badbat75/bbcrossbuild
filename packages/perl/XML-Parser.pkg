@@ -2,7 +2,7 @@
 PKG_VER=2.46
 PKG_URL="https://cpan.metacpan.org/authors/id/T/TO/TODDR/XML-Parser-${PKG_VER}.tar.gz"
 PKG_SEPS="lfs/perl5"
-BUILD_PROCESS=perlmodule
+BUILD_PROCESS=downloadonly
 
 PKG_PREBUILD="cat <<-EOF | patch -s -p1 || true
 --- XML-Parser/Makefile.PL	2019-09-24 07:20:53.000000000 +0200

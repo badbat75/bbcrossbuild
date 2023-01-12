@@ -417,7 +417,7 @@ function inject_into_mount_tag () {
 		echo; \
 		echo "fail [inject_into_mount_tag: ${STATUS}]."; \
 		echo; \
-		if [ -f ${LOG_PATH}/images_${ROOT_DIR}.log ];
+		if [ -f ${LOG_PATH}/images_${ROOT_DIR}.log ]; \
 		then \
 			echo "Log ${LOG_PATH}/images_${ROOT_DIR}.log:"; \
 			echo; \
@@ -463,7 +463,7 @@ function inject_into_mount_tag () {
 	echo -n "Syncing ${SOURCE_PATH} to ${TARGET_PATH}... " | log_buffer info >> ${LOG_PATH}/images_${ROOT_DIR}.log
 	cd ${SOURCE_PATH}
 	run_cmd -s "rsync -K -a ${RSYNC_EXCLUDE} --devices --specials --no-owner --no-group ${TARGET_FILE} ${TARGET_PATH}" >> ${LOG_PATH}/images_${ROOT_DIR}.log
-	cd -
+	cd - > /dev/null
 	echo -e "Done.\n" | log_buffer info >> ${LOG_PATH}/images_${ROOT_DIR}.log
 	echo -n "Setting ownership... "
 	function set_ownership () {
@@ -532,7 +532,7 @@ function run_postinstall_scripts () {
 	echo "Running post install scripts on ${_param_1}... " | log_buffer info >> ${LOG_PATH}/images_${_param_1}.log
 	export PLATFORM_PATH LOG_PATH
 	export -f param2value run_on_root_dir
-	find ${PLATFORM_PATH}/${_param_1}/postinst_scripts -type f -printf '%P\n' | sort -n | xargs -I{} bash -c "run_on_root_dir ${_param_1} root 'set -x; source /postinst_scripts/{}'" >> ${LOG_PATH}/images_${_param_1}.log
+	find ${PLATFORM_PATH}/${_param_1}/postinst_scripts -type f -printf '%P\n' | sort -n | xargs -I{} bash -c "run_on_root_dir ${_param_1} root 'set -ex; source /postinst_scripts/{}'" >> ${LOG_PATH}/images_${_param_1}.log
 	run_cmd -s "rm -rfv ${PLATFORM_PATH}/${_param_1}/postinst_scripts" >> ${LOG_PATH}/images_${_param_1}.log
 	echo "Done." | log_buffer info >> ${LOG_PATH}/images_${_param_1}.log
 	[ ${_param_v:-0} -eq 1 ] && set +x || true

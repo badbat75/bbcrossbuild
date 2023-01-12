@@ -70,5 +70,4 @@ PKG_POSTBUILD="
 			ln -fsv \${I}.so.\${SO_VERSION} ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/\${I}.so.\${SO}
 			ln -fsv \${I}.so.\${SO_VERSION} ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/\${I}.so
 		done
-		pause
 	"

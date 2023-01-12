@@ -60,8 +60,8 @@ PKG_POSTBUILD="install -d ${PKG_PKGPATH}${INSTALL_PREFIX}/sbin
 	cp hostapd/hostapd.8 ${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man8/ && gzip -f ${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man8/hostapd.8
 	cp hostapd/hostapd_cli.1 ${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man5/ && gzip -f ${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man5/hostapd_cli.1
 
-	mkdir -pv ${PKG_PKGPATH}${INSTALL_PREFIX}/lib/systemd/system
-	cat > ${PKG_PKGPATH}${INSTALL_PREFIX}/lib/systemd/system/hostapd.service <<-EOF
+	mkdir -pv ${PKG_PKGPATH}/lib/systemd/system
+	cat > ${PKG_PKGPATH}/lib/systemd/system/hostapd.service <<-EOF
 		[Unit]
 		Description=Access point and authentication server for Wi-Fi and Ethernet
 		Documentation=man:hostapd(8)
@@ -79,7 +79,7 @@ PKG_POSTBUILD="install -d ${PKG_PKGPATH}${INSTALL_PREFIX}/sbin
 		[Install]
 		WantedBy=multi-user.target
 	EOF
-	cat > ${PKG_PKGPATH}${INSTALL_PREFIX}/lib/systemd/system/hostapd\@.service <<-EOF
+	cat > ${PKG_PKGPATH}/lib/systemd/system/hostapd\@.service <<-EOF
 		[Unit]
 		Description=Access point and authentication server for Wi-Fi and Ethernet (%I)
 		Documentation=man:hostapd(8)
@@ -125,4 +125,4 @@ PKG_POSTBUILD="install -d ${PKG_PKGPATH}${INSTALL_PREFIX}/sbin
 		#DAEMON_OPTS=\"\"
 	EOF
 	"
-PKG_POSTINSTALL="systemctl disable hostapd"
+PKG_POSTINSTALL="systemctl disable hostapd.service"
