@@ -17,11 +17,11 @@ BUILD_PROCESS=mesonninja
 INST_CMD=install
 PKG_POSTBUILD="chmod -v 04755 ${PKG_PKGPATH}${INSTALL_LIBDIR}/polkit-1/polkit-agent-helper-1"
 PKG_POSTINSTALL="if ! getent group polkitd; then
-	groupadd -fg 27 polkitd
+	groupadd --system -fg 27 polkitd
 fi
 
 if ! getent passwd polkitd; then
-	useradd -c \"PolicyKit Daemon Owner\" -d ${INSTALL_SYSCONFDIR}/polkit-1 -u 27 -g polkitd -s /bin/false polkitd
+	useradd --system -c \"PolicyKit Daemon Owner\" -d ${INSTALL_SYSCONFDIR}/polkit-1 -u 27 -g polkitd -s /sbin/nologin polkitd
 fi
 
 chown -R polkitd:polkitd ${INSTALL_SHAREDIR}/polkit-1/rules.d

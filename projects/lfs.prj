@@ -5,6 +5,7 @@ fi
 
 ## Sets default values:
 TOOLCHAIN=${TOOLCHAIN:-gnu}
+LFS_SPLITUSR=${LFS_SPLITUSR:-0}
 ENABLE_SSH=${ENABLE_SSH:-1}
 ENABLE_DEV=${ENABLE_DEV:-0}
 LFS_HOSTNAME=${LFS_HOSTNAME:-lfs}
@@ -145,11 +146,14 @@ then
 fi
 echo "LANG=en_US.UTF-8" > ${BIN_PATH}/etc/locale.conf
 
+>${BIN_PATH}/postinst_scripts/99-lfs-configurations
 if [ ! -x ${WLAN_SSID} ] && [ ! -x ${WLAN_PSK} ] && [ ! -x ${WLAN_DEV} ]
 then
 	echo Configuring WiFi
 	wpa_passphrase ${WLAN_SSID} ${WLAN_PSK} > ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant-${WLAN_DEV}.conf
-	systemctl --root=${BIN_PATH} enable wpa_supplicant@${WLAN_DEV}
+	cat >>${BIN_PATH}/postinst_scripts/99-lfs-configurations <<-EOF
+		systemctl enable wpa_supplicant@${WLAN_DEV}
+	EOF
 	cat > ${BIN_PATH}/etc/systemd/network/${WLAN_DEV}.network <<-EOF
 		[Match]
 		Name=${WLAN_DEV}
@@ -164,7 +168,9 @@ if [ ${ENABLE_SSH} -eq 1 ]
 then
 	echo Enabling SSHd
 	ssh-keygen -A -f ${BIN_PATH}
-	systemctl --root=${BIN_PATH} enable sshd
+	cat >>${BIN_PATH}/postinst_scripts/99-lfs-configurations <<-EOF
+		systemctl enable sshd
+	EOF
 	generate_ssh_keys --install binaries
 	echo
 fi
@@ -184,9 +190,10 @@ case ${PLATFORM_NAME} in
 			esac
 		fi
 		echo "net.ifnames=0 console=tty1 root=/dev/mmcblk0p2 fsck.repair=yes rootwait systemd.gpt_auto=no" >${BIN_PATH}/boot/cmdline.txt
-		systemctl --root=${BIN_PATH} disable systemd-oomd.socket
-		systemctl --root=${BIN_PATH} disable systemd-oomd.service
-		systemctl --root=${BIN_PATH} disable regenerate_ssh_host_keys
+		cat >>${BIN_PATH}/postinst_scripts/99-lfs-configurations <<-EOF
+			systemctl --root=${BIN_PATH} disable systemd-oomd.socket
+			systemctl --root=${BIN_PATH} disable systemd-oomd.service
+		EOF
 	;;
 	*) ;;
 esac

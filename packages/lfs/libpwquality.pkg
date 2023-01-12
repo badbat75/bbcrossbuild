@@ -1,7 +1,7 @@
 # libpwquality
 PKG_VER=1.4.5
 PKG_URL="https://github.com/libpwquality/libpwquality/releases/download/libpwquality-${PKG_VER}/libpwquality-${PKG_VER}.tar.bz2"
-PKG_DEPS="lfs/cracklib"
+PKG_DEPS="lfs/cracklib lfs/Linux-PAM"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--with-securedir=${INSTALL_LIBDIR}/security"

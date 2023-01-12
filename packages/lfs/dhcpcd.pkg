@@ -67,6 +67,10 @@ PKG_POSTBUILD="install  -v -m700 -d ${PKG_PKGPATH}/var/lib/dhcpcd
 		WantedBy=multi-user.target
 		EOF
 "
-PKG_POSTINSTALL="groupadd --system -g 52 dhcpcd
-useradd --system -c 'DHCP Client Daemon' -d /var/lib/dhcpcd -g dhcpcd -s /bin/false -u 52 dhcpcd
+PKG_POSTINSTALL="if ! getent group dhcpcd; then
+	groupadd --system -g 52 dhcpcd
+fi
+if ! getent passwd dhcpcd; then
+	useradd --system -c \"DHCP Client Daemon\" -d /var/lib/dhcpcd -g dhcpcd -s /sbin/nologin -u 52 dhcpcd
+fi
 chown -v dhcpcd:dhcpcd /var/lib/dhcpcd"

@@ -33,8 +33,12 @@ case ${PKG_TARGET} in
 		CONF_FLAGS+=" --disable-sql"
 		CONF_FLAGS+=" --disable-wt"
 		CONF_FLAGS+=" --enable-overlays=mod"
-		PKG_POSTINSTALL="groupadd -g 83 ldap
-useradd  -c \"OpenLDAP Daemon Owner\" -d /var/lib/openldap -u 83 -g ldap -s /bin/false ldap"
+		PKG_POSTINSTALL="if ! getent group ldap; then
+	groupadd --system -g 83 ldap
+fi
+if ! getent passwd ldap; then
+	useradd --system -c \"OpenLDAP Daemon Owner\" -d /var/lib/openldap -u 83 -g ldap -s /sbin/nologin ldap
+fi"
 	;;
 esac
 INST_CMD=install

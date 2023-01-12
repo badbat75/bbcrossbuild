@@ -27,6 +27,6 @@ if ! getent group systemd-oom; then
 fi
 
 if ! getent passwd systemd-oom; then
-	useradd --system -c \"systemd OOM Daemon\" -d /etc/dbus-1 -g systemd-oom -s /bin/false systemd-oom
+	useradd --system -c \"systemd OOM Daemon\" -d /etc/dbus-1 -g systemd-oom -s /sbin/nologin systemd-oom
 fi"
 PKG_POSTINSTALL_PRIO=11

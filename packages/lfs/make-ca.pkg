@@ -6,7 +6,7 @@ PKG_DEPS+=" lfs/nss"
 BUILD_PROCESS=simplemake
 PKG_TWOSTEPSBUILD=0
 INST_CMD=install
-PKG_PREBUILD="sed 's@elif test -d /lib/systemd/system; then \\@else@' -i Makefile
+PKG_PREBUILD="sed 's@elif test -d /lib/systemd/system; then \\@else \\@' -i Makefile
 PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}/etc/ssl/local
     ${PKG_PKGPATH}/usr/sbin/make-ca -D ${PKG_PKGPATH} -g"
 PKG_POSTINSTALL="systemctl enable update-pki.timer"

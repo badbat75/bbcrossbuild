@@ -160,3 +160,9 @@ PKG_POSTBUILD="install -v -m640 /dev/null ${PKG_PKGPATH}/etc/shadow
 		install -v -m644 ${PKG_PKGPATH}/etc/pam.d/chage ${PKG_PKGPATH}/etc/pam.d/\${PROGRAM}
 		sed -i \"s/chage/\$PROGRAM/\" ${PKG_PKGPATH}/etc/pam.d/\${PROGRAM}
 	done"
+
+if [ ${LFS_SPLITUSR} -eq 1 ]
+then
+	PKG_POSTBUILD+=";mkdir -pv ${PKG_PKGPATH}/sbin
+		ln -s ../usr/sbin/nologin ${PKG_PKGPATH}/sbin"
+fi

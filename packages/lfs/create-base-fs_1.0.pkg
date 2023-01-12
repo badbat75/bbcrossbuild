@@ -4,9 +4,16 @@ PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/{dev,proc,sys,run,etc,var}
 	then
 		local PREFIX=$(echo ${INSTALL_PREFIX} | sed 's|^/||')
 		mkdir -pv ${PKG_PKGPATH}/{\${PREFIX}/bin,\${PREFIX}/lib,\${PREFIX}/sbin}
-		ln -sfv \${PREFIX}/bin ${PKG_PKGPATH}
-		ln -sfv \${PREFIX}/lib ${PKG_PKGPATH}
-		ln -sfv \${PREFIX}/sbin ${PKG_PKGPATH}
+		if [ ${LFS_SPLITUSR} -eq 0 ]
+		then
+			ln -sfv \${PREFIX}/bin ${PKG_PKGPATH}
+			ln -sfv \${PREFIX}/lib ${PKG_PKGPATH}
+			ln -sfv \${PREFIX}/sbin ${PKG_PKGPATH}
+		else
+			mkdir -pv ${PKG_PKGPATH}/bin
+			mkdir -pv ${PKG_PKGPATH}/lib
+			mkdir -pv ${PKG_PKGPATH}/sbin
+		fi
 		if [ "${HARCH_LIB}" == "64" ]
 		then
 			mkdir -pv ${PKG_PKGPATH}/\${PREFIX}/lib64

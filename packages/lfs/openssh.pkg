@@ -108,8 +108,10 @@ PKG_POSTBUILD+="install -vdm755 ${PKG_PKGPATH}/etc/pam.d
 ### This is too restrictive
 ## -e 's/#PasswordAuthentication yes/PasswordAuthentication no/' \
 
-PKG_POSTINSTALL="# create bluetooth group if not already present
-# OpenSSH
-install  -v -m700 -d /var/lib/sshd
-groupadd --system -g 50 sshd
-useradd --system -c 'sshd PrivSep' -d /var/lib/sshd -g sshd -s /bin/false -u 50 sshd"
+PKG_POSTINSTALL="install  -v -m700 -d /var/lib/sshd
+if ! getent group sshd; then
+	groupadd --system -g 50 sshd
+fi
+if ! getent passwd sshd; then
+	useradd --system -c 'sshd PrivSep' -d /var/lib/sshd -g sshd -s /sbin/nologin -u 50 sshd
+fi"
