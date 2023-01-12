@@ -977,8 +977,11 @@ function mesonninja () {
 	EOF
 	run_cmd "chmod +x runconfig.sh runmake.sh"
 	run_cmd "./runconfig.sh"
-	run_cmd "./runmake.sh -j${NPROCS}"
-	run_cmd "./runmake.sh -j${NPROCS} ${INST_CMD:-install}"
+	run_cmd "./runmake.sh -j${NPROCS} ${PKG_MAKETARGETS}"
+	if [ ${PKG_SKIPINSTALL:-0} -eq 0 ]
+	then
+		run_cmd "./runmake.sh -j${NPROCS} ${INST_CMD:-install}"
+	fi
 	cd ${BB_HOME}
 	trap - ERR
 }
@@ -1627,6 +1630,7 @@ function build () {(
 		PKG_POSTINSTALL_PRIO \
 		PKG_PREBUILD \
 		PKG_RUSTFLAGS \
+		PKG_SKIPINSTALL \
 		PKG_SRCDIR \
 		PKG_SUFFIX \
 		PKG_TARGET \

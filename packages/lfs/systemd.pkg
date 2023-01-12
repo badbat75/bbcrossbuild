@@ -8,6 +8,7 @@ PKG_URL="https://github.com/systemd/systemd-stable/archive/refs/tags/v${PKG_VER}
 PKG_DEPS="lfs/zlib lfs/xz lfs/bzip2 lfs/zstd lfs/libxml2"
 BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Drootlibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
+CONF_FLAGS+=" -Drootprefix=/"
 CONF_FLAGS+=" -Dfirstboot=false"
 CONF_FLAGS+=" -Dtests=false"
 CONF_FLAGS+=" -Dslow-tests=false"
@@ -44,6 +45,11 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Dmicrohttpd=false"
 		CONF_FLAGS+=" -Dopenssl=false"
 		CONF_FLAGS+=" -Dpcre2=false"
+		PKG_MAKETARGETS="libsystemd.so.0.34.0 libudev.so.1.7.4 src/libsystemd/libsystemd.pc src/libudev/libudev.pc"
+		PKG_SKIPINSTALL=1
+		PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/pkgconfig
+			install -vm755 {libsystemd.so.0.34.0,libudev.so.1.7.4} ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
+			install -vm644 src/{libsystemd/libsystemd.pc,libudev/libudev.pc} ${INSTALL_LIBSUFFIX}/pkgconfig"
 	;;
 	*)
 		PKG_DEPS+=" lfs/D-Bus lfs/gnu-efi lfs/libcap2 lfs/libaudit lfs/openssl lfs/Linux-PAM lfs/polkit lfs/GLib lfs/kmod lfs/util-linux"
