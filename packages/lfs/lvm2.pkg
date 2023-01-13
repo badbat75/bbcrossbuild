@@ -9,6 +9,7 @@ PKG_DEPS="lfs/libaio lfs/systemd:bootstrap"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--with-usrlibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
+CONF_FLAGS+=" --with-systemdsystemunitdir=/lib/systemd/system"
 CONF_FLAGS+=" --enable-cmdlib"
 CONF_FLAGS+=" --enable-pkgconfig"
 CONF_FLAGS+=" --enable-udev_sync"

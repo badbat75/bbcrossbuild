@@ -771,15 +771,11 @@ function configmake () {
 		fi
 	fi
 	cat >runconfig.sh <<-EOF
-		#!/bin/bash
-		echo "\\\$ ${CONF_ENV} \\\\"
-		echo -e "\t${RUNCONFIG_CMD} ${CONF_FLAGS} \\\\"
-		echo -e "\t\t${CONF_VARS}"
+		#!/bin/bash -x
 		${CONF_ENV} ${RUNCONFIG_CMD} ${CONF_FLAGS} ${CONF_VARS} \${@}
 	EOF
 	cat >runmake.sh <<-EOF
-		#!/bin/bash
-		echo "\\\$ ${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} ${PKG_MAKEVARS} \${@}"
+		#!/bin/bash -x
 		${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} ${PKG_MAKEVARS} \${@}
 	EOF
 	run_cmd "chmod +x runconfig.sh runmake.sh"
@@ -812,8 +808,7 @@ function simplemake () {
 	create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
 	cat >runmake.sh <<-EOF
-		#!/bin/bash
-		echo "\\\$ ${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} PREFIX=${INSTALL_PREFIX} LIBSUFFIX=${INSTALL_LIBSUFFIX} ${PKG_MAKEVARS} \${@}"
+		#!/bin/bash -x
 		${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} PREFIX=${INSTALL_PREFIX} LIBSUFFIX=${INSTALL_LIBSUFFIX} ${PKG_MAKEVARS} \${@}
 	EOF
 	run_cmd "chmod +x runmake.sh"
@@ -849,27 +844,40 @@ function cmakebuild () {
 	else
 		CONF_FLAGS+=" -DBUILD_STATIC_LIBS=OFF"
 	fi
+	local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v')"
 	CCWRAPPER="" create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
-	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/cmake ${PKG_SRCPATH} \\
-		-G Ninja \\
-		-DCMAKE_BUILD_TYPE=\"Release\" \\
-		-DTOOLCHAIN_PREFIX=${HARCH}- \\
-		-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \\
-		-DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \\
-		-DCMAKE_AR=${AR} \\
-		-DCMAKE_RANLIB=${RANLIB} \\
-		-DCMAKE_CROSSCOMPILING=\"True\" \\
-		-DCMAKE_INSTALL_PREFIX=\"${INSTALL_PREFIX}\" \\
-		-DCMAKE_INSTALL_LIBDIR=\"${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}\" \\
-		-DLIB_SUFFIX=\"${INSTALL_LIBSUFFIX}\" \\
-		-DCMAKE_INSTALL_INCLUDEDIR=\"${INSTALL_INCLUDEDIR}\" \\
-		-DCMAKE_INSTALL_SYSCONFDIR=\"${INSTALL_SYSCONFDIR}\" \\
-		-DCMAKE_INSTALL_DATADIR=\"${INSTALL_SHAREDIR}\" \\
-		${CONF_FLAGS}"
-	local NINJA_FLAGS="-j${NPROCS}$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v')"
-	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS}"
-	run_cmd "DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} ${INST_CMD:-install}"
+
+	cat >runconfig.sh <<-EOF
+		#!/bin/bash -x
+		${CONF_ENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/cmake ${PKG_SRCPATH} \\
+		   -G Ninja \\
+		   -DCMAKE_BUILD_TYPE="Release" \\
+		   -DTOOLCHAIN_PREFIX=${HARCH}- \\
+		   -DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \\
+		   -DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \\
+		   -DCMAKE_AR=${AR} \\
+		   -DCMAKE_RANLIB=${RANLIB} \\
+		   -DCMAKE_CROSSCOMPILING="True" \\
+		   -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" \\
+		   -DCMAKE_INSTALL_LIBDIR="${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}" \\
+		   -DLIB_SUFFIX="${INSTALL_LIBSUFFIX}" \\
+		   -DCMAKE_INSTALL_INCLUDEDIR="${INSTALL_INCLUDEDIR}" \\
+		   -DCMAKE_INSTALL_SYSCONFDIR="${INSTALL_SYSCONFDIR}" \\
+		   -DCMAKE_INSTALL_DATADIR="${INSTALL_SHAREDIR}" \\
+		   ${CONF_FLAGS}
+	EOF
+	cat >runmake.sh <<-EOF
+		#!/bin/bash -x
+		${PKG_MAKEENV} DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}
+	EOF
+	run_cmd "chmod +x runconfig.sh runmake.sh"
+	run_cmd "./runconfig.sh"
+	run_cmd "./runmake.sh -j${NPROCS} ${PKG_MAKETARGETS}"
+	if [ ${PKG_SKIPINSTALL:-0} -eq 0 ]
+	then
+		run_cmd "./runmake.sh -j${NPROCS} ${INST_CMD:-install}"
+	fi
 	cd ${BB_HOME}
 	trap - ERR
 }
@@ -970,14 +978,11 @@ function mesonninja () {
 		;;
 	esac
 	cat > runconfig.sh <<-EOF
-		#!/bin/bash
-		echo "\\\$ ${CONF_ENV} \\\\"
-		echo -e "\t${RUNCONFIG_CMD} ${CONF_FLAGS}"
+		#!/bin/bash -x
 		${CONF_ENV} ${RUNCONFIG_CMD} ${CONF_FLAGS} \${@}	
 	EOF
 	cat >runmake.sh <<-EOF
-		#!/bin/bash
-		echo "\\\$ ${PKG_MAKEENV} DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}"
+		#!/bin/bash -x
 		${PKG_MAKEENV} DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}
 	EOF
 	run_cmd "chmod +x runconfig.sh runmake.sh"

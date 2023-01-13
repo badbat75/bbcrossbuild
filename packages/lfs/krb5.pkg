@@ -21,10 +21,10 @@ PKG_PREBUILD="sed -i 's/(MAKE) install INSTALL_STRIP=-s/(MAKE) install INSTALL_S
 
 case ${PKG_TARGET} in
 	bootstrap)
-		PKG_PREBUILD="sed -e '/^SUBDIRS=/ s/\$/\\n__BEGIN_DELETE/' \
+		PKG_PREBUILD+=";sed -e '/^SUBDIRS=/ s/\$/\\n__BEGIN_DELETE/' \
 			-e '/^WINSUBDIRS=/ s/^/__END_DELETE\\n/' -i src/Makefile.in
 			sed '/^__BEGIN_DELETE/,/^__END_DELETE/d' -i src/Makefile.in
-			sed 's/^SUBDIRS=/SUBDIRS=include lib/ -i src/Makefile.in"
+			sed 's/^SUBDIRS=.*/SUBDIRS=util include lib build-tools/' -i src/Makefile.in"
 	;;
 	*)
 		PKG_DEPS="lfs/e2fsprogs"
