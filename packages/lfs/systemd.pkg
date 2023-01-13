@@ -1,6 +1,6 @@
 # systemd
 case ${SYSTEMD_VER:-251} in
-	252) PKG_VER=252.3 ;;
+	252) PKG_VER=252.4 ;;
 	251) PKG_VER=251.10 ;;
 	*) PKG_VER=${SYSTEMD_VER} ;;
 esac
