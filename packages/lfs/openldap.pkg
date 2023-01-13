@@ -11,11 +11,14 @@ PKG_AUTOCONF=1
 		CONF_FLAGS+=" --with-tls=openssl"
 		CONF_FLAGS+=" --with-yielding_select=yes"
 case ${HM} in
-	arm) CONF_VARS="ac_cv_func_memcmp_working=1" ;;
+	arm|aarch64) CONF_VARS="ac_cv_func_memcmp_working=1" ;;
 esac
 case ${PKG_TARGET} in
 	bootstrap)
 		CONF_FLAGS+=" --disable-slapd"
+		PKG_TWOSTEPSBUILD=0
+		PKG_PREBUILD="sed 's/^SUBDIRS=.*/SUBDIRS= include libraries/' -i Makefile.in"
+		INST_CMD="install-strip"
 	;;
 	client)
 		PKG_DEPS+=" lfs/cyrus-sasl"

@@ -15,7 +15,9 @@ CONF_FLAGS="--includedir=${INSTALL_INCLUDEDIR}/security \
 case ${PKG_TARGET} in
 	bootstrap)
 		PKG_TWOSTEPSBUILD=0
-		INST_CMD="install-exec";;
+		PKG_PREBUILD="sed 's/^SUBDIRS =.*/SUBDIRS = libpam libpamc libpam_misc/' -i Makefile.am"
+		INST_CMD="install-strip"
+	;;
 	*)
 		PKG_DEPS+=" lfs/BerkeleyDB lfs/libaudit"
 		INST_CMD="install-strip"

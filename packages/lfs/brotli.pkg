@@ -3,8 +3,6 @@ PKG_VER=1.0.9
 PKG_URL="https://github.com/google/brotli/archive/v${PKG_VER}/brotli-${PKG_VER}.tar.gz"
 PKG_DEPS=""
 BUILD_PROCESS=cmakebuild
-VAR_INSTALL_LIBDIR=CMAKE_INSTALL_LIBDIR
-VAR_INSTALL_INCDIR=CMAKE_INSTALL_INCLUDEDIR
 CONF_FLAGS=
 INST_CMD="install/strip"
 

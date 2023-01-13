@@ -22,7 +22,7 @@ PKG_PREBUILD="if [ -f trust/trust-extract-compat.orig ]
 case ${PKG_TARGET} in
 	bootstrap)
 		PKG_TWOSTEPSBUILD=0
-		INST_CMD="install-exec";;
+		INST_CMD="install-data install-exec";;
 	*)
 		PKG_DEPS+=" lfs/nss"
 		INST_CMD="install-strip"
