@@ -4,7 +4,6 @@ PKG_URL="https://github.com/linux-pam/linux-pam/releases/download/v${PKG_VER}/Li
 PKG_AUTOCONF=1
 PKG_DEPS="lfs/libnsl lfs/libtirpc"
 PKG_DEPS+=" lfs/libxml2" 
-PKG_DEPS+=" lfs/libpwquality"
 PKG_PREBUILD="sed -e 's/dummy elinks/dummy lynx/'                                    \
 	-e 's/-no-numbering -no-references/-force-html -nonumbers -stdin/' \
 	-i configure"
@@ -21,6 +20,7 @@ case ${PKG_TARGET} in
 	;;
 	*)
 		PKG_DEPS+=" lfs/BerkeleyDB lfs/libaudit"
+		PKG_DEPS+=" lfs/libpwquality"
 		INST_CMD="install-strip"
 		PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}/etc/pam.d
 			cat > ${PKG_PKGPATH}/etc/pam.d/other <<-EOF
