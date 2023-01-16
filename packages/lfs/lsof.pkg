@@ -1,5 +1,5 @@
 # lsof
-PKG_VER=4.96.4
+PKG_VER=4.96.5
 PKG_URL="https://github.com/lsof-org/lsof/archive/refs/tags/${PKG_VER}.tar.gz"
 PKG_DEPS="lfs/libtirpc"
 BUILD_PROCESS=downloadonly

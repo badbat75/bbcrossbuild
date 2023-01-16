@@ -1,6 +1,6 @@
 # ncurses
-PKG_VER=6.3+p20221029
-PKG_URL="https://github.com/mirror/ncurses/archive/da409f83dde1caedbb9c84acaf5943275e60e0e0.tar.gz"
+PKG_VER=6.4
+PKG_URL="https://github.com/mirror/ncurses/archive/refs/tags/v6.4.tar.gz"
 
 BUILD_PROCESS=configmake
 CONF_FLAGS="--with-pkg-config-libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/pkgconfig \
