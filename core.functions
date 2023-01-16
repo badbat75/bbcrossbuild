@@ -312,8 +312,10 @@ run_cmd () {
 	trap 'STATUS=${PIPESTATUS[0]}; \
 		trap - ERR; \
 		trap - SIGINT; \
-		echo -e "\nERR caught. [run_cmd: ${STATUS}]" >&2;  \
+		echo -e "\nERR caught. [run_cmd: ${STATUS}]" >&2; \
 		echo -e "Command: ${CMDLINE}\n" >&2; \
+		echo -e "Environment variables:\n" >&2; \
+		env >&2; \
 		return ${STATUS};' ERR
 	trap 'echo "SIGINT caught. [run_cmd]"; \
 		trap - ERR; \

@@ -27,6 +27,18 @@ function check_llvm_c () {
 
 function set_gnu_buildenv () {
 
+	function gcc_sysroot () {
+		# Check where glibc is installed
+		if [ -f ${DISTOS_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/crtn.o ] && \
+			[ -f ${DISTOS_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/crti.o ] && \
+			[ -f ${DISTOS_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/crt1.o ]
+		then
+			echo "${DISTOS_PATH}"
+		else
+			echo "${BIN_PATH}"
+		fi
+	}
+
 	function gcc_toolchain_print_searchdirs () {
 		case ${1} in
 			build)
@@ -87,6 +99,12 @@ function set_gnu_buildenv () {
 	LIBRARY_PATH_FOR_BUILD=$(gcc_toolchain_print_searchdirs build 5)
 	INCLUDE_PATH_FOR_BUILD=$(find {/,/usr/} -mindepth 1 -maxdepth 1 -name include -type d)
 
+	GMPURL=https://gmplib.org/download/gmp/gmp-${GMP_VER}.tar.xz
+	MPFRURL=https://www.mpfr.org/mpfr-${MPFR_VER}/mpfr-${MPFR_VER}.tar.xz
+	MPCURL=https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VER}.tar.gz
+	ISLURL=https://libisl.sourceforge.io/isl-${ISL_VER}.tar.xz
+	BINUTILSURL=https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.bz2
+	GCCURL=https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz
 }
 
 function setup_rust () {
@@ -603,38 +621,164 @@ function setup_bison () {
 	trap ERR
 }
 
-function setup_gcc () {
-	function gcc_sysroot () {
-		# Check where glibc is installed
-		if [ -f ${DISTOS_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/crtn.o ] && \
-			[ -f ${DISTOS_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/crti.o ] && \
-			[ -f ${DISTOS_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/crt1.o ]
-		then
-			echo "${DISTOS_PATH}"
-		else
-			echo "${BIN_PATH}"
-		fi
-	}
-
-	function gcc_download () {
+function setup_binutils () {
+	function binutils_download () {
 		trap 'local STATUS=${?}; \
 			trap - ERR; \
 			return ${STATUS};' ERR
-
-		local GMPURL=https://gmplib.org/download/gmp/gmp-${GMP_VER}.tar.xz
-		local MPFRURL=https://www.mpfr.org/mpfr-${MPFR_VER}/mpfr-${MPFR_VER}.tar.xz
-		local MPCURL=https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VER}.tar.gz
-		local ISLURL=https://libisl.sourceforge.io/isl-${ISL_VER}.tar.xz
-		local BINUTILSURL=https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.xz
-		#local BINUTILSURL=https://github.com/RTEMS/sourceware-mirror-binutils-gdb/archive/refs/tags/binutils-${BINUTILS_VER}.tar.gz
-		#local GCCURL=https://ftp.gnu.org/gnu/gcc/gcc-${GCC_VER}/gcc-${GCC_VER}.tar.xz
-		local GCCURL=https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz
 
 		download_uncompress ${BINUTILSURL} ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}
 		if [ -f ${PATCH_PATH}/binutils/binutils_${BINUTILS_VER}.patch ]
 		then
 			( cd ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}; run_cmd "patch -p1 < ${PATCH_PATH}/binutils/binutils_${BINUTILS_VER}.patch" )
 		fi
+		download_uncompress ${GMPURL} ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/gmp
+		download_uncompress ${MPFRURL} ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/mpfr
+		download_uncompress ${MPCURL} ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/mpc
+		download_uncompress ${ISLURL} ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/isl
+		trap ERR
+	}
+
+	function binutils_buildenv () {
+		if [ ${MAKEVERBOSE:-0} -eq 0 ]
+		then
+			local SILENTCONFIG="--enable-silent-rules"
+			build_configargs="${SILENTCONFIG}"
+			host_configargs="${SILENTCONFIG}"
+			target_configargs="${SILENTCONFIG}"
+		fi
+
+		### Config parameters in common with GCC and Binutils
+		COMMON_CONFIG="--with-sysroot=/ --with-sysroot=$(gcc_sysroot) --enable-shared --with-system-zlib"
+		### Workaround for latest patches (--disable-werror)
+		BINUTILS_CONFIG="--enable-gold=default --enable-ld --enable-gprofng=yes --enable-lto \
+			--enable-new-dtags --disable-rpath --enable-threads=yes --enable-plugins --enable-64-bit-bfd \
+			--enable-compressed-debug-sections=all --enable-separate-code=yes --enable-plugins ${SILENTCONFIG}"
+
+		COMPFLAGS="${GNU_EXTRACOMPFLAGS} -Wno-maybe-uninitialized -Wno-stringop-overflow -Wno-stack-usage -Wno-alloc-size-larger-than"
+		LINKERFLAGS="${GNU_EXTRALDFLAGS}"
+		LTO_COMPFLAGS=
+		LTO_LINKERFLAGS=
+		if [ ${GCC_LTOENABLE:-0} -eq 1 ]
+		then
+			LTO_COMPFLAGS=" -flto=${LTOPROCS}"
+			LTO_LINKERFLAGS=" -fuse-linker-plugin"
+		fi
+	}
+	
+	function binutils_configuration () {
+		trap 'STATUS=${?}; \
+			trap - ERR; \
+			return ${STATUS}' ERR
+
+		local CONFIG_ARCH_PARAMS="--build=${BARCH} --host=${BARCH} --target=${HARCH}"
+		case ${HM} in
+			x86_64) local PLATFORM_ARCHFLAGS=""
+				;;
+
+			*)	local PLATFORM_ARCHFLAGS=" ${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
+				;;
+		esac
+		local PLATFORM_ARCHFLAGS="--enable-targets=${HM}-${HOS}-${HLIBC} --with-arch-directory=${HM} ${HMARCH:+ --with-arch=${HMARCH}}${PLATFORM_ARCHFLAGS}"
+		if [ -d ${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER} ]
+		then
+			rm -rf ${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}
+		fi
+		run_cmd "mkdir -p ${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}"
+		pushd ${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}
+		binutils_buildenv
+		run_cmd "CC_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
+				CXX_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
+				AR_FOR_BUILD=\"${AR_FOR_BUILD}\" \\
+				NM_FOR_BUILD=\"${NM_FOR_BUILD}\" \\
+				RANLIB_FOR_BUILD=\"${RANLIB_FOR_BUILD}\" \\
+				CFLAGS_FOR_BUILD=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}\" \\
+				CXXFLAGS_FOR_BUILD=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}\" \\
+				LDFLAGS_FOR_BUILD=\"${LINKERFLAGS}\" \\
+				CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
+				CXX=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
+				AR=\"${AR_FOR_BUILD}\" \\
+				NM=\"${NM_FOR_BUILD}\" \\
+				RANLIB=\"${RANLIB_FOR_BUILD}\" \\
+				CFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}\" \\
+				CXXFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}\" \\
+				LDFLAGS=\"${LINKERFLAGS}${LTO_LINKERFLAGS}\" \\
+				CFLAGS_FOR_TARGET=\"${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
+				CXXFLAGS_FOR_TARGET=\"${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
+				LDFLAGS_FOR_TARGET=\"${LINKERFLAGS} ${OPTLINK_FLAGS}\" \\
+				${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/configure \\
+					${CONFIG_ARCH_PARAMS} ${PLATFORM_ARCHFLAGS} \\
+					${COMMON_CONFIG} ${BINUTILS_CONFIG} \\
+					--prefix=\"${TOOLCHAIN_PATH}\" \\
+					build_configargs='${build_configargs}' \\
+					host_configargs='${host_configargs}' \\
+					target_configargs='${target_configargs}'"
+		popd
+		trap - ERR
+	}
+	
+	function binutils_make () {
+		trap 'STATUS=${?}; \
+			trap - ERR; \
+			return ${STATUS}' ERR
+
+		if [ ! -d ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER} ]
+		then
+			echo "Downloading... " | log_buffer info
+			binutils_download
+		fi
+		if [ ! -f ${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}/config.status ]
+		then
+			echo "Configuration... " | log_buffer info
+			binutils_configuration
+		fi
+		pushd ${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}
+		echo "Making compiler." | log_buffer info
+		run_cmd "make STAGE_CC_WRAPPER=\"${CCWRAPPER}\" all"
+		run_cmd "make STAGE_CC_WRAPPER=\"${CCWRAPPER}\" install-strip"
+		popd
+		trap ERR
+	}
+
+	trap 'local STATUS=${?}; \
+		trap - ERR; \
+		echo "fail."; \
+		echo "Remove ${TOOLCHAIN_PATH} folder before start over again."; \
+		echo; \
+		return ${STATUS}' ERR
+
+	echo -n "Setting up binutils"
+	echo -n "-${BINUTILS_VER}... "
+
+	local BINUTILS_MAJVER=$(cut -d. -f1 <<<${BINUTILS_VER})
+
+	local SPACES="   "
+	if [ ! -f ${TOOLCHAIN_PATH}/bin/${HARCH}-ld.bfd ]
+	then
+		echo -n "building... "
+		binutils_make ${HARCH} >> ${LOG_PATH}/toolchain_binutils-${BINUTILS_VER}.log
+		echo -e "done.\n"
+	else
+		echo "already there.\n"
+	fi
+	if [ -d ${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER} ]
+	then
+		run_cmd "rm -rf ${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}" >> ${LOG_PATH}/toolchain_binutils-${BINUTILS_VER}.log
+	fi
+	if [ -d ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER} ]
+	then
+		run_cmd "rm -rf ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}" >> ${LOG_PATH}/toolchain_binutils-${BINUTILS_VER}.log
+	fi
+
+	trap - ERR
+}
+
+function setup_gcc () {
+	function gcc_download () {
+		trap 'local STATUS=${?}; \
+			trap - ERR; \
+			return ${STATUS};' ERR
+
 		download_uncompress ${GCCURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
 		if [ -f ${PATCH_PATH}/gcc/gcc_${GCC_VER}.patch ]
 		then 
@@ -644,37 +788,7 @@ function setup_gcc () {
 		download_uncompress ${MPFRURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpfr
 		download_uncompress ${MPCURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpc
 		download_uncompress ${ISLURL} ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/isl
-		pushd ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}
 		run_cmd "sed 's@^#include <limits.h>@#include <linux/limits.h>@' -i ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/libsanitizer/asan/asan_linux.cpp"
-		find ../binutils-${BINUTILS_VER} -maxdepth 1 -type d ! -path ../binutils-${BINUTILS_VER} -exec bash -c 'run_cmd "ln -fs {} ."' \;
-		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 9 && test_version ${BINUTILS_VER} -ge 2.33
-		then
-			echo "GCC version older than 10 and BINUTILS 2.33 or earlier... " | log_buffer info
-			run_cmd "cp -f ../binutils-${BINUTILS_VER}/configure.ac ."
-			run_cmd "cp -f ../binutils-${BINUTILS_VER}/Makefile.* ."
-		fi
-		if test_version $(echo ${GCC_VER} | sed 's/_/./g; s/-.*$//g') -le 9 && test_version ${BINUTILS_VER} -ge 2.34
-		then
-			echo "GCC version older than 10 and BINUTILS 2.34 or earlier... " | log_buffer info
-			run_cmd "ln -fs ../binutils-${BINUTILS_VER}/config/debuginfod.m4 config/debuginfod.m4"
-		fi
-		if test_version ${GCC_VER} -lt 12.0.0 && test_version ${BINUTILS_VER} -ge 2.37
-		then
-			echo "GCC version is less than 12.0.0 and BINUTILS 2.37 or earlier... " | log_buffer info
-			run_cmd "mv libiberty libiberty.gcc"
-			run_cmd "ln -fs ../binutils-${BINUTILS_VER}/libiberty ."
-			run_cmd "mv include/demangle.h include/demangle.h.gcc"
-			run_cmd "ln -fs ../binutils-${BINUTILS_VER}/include/demangle.h include/"
-		fi
-		if [ ../binutils-${BINUTILS_VER}/libiberty/cp-demangle.c -nt libiberty/cp-demangle.c ]
-		then
-			echo "binutils-${BINUTILS_VER}/libiberty newer than gcc-${GCC_VER}/libiberty... " | log_buffer info
-			run_cmd "mv libiberty libiberty.gcc"
-			run_cmd "ln -fs ../binutils-${BINUTILS_VER}/libiberty ."
-			run_cmd "mv include/demangle.h include/demangle.h.gcc"
-			run_cmd "ln -fs ../binutils-${BINUTILS_VER}/include/demangle.h include/"
-		fi
-		popd
 		trap ERR
 	}
 
@@ -696,10 +810,6 @@ function setup_gcc () {
 			--with-linker-hash-style=gnu --enable-plugin --enable-initfini-array \
 			--enable-gnu-indirect-function --disable-nls --disable-option-checking \
 			${SILENTCONFIG}"
-		### Workaround for latest patches (--disable-werror)
-		BINUTILS_CONFIG="--disable-werror --enable-gold=default --enable-ld --enable-gprofng=yes --enable-lto \
-			--enable-new-dtags --disable-rpath --enable-threads=yes --enable-plugins --enable-64-bit-bfd \
-			--enable-compressed-debug-sections=all --enable-separate-code=yes --enable-plugins"
 
 		if [[ "${GCC_LANGUAGES}" =~ "fortran" ]]
 		then
@@ -759,7 +869,7 @@ function setup_gcc () {
 				LDFLAGS_FOR_TARGET=\"${LINKERFLAGS} ${OPTLINK_FLAGS}\" \\
 				${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure \\
 					${CONFIG_ARCH_PARAMS} ${PLATFORM_ARCHFLAGS} \\
-					${COMMON_CONFIG} ${BINUTILS_CONFIG} ${GCC_CONFIG} \\
+					${COMMON_CONFIG} ${GCC_CONFIG} \\
 					--prefix=\"${TOOLCHAIN_PATH}\" \\
 					build_configargs='${build_configargs}' \\
 					host_configargs='${host_configargs}' \\
@@ -1109,10 +1219,6 @@ function setup_gcc () {
 	if [ -d ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER} ]
 	then
 		run_cmd "rm -rf ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
-	fi
-	if [ -d ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER} ]
-	then
-		run_cmd "rm -rf ${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}" >> ${LOG_PATH}/toolchain_gcc-${GCC_VER}.log
 	fi
 	if [ -d ${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER} ]
 	then
@@ -1834,6 +1940,7 @@ function setup_full_toolchain () {
 	setup_autotools --default
 	setup_pkgconfig
 	setup_bison
+	setup_binutils
 	setup_gcc ${SETUP_GCC}
 	setup_toolchain_wrapper
 	setup_cmake

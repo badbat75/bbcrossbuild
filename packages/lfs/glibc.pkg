@@ -60,7 +60,7 @@ case ${PKG_TARGET} in
 			--disable-werror --disable-sanity-checks --without-cvs"
 		PKG_DEPS=
 		PKG_TWOSTEPSBUILD=1
-		PKG_MAKEVARS="slibdir=${INSTALL_LIBDIR}/glibc-${GLIBC_VER} \
+		PKG_MAKEVARS+=" slibdir=${INSTALL_LIBDIR}/glibc-${GLIBC_VER} \
 			complocaledir=${TARGET_LIBDIR}/locale datadir=${TARGET_SHAREDIR}"
 		PKG_MAKETARGETS="lib elf/subdir_lib locale/others"
 		INST_CMD="elf/ldso_install locale/subdir_install"
@@ -73,7 +73,7 @@ case ${PKG_TARGET} in
 			--with-headers=${BIN_PATH}${INSTALL_INCLUDEDIR}"
 		CONF_ENV="unset CXX CXXFLAGS; CC=\"${CC_FOR_BUILD}\" CFLAGS=\"${CFLAGS_FOR_BUILD}\" CC=\"${CPP_FOR_BUILD}\" CPPFLAGS=\"${CPPLAGS_FOR_BUILD}\""
 		PKG_TWOSTEPSBUILD=0
-		PKG_MAKEVARS="install-bootstrap-headers=yes"
+		PKG_MAKEVARS+=" install-bootstrap-headers=yes"
 		INST_CMD="install-headers"
 	;;
 	stage1)
