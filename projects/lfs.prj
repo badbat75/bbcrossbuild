@@ -6,20 +6,20 @@ fi
 ## Sets default values:
 TOOLCHAIN=${TOOLCHAIN:-gnu}
 LFS_SPLITUSR=${LFS_SPLITUSR:-0}
-ENABLE_SSH=${ENABLE_SSH:-1}
-ENABLE_DEV=${ENABLE_DEV:-0}
+LFS_ENABLESSH=${LFS_ENABLESSH:-1}
+LFS_ENABLEDEV=${LFS_ENABLEDEV:-0}
 LFS_HOSTNAME=${LFS_HOSTNAME:-lfs}
 LFS_FSTYPE=${LFS_FSTYPE:-ext4}
-WLAN_DEV=${WLAN_DEV:-wlan0}
+LFS_WLANDEV=${LFS_WLANDEV:-wlan0}
 
 echo "Tool chain: ${TOOLCHAIN}"
-echo "Is ssh enabled: $( [ ${ENABLE_SSH} -eq 1 ] && echo yes || no )"
+echo "Is ssh enabled: $( [ ${LFS_ENABLESSH} -eq 1 ] && echo yes || no )"
 echo "LFS hostname: ${LFS_HOSTNAME}"
 echo "LFS filesystem type: ${LFS_FSTYPE}"
-if [ ! -x ${WLAN_SSID} ] && [ ! -x ${WLAN_PSK} ] && [ ! -x ${WLAN_DEV} ]
+if [ ! -x ${LFS_WLANSSID} ] && [ ! -x ${LFS_WLANPSK} ] && [ ! -x ${LFS_WLANDEV} ]
 then
-	echo "SSID: ${WLAN_SSID}"
-	echo "WLAN device: ${WLAN_DEV}"
+	echo "SSID: ${LFS_WLANSSID}"
+	echo "WLAN device: ${LFS_WLANDEV}"
 fi
 echo
 
@@ -121,7 +121,7 @@ KERNEL_LTOENABLE=thin
 	build lfs/alsa-utils
 ### Development
 	build lfs/strace
-	if [ ${ENABLE_DEV} -eq 1 ]
+	if [ ${LFS_ENABLEDEV} -eq 1 ]
 	then
 		build lfs/binutils
 		GCC_TARGETS="binaries" build lfs/gcc
@@ -147,24 +147,24 @@ fi
 echo "LANG=en_US.UTF-8" > ${BIN_PATH}/etc/locale.conf
 
 >${BIN_PATH}/postinst_scripts/99-lfs-configurations
-if [ ! -x ${WLAN_SSID} ] && [ ! -x ${WLAN_PSK} ] && [ ! -x ${WLAN_DEV} ]
+if [ ! -x ${LFS_WLANSSID} ] && [ ! -x ${LFS_WLANPSK} ] && [ ! -x ${LFS_WLANDEV} ]
 then
 	echo Configuring WiFi
-	wpa_passphrase ${WLAN_SSID} ${WLAN_PSK} > ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant-${WLAN_DEV}.conf
+	wpa_passphrase ${LFS_WLANSSID} ${LFS_WLANPSK} > ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant-${LFS_WLANDEV}.conf
 	cat >>${BIN_PATH}/postinst_scripts/99-lfs-configurations <<-EOF
-		systemctl enable wpa_supplicant@${WLAN_DEV}
+		systemctl enable wpa_supplicant@${LFS_WLANDEV}
 	EOF
-	cat > ${BIN_PATH}/etc/systemd/network/${WLAN_DEV}.network <<-EOF
+	cat > ${BIN_PATH}/etc/systemd/network/${LFS_WLANDEV}.network <<-EOF
 		[Match]
-		Name=${WLAN_DEV}
-		SSID=${WLAN_SSID}
+		Name=${LFS_WLANDEV}
+		SSID=${LFS_WLANSSID}
 
 		[Network]
 		DHCP=yes
 	EOF
 	echo
 fi
-if [ ${ENABLE_SSH} -eq 1 ]
+if [ ${LFS_ENABLESSH} -eq 1 ]
 then
 	echo Enabling SSHd
 	ssh-keygen -A -f ${BIN_PATH}

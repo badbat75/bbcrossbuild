@@ -56,10 +56,7 @@ case "${PKG_TARGET}" in
 		PKG_DEPS+=" lfs/libgcrypt"
 		PKG_DEPS+=" lfs/libidn2"
 		PKG_DEPS+=" lfs/libmicrohttpd"
-		if [ ${LFS_LIBPWQUALITY:-1} -eq 1 ]
-		then
-			PKG_DEPS+=" lfs/libpwquality"
-		fi
+		PKG_DEPS+=" lfs/libpwquality"
 		PKG_DEPS+=" lfs/libseccomp"
 		PKG_DEPS+=" lfs/libxkbcommon"
 		PKG_DEPS+=" lfs/lz4"
