@@ -1,10 +1,12 @@
-#!/bin/sh
+#!/bin/sh -e
+
 DBG_ARCH=${DBG_ARCH:-aarch64}
 DBG_PORT=${DBG_PORT:-10101}
 DBG_EXEC=${1}
-SYSROOT=${2}
+shift 1
+DBG_EXEC_PARAMS="${@}"
 
-if [ -z ${DBG_EXEC} ] || [ -z ${SYSROOT} ]
+if [ -z ${DBG_EXEC} ]
 then
 	echo "Usage:"
 	echo
@@ -15,13 +17,12 @@ fi
 
 export QEMU_LD_PREFIX=${SYSROOT}
 
-echo "Command to debug: ${DBG_EXEC}"
-echo "System root: ${SYSROOT}"
+echo "Command to debug: ${DBG_EXEC} ${DBG_EXEC_PARAMS}"
 echo "Target architecture: ${DBG_ARCH}"
 echo
 echo -n "Running command in debug mode..."
-nohup qemu-${DBG_ARCH}-static -g ${DBG_PORT} ${SYSROOT}${DBG_EXEC} &
-echo " ok."
+nohup qemu-${DBG_ARCH}-static -g ${DBG_PORT} ${SYSROOT}${DBG_EXEC} ${DBG_EXEC_PARAMS} &
+echo -e " ok.\n"
 
 cat >/tmp/batch.gdb <<-EOF
 	set debuginfod enabled on
