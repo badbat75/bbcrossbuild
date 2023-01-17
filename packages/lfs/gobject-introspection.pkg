@@ -21,5 +21,3 @@ fi
 rm -fv ${INSTALL_EXECPREFIX}/bin/g-ir-*.cross"
 	;;
 esac
-PKG_OVERRIDELTO=0
-PKG_OVERRIDELD=bfd
