@@ -100,7 +100,7 @@ KERNEL_LTOENABLE=thin
 	build lfs/net-tools
 	build lfs/iproute2
 	build lfs/curl
-	build lfs/wget
+	build lfs/wget2
 	build lfs/tcpdump
 ### Wireless
 	build lfs/wpa_supplicant
