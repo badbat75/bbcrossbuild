@@ -10,6 +10,7 @@ PKG_PREBUILD="sed -e 's/dummy elinks/dummy lynx/'                               
 BUILD_PROCESS=configmake
 CONF_FLAGS="--includedir=${INSTALL_INCLUDEDIR}/security \
 			--enable-securedir=${INSTALL_LIBDIR}/security \
+			--with-systemdunitdir=/lib/systemd/system \
 			--docdir=${INSTALL_SHAREDIR}/doc/Linux-PAM-${PKG_VER}"
 
 case ${PKG_TARGET} in
