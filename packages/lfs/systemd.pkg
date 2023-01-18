@@ -64,6 +64,7 @@ case "${PKG_TARGET}" in
 		PKG_DEPS+=" lfs/p11-kit"
 		PKG_DEPS+=" lfs/pcre2"
 		PKG_DEPS+=" lfs/quota-tools"
+		PKG_DEPS+=" lfs/libbpf"
 		###
 		CONF_FLAGS+=" -Dblkid=true"
 		CONF_FLAGS+=" -Dman=auto"

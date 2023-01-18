@@ -482,6 +482,7 @@ function create_environment_source () {
 		### Tool chain: ${PKG_TOOLCHAIN:-${TOOLCHAIN}}
 		### C Wrapper: ${CCWRAPPER}
 		### Build type: ${BUILD_PROCESS}
+		### Target: ${TARGET_ENV} [${_param_target}]
 		###### Other environment variables:
 		### DISTOS_PATH=${DISTOS_PATH}
 		### BIN_PATH=${BIN_PATH}
@@ -691,6 +692,7 @@ function downloadonly () {
 	if [ -d ${PKG_BLDPATH} ]
 	then
 		cd ${PKG_BLDPATH}
+		echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 		create_environment_source
 		source environment.source
 	fi
@@ -757,6 +759,7 @@ function configmake () {
 			CONF_FLAGS+=" --disable-static"
 		fi
 	fi
+	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
 	if [[ "${CONF_CMD}" =~ ^\./.* ]]
@@ -805,6 +808,7 @@ function simplemake () {
 	return ${STATUS};' ERR
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
 	cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
+	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
 	cat >runmake.sh <<-EOF
@@ -845,6 +849,7 @@ function cmakebuild () {
 		CONF_FLAGS+=" -DBUILD_STATIC_LIBS=OFF"
 	fi
 	local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v')"
+	echo "CCWRAPPER=\"\" create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	CCWRAPPER="" create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
 
@@ -949,6 +954,7 @@ function mesonninja () {
 
 	run_cmd "mkdir -p ${PKG_BLDPATH}"
 	cd ${PKG_BLDPATH}
+	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
 	if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
@@ -1003,6 +1009,7 @@ function cargobuild () {
 
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
 	cd ${PKG_BLDPATH}
+	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
 	local CARGO_BIN=${CARGO_BIN:-${INSTALL_EXECPREFIX}/bin}
@@ -1118,6 +1125,7 @@ function kernelbuild () {
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
 	cd ${PKG_BLDPATH}
 
+	echo "GCC_DEFAULT_LD=bfd  create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	GCC_DEFAULT_LD=bfd create_environment_source --target ${PKG_TARGET_ENV}
 	sed -e 's/FLAGS=.*/FLAGS=/g' -e 's/PKG_CONFIG\(.*\)=.*/PKG_CONFIG\1=/' -i environment.source
 	source environment.source
@@ -1281,6 +1289,7 @@ function pythonbuild () {
 		fi
 		export PYTHONPATH
 	done
+	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
 	run_cmd "cross-python -m site"
@@ -1338,6 +1347,7 @@ function pythonpip () {
 	#PYTHONUSERBASE="${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
 	#export PYTHONUSERBASE
 	export PYTHONPATH
+	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
 	run_cmd "cross-python -m site"
@@ -1455,6 +1465,7 @@ function boostbuild () {
 			local LTO=off
 			;;
 	esac
+	#echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	#create_environment_source
 	#source environment.source
 	run_cmd "./bootstrap.sh \\
@@ -1489,6 +1500,7 @@ function custom () {
 
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
 	pushd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
+	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
 	cat >runmake.sh <<-EOF
@@ -1512,6 +1524,7 @@ function perlmodule () {
 
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
 	pushd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
+	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
 	pwd
