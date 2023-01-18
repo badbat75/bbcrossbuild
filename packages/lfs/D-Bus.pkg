@@ -22,23 +22,23 @@ CONF_FLAGS+=" --disable-asserts"
 CONF_FLAGS+=" --disable-doxygen-docs"
 CONF_FLAGS+=" --disable-xml-docs"
 CONF_FLAGS+=" --disable-tests"
-CONF_FLAGS+=" --localstatedir=/var"
+CONF_FLAGS+=" --localstatedir=${INSTALL_LOCALSTATEDIR}"
 CONF_FLAGS+=" --runstatedir=/run"
 CONF_FLAGS+=" --with-system-socket=/run/dbus/system_bus_socket"
 CONF_FLAGS+=" --with-systemdsystemunitdir=/lib/systemd/system"
 CONF_FLAGS+=" --with-systemduserunitdir=${INSTALL_LIBDIR}/systemd/user"
-CONF_FLAGS+=" --docdir=/usr/share/doc/dbus-${PKG_VER}"
+CONF_FLAGS+=" --docdir=${INSTALL_SHAREDIR}/doc/dbus-${PKG_VER}"
 INST_CMD="install-strip"
 
-PKG_POSTINSTALL="chown -v root:messagebus /usr/libexec/dbus-daemon-launch-helper
-chmod -v 4750 /usr/libexec/dbus-daemon-launch-helper
-ln -sfv /etc/machine-id /var/lib/dbus/machine-id
+PKG_POSTINSTALL="chown -v root:messagebus ${INSTALL_PREFIX}/libexec/dbus-daemon-launch-helper
+chmod -v 4750 ${INSTALL_PREFIX}/libexec/dbus-daemon-launch-helper
+ln -sfv /etc/machine-id ${INSTALL_LOCALSTATEDIR}/lib/dbus/machine-id
 
 if ! getent group systemd-oom; then
 	groupadd --system systemd-oom
 fi
 
 if ! getent passwd systemd-oom; then
-	useradd --system -c \"systemd OOM Daemon\" -d /etc/dbus-1 -g systemd-oom -s /sbin/nologin systemd-oom
+	useradd --system -c \"systemd OOM Daemon\" -d ${INSTALL_SYSCONFDIR}/dbus-1 -g systemd-oom -s /sbin/nologin systemd-oom
 fi"
 PKG_POSTINSTALL_PRIO=11
