@@ -759,7 +759,7 @@ function setup_binutils () {
 		binutils_make ${HARCH} >> ${LOG_PATH}/toolchain_binutils-${BINUTILS_VER}.log
 		echo -e "done.\n"
 	else
-		echo "already there.\n"
+		echo "already there."
 	fi
 	if [ -d ${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER} ]
 	then
