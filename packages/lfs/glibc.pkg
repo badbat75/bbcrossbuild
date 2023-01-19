@@ -33,14 +33,6 @@ then
 else
 	CONF_FLAGS+=" --disable-build-nscd --disable-nscd"
 fi
-if [ -d ${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib ]
-then
-	CONF_ENV="LD_LIBRARY_PATH=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib "
-	PKG_MAKEENV="LD_LIBRARY_PATH=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib "
-else
-	CONF_ENV="LD_LIBRARY_PATH= "
-	PKG_MAKEENV="LD_LIBRARY_PATH= "
-fi
 CONF_VARS="libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes"
 PKG_MAKEVARS="slibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} rootsbindir=${INSTALL_PREFIX}/sbin \
 	complocaledir=${INSTALL_LIBDIR}/locale cross-compiling=yes"
