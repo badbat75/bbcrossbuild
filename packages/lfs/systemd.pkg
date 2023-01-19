@@ -69,6 +69,7 @@ case "${PKG_TARGET}" in
 		PKG_DEPS+=" lfs/qrencode"
 		PKG_DEPS+=" lfs/libfido2"
 		PKG_DEPS+=" lfs/tpm2-tss"
+		PKG_DEPS+=" lfs/kexec-tools"
 		###
 		CONF_FLAGS+=" -Dblkid=true"
 		CONF_FLAGS+=" -Dman=auto"
@@ -79,10 +80,12 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Ddbussessionservicedir=${INSTALL_SHAREDIR}/dbus-1/services"
 		CONF_FLAGS+=" -Ddbuspolicydir=${INSTALL_SHAREDIR}/dbus-1/system.d"
 		CONF_FLAGS+=" -Ddbus-interfaces-dir=${INSTALL_SHAREDIR}/dbus-1/interfaces"
+		CONF_FLAGS+=" -Dbashcompletiondir=${INSTALL_SHAREDIR}/bash-completion/completions/"
 		CONF_FLAGS+=" -Defi-includedir=${BIN_PATH}${INSTALL_INCLUDEDIR}/efi"
 		CONF_FLAGS+=" -Defi-libdir=${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 		CONF_FLAGS+=" -Dquotaon-path=${INSTALL_EXECPREFIX}/sbin/quotaon"
 		CONF_FLAGS+=" -Dquotacheck-path=${INSTALL_EXECPREFIX}/sbin/quotacheck"
+		CONF_FLAGS+=" -Dkexec-path=${INSTALL_EXECPREFIX}/sbin/kexec"
 		PKG_POSTBUILD="install -v -m755 -d ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/pam.d
 			cat >> ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/pam.d/system-session <<-EOF
 				# Begin Systemd addition
