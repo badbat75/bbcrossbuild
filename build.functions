@@ -571,7 +571,7 @@ function create_environment_source () {
 		cross|native)
 			cat <<-EOF >> environment.source
 				export PKG_CONFIG='$(which pkg-config)'
-				export PKG_CONFIG_LIBDIR=/usr/lib64/pkgconfig:${TOOLCHAIN_PATH}/lib/pkgconfig:${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig
+				export PKG_CONFIG_LIBDIR=${TOOLCHAIN_PATH}/lib/pkgconfig:${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig:/usr/lib64/pkgconfig
 				export PKG_CONFIG_SYSROOT_DIR=
 				export PKG_CONFIG_ALLOW_CROSS=
 			EOF
