@@ -484,7 +484,7 @@ function setup_autotools () {
 	if [ ${_param_default:-0} -eq 1 ]
 	then
 		pathadd PATH "${AUTOTOOLS_PATH}/bin"
-		pathadd LD_LIBRARY_PATH "${AUTOTOOLS_PATH}/lib"
+		#pathadd LD_LIBRARY_PATH "${AUTOTOOLS_PATH}/lib"
 	fi
 	trap ERR
 }
@@ -1745,7 +1745,8 @@ function setup_python () {
 				export AR="${HOST_AR}"
 				export NM="${HOST_NM}"
 				export RANLIB="${HOST_RANLIB}"
-				export LDFLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS} ${GNU_EXTRALDFLAGS} ${OPTLINK_FLAGS}"
+				export LDFLAGS="-Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib ${GNU_EXTRALDFLAGS} \
+					-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS} ${OPTLINK_FLAGS}"
 				;;
 			llvm)
 				export CC="${CCWRAPPER:+${CCWRAPPER} }clang"
@@ -1753,9 +1754,11 @@ function setup_python () {
 				export AR="llvm-ar"
 				export NM="llvm-nm"
 				export RANLIB="llvm-ranlib"
-				export LDFLAGS="-fuse-ld=lld -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS} ${OPTLINK_FLAGS}"
+				export LDFLAGS="-Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib ${LLVM_EXTRALDFLAGS} \
+					-fuse-ld=lld -Wl,--threads=${NPROCS} ${LLVM_EXTRAPOLLYFLAGSLIBS} ${OPTLINK_FLAGS}"
 				;;
 		esac
+		export LDFLAGS+=" -Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/lib"
 		run_cmd "${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER} --enable-shared \
 			--with-system-ffi --with-ensurepip=yes --disable-test-modules \
 			--enable-optimizations --with-lto --enable-ipv6 \
@@ -1852,7 +1855,7 @@ function setup_python () {
 	TARGET_PYTHON=${PYTHON_SEARCHPATH}/usr/bin/python${PYTHONBIN_VER}
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin"
-	pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib"
+	#pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib"
 	if [ ! -x ${BUILD_PYTHON} ] || [ ! -x ${BUILD_PYTHONPIP} ]
 	then
 		echo -n "downloading... "
@@ -2074,6 +2077,6 @@ fi
 set_gnu_buildenv
 
 pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/bin"
-pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_PATH}/lib"
+#pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_PATH}/lib"
 pathadd PATH "${TOOLCHAIN_PATH}/bin"
-pathadd LD_LIBRARY_PATH "${TOOLCHAIN_PATH}/lib"
+#pathadd LD_LIBRARY_PATH "${TOOLCHAIN_PATH}/lib"

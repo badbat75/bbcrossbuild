@@ -5,17 +5,12 @@ PKG_PERL_LIBVER=$(echo ${PKG_VER} | cut -d. -f1,2)
 PKG_PERLCROSS_VER=f842531ca3198ac30dddfd36f881b947cbffebdd
 PKG_URL="https://www.cpan.org/src/5.0/perl-${PKG_VER}.tar.xz"
 PKG_DEPS="lfs/gdbm lfs/expat"
-BUILD_PROCESS=downloadonly
+BUILD_PROCESS=custom
 PKG_COPYSRC=1
 PKG_FAULTYCFLAGS=1
 PKG_PREBUILD="NODELETEDESTDIR=1 download_uncompress https://github.com/arsv/perl-cross/archive/${PKG_PERLCROSS_VER}.tar.gz \${PKG_SRCPATH}"
-PKG_POSTBUILD="
-	set -x
+PKG_BUILDSCRIPT="
 	[ -d ${SRC_PATH}/perl ] && cp -frpv ${SRC_PATH}/perl/* . || true
-	echo OPTCOMP_FLAGS: \${OPTCOMP_FLAGS}
-	echo OPTLINK_FLAGS: \${OPTLINK_FLAGS}
-	create_environment_source
-	source environment.source
 	\${PKG_SRCPATH}/configure \
 		--prefix=/usr --target=${HARCH} --sysroot=${BIN_PATH} \
 		--host-cc=${TOOLCHAIN_PATH}/bin/toolchain_build_cc \
@@ -40,5 +35,4 @@ PKG_POSTBUILD="
         -Dvendorarch=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/${PKG_PERL_LIBVER}/vendor_perl
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} crosspatch miniperl dynaloader perl cflags nonxs_ext utilities
 	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} -j1 extensions pods
-	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} install
-	set +x"
+	make ${PKG_MAKEVARS} V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} install"

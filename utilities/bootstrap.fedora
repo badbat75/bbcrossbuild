@@ -34,7 +34,7 @@ PACKAGES+=" gperf"
 PACKAGES+=" libxml2-devel"
 
 # for glib-dbus-1.0
-PACKAGES+=" dbus-glib-devel"
+# PACKAGES+=" dbus-glib-devel"
 
 # for udevil
 PACKAGES+=" intltool"
@@ -46,19 +46,19 @@ PACKAGES+=" pandoc"
 PACKAGES+=" libxslt docbook-xsl docbook2X"
 
 # for man-db
-PACKAGES+=" groff"
+# PACKAGES+=" groff"
 
 # for btrfs-progs
 PACKAGES+=" xmlto asciidoc"
 
 # for krb5
-PACKAGES+=" libss-devel"
+# PACKAGES+=" libss-devel"
 
 # for gobject-introspection
-PACKAGES+=" gobject-introspection-devel"
+# PACKAGES+=" gobject-introspection-devel"
 
 # for chromium
-PACKAGES+=" libevent-devel"
+# PACKAGES+=" libevent-devel"
 
 if dnf 2>&1 > /dev/null
 then
@@ -72,20 +72,20 @@ fi
 #python2 <(curl -s https://bootstrap.pypa.io/pip/2.7/get-pip.py)
 
 # Debian Packages
-(
-    cd /tmp
-    git clone https://salsa.debian.org/reproducible-builds/strip-nondeterminism.git
-    cd strip-nondeterminism
-    perl Makefile.PL PREFIX=/usr INSTALLSITELIB="\$(INSTALLPRIVLIB)"
-    make
-    sudo make install
-    cd -
-    rm -rf strip-nondeterminism
-)
-if [ ! -f /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm.orig ]
-then
-    sudo cp -v /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm.orig
-else
-    sudo cp -fv /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm.orig /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm
-fi
-sudo sed -i "s/'0755'/0755/g" /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm
+#(
+#    cd /tmp
+#    git clone https://salsa.debian.org/reproducible-builds/strip-nondeterminism.git
+#    cd strip-nondeterminism
+#    perl Makefile.PL PREFIX=/usr INSTALLSITELIB="\$(INSTALLPRIVLIB)"
+#    make
+#    sudo make install
+#    cd -
+#    rm -rf strip-nondeterminism
+#)
+#if [ ! -f /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm.orig ]
+#then
+#    sudo cp -v /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm.orig
+#else
+#    sudo cp -fv /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm.orig /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm
+#fi
+#sudo sed -i "s/'0755'/0755/g" /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm
