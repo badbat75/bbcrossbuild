@@ -5,4 +5,5 @@ BUILD_PROCESS=simplemake
 PKG_MAKEVARS="-C src LIBSUBDIR=/lib${INSTALL_LIBSUFFIX}"
 INST_CMD="install"
 
-PKG_POSTBUILD="\${STRIP} --strip-unneeded ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libbpf.so.${PKG_VER}"
+PKG_POSTBUILD="\${STRIP} --strip-unneeded ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libbpf.so.${PKG_VER}
+    install -vm644 \${PKG_SRCPATH}/src/{hashmap.h,libbpf_internal.h,relo_core.h,nlattr.h} ${PKG_PKGPATH}${INSTALL_INCLUDEDIR}/bpf"
