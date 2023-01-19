@@ -105,6 +105,17 @@ function set_gnu_buildenv () {
 	ISLURL=https://libisl.sourceforge.io/isl-${ISL_VER}.tar.xz
 	BINUTILSURL=https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.bz2
 	GCCURL=https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz
+
+	TARGET_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
+	COMPFLAGS="${GNU_EXTRACOMPFLAGS} -Wno-maybe-uninitialized -Wno-stringop-overflow -Wno-stack-usage -Wno-alloc-size-larger-than"
+	LINKERFLAGS="${GNU_EXTRALDFLAGS}"
+	LTO_COMPFLAGS=
+	LTO_LINKERFLAGS=
+	if [ ${GCC_LTOENABLE:-0} -eq 1 ]
+	then
+		LTO_COMPFLAGS=" -flto=${LTOPROCS}"
+		LTO_LINKERFLAGS=" -fuse-linker-plugin"
+	fi
 }
 
 function setup_rust () {
@@ -655,15 +666,6 @@ function setup_binutils () {
 			--enable-new-dtags --disable-rpath --enable-threads=yes --enable-plugins --enable-64-bit-bfd \
 			--enable-compressed-debug-sections=all --enable-separate-code=yes --enable-plugins ${SILENTCONFIG}"
 
-		COMPFLAGS="${GNU_EXTRACOMPFLAGS} -Wno-maybe-uninitialized -Wno-stringop-overflow -Wno-stack-usage -Wno-alloc-size-larger-than"
-		LINKERFLAGS="${GNU_EXTRALDFLAGS}"
-		LTO_COMPFLAGS=
-		LTO_LINKERFLAGS=
-		if [ ${GCC_LTOENABLE:-0} -eq 1 ]
-		then
-			LTO_COMPFLAGS=" -flto=${LTOPROCS}"
-			LTO_LINKERFLAGS=" -fuse-linker-plugin"
-		fi
 	}
 	
 	function binutils_configuration () {
@@ -703,8 +705,8 @@ function setup_binutils () {
 				CFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}\" \\
 				CXXFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}\" \\
 				LDFLAGS=\"${LINKERFLAGS}${LTO_LINKERFLAGS}\" \\
-				CFLAGS_FOR_TARGET=\"${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
-				CXXFLAGS_FOR_TARGET=\"${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
+				CFLAGS_FOR_TARGET=\"${TARGET_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
+				CXXFLAGS_FOR_TARGET=\"${TARGET_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
 				LDFLAGS_FOR_TARGET=\"${LINKERFLAGS} ${OPTLINK_FLAGS}\" \\
 				${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/configure \\
 					${CONFIG_ARCH_PARAMS} ${PLATFORM_ARCHFLAGS} \\
@@ -816,15 +818,6 @@ function setup_gcc () {
 			GCC_CONFIG+=" --enable-libquadmath --enable-libquadmath-support"
 		fi
 
-		COMPFLAGS="${GNU_EXTRACOMPFLAGS} -Wno-maybe-uninitialized -Wno-stringop-overflow -Wno-stack-usage -Wno-alloc-size-larger-than"
-		LINKERFLAGS="${GNU_EXTRALDFLAGS}"
-		LTO_COMPFLAGS=
-		LTO_LINKERFLAGS=
-		if [ ${GCC_LTOENABLE:-0} -eq 1 ]
-		then
-			LTO_COMPFLAGS=" -flto=${LTOPROCS}"
-			LTO_LINKERFLAGS=" -fuse-linker-plugin"
-		fi
 	}
 	
 	function gcc_configuration () {
@@ -864,8 +857,8 @@ function setup_gcc () {
 				CFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}\" \\
 				CXXFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}\" \\
 				LDFLAGS=\"${LINKERFLAGS}${LTO_LINKERFLAGS}\" \\
-				CFLAGS_FOR_TARGET=\"${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
-				CXXFLAGS_FOR_TARGET=\"${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
+				CFLAGS_FOR_TARGET=\"${TARGET_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
+				CXXFLAGS_FOR_TARGET=\"${TARGET_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
 				LDFLAGS_FOR_TARGET=\"${LINKERFLAGS} ${OPTLINK_FLAGS}\" \\
 				${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure \\
 					${CONFIG_ARCH_PARAMS} ${PLATFORM_ARCHFLAGS} \\
