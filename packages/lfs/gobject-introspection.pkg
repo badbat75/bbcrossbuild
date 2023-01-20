@@ -8,6 +8,7 @@ INST_CMD=install
 case ${PKG_TARGET} in
 	cross)
 		CONF_FLAGS="-Dpython=python3"
+		PKG_LDFLAGS="-Wl,-rpath -Wl,${TOOLCHAIN_PATH}/lib -Wl,-rpath-link -Wl,${TOOLCHAIN_PATH}/lib"
 	;;
 	*)
 		PKG_DEPS="lfs/gobject-introspection:cross"

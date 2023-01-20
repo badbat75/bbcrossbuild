@@ -1,0 +1,7 @@
+# D-Bus
+PKG_VER=${CMAKE_VER}
+PKG_URL="https://github.com/Kitware/CMake/releases/download/v${PKG_VER}/cmake-${PKG_VER}.tar.gz"
+PKG_DEPS=
+BUILD_PROCESS=cmakebuild
+CONF_FLAGS=
+INST_CMD="install/strip"

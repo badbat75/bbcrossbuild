@@ -7,8 +7,8 @@ esac
 PKG_URL="https://github.com/systemd/systemd-stable/archive/refs/tags/v${PKG_VER}.tar.gz"
 PKG_DEPS="lfs/zlib lfs/xz lfs/bzip2 lfs/zstd lfs/libxml2"
 BUILD_PROCESS=mesonninja
-#CONF_FLAGS="-Drootlibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
-CONF_FLAGS=" -Dfirstboot=false"
+CONF_FLAGS="-Drootlibdir=/lib${INSTALL_LIBSUFFIX}"
+CONF_FLAGS+=" -Dfirstboot=false"
 CONF_FLAGS+=" -Dtests=false"
 CONF_FLAGS+=" -Dslow-tests=false"
 CONF_FLAGS+=" -Dfuzz-tests=false"

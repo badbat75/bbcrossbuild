@@ -20,6 +20,7 @@ case ${PKG_TARGET} in
 		install -vm644 config/icucross.inc ${TOOLCHAIN_PATH}/share/icu/${PKG_VER}/config"
 		PKG_CFLAGS="-DICU_DATA_DIR=\\\"${TOOLCHAIN_PATH}/share/icu/${PKG_VER}\\\""
 		PKG_CXXFLAGS="-DICU_DATA_DIR=\\\"${TOOLCHAIN_PATH}/share/icu/${PKG_VER}\\\""
+		PKG_LDFLAGS="-Wl,-rpath -Wl,${TOOLCHAIN_PATH}/lib"
 		PKG_MAKEVARS="sbindir=${TOOLCHAIN_PATH}/bin"
 	;;
 	*)
