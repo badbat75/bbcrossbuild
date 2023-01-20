@@ -43,6 +43,7 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Dimportd=false"
 		CONF_FLAGS+=" -Dmicrohttpd=false"
 		CONF_FLAGS+=" -Dopenssl=false"
+		CONF_FLAGS+=" -Dpam=false"
 		CONF_FLAGS+=" -Dpcre2=false"
 	;;
 	*)
@@ -75,7 +76,7 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Dman=auto"
 		CONF_FLAGS+=" -Dpam=true"
 		CONF_FLAGS+=" -Dpamlibdir=${INSTALL_LIBDIR}/security"
-		CONF_FLAGS+=" -Dpamconfdir=${INSTALL_SYSCONFDIR}/pam.d"
+		CONF_FLAGS+=" -Dpamconfdir=no"
 		CONF_FLAGS+=" -Ddbussystemservicedir=${INSTALL_SHAREDIR}/dbus-1/system-services"
 		CONF_FLAGS+=" -Ddbussessionservicedir=${INSTALL_SHAREDIR}/dbus-1/services"
 		CONF_FLAGS+=" -Ddbuspolicydir=${INSTALL_SHAREDIR}/dbus-1/system.d"
@@ -115,7 +116,6 @@ case "${PKG_TARGET}" in
 				# End ${INSTALL_SYSCONFDIR}/pam.d/systemd-user
 			EOF
 
-			systemd-machine-id-setup --root=${PKG_PKGPATH}
 			systemctl --root=${PKG_PKGPATH} preset-all
 			#systemctl --root=${PKG_PKGPATH} disable systemd-sysupdate{,-reboot}
 			"
@@ -127,3 +127,4 @@ PKG_LD_LIBRARY_PATH=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
 PKG_PREBUILD="sed -i -e 's/GROUP=\"render\"/GROUP=\"video\"/' -e 's/GROUP=\"sgx\", //' rules.d/50-udev-default.rules.in"
 ### Python modules does not pass sysroot flags...
 PKG_FAULTYCFLAGS=1
+PKG_POSTINSTALL="systemd-machine-id-setup"
