@@ -36,8 +36,8 @@ function setbuildenv () {
 				export PKG_CONFIG_ALLOW_CROSS=1
 			fi
 			export QEMU_LD_PREFIX="${BIN_PATH}"
-			PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
-			PLATFORM_RUSTFLAGS="${HMCPU:+-C target-cpu=${HMCPU}}${HMARCH_RUST:+ -C target-feature=${HMARCH_RUST} }"
+			#PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
+			#PLATFORM_RUSTFLAGS="${HMCPU:+-C target-cpu=${HMCPU}}${HMARCH_RUST:+ -C target-feature=${HMARCH_RUST} }"
 
 			COMMON_CFLAGS="-I${BIN_PATH}${TARGET_INCLUDEDIR}"
 			COMMON_CXXFLAGS="-I${BIN_PATH}${TARGET_INCLUDEDIR}"

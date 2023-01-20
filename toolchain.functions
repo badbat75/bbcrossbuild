@@ -1016,9 +1016,8 @@ function setup_gcc () {
 			fi
 			if [ ! -f ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/config.status ]
 			then
-				echo "Configuration... " | log_buffer info
-				GCC_LTOENABLE=0
-				gcc_configuration
+				echo "Configuration... " | log_buffer info				
+				GCC_LTOENABLE=0 gcc_configuration
 			fi
 			pushd ${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}
 			create_sccache_wrapper
