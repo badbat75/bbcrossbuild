@@ -106,16 +106,8 @@ function set_gnu_buildenv () {
 	BINUTILSURL=https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.bz2
 	GCCURL=https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz
 
-	TARGET_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
-	COMPFLAGS="${GNU_EXTRACOMPFLAGS} -Wno-maybe-uninitialized -Wno-stringop-overflow -Wno-stack-usage -Wno-alloc-size-larger-than"
-	LINKERFLAGS="${GNU_EXTRALDFLAGS}"
-	LTO_COMPFLAGS=
-	LTO_LINKERFLAGS=
-	if [ ${GCC_LTOENABLE:-0} -eq 1 ]
-	then
-		LTO_COMPFLAGS=" -flto=${LTOPROCS}"
-		LTO_LINKERFLAGS=" -fuse-linker-plugin"
-	fi
+	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
+	PLATFORM_RUSTFLAGS="${HMCPU:+-C target-cpu=${HMCPU}}${HMARCH_RUST:+ -C target-feature=${HMARCH_RUST} }"
 }
 
 function setup_rust () {
@@ -495,7 +487,6 @@ function setup_autotools () {
 	if [ ${_param_default:-0} -eq 1 ]
 	then
 		pathadd PATH "${AUTOTOOLS_PATH}/bin"
-		#pathadd LD_LIBRARY_PATH "${AUTOTOOLS_PATH}/lib"
 	fi
 	trap ERR
 }
@@ -666,6 +657,15 @@ function setup_binutils () {
 			--enable-new-dtags --disable-rpath --enable-threads=yes --enable-plugins --enable-64-bit-bfd \
 			--enable-compressed-debug-sections=all --enable-separate-code=yes --enable-plugins ${SILENTCONFIG}"
 
+		COMPFLAGS="${GNU_EXTRACOMPFLAGS}"
+		LINKERFLAGS="${GNU_EXTRALDFLAGS}"
+		LTO_COMPFLAGS=
+		LTO_LINKERFLAGS=
+		if [ ${GCC_LTOENABLE:-0} -eq 1 ]
+		then
+			LTO_COMPFLAGS=" -flto=${LTOPROCS}"
+			LTO_LINKERFLAGS=" -fuse-linker-plugin"
+		fi
 	}
 	
 	function binutils_configuration () {
@@ -705,8 +705,8 @@ function setup_binutils () {
 				CFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}\" \\
 				CXXFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}\" \\
 				LDFLAGS=\"${LINKERFLAGS}${LTO_LINKERFLAGS}\" \\
-				CFLAGS_FOR_TARGET=\"${TARGET_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
-				CXXFLAGS_FOR_TARGET=\"${TARGET_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
+				CFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
+				CXXFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
 				LDFLAGS_FOR_TARGET=\"${LINKERFLAGS} ${OPTLINK_FLAGS}\" \\
 				${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/configure \\
 					${CONFIG_ARCH_PARAMS} ${PLATFORM_ARCHFLAGS} \\
@@ -806,7 +806,7 @@ function setup_gcc () {
 		### Config parameters in common with GCC and Binutils
 		COMMON_CONFIG="--with-sysroot=/ --with-sysroot=$(gcc_sysroot) --enable-shared --with-system-zlib"
 		GCC_CONFIG="--enable-languages=${GCC_LANGUAGES:-c,c++} --enable-multiarch --enable-version-specific-runtime-libs  \
-			--enable-threads=posix --enable-checking=release --disable-multilib \
+			--enable-threads=posix --enable-tls --enable-checking=release --disable-multilib \
 			--enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object \
 			--enable-linker-build-id --with-gcc-major-version-only --enable-libstdcxx-backtrace \
 			--with-linker-hash-style=gnu --enable-plugin --enable-initfini-array \
@@ -818,6 +818,15 @@ function setup_gcc () {
 			GCC_CONFIG+=" --enable-libquadmath --enable-libquadmath-support"
 		fi
 
+		COMPFLAGS="${GNU_EXTRACOMPFLAGS} -Wno-maybe-uninitialized -Wno-stringop-overflow -Wno-stack-usage -Wno-alloc-size-larger-than"
+		LINKERFLAGS="${GNU_EXTRALDFLAGS}"
+		LTO_COMPFLAGS=
+		LTO_LINKERFLAGS=
+		if [ ${GCC_LTOENABLE:-0} -eq 1 ]
+		then
+			LTO_COMPFLAGS=" -flto=${LTOPROCS}"
+			LTO_LINKERFLAGS=" -fuse-linker-plugin"
+		fi
 	}
 	
 	function gcc_configuration () {
@@ -857,8 +866,8 @@ function setup_gcc () {
 				CFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}\" \\
 				CXXFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}\" \\
 				LDFLAGS=\"${LINKERFLAGS}${LTO_LINKERFLAGS}\" \\
-				CFLAGS_FOR_TARGET=\"${TARGET_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
-				CXXFLAGS_FOR_TARGET=\"${TARGET_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
+				CFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
+				CXXFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
 				LDFLAGS_FOR_TARGET=\"${LINKERFLAGS} ${OPTLINK_FLAGS}\" \\
 				${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure \\
 					${CONFIG_ARCH_PARAMS} ${PLATFORM_ARCHFLAGS} \\
@@ -1571,7 +1580,6 @@ function setup_llvm () {
 		echo -n "building host binaries... "
 		build_llvm >> ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log 2>&1
 	fi
-	pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib64"
 	pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin"
 	case x${HM} in
 		xarm)
@@ -1848,7 +1856,6 @@ function setup_python () {
 	TARGET_PYTHON=${PYTHON_SEARCHPATH}/usr/bin/python${PYTHONBIN_VER}
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin"
-	#pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib"
 	if [ ! -x ${BUILD_PYTHON} ] || [ ! -x ${BUILD_PYTHONPIP} ]
 	then
 		echo -n "downloading... "
@@ -2070,6 +2077,4 @@ fi
 set_gnu_buildenv
 
 pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/bin"
-#pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_PATH}/lib"
 pathadd PATH "${TOOLCHAIN_PATH}/bin"
-#pathadd LD_LIBRARY_PATH "${TOOLCHAIN_PATH}/lib"
