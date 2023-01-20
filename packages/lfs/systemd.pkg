@@ -7,8 +7,8 @@ esac
 PKG_URL="https://github.com/systemd/systemd-stable/archive/refs/tags/v${PKG_VER}.tar.gz"
 PKG_DEPS="lfs/zlib lfs/xz lfs/bzip2 lfs/zstd lfs/libxml2"
 BUILD_PROCESS=mesonninja
-CONF_FLAGS="-Drootlibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
-CONF_FLAGS+=" -Dfirstboot=false"
+#CONF_FLAGS="-Drootlibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
+CONF_FLAGS=" -Dfirstboot=false"
 CONF_FLAGS+=" -Dtests=false"
 CONF_FLAGS+=" -Dslow-tests=false"
 CONF_FLAGS+=" -Dfuzz-tests=false"
@@ -35,6 +35,7 @@ case "${PKG_TARGET}" in
 	bootstrap) LIBAUDIT_TARGET=bootstrap
 		PKG_DEPS+=" lfs/libcap2:bootstrap"
 		CONF_FLAGS+=" -Daudit=false"
+		CONF_FLAGS+=" -Ddbus=false"
 		CONF_FLAGS+=" -Dcoredump=false"
 		CONF_FLAGS+=" -Delfutils=false"
 		CONF_FLAGS+=" -Dlibidn2=false"
@@ -74,8 +75,9 @@ case "${PKG_TARGET}" in
 		###
 		CONF_FLAGS+=" -Dblkid=true"
 		CONF_FLAGS+=" -Dman=auto"
+		CONF_FLAGS+=" -Ddbus=true"
 		CONF_FLAGS+=" -Dpam=true"
-		CONF_FLAGS+=" -Dpamlibdir=${INSTALL_LIBDIR}/security"
+		CONF_FLAGS+=" -Dpamlibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/security"
 		CONF_FLAGS+=" -Dpamconfdir=no"
 		CONF_FLAGS+=" -Ddbussystemservicedir=${INSTALL_SHAREDIR}/dbus-1/system-services"
 		CONF_FLAGS+=" -Ddbussessionservicedir=${INSTALL_SHAREDIR}/dbus-1/services"
@@ -115,9 +117,6 @@ case "${PKG_TARGET}" in
 
 				# End ${INSTALL_SYSCONFDIR}/pam.d/systemd-user
 			EOF
-
-			systemctl --root=${PKG_PKGPATH} preset-all
-			#systemctl --root=${PKG_PKGPATH} disable systemd-sysupdate{,-reboot}
 			"
 		;;
 esac
@@ -126,5 +125,6 @@ INST_CMD="install"
 PKG_LD_LIBRARY_PATH=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
 PKG_PREBUILD="sed -i -e 's/GROUP=\"render\"/GROUP=\"video\"/' -e 's/GROUP=\"sgx\", //' rules.d/50-udev-default.rules.in"
 ### Python modules does not pass sysroot flags...
-PKG_FAULTYCFLAGS=1
-PKG_POSTINSTALL="systemd-machine-id-setup"
+#PKG_FAULTYCFLAGS=1
+PKG_POSTINSTALL="systemd-machine-id-setup && systemctl preset-all"
+PKG_POSTINSTALL_PRIO="10"

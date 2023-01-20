@@ -10,7 +10,7 @@ CONF_FLAGS+=" -Dsession_tracking=libsystemd-login"
 CONF_FLAGS+=" -Dsystemdsystemunitdir=/lib/systemd/system"
 CONF_FLAGS+=" -Dos_type=lfs"
 CONF_FLAGS+=" -Dpam_prefix=${INSTALL_SYSCONFDIR}/pam.d"
-CONF_FLAGS+=" -Dpam_module_dir=${INSTALL_LIBDIR}/security"
+CONF_FLAGS+=" -Dpam_module_dir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/security"
 CONF_FLAGS+=" -Dtests=false"
 CONF_FLAGS+=" -Dexamples=false"
 BUILD_PROCESS=mesonninja

@@ -8,6 +8,6 @@ PKG_DEPS+=" lfs/libpwquality"
 ###
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
-CONF_FLAGS="--disable-ssh-token"
+CONF_FLAGS="--exec-prefix=/ --libdir=/lib${INSTALL_LIBSUFFIX} --disable-ssh-token"
 CONF_VARS="systemduserunitdir=${INSTALL_LIBDIR}/systemd/user systemd_tmpfilesdir=${INSTALL_LIBDIR}/tmpfiles.d"
 INST_CMD="install-strip"

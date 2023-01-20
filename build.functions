@@ -936,6 +936,7 @@ function mesonninja () {
 			endian = '${HMENDIAN}'
 
 			[properties]
+			sys_root = '${SYSROOT}'
 			c_args = [${C_ARGS}]
 			cpp_args = [${CPP_ARGS}]
 			fortran_args= [${FORTRAN_ARGS}]
