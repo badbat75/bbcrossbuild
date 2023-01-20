@@ -13,7 +13,7 @@ case ${PKG_TARGET} in
 	*)
 		PKG_DEPS="lfs/Linux-PAM"
 		PKG_POSTBUILD="./runmake.sh -C pam_cap
-			install -v -m755 -d ${PKG_PKGPATH}/usr/lib/security
+			install -v -m755 -d ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/security
 			install -v -m755 pam_cap/pam_cap.so ${PKG_PKGPATH}/usr/lib/security
 			install -v -m755 -d ${PKG_PKGPATH}/etc/security
 			install -v -m644 pam_cap/capability.conf ${PKG_PKGPATH}/etc/security
