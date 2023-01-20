@@ -2,18 +2,6 @@
 PKG_VER=1.15.2
 PKG_URL="https://dbus.freedesktop.org/releases/dbus/dbus-${PKG_VER}.tar.xz"
 PKG_DEPS="lfs/expat lfs/libaudit:bootstrap lfs/libcap2 lfs/systemd:bootstrap lfs/GLib:bootstrap lfs/libX11"
-
-#BUILD_PROCESS=cmakebuild
-#CONF_FLAGS="-DENABLE_USER_SESSION=True"
-#CONF_FLAGS+=" -DDBUS_DISABLE_ASSERT=True"
-#CONF_FLAGS+=" -DDBUS_ENABLE_DOXYGEN_DOCS=True"
-#CONF_FLAGS+=" -DDBUS_ENABLE_XML_DOCS=True"
-#CONF_FLAGS+=" -DDBUS_BUILD_TESTS=False"
-#CONF_FLAGS+=" -DDBUS_RUNSTATEDIR=/run"
-#CONF_FLAGS+=" -DWITH_SYSTEMD_SYSTEMUNITDIR=/lib/systemd/system"
-#CONF_FLAGS+=" -DWITH_SYSTEMD_USERUNITDIR=${INSTALL_LIBDIR}/systemd/user"
-#INST_CMD="install/strip"
-
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-user-session"
 CONF_FLAGS+=" --enable-libaudit"
