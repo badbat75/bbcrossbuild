@@ -15,11 +15,23 @@ CONF_FLAGS="ADJTIME_PATH=/var/lib/hwclock/adjtime \
             --disable-makeinstall-chown \
             --without-tinfo"
 CONF_VARS="ADJTIME_PATH=/var/lib/hwclock/adjtime runstatedir=/run"
-INST_CMD="install-strip"
 PKG_MAKEVARS="NCURSES_LIBS=-lncurses"
 
 case ${TOOLCHAIN} in
     llvm)
         PKG_CFLAGS=" -Wno-implicit-function-declaration"
         ;;
+esac
+
+case ${PKG_TARGET} in
+    cross)
+        PKG_MAKETARGETS="libuuid.la libblkid.la"
+        INST_CMD="install-nodist_blkidincHEADERS install-uuidincHEADERS"
+        PKG_POSTBUILD="install -vdm755 ${TOOLCHAIN_PATH}/lib
+            install -vm755 .libs/{libuuid.so,libblkid.so} ${TOOLCHAIN_PATH}/lib"
+    ;;
+    *)
+        PKG_DEPS+=" lfs/util-linux:cross"
+        INST_CMD="install-strip"
+    ;;
 esac

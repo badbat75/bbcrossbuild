@@ -15,19 +15,36 @@ function setbuildenv () {
 	OPTS="" OPTS_WITH_VALUE="--target" param2value "${@}"
 	local TARGET_ENV=${_param_target:-target}
 	case ${TARGET_ENV} in
-		native|cross)
+		native)
 			unset QEMU_LD_PREFIX COMMON_CPPFLAGS SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH
 			PLATFORM_CFLAGS="-march=native"
 			PLATFORM_RUSTFLAGS="-C target-cpu=native"
-			COMMON_CFLAGS="-I${GLOBAL_TOOLCHAIN_PATH}/include -I${TOOLCHAIN_PATH}/include"
+			COMMON_CFLAGS="-I${GLOBAL_TOOLCHAIN_PATH}/include"
 			COMMON_CXXFLAGS="${COMMON_CFLAGS}"
 			COMMON_FCFLAGS="${COMMON_CFLAGS}"
-			COMMON_LDFLAGS="-L${GLOBAL_TOOLCHAIN_PATH}/lib -L${TOOLCHAIN_PATH}/lib"
+			COMMON_LDFLAGS="-L${GLOBAL_TOOLCHAIN_PATH}/lib"
+			COMMON_LDFLAGS+=" -Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib"
+			COMMON_LDFLAGS+=" -Wl,-rpath-link -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib"
+			COMMON_PKG_CONFIG_LIBDIR="${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig"
+			COMMON_PKG_CONFIG_LIBDIR+=":${GLOBAL_TOOLCHAIN_PATH}/share/pkgconfig"
+		;;
+		cross)
+			unset QEMU_LD_PREFIX COMMON_CPPFLAGS SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH
+			PLATFORM_CFLAGS="-march=native"
+			PLATFORM_RUSTFLAGS="-C target-cpu=native"
+			COMMON_CFLAGS="-I${GLOBAL_TOOLCHAIN_PATH}/include"
+			COMMON_CFLAGS+=" -I${TOOLCHAIN_PATH}/include"
+			COMMON_CXXFLAGS="${COMMON_CFLAGS}"
+			COMMON_FCFLAGS="${COMMON_CFLAGS}"
+			COMMON_LDFLAGS="-L${TOOLCHAIN_PATH}/lib"
+			COMMON_LDFLAGS+=" -L${GLOBAL_TOOLCHAIN_PATH}/lib"
+			COMMON_LDFLAGS+=" -Wl,-rpath -Wl,${TOOLCHAIN_PATH}/lib"
+			COMMON_LDFLAGS+=" -Wl,-rpath-link -Wl,${TOOLCHAIN_PATH}/lib"
+			COMMON_LDFLAGS+=" -Wl,-rpath-link -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib"
 			COMMON_PKG_CONFIG_LIBDIR="${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig"
 			COMMON_PKG_CONFIG_LIBDIR+=":${GLOBAL_TOOLCHAIN_PATH}/share/pkgconfig"
 			COMMON_PKG_CONFIG_LIBDIR+=":${TOOLCHAIN_PATH}/lib/pkgconfig"
 			COMMON_PKG_CONFIG_LIBDIR+=":${TOOLCHAIN_PATH}/share/pkgconfig"
-			unset SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH
 		;;
 		target)
 			if [ ${HARCH} != ${BARCH} ]
@@ -797,7 +814,10 @@ function configmake () {
 			run_cmd "./runmake.sh ${target}"
 		done
 	fi
-	run_cmd "./runmake.sh ${INST_CMD:-} DESTDIR=${PKG_PKGPATH}"
+	if [ ${PKG_SKIPINSTALL:-0} -eq 0 ]
+	then
+		run_cmd "./runmake.sh ${INST_CMD:-} DESTDIR=${PKG_PKGPATH}"
+	fi
 	popd
 	trap - ERR
 }
@@ -824,7 +844,10 @@ function simplemake () {
 			run_cmd "./runmake.sh ${target}"
 		done
 	fi
-	run_cmd "./runmake.sh ${INST_CMD:-install} DESTDIR=${PKG_PKGPATH} "
+	if [ ${PKG_SKIPINSTALL:-0} -eq 0 ]
+	then
+		run_cmd "./runmake.sh ${INST_CMD:-install} DESTDIR=${PKG_PKGPATH} "
+	fi
 	cd ${BB_HOME}
 	trap - ERR
 }
