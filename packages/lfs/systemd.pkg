@@ -1,10 +1,13 @@
 # systemd
 case ${SYSTEMD_VER:-251} in
-	252) PKG_VER=252.4 ;;
+	252)
+		PKG_VER=252.4+d7aa93a
+		PKG_URL="https://github.com/systemd/systemd-stable/archive/d7aa93ab2e8de34fc91b6392f498121518954dee.tar.gz"
+	;;
 	251) PKG_VER=251.10 ;;
 	*) PKG_VER=${SYSTEMD_VER} ;;
 esac
-PKG_URL="https://github.com/systemd/systemd-stable/archive/refs/tags/v${PKG_VER}.tar.gz"
+PKG_URL="${PKG_URL:-https://github.com/systemd/systemd-stable/archive/refs/tags/v${PKG_VER}.tar.gz}"
 PKG_DEPS="lfs/zlib lfs/xz lfs/bzip2 lfs/zstd lfs/libxml2"
 BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Drootlibdir=/lib${INSTALL_LIBSUFFIX}"
