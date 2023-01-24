@@ -31,6 +31,13 @@ CONF_FLAGS+=" -Ddefault-dnssec=no"
 CONF_FLAGS+=" -Ddefault-dns-over-tls=no"
 CONF_FLAGS+=" -Ddefault-mdns=no"
 CONF_FLAGS+=" -Ddefault-llmnr=resolve"
+### To be tested
+CONF_FLAGS+=" -Dnss-myhostname=true"
+CONF_FLAGS+=" -Dnss-mymachines=true"
+CONF_FLAGS+=" -Dnss-resolve=true"
+CONF_FLAGS+=" -Dnss-systemd=true"
+CONF_FLAGS+=" -Doomd=true"
+###
 case "${PKG_TARGET}" in
 	bootstrap) LIBAUDIT_TARGET=bootstrap
 		PKG_DEPS+=" lfs/libcap2:bootstrap"

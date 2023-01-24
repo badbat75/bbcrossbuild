@@ -971,7 +971,7 @@ function mesonninja () {
 			CONF_FLAGS+=" --default-library=shared"
 		fi
 	fi
-	local RUNCONFIG_CMD="${GLOBAL_TOOLCHAIN_PATH}/bin/meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release -Db_ndebug=true"
+	local RUNCONFIG_CMD="${GLOBAL_TOOLCHAIN_PATH}/bin/meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release -Db_ndebug=true -Db_pie=true"
 	case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 		0) ;;
 		*) RUNCONFIG_CMD+=" -Db_lto=true" ;;
