@@ -191,10 +191,10 @@ case ${PLATFORM_NAME} in
 			esac
 		fi
 		echo "net.ifnames=0 console=tty1 root=/dev/mmcblk0p2 fsck.repair=yes rootwait systemd.gpt_auto=no" >${BIN_PATH}/boot/cmdline.txt
-		cat >>${BIN_PATH}/postinst_scripts/99-lfs-configurations <<-EOF
-			systemctl disable systemd-oomd.socket
-			systemctl disable systemd-oomd.service
-		EOF
+		#cat >>${BIN_PATH}/postinst_scripts/99-lfs-configurations <<-EOF
+		#	systemctl disable systemd-oomd.socket
+		#	systemctl disable systemd-oomd.service
+		#EOF
 	;;
 	*) ;;
 esac
