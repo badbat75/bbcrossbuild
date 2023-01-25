@@ -25,8 +25,8 @@ esac
 
 case ${PKG_TARGET} in
     cross)
-        PKG_MAKETARGETS="libuuid.la libblkid.la"
-        INST_CMD="install-nodist_blkidincHEADERS install-uuidincHEADERS"
+        PKG_MAKETARGETS="libuuid.la,libblkid.la,install-nodist_blkidincHEADERS,install-uuidincHEADERS"
+        PKG_SKIPINSTALL=1
         PKG_POSTBUILD="install -vdm755 ${TOOLCHAIN_PATH}/lib
             install -vm755 .libs/{libuuid.so,libblkid.so} ${TOOLCHAIN_PATH}/lib"
     ;;
