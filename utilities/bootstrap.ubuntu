@@ -1,5 +1,5 @@
 #!/bin/bash
-sudo apt-get install -y bc kpartx parted curl build-essential libzstd1 libzstd-dev \
+sudo apt-get install -y bc kpartx parted curl build-essential patchelf libzstd1 libzstd-dev \
     gawk flex \
     git xmltoman docbook-utils swig doxygen texinfo python3-docutils
 

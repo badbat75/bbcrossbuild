@@ -1120,14 +1120,8 @@ function setup_gcc () {
 					fi
 				done
 			fi
-			eval local $(grep "^RTLDLIST=" /usr/bin/ldd)
-			for ldso in ${RTLDLIST}
-			do
-				if [ -f ${ldso} ]
-				then
-					local RTD=${RTD:+${RTD} }${ldso}
-				fi
-			done
+			local RTLDLIST="$(find ${TOOLCHAIN_PATH}/lib -name "ld-linux*.so.*" | xargs)"
+			local RTD=${RTD:+${RTD} }${RTLDLIST}
 			if [ -n "${RTD}" ]
 			then
 				if [ ! -d ${TOOLCHAIN_PATH}/bin ]

@@ -32,13 +32,13 @@ function setbuildenv () {
 			unset QEMU_LD_PREFIX COMMON_CPPFLAGS SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH
 			PLATFORM_CFLAGS="-march=native"
 			PLATFORM_RUSTFLAGS="-C target-cpu=native"
-			COMMON_CFLAGS="-I${GLOBAL_TOOLCHAIN_PATH}/include"
 			COMMON_CFLAGS+=" -I${TOOLCHAIN_PATH}/include"
+			COMMON_CFLAGS="-I${GLOBAL_TOOLCHAIN_PATH}/include"
 			COMMON_CXXFLAGS="${COMMON_CFLAGS}"
 			COMMON_FCFLAGS="${COMMON_CFLAGS}"
 			COMMON_LDFLAGS="-L${TOOLCHAIN_PATH}/lib"
 			COMMON_LDFLAGS+=" -L${GLOBAL_TOOLCHAIN_PATH}/lib"
-			COMMON_LDFLAGS+=" -Wl,-rpath -Wl,${TOOLCHAIN_PATH}/lib"
+			COMMON_LDFLAGS+=" -Wl,-rpath -Wl,${TOOLCHAIN_PATH}/lib:${GLOBAL_TOOLCHAIN_PATH}/lib"
 			COMMON_LDFLAGS+=" -Wl,-rpath-link -Wl,${TOOLCHAIN_PATH}/lib"
 			COMMON_LDFLAGS+=" -Wl,-rpath-link -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib"
 			COMMON_PKG_CONFIG_LIBDIR="${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig"
@@ -752,6 +752,18 @@ function configmake () {
 		CONF_FLAGS="--prefix=${INSTALL_PREFIX} --exec-prefix=${INSTALL_EXECPREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
 					--includedir=${INSTALL_INCLUDEDIR} --sysconfdir=${INSTALL_SYSCONFDIR} --localstatedir=${INSTALL_LOCALSTATEDIR} \
 					${CONF_FLAGS}"
+		if [ ${BUILD_LIBSHARED} -eq 1 ]
+		then
+			CONF_FLAGS=" --enable-shared ${CONF_FLAGS}"
+		else
+			CONF_FLAGS=" --disable-shared ${CONF_FLAGS}"
+		fi
+		if [ ${BUILD_LIBSTATIC} -eq 1 ]
+		then
+			CONF_FLAGS=" --enable-static ${CONF_FLAGS}"
+		else
+			CONF_FLAGS=" --disable-static ${CONF_FLAGS}"
+		fi
 		case ${PKG_TARGET_ENV} in
 			native)
 				CONF_FLAGS="--build=${BARCH} --host=${BARCH} ${CONF_FLAGS}"
@@ -763,18 +775,6 @@ function configmake () {
 				CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH} ${CONF_FLAGS}"
 			;;
 		esac
-		if [ ${BUILD_LIBSHARED} -eq 1 ]
-		then
-			CONF_FLAGS+=" --enable-shared"
-		else
-			CONF_FLAGS+=" --disable-shared"
-		fi
-		if [ ${BUILD_LIBSTATIC} -eq 1 ]
-		then
-			CONF_FLAGS+=" --enable-static"
-		else
-			CONF_FLAGS+=" --disable-static"
-		fi
 	fi
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	create_environment_source --target ${PKG_TARGET_ENV}
@@ -809,10 +809,14 @@ function configmake () {
 	run_cmd "./runconfig.sh"
 	if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ -n "${PKG_MAKETARGETS}" ]
 	then
+		IFS=,
 		for target in ${PKG_MAKETARGETS:-all}
 		do
+			unset IFS
+			echo "Making ${target}..."
 			run_cmd "./runmake.sh ${target}"
 		done
+		unset IFS
 	fi
 	if [ ${PKG_SKIPINSTALL:-0} -eq 0 ]
 	then
@@ -838,11 +842,14 @@ function simplemake () {
 	run_cmd "chmod +x runmake.sh"
 	if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
 	then
+		IFS=,
 		for target in ${PKG_MAKETARGETS:-all}
 		do
+			unset IFS
 			echo "Making ${target}..."
 			run_cmd "./runmake.sh ${target}"
 		done
+		unset IFS
 	fi
 	if [ ${PKG_SKIPINSTALL:-0} -eq 0 ]
 	then

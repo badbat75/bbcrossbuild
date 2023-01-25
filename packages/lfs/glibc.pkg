@@ -36,28 +36,21 @@ fi
 CONF_VARS="libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes"
 PKG_MAKEVARS="slibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} rootsbindir=${INSTALL_PREFIX}/sbin \
 	complocaledir=${INSTALL_LIBDIR}/locale cross-compiling=yes"
-if [ ${MAKEVERBOSE:-0} -eq 0 ]
-then
-	PKG_MAKEVARS+=" -s"
-fi
 PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd
 #PKG_PREBUILD="sed '/MAKEFLAGS :=/s/)r/) -r/' -i Makerules"
 
 case ${PKG_TARGET} in
 	cross)
-		CONF_FLAGS="--libdir=${INSTALL_LIBDIR}/glibc-${GLIBC_VER} \
+		CONF_FLAGS="--libdir=${INSTALL_LIBDIR} \
 			--disable-profile --disable-crypt \
 			--disable-build-nscd --disable-nscd \
 			--disable-werror --disable-sanity-checks --without-cvs"
 		PKG_DEPS=
-		PKG_TWOSTEPSBUILD=1
-		PKG_MAKEVARS+=" slibdir=${INSTALL_LIBDIR}/glibc-${GLIBC_VER} \
-			complocaledir=${TARGET_LIBDIR}/locale datadir=${TARGET_SHAREDIR}"
-		PKG_MAKETARGETS="lib elf/subdir_lib locale/others"
-		INST_CMD="elf/ldso_install locale/subdir_install"
-		PKG_POSTBUILD="install -vm755 libc.so ${INSTALL_LIBDIR}/glibc-${GLIBC_VER}/
-			ln -fsv libc.so ${INSTALL_LIBDIR}/glibc-${GLIBC_VER}/libc.so.6;"	
+		PKG_MAKEVARS=" slibdir=${INSTALL_LIBDIR} complocaledir=${TARGET_LIBDIR}/locale datadir=${TARGET_SHAREDIR}"
+		PKG_MAKETARGETS="lib,elf/subdir_lib,locale/others,elf/ldso_install,${TOOLCHAIN_PATH}/lib/libc.so.6,${TOOLCHAIN_PATH}/lib/libc.so,locale/subdir_install"
+		PKG_SKIPINSTALL=1
+		PKG_POSTBUILD="patchelf --remove-rpath ${INSTALL_LIBDIR}/ld-linux*.so.*;"
 	;;
 	headers)
 		STD_CONF_FLAGS=0
@@ -77,7 +70,6 @@ case ${PKG_TARGET} in
 			\${CC} \${CFLAGS} \${LDFLAGS} -nostdlib -nostartfiles -shared -x c /dev/null -o \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libc.so;"
 	;;
 	stage2)
-		PKG_TWOSTEPSBUILD=1
 		INST_CMD="install"
 	;;
 	*)
@@ -94,7 +86,6 @@ case ${PKG_TARGET} in
 			CONF_FLAGS+=" --with-nonshared-cflags="'"-fplugin=annobin -fplugin-arg-annobin-disable -Wa,--generate-missing-build-notes=yes"'
 			PKG_MAKEVARS+=" ASFLAGS="'"-g -Wa,--generate-missing-build-notes=yes"'
 		fi
-		PKG_TWOSTEPSBUILD=1
 		INST_CMD="install"
 		PKG_POSTBUILD+="touch ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/ld.so.conf
 			cat > ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/nsswitch.conf <<-EOF
@@ -160,6 +151,10 @@ case ${PKG_TARGET} in
 		fi
 	;;
 esac
+if [ ${MAKEVERBOSE:-0} -eq 0 ]
+then
+	PKG_MAKEVARS+=" -s"
+fi
 PKG_POSTBUILD+="if [ ! -f \${PKG_PKGPATH}${INSTALL_INCLUDEDIR}/gnu/stubs.h ]
 then
 	install -vDm644 /dev/null ${PKG_PKGPATH}${INSTALL_INCLUDEDIR}/gnu/stubs.h
