@@ -1588,7 +1588,8 @@ function perlmodule () {
 }
 
 
-function build () {(
+function build () {
+(
 	function downloadsources () {
 		trap 'STATUS=${?}; \
 			trap - ERR SIGINT; \
@@ -1957,7 +1958,8 @@ function build () {(
 	echo "Done."
 	echo
 	trap - ERR
-)}
+)
+}
 
 function is_build_functions () {
 	return 0
