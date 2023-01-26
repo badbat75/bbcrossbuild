@@ -132,7 +132,7 @@ KERNEL_LTOENABLE=thin
 		build lfs/autoconf
 		build lfs/automake
 		build lfs/gettext
-		build lfs/pkg-config
+		build lfs/pkgconf
 		build lfs/sccache
 		build lfs/cmake
 	else

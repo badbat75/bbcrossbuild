@@ -2,6 +2,9 @@
 PKG_URL="https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.bz2"
 PKG_DEPS="lfs/libgmp lfs/libmpfr lfs/libmpc lfs/libisl"
 case ${BINUTILS_VER} in
+    2.40)
+        PKG_SUFFIX=_${BINUTILS_VER}
+        ;;
 	2.39)
 		PKG_SUFFIX=_2.39+4e3ee240162
 		PATCHES=binutils/binutils_2.39+4e3ee240162.patch
@@ -14,15 +17,15 @@ BUILD_PROCESS=configmake
 AUTOCONF_PATH=".,bfd,binutils,gas,gold,gprof,gprofng,intl,ld,libctf,libiberty,opcodes"
 STD_CONF_FLAGS=0
 CONF_ENV="env -u CPP -u CPPFLAGS"
-CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
+CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} --with-sysroot=/ --with-build-sysroot=\${SYSROOT} \
     --build=${BARCH} --host=${HARCH} --target=${HARCH} \
     --disable-werror \
     --enable-shared --enable-static \
-    --with-mpc-include=${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpc-lib=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
-    --with-mpfr-include=${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpfr-lib=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
-    --with-isl-include=${SYSROOT}${INSTALL_INCLUDEDIR} --with-isl-lib=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
-    --enable-targets=${HARCH} --with-arch-directory=${HM} --with-arch=${HMARCH} --with-system-zlib \
-    --disable-werror --enable-gold=default --enable-ld --enable-gprofng=yes --enable-lto \
+    --with-mpc-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpc-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
+    --with-mpfr-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpfr-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
+    --with-isl-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-isl-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
+    --with-system-zlib \
+    --enable-gold=default --enable-ld --enable-gprofng=yes --enable-lto \
     --enable-new-dtags --disable-rpath --enable-threads=yes --enable-plugins --enable-64-bit-bfd \
     --enable-compressed-debug-sections=all --enable-separate-code=yes --enable-plugins"
 PKG_MAKETARGETS="all,-j1 install-strip"

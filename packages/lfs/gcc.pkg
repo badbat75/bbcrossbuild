@@ -14,16 +14,16 @@ BUILD_PROCESS=configmake
 AUTOCONF_PATH=autoscan
 STD_CONF_FLAGS=0
 CONF_ENV="env -u CPP -u CPPFLAGS"
-CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
+CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR} --with-sysroot=/ --with-build-sysroot=\${SYSROOT} \
 	--build=${BARCH} --host=${HARCH} --target=${HARCH} \
 	--enable-shared --enable-static \
-	--with-mpc-include=${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpc-lib=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
-	--with-mpfr-include=${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpfr-lib=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
-	--with-isl-include=${SYSROOT}${INSTALL_INCLUDEDIR} --with-isl-lib=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
-	--with-gmp-include=${SYSROOT}${INSTALL_INCLUDEDIR} --with-gmp-lib=${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
-	--enable-targets=${HARCH} --with-arch-directory=${HM} --with-arch=${HMARCH} --with-system-zlib \
-	--enable-languages=${GCC_LANGUAGES:-c,c++} --enable-multiarch --enable-version-specific-runtime-libs \
-	--enable-threads=posix --enable-checking=release --disable-multilib \
+	--with-mpc-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpc-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
+	--with-mpfr-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpfr-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
+	--with-isl-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-isl-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
+	--with-gmp-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-gmp-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
+	--with-system-zlib \
+	--enable-languages=${GCC_LANGUAGES:-c,c++} --enable-multiarch --enable-version-specific-runtime-libs  \
+	--enable-threads=posix --enable-tls --enable-checking=release --disable-multilib \
 	--enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object \
 	--enable-linker-build-id --with-gcc-major-version-only --enable-libstdcxx-backtrace \
 	--with-linker-hash-style=gnu --enable-plugin --enable-initfini-array \
