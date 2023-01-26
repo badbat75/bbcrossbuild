@@ -1811,7 +1811,7 @@ function build () {
 			fi
 		fi
 	else
-		echo -e "Check command:\n${PKG_CHECK}"
+		#echo -e "Check command:\n${PKG_CHECK}"
 		if eval ${PKG_CHECK} > /dev/null 2>&1
 		then
 			echo "${SPACES}Package ${PKG_NAME}${PKG_TARGET:+:${PKG_TARGET}} already built."
