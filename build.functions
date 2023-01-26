@@ -600,7 +600,7 @@ function create_environment_source () {
 				export PKG_CONFIG_SYSROOT_DIR='${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}'
 				export PKG_CONFIG_ALLOW_CROSS='${PKG_CONFIG_ALLOW_CROSS}'
 			EOF
-			if [ -f ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate ]
+			if [ -f ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate ] && [ ${PKG_DISABLECROSSPYTHON:-0} -eq 0 ]
 			then
 				echo -e "\nsource ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate\n" >> environment.source
 			fi
@@ -796,32 +796,19 @@ function configmake () {
 	EOF
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -x
-		${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} ${PKG_MAKEVARS} \${@}
+		${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
 	EOF
 	run_cmd "chmod +x runconfig.sh runmake.sh"
 
-	#if [[ "${CONF_CMD}" =~ ^\./.* ]]
-	#then
-	#	run_cmd "${CONF_CMD} ${CONF_FLAGS}"
-	#else 
-	#	run_cmd "${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure} ${CONF_FLAGS}"
-	#fi
 	run_cmd "./runconfig.sh"
-	if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ -n "${PKG_MAKETARGETS}" ]
-	then
-		IFS=,
-		for target in ${PKG_MAKETARGETS:-all}
-		do
-			unset IFS
-			echo "Making ${target}..."
-			run_cmd "./runmake.sh ${target}"
-		done
+	IFS=,
+	for target in ${PKG_MAKETARGETS:-all,install}
+	do
 		unset IFS
-	fi
-	if [ ${PKG_SKIPINSTALL:-0} -eq 0 ]
-	then
-		run_cmd "./runmake.sh ${INST_CMD:-} DESTDIR=${PKG_PKGPATH}"
-	fi
+		echo "Making ${target}..."
+		run_cmd "./runmake.sh ${target}"
+	done
+	unset IFS
 	popd
 	trap - ERR
 }
@@ -837,24 +824,17 @@ function simplemake () {
 	source environment.source
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -x
-		${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} PREFIX=${INSTALL_PREFIX} LIBSUFFIX=${INSTALL_LIBSUFFIX} ${PKG_MAKEVARS} \${@}
+		${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} PREFIX=${INSTALL_PREFIX} LIBSUFFIX=${INSTALL_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
 	EOF
 	run_cmd "chmod +x runmake.sh"
-	if [ ${PKG_TWOSTEPSBUILD:-1} -eq 1 ] || [ ! -x ${PKG_MAKETARGETS} ]
-	then
-		IFS=,
-		for target in ${PKG_MAKETARGETS:-all}
-		do
-			unset IFS
-			echo "Making ${target}..."
-			run_cmd "./runmake.sh ${target}"
-		done
+	IFS=,
+	for target in ${PKG_MAKETARGETS:-all,install}
+	do
 		unset IFS
-	fi
-	if [ ${PKG_SKIPINSTALL:-0} -eq 0 ]
-	then
-		run_cmd "./runmake.sh ${INST_CMD:-install} DESTDIR=${PKG_PKGPATH} "
-	fi
+		echo "Making ${target}..."
+		run_cmd "./runmake.sh ${target}"
+	done
+	unset IFS
 	cd ${BB_HOME}
 	trap - ERR
 }
@@ -878,7 +858,7 @@ function cmakebuild () {
 	else
 		CONF_FLAGS+=" -DBUILD_STATIC_LIBS=OFF"
 	fi
-	local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v')"
+	local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v') -j${NPROCS}"
 	echo "CCWRAPPER=\"\" create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	CCWRAPPER="" create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
@@ -908,11 +888,14 @@ function cmakebuild () {
 	EOF
 	run_cmd "chmod +x runconfig.sh runmake.sh"
 	run_cmd "./runconfig.sh"
-	run_cmd "./runmake.sh -j${NPROCS} ${PKG_MAKETARGETS}"
-	if [ ${PKG_SKIPINSTALL:-0} -eq 0 ]
-	then
-		run_cmd "./runmake.sh -j${NPROCS} ${INST_CMD:-install}"
-	fi
+	IFS=,
+	for target in ${PKG_MAKETARGETS:-all,install}
+	do
+		unset IFS
+		echo "Making ${target}..."
+		run_cmd "./runmake.sh ${target}"
+	done
+	unset IFS
 	cd ${BB_HOME}
 	trap - ERR
 }
@@ -1006,7 +989,7 @@ function mesonninja () {
 		0) ;;
 		*) RUNCONFIG_CMD+=" -Db_lto=true" ;;
 	esac
-	local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v')"
+	local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v') -j${NPROCS}"
 	case ${PKG_TARGET} in
 		cross|native) ;;
 		*)
@@ -1024,11 +1007,14 @@ function mesonninja () {
 	EOF
 	run_cmd "chmod +x runconfig.sh runmake.sh"
 	run_cmd "./runconfig.sh"
-	run_cmd "./runmake.sh -j${NPROCS} ${PKG_MAKETARGETS}"
-	if [ ${PKG_SKIPINSTALL:-0} -eq 0 ]
-	then
-		run_cmd "./runmake.sh -j${NPROCS} ${INST_CMD:-install}"
-	fi
+	IFS=,
+	for target in ${PKG_MAKETARGETS:-all,install}
+	do
+		unset IFS
+		echo "Making ${target}..."
+		run_cmd "./runmake.sh ${target}"
+	done
+	unset IFS
 	cd ${BB_HOME}
 	trap - ERR
 }
@@ -1105,7 +1091,7 @@ function kernelmodbuild () {
 	fi
 
 	run_cmd "KCFLAGS=\"${PKG_CFLAGS}\" ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} modules"
-	run_cmd "eval ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} INSTALL_MOD_PATH=${PKG_PKGPATH} INSTALL_MOD_DIR=${PKG_KERNEL_MODPATH} ${INST_CMD:-modules_install}"
+	run_cmd "eval ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} INSTALL_MOD_PATH=${PKG_PKGPATH} INSTALL_MOD_DIR=${PKG_KERNEL_MODPATH} modules_install"
 	run_cmd "rm -f ${PKG_PKGPATH}/lib/modules/*/modules.*"
 
 	run_cmd "mkdir -pv ${PKG_PKGPATH}/postinst_scripts"
@@ -1237,14 +1223,14 @@ function kernelbuild () {
 			;;
 		*)
 			[ ! -d ${PKG_PKGPATH}/boot ] && mkdir ${PKG_PKGPATH}/boot
-			run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_PATH=${PKG_PKGPATH}/boot ${INST_CMD} install"
+			run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_PATH=${PKG_PKGPATH}/boot ${PKG_MAKEVARS} install"
 			;;
 	esac
 	
 	# Build and install modules
 
 	run_cmd "./make4kern.sh modules"
-	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_MOD_PATH=${PKG_PKGPATH} ${INST_CMD} modules_install"
+	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_MOD_PATH=${PKG_PKGPATH} ${PKG_MAKEVARS} modules_install"
 	local KERNELRELEASE=$(cat include/config/kernel.release)
 	run_cmd "rm ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/build ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/source"
 
@@ -1256,7 +1242,7 @@ function kernelbuild () {
 			run_cmd "mkdir -p ${PKG_PKGPATH}/boot/overlays"
 		fi
 		run_cmd "./make4kern.sh dtbs"
-		run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_DTBS_PATH=${PKG_PKGPATH}/boot ${INST_CMD} dtbs_install"
+		run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_DTBS_PATH=${PKG_PKGPATH}/boot ${PKG_MAKEVARS} dtbs_install"
 	fi
 
 	PKG_KERNEL_BLDPATH="${PWD}"
@@ -1654,7 +1640,6 @@ function build () {
 		CONF_VARS \
 		GIT_URL \
 		GIT_COMMIT \
-		INST_CMD \
 		MAKEDIR \
 		PATCHDEB \
 		PATCHES \
@@ -1662,9 +1647,11 @@ function build () {
 		PKG_AUTOMAKE \
 		PKG_BUILDSCRIPT \
 		PKG_CFLAGS \
+		PKG_CHECK \
 		PKG_COPYSRC \
 		PKG_CXXFLAGS \
 		PKG_DEPS \
+		PKG_DISABLECROSSPYTHON \
 		PKG_FAULTYCFLAGS \
 		PKG_FCFLAGS \
 		PKG_GETTEXT \
@@ -1685,13 +1672,11 @@ function build () {
 		PKG_POSTINSTALL_PRIO \
 		PKG_PREBUILD \
 		PKG_RUSTFLAGS \
-		PKG_SKIPINSTALL \
 		PKG_SRCDIR \
 		PKG_SUFFIX \
 		PKG_TARGET \
 		PKG_TARGET_ENV \
 		PKG_TOOLCHAIN \
-		PKG_TWOSTEPSBUILD \
 		PKG_URL \
 		PKG_VER \
 		STD_CONF_FLAGS \
@@ -1745,6 +1730,12 @@ function build () {
 			local INSTALL_SYSCONFDIR=${NATIVE_SYSCONFDIR}
 			local INSTALL_LOCALSTATEDIR=${NATIVE_LCALSTATEDIR}
 			local INSTALL_SHAREDIR=${NATIVE_SHAREDIR}
+			local NOSAVESTATUS=1
+			if [ -z ${PKG_CHECK} ]
+			then
+				echo "PKG_CHECK not specified and target is native. Exiting..."
+				return 1
+			fi
 		;;
 		cross)
 			local PKG_TARGET_ENV=cross
@@ -1790,24 +1781,36 @@ function build () {
 
 	echo "Package ${PKG_NAME}${PKG_TARGET:+:${PKG_TARGET}}"
 
-	### Check if target package or default package has already built
-	local PKG_CHKSUM="$( md5sum ${PKG_PATH}/${PKG_FILE}.pkg )"
-	if [ -f ${STATUS_FILE_DEFAULT_TARGET} ]
+	if [ -z ${PKG_CHECK} ]
 	then
-		local STATUS_CHK_FILE=${STATUS_FILE_DEFAULT_TARGET}
+		### Check if target package or default package has already built
+		local PKG_CHKSUM="$( md5sum ${PKG_PATH}/${PKG_FILE}.pkg )"
+		if [ -f ${STATUS_FILE_DEFAULT_TARGET} ]
+		then
+			local STATUS_CHK_FILE=${STATUS_FILE_DEFAULT_TARGET}
+		else
+			local STATUS_CHK_FILE=${STATUS_FILE}
+		fi
+		if [ -f ${STATUS_CHK_FILE} ] && [ ${FORCE} -eq 0 ]
+		then
+			if [ "${PKG_CHKSUM}" == "$( cat ${STATUS_CHK_FILE} )" ]
+			then
+				echo "${SPACES}Package ${PKG_NAME}${PKG_TARGET:+:${PKG_TARGET}} already built."
+				echo
+				trap - ERR
+				return 0
+			else
+				rm -f ${STATUS_FILE}
+			fi
+		fi
 	else
-		local STATUS_CHK_FILE=${STATUS_FILE}
-	fi
-	if [ -f ${STATUS_CHK_FILE} ] && [ ${FORCE} -eq 0 ]
-	then
-		if [ "${PKG_CHKSUM}" == "$( cat ${STATUS_CHK_FILE} )" ]
+		echo -e "Check command:\n${PKG_CHECK}" | log_buffer info	
+		if eval ${PKG_CHECK} > /dev/null 2>&1
 		then
 			echo "${SPACES}Package ${PKG_NAME}${PKG_TARGET:+:${PKG_TARGET}} already built."
 			echo
 			trap - ERR
 			return 0
-		else
-			rm -f ${STATUS_FILE}
 		fi
 	fi
 	for dep in ${PKG_DEPS}

@@ -5,7 +5,7 @@ PKG_DEPS="lfs/ncurses lfs/readline lfs/icu lfs/python3"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--with-history --with-icu --with-threads PYTHON=$(which python3)"
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"
 PKG_PREBUILD="sed -i '/if Py/{s/Py/(Py/;s/)/))/}' python/{types.c,libxml.c}
     sed -i 's/ TRUE/ true/' encoding.c"
 #PATCHDEB=""

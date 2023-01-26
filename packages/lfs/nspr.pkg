@@ -10,6 +10,6 @@ if [ "${HARCH_BITWIDTH}" == "64" ]
 then
     CONF_FLAGS+=" --enable-64bit"
 fi
-INST_CMD="install"
+#PKG_MAKETARGETS="all,install"
 
 PKG_PREBUILD="sed -ri '/^RELEASE/s/^/#/' nspr/pr/src/misc/Makefile.in"

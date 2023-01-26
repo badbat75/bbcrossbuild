@@ -9,10 +9,9 @@ CONF_FLAGS="--disable-werror --disable-failure-tokens --disable-valgrind \
 
 case ${PKG_TARGET} in
 	headers)
-		PKG_TWOSTEPSBUILD=0
-		INST_CMD=install-nodist_includeHEADERS
+		PKG_MAKETARGETS="install-nodist_includeHEADERS"
 	;;
 	*)	
-		INST_CMD=install-strip
+		PKG_MAKETARGETS="all,install-strip"
 	;;
 esac

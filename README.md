@@ -1,4 +1,4 @@
-# bbcrossbuild 2.1
+# bbcrossbuild 3.0
 This is a framework to automate the cross-compilation of packages through a project file.
 ## Current Limitations
 
@@ -161,10 +161,6 @@ Specify source subdirectory where to run the build
 Use standard conf flags used by bbxb (i.e. --prefix, --exec-prefix etc), default to 1, set to 0 to override it
 `STD_CONF_FLAGS=1`
 
-**PKG_TWOSTEPSBUILD:**
-Define if make is run directly with install or there should be a make all phase and an installation phase after. Disabled in configmake (0), enabled in simplemake (1) by default  
-`PKG_TWOSTEPSBUILD=1`
-
 **PKG_TOOLCHAIN:**
 Define what toolchain to use when building this package
 `PKG_TOOLCHAIN=gnu|llvm`
@@ -206,12 +202,6 @@ Define the list of libraries to build and install
 
 Specify if the binaries should be stripped out of unneeded symbols  
 `CARGO_STRIP=1`
-
-#### Install process
-
-**INST_CMD:**
-command to use for make install command. Most commons defined in package's Makefile are install or install-strip but you can pass also different make parameters in. i.e: "all check install-strip".  
-`INST_CMD=install|install-strip`
 
 #### Post build process
 

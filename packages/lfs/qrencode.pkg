@@ -4,4 +4,4 @@ PKG_URL="https://fukuchi.org/works/qrencode/qrencode-${PKG_VER}.tar.bz2"
 PKG_DEPS="lfs/libpng"
 BUILD_PROCESS=configmake
 CONF_FLAGS=
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"

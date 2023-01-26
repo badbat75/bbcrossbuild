@@ -6,7 +6,7 @@ PKG_AUTOCONF=1
 BUILD_PROCESS=configmake
 CONF_FLAGS="--sbindir=${INSTALL_EXECPREFIX}/sbin --without-xen"
 #CONF_ENV="BUILD_CC="'${CC_FOR_BUILD}'" BUILD_CFLAGS="'${CC_FOR_BUILD}'" TARGET_CC="'${CC}'" TARGET_CCFLAGS="'${CFLAGS}'" TARGET_LD="'${LINKER_EXE}'
-INST_CMD="install"
+#PKG_MAKETARGETS="all,install"
 
 PKG_PREBUILD="rm -fv include/config.h"
 

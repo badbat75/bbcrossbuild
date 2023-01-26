@@ -15,14 +15,13 @@ CONF_FLAGS="--includedir=${INSTALL_INCLUDEDIR}/security \
 
 case ${PKG_TARGET} in
 	bootstrap)
-		PKG_TWOSTEPSBUILD=0
 		PKG_PREBUILD="sed 's/^SUBDIRS =.*/SUBDIRS = libpam libpamc libpam_misc/' -i Makefile.am"
-		INST_CMD="install-strip"
+		PKG_MAKETARGETS="install-strip"
 	;;
 	*)
 		PKG_DEPS+=" lfs/BerkeleyDB lfs/libaudit"
 		PKG_DEPS+=" lfs/libpwquality"
-		INST_CMD="install-strip"
+		PKG_MAKETARGETS="all,install-strip"
 		PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}/etc/pam.d
 			cat > ${PKG_PKGPATH}/etc/pam.d/other <<-EOF
 				# Begin /etc/pam.d/other

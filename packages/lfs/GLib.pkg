@@ -15,4 +15,4 @@ esac
 DBUS_TARGET=bootstrap
 BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Dman=true -Dtests=false"
-INST_CMD="install"
+#PKG_MAKETARGETS="all,install"

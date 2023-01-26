@@ -16,8 +16,7 @@ CONF_FLAGS="--prefix=${INSTALL_PREFIX} --openssldir=${INSTALL_SYSCONFDIR}/ssl $(
     esac
     ) shared zlib-dynamic no-tests"
 BUILD_PROCESS=configmake
-INST_CMD="install"
-PKG_TWOSTEPSBUILD=1
+#PKG_MAKETARGETS="all,install"
 PKG_MAKEVARS="MANSUFFIX=ssl LIBDIR=lib${INSTALL_LIBSUFFIX}"
 case ${TOOLCHAIN} in
     llvm) PKG_CFLAGS="-std=gnu99";;

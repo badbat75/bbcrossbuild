@@ -4,4 +4,4 @@ PKG_URL="https://www.freedesktop.org/software/fontconfig/release/fontconfig-${PK
 PKG_DEPS="lfs/FreeType lfs/json-c"
 BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Dtests=disabled"
-INST_CMD="install"
+#PKG_MAKETARGETS="all,install"

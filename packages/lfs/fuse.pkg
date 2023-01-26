@@ -3,7 +3,7 @@ PKG_VER=3.12.0
 PKG_URL="https://github.com/libfuse/libfuse/releases/download/fuse-${PKG_VER}/fuse-${PKG_VER}.tar.xz"
 BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Dtests=false -Dexamples=false"
-INST_CMD="install"
+#PKG_MAKETARGETS="all,install"
 
 PKG_PREBUILD="sed '/^udev/,\$ s/^/#/' -i util/meson.build"
 PKG_POSTBUILD="chmod u+s ${PKG_PKGPATH}${INSTALL_EXECPREFIX}/bin/fusermount3

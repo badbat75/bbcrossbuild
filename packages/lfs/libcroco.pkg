@@ -4,4 +4,4 @@ PKG_URL="https://download.gnome.org/sources/libcroco/$(echo ${PKG_VER} | cut -d.
 PKG_DEPS="lfs/GLib lfs/libxml2"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--docdir=/usr/share/doc/gettext-${GETTEXT_VER}"
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"

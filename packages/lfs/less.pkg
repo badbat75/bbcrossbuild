@@ -3,7 +3,7 @@ PKG_VER=608
 PKG_URL="http://www.greenwoodsoftware.com/less/less-${PKG_VER}.tar.gz"
 PKG_DEPS="lfs/ncurses"
 BUILD_PROCESS=configmake
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"
 
 case ${TOOLCHAIN} in
     llvm)

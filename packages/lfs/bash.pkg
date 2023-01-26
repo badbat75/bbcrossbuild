@@ -6,7 +6,8 @@ PKG_DEPS="lfs/ncurses lfs/readline"
 BUILD_PROCESS=configmake
 #PKG_OVERRIDELTO=0
 CONF_FLAGS="--without-bash-malloc --with-installed-readline"
-INST_CMD="STRIP=${HARCH}-strip install-strip"
+PKG_MAKETARGETS="all,install-strip"
+PKG_MAKEVARS="STRIP=${HARCH}-strip"
 
 case ${TOOLCHAIN} in
     llvm)

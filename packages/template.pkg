@@ -64,11 +64,6 @@ CONF_FLAGS="--disable-feature or -DENABLE_FEATURE"
 # Specify source subdirectory where to run the build
 CONF_PATH=subdir1/subdir2
 
-### PKG_TWOSTEPSBUILD
-# Define if make is run directly with install or there should be a make all phase and an installation
-# phase after. Disabled in configmake (0), enabled in simplemake (1) by default
-PKG_TWOSTEPSBUILD=1
-
 ### PKG_CFLAGS/PKG_CXXFLAGS/PKG_LDFLAGS:
 # Permits to specify additional c/c++/ld compiler flags to build with:
 PKG_CFLAGS="-f<parameter> -W<parameter>"
@@ -99,14 +94,6 @@ CARGO_BINLIST="binary1 binary2 binary3"
 CARGO_LIBLIST="lib1 lib2 lib3"
 # Specify if the binaries should be stripped out of unneeded symbols
 CARGO_STRIP=1
-
-###### Install process ######
-
-### INST_CMD:
-# command to use for make install command. Most commons defined in package's Makefile are
-# install or install-strip but you can pass also different make parameters in. i.e:
-# "all check install-strip"
-INST_CMD=install|install-strip
 
 ###### Post build process ######
 

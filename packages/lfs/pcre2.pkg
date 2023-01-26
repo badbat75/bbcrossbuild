@@ -10,5 +10,5 @@ CONF_FLAGS="--enable-unicode                    \
             --enable-pcre2grep-libz             \
             --enable-pcre2grep-libbz2           \
             --enable-pcre2test-libreadline"
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"
 #PATCHDEB=""

@@ -5,4 +5,4 @@ BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--disable-debug --disable-cli"
 PKG_MAKEVARS=""
-INST_CMD=install-strip
+PKG_MAKETARGETS="all,install-strip"

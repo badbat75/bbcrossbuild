@@ -13,7 +13,7 @@ CONF_FLAGS+=" --with-systemdsystemunitdir=/lib/systemd/system"
 CONF_FLAGS+=" --enable-cmdlib"
 CONF_FLAGS+=" --enable-pkgconfig"
 CONF_FLAGS+=" --enable-udev_sync"
-INST_CMD="install install_systemd_units"
+PKG_MAKETARGETS="all,install,install_systemd_units"
 PKG_COPYSRC=1
 
 PKG_PREBUILD="sed 's@../../include/cmds.h@../include/cmds.h@' -i lib/commands/cmd_enum.h"

@@ -4,6 +4,6 @@ PKG_URL="https://gitlab.com/libpipeline/libpipeline/-/archive/${PKG_VER}/libpipe
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS=""
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"
 
 PKG_PREBUILD="./bootstrap"

@@ -6,7 +6,7 @@ PKG_CFLAGS="-fpic -fPIC -D_FILE_OFFSET_BITS=64"
 #PKG_LDFLAGS=
 BUILD_PROCESS=simplemake
 PKG_MAKEVARS="HOSTCC=gcc"
-INST_CMD="install"
+#PKG_MAKETARGETS="all,install"
 PKG_CFLAGS="-DHAVE_HANDLE_AT=1 -DHAVE_SETNS=1"
 PKG_PREBUILD="sed -i /ARPD/d Makefile
 	sed -i '/^CC :=/ s/:=/?=/' Makefile

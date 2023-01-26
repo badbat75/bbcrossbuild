@@ -4,4 +4,4 @@ PKG_URL="https://downloads.sourceforge.net/project/net-tools/net-tools-${PKG_VER
 BUILD_PROCESS=simplemake
 PKG_PREBUILD="yes '' | make config"
 PKG_MAKEVARS="-j1 BINDIR='${INSTALL_PREFIX}/bin' SBINDIR='${INSTALL_PREFIX}/bin'"
-INST_CMD="install"
+#PKG_MAKETARGETS="all,install"

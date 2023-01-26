@@ -49,7 +49,6 @@ case ${PKG_TARGET} in
 		PKG_DEPS=
 		PKG_MAKEVARS=" slibdir=${INSTALL_LIBDIR} complocaledir=${TARGET_LIBDIR}/locale datadir=${TARGET_SHAREDIR}"
 		PKG_MAKETARGETS="lib,elf/subdir_lib,locale/others,elf/ldso_install,${TOOLCHAIN_PATH}/lib/libc.so.6,${TOOLCHAIN_PATH}/lib/libc.so,locale/subdir_install"
-		PKG_SKIPINSTALL=1
 		PKG_POSTBUILD="patchelf --remove-rpath ${INSTALL_LIBDIR}/ld-linux*.so.*;"
 	;;
 	headers)
@@ -57,20 +56,16 @@ case ${PKG_TARGET} in
 		CONF_FLAGS="--build=${BARCH} --host=${HARCH} --target=${HARCH} --prefix=${INSTALL_PREFIX} --includedir=${INSTALL_INCLUDEDIR} \
 			--with-headers=${BIN_PATH}${INSTALL_INCLUDEDIR}"
 		CONF_ENV="unset CXX CXXFLAGS; CC=\"${CC_FOR_BUILD}\" CFLAGS=\"${CFLAGS_FOR_BUILD}\" CC=\"${CPP_FOR_BUILD}\" CPPFLAGS=\"${CPPLAGS_FOR_BUILD}\""
-		PKG_TWOSTEPSBUILD=0
 		PKG_MAKEVARS+=" install-bootstrap-headers=yes"
-		INST_CMD="install-headers"
+		PKG_MAKETARGETS="install-headers"
 	;;
 	stage1)
-		PKG_TWOSTEPSBUILD=0
-		PKG_MAKETARGETS="csu/subdir_lib"
-		INST_CMD="install-headers"
+		PKG_MAKETARGETS="csu/subdir_lib,install-headers"
 		PKG_POSTBUILD+="mkdir -pv \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
 			install csu/crt1.o csu/crti.o csu/crtn.o \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
 			\${CC} \${CFLAGS} \${LDFLAGS} -nostdlib -nostartfiles -shared -x c /dev/null -o \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libc.so;"
 	;;
 	stage2)
-		INST_CMD="install"
 	;;
 	*)
 		PKG_DEPS+=" lfs/glibc:cross"
@@ -86,7 +81,6 @@ case ${PKG_TARGET} in
 			CONF_FLAGS+=" --with-nonshared-cflags="'"-fplugin=annobin -fplugin-arg-annobin-disable -Wa,--generate-missing-build-notes=yes"'
 			PKG_MAKEVARS+=" ASFLAGS="'"-g -Wa,--generate-missing-build-notes=yes"'
 		fi
-		INST_CMD="install"
 		PKG_POSTBUILD+="touch ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/ld.so.conf
 			cat > ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/nsswitch.conf <<-EOF
 				# Begin /etc/nsswitch.conf

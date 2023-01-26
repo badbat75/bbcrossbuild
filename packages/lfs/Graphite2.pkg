@@ -8,7 +8,7 @@ case ${PKG_TARGET} in
 esac
 BUILD_PROCESS=cmakebuild
 CONF_FLAGS=""
-INST_CMD="install/strip"
+PKG_MAKETARGETS="all,install/strip"
 PKG_OVERRIDELTO=0
 
 PKG_PREBUILD="sed '/add_definitions(-mfpmath=sse -msse2)/d' -i src/CMakeLists.txt

@@ -6,6 +6,6 @@ BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_ENVS="PYTHON=cross-python3"
 CONF_FLAGS=
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"
 
 PKG_PREBUILD="sed -i 's/env python/&3/' src/psl-make-dafsa"

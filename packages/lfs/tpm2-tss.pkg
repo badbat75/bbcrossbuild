@@ -5,7 +5,7 @@ PKG_DEPS="lfs/openssl lfs/json-c lfs/curl lfs/systemd:bootstrap"
 PKG_AUTOCONF=1
 BUILD_PROCESS=configmake
 CONF_FLAGS=
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"
 
 PKG_PREBUILD="sed -e '/^git describe/d' -e '/^\${AUTORECONF}/d' -i bootstrap
     echo 4.0.0 > VERSION

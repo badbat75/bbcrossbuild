@@ -9,7 +9,7 @@ CONF_ENV="sa_lib_dir=${INSTALL_PREFIX}/lib/sa \
     conf_dir=/etc/sysconfig"
 CONF_FLAGS="--disable-file-attr"
 PKG_CFLAGS="-Wno-deprecated-declarations"
-INST_CMD=install
+#PKG_MAKETARGETS="all,install"
 
 PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}/lib/systemd/system
     install -v -m644 sysstat.service ${PKG_PKGPATH}/lib/systemd/system/sysstat.service

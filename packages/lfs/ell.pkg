@@ -4,4 +4,4 @@ PKG_URL="https://mirrors.edge.kernel.org/pub/linux/libs/ell/ell-${PKG_VER}.tar.x
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS=""
-INST_CMD=install-strip
+PKG_MAKETARGETS="all,install-strip"

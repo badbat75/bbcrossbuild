@@ -12,7 +12,7 @@ CONF_FLAGS+=" --with-ldap"
 CONF_FLAGS+=" --enable-ldapdb"
 CONF_ENV="env -u CPPFLAGS"
 CONF_VARS="ac_cv_gssapi_supports_spnego=yes"
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"
 
 PKG_POSTBUILD="install -v -dm755 ${PKG_PKGPATH}${INSTALL_SHAREDIR}/doc/cyrus-sasl-${PKG_VER}/html
     install -v -m644 \${PKG_SRCPATH}/saslauthd/LDAP_SASLAUTHD ${PKG_PKGPATH}${INSTALL_SHAREDIR}/doc/cyrus-sasl-${PKG_VER}

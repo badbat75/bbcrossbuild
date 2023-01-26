@@ -6,7 +6,7 @@ BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--with-securedir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/security"
 CONF_FLAGS+=" --with-python-binary=cross-python3"
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"
 
 PKG_PREBUILD="install -vdm755 \${PKG_BLDPATH}/src install -vdm755 \${PKG_BLDPATH}/python
 	ln -fsv \${PKG_SRCPATH}/src/pwquality.h \${PKG_BLDPATH}/src/pwquality.h

@@ -4,7 +4,6 @@ PKG_URL="https://downloads.isc.org/isc/dhcp/${PKG_VER}/dhcp-${PKG_VER}.tar.gz"
 PKG_AUTOCONF=1
 AUTOCONF_PATH=autoscan
 BUILD_PROCESS=configmake
-PKG_TWOSTEPSBUILD=1
 PKG_CFLAGS="-Wall -fno-strict-aliasing \
 	-D_PATH_DHCLIENT_SCRIPT='\''\"/sbin/dhclient-script\"'\'' \
 	-D_PATH_DHCPD_CONF='\''\"/etc/dhcp/dhcpd.conf\"'\'' \
@@ -17,7 +16,7 @@ CONF_FLAGS="--with-randomdev=/dev/urandom \
 	--with-cli6-lease-file=/var/lib/dhclient/dhclient6.leases \
 	--with-bind-extra-config=\"--build=${BARCH}\" BUILD_CC=\"\${CC_FOR_BUILD}\" BUILD_CFLAGS=\"\${CFLAGS_FOR_BUILD}\""
 PKG_MAKEVARS="AR=\"\${AR_FOR_BUILD}\""
-INST_CMD="install-strip"
+PKG_MAKETARGETS="DESTDIR= all,install-strip"
 PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}/sbin
 	install -vdm755  ${PKG_PKGPATH}/var/lib/dhclient
 	install -vm755 \${PKG_SRCPATH}/client/scripts/linux ${PKG_PKGPATH}/sbin/dhclient-script

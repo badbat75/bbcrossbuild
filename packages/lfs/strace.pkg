@@ -4,7 +4,7 @@ PKG_URL="https://github.com/strace/strace/releases/download/v${PKG_VER}/strace-$
 BUILD_PROCESS=configmake
 #PKG_OVERRIDELTO=0
 CONF_FLAGS="--enable-mpers=no"
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"
 case ${TOOLCHAIN} in
     llvm)
         PKG_CFLAGS="-Wno-unused-function -Wno-deprecated-non-prototype"

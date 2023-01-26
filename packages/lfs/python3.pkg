@@ -14,8 +14,10 @@ fi
 CONF_VARS="CROSS_COMPILE=${HARCH}- CROSS_COMPILE_TARGET=yes \
 	ax_cv_c_float_words_bigendian=$([ ${HMENDIAN} != little ] && echo yes || echo no) \
 	ac_cv_file__dev_ptmx=yes ac_cv_file__dev_ptc=no"
-INST_CMD="install"
+#PKG_MAKETARGETS="all,install"
 PKG_OVERRIDELTO=0
 case ${TOOLCHAIN} in
 	llvm) PKG_FAULTYCFLAGS=1;;
 esac
+
+PKG_DISABLECROSSPYTHON=1

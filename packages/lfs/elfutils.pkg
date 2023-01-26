@@ -5,7 +5,8 @@ PKG_DEPS="lfs/zlib lfs/gzip lfs/bzip2 lfs/zstd lfs/xz"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--disable-debuginfod --disable-werror --enable-libdebuginfod=dummy --program-prefix="
-INST_CMD="install-strip STRIPPROG=${HARCH}-strip"
+PKG_MAKEVARS="STRIPPROG=${HARCH}-strip"
+PKG_MAKETARGETS="all,install-strip"
 #PKG_OVERRIDELTO=0 ### LLVM build successfully
 PKG_PREBUILD='cat <<EOF | patch -s -p1 || true
 diff -Naur elfutils.182.orig/config/eu.am elfutils.182/config/eu.am

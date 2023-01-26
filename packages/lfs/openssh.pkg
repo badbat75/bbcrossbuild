@@ -13,8 +13,7 @@ CONF_FLAGS="--sysconfdir=${INSTALL_SYSCONFDIR}/ssh \
 		--with-kerberos5=${INSTALL_PREFIX} \
 		--with-libedit \
 		--with-xauth=/usr/bin/xauth"
-INST_CMD="install"
-PKG_TWOSTEPSBUILD=1
+#PKG_MAKETARGETS="all,install"
 PKG_PREBUILD="sed -e '/INSTALLKEYS_SH/s/)//' -e '260a\  )' -i contrib/ssh-copy-id
 	sed -i '/^STRIP_OPT/ s/-s$/\"-s --strip-program=\$STRIP\"/' configure.ac"
 PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/lib/systemd/system

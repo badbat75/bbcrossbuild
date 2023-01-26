@@ -4,4 +4,4 @@ PKG_URL="https://developers.yubico.com/libfido2/Releases/libfido2-${PKG_VER}.tar
 PKG_DEPS=lfs/libcbor
 BUILD_PROCESS=cmakebuild
 CONF_FLAGS="-DBUILD_EXAMPLES=Off"
-INST_CMD="install/strip"
+PKG_MAKETARGETS="all,install/strip"

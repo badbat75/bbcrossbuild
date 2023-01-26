@@ -4,4 +4,4 @@ PKG_URL="https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VER}.tar.gz"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--docdir=/usr/share/doc/mpc-${MPC_VER}"
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"

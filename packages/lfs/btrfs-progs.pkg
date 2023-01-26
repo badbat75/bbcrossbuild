@@ -7,4 +7,4 @@ BUILD_PROCESS=configmake
 CONF_FLAGS="--disable-documentation"
 PKG_TWOSTEPSBUILD=1
 PKG_MAKEVARS="bindir=${INSTALL_EXECPREFIX}/sbin udevdir=/lib/udev"
-INST_CMD="install"
+#PKG_MAKETARGETS="all,install"

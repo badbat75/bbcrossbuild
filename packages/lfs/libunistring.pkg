@@ -4,7 +4,7 @@ PKG_URL="https://ftp.gnu.org/gnu/libunistring/libunistring-${PKG_VER}.tar.xz"
 BUILD_PROCESS=configmake
 CONF_FLAGS=""
 PKG_AUTOCONF=1
-INST_CMD=install-strip
+PKG_MAKETARGETS="all,install-strip"
 
 # Dependencies:
 

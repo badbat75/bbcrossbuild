@@ -4,7 +4,7 @@ PKG_URL="http://mirror.kumi.systems/gnu/autoconf-archive/autoconf-archive-${AUTO
 PKG_DEPS=
 BUILD_PROCESS=configmake
 CONF_FLAGS=""
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"
 PKG_POSTBUILD="mv -v \${PKG_PKGPATH}${INSTALL_PREFIX}/share/aclocal \${PKG_PKGPATH}${INSTALL_PREFIX}/share/aclocal.2bmoved"
 PKG_POSTINSTALL="if [ -d ${INSTALL_PREFIX}/share/aclocal.2bmoved ]
 then

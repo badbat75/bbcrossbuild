@@ -12,7 +12,6 @@ case ${GCC_VER} in
 esac
 BUILD_PROCESS=configmake
 AUTOCONF_PATH=autoscan
-#AUTOCONF_THREADS=1
 STD_CONF_FLAGS=0
 CONF_ENV="env -u CPP -u CPPFLAGS"
 CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR} --with-sysroot=/ --with-build-sysroot=${SYSROOT} \
@@ -97,8 +96,7 @@ case "${GCC_TARGETS:-all}" in
 	all)
 		PKG_SUFFIX="-all${PKG_SUFFIX}"
 		local OBJECTS=
-		PKG_MAKETARGETS="all"
-		INST_CMD+=" install-strip"
+		PKG_MAKETARGETS="all,install-strip"
 	;;
 	binaries)
 		PKG_SUFFIX="-binaries${PKG_SUFFIX}"
@@ -117,7 +115,6 @@ case "${GCC_TARGETS:-all}" in
 esac
 for object in $( echo ${OBJECTS} | tr ',' ' ' )
 do
-	PKG_MAKETARGETS+=" all-${object}"
-	INST_CMD+=" install-strip-${object}"
+	PKG_MAKETARGETS+=" all-${object},install-strip-${object}"
 done
 ######################################################################

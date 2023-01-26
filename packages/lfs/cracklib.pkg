@@ -7,7 +7,7 @@ PKG_AUTOCONF=1
 CONF_ENVS="PYTHON=cross-python3"
 CONF_FLAGS="--with-default-dict=${INSTALL_LIBDIR}/cracklib/pw_dict"
 PKG_CPPFLAGS="-I\${SYSROOT}${INSTALL_INCLUDEDIR}/python${PYTHONBIN_VER}"
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"
 
 PKG_PREBUILD="sed -i '/skipping/d' util/packer.c &&
 	sed -i '15209 s/.*/am_cv_python_version=${PYTHONBIN_VER}/' configure &&

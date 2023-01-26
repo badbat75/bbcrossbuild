@@ -9,7 +9,8 @@ CONF_FLAGS="--libexecdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
 			--with-env-editor \
 			--docdir=/usr/share/doc/sudo-${PKG_VER} \
 			--with-passprompt='[sudo] password for %p: '"
-INST_CMD="install install_uid=$(id -u) install_gid=$(id -g)"
+#PKG_MAKETARGETS="all,install"
+PKG_MAKEVARS="install_uid=$(id -u) install_gid=$(id -g)"
 PKG_POSTBUILD="cat > ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/sudoers.d/sudo <<-EOF
 		Defaults secure_path=\"/usr/bin:/bin:/usr/sbin:/sbin\"
 		#%wheel ALL=(ALL) ALL

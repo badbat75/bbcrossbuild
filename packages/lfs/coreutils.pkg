@@ -3,7 +3,7 @@ PKG_VER=9.1
 PKG_URL="https://ftp.gnu.org/gnu/coreutils/coreutils-${PKG_VER}.tar.xz"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-install-program=hostname --enable-no-install-program=kill,uptime"
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"
 
 if [ ${LFS_SPLITUSR} -eq 1 ]
 then

@@ -4,4 +4,4 @@ PKG_URL="https://xorg.freedesktop.org/archive/individual/proto/xcb-proto-1.15.2.
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS=""
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"

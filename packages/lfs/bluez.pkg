@@ -36,7 +36,7 @@ then
 	PKG_DEPS+=" lfs/alsa-lib"
 	CONF_FLAGS+=" --enable-midi"
 fi
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"
 
 PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}${INSTALL_PREFIX}/sbin/
 	ln -svf ../libexec/bluetooth/bluetoothd ${PKG_PKGPATH}${INSTALL_PREFIX}/sbin/

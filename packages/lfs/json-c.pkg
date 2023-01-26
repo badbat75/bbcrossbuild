@@ -4,5 +4,4 @@ PKG_URL="https://github.com/json-c/json-c/archive/refs/tags/json-c-${PKG_VER}.ta
 PKG_DEPS=""
 BUILD_PROCESS=cmakebuild
 CONF_FLAGS="-DDISABLE_WERROR=true -DENABLE_THREADING=true"
-PKG_TWOSTEPSBUILD=1
-INST_CMD="install/strip"
+PKG_MAKETARGETS="all,install/strip"

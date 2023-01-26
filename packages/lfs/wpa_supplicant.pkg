@@ -2,7 +2,7 @@
 PKG_VER=2.10
 PKG_SRCDIR=wpa_${PKG_VER}
 BUILD_PROCESS=simplemake
-INST_CMD=all
+PKG_MAKETARGETS="all"
 PKG_DEPS="lfs/wpa lfs/ncurses lfs/readline lfs/libnl lfs/openssl lfs/pcsc-lite firmwares/wireless-regdb"
 PKG_MAKEVARS="PREFIX=${INSTALL_PREFIX} INCDIR=${INSTALL_INCLUDEDIR} BINDIR=/sbin -C wpa_supplicant"
 PKG_CFLAGS="-I\${SYSROOT}${INSTALL_INCLUDEDIR}/PCSC"

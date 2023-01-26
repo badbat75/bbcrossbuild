@@ -5,4 +5,4 @@ PKG_DEPS="lfs/libgmp"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--enable-thread-safe"
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"

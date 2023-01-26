@@ -5,7 +5,7 @@ BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS=""
 PKG_MAKEVARS="docdir=/usr/share/doc/libdaemon-${PKG_VER}"
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"
 
 PKG_POSTBUILD="./runmake.sh -C doc doxygen
     install -v -m755 -d ${PKG_PKGPATH}${INSTALL_SHAREDIR}/doc/libdaemon-${PKG_VER}/reference/html

@@ -6,9 +6,7 @@ PKG_DEPS+=" lfs/libnghttp2 lfs/krb5:bootstrap lfs/libcap2:bootstrap"
 BUILD_PROCESS=configmake
 case ${PKG_TARGET} in
 	bootstrap)
-		PKG_TWOSTEPSBUILD=0
 		PKG_PREBUILD="sed 's/^SUBDIRS =.*/SUBDIRS = . lib/' -i Makefile.in"
-		INST_CMD="install-strip"
 	;;
 	*)
 		PKG_DEPS+=" lfs/json-c lfs/libidn2"
@@ -26,6 +24,4 @@ install -d -m770 -o named -g named /srv/named"
 	;;
 esac
 CONF_VARS="BUILD_CC=\"\${CC_FOR_BUILD}\""
-#PKG_MAKETARGETS=""
-INST_CMD="install"
-
+PKG_MAKETARGETS="install"

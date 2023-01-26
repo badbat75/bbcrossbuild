@@ -10,5 +10,5 @@ CONF_FLAGS="--enable-unicode-properties \
 	--enable-pcregrep-libbz2 \
 	--enable-pcretest-libreadline \
 	--enable-jit"
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"
 #PATCHDEB=""

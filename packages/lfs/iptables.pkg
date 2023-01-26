@@ -8,7 +8,7 @@ PKG_DEPS="lfs/libpcap"
 #PKG_DEPS+=" lfs/nftables"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--disable-nftables --enable-libipq"
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"
 
 PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}/lib/systemd/system
 	cat <<-EOF > ${PKG_PKGPATH}/lib/systemd/system/iptables.services

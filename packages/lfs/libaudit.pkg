@@ -5,7 +5,7 @@ PKG_AUTOCONF=1
 BUILD_PROCESS=configmake
 CONF_FLAGS="--disable-zos-remote --without-python --with-python3"
 PKG_FAULTYCFLAGS=1
-INST_CMD=install-strip
+PKG_MAKETARGETS="all,install-strip"
 PKG_TARGET=${PKG_TARGET:-${LIBAUDIT_TARGET}}
 case "${PKG_TARGET}" in
 	bootstrap) ;;

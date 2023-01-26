@@ -7,7 +7,7 @@ PKG_AUTOCONF=1
 AUTOCONF_PATH=dist
 CONF_PATH=dist
 CONF_FLAGS="--enable-dbm --enable-cxx"
-INST_CMD="install"
+#PKG_MAKETARGETS="all,install"
 
 case ${TOOLCHAIN} in
     llvm)

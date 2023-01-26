@@ -7,8 +7,8 @@ BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Drootlibdir=/lib${INSTALL_LIBSUFFIX}"
 CONF_FLAGS+=" -Dcgroup-controller=elogind"
 CONF_FLAGS+=" -Ddbuspolicydir=${INSTALL_SYSCONFDIR}/dbus-1/system.d"
-ONF_FLAGS+=" -Dman=auto"
-INST_CMD="install"
+CONF_FLAGS+=" -Dman=auto"
+#PKG_MAKETARGETS="all,install"
 
 PKG_PREBUILD="sed -i '/Disable polkit/,+8 d' meson.build
 sed '/request_name/i\\

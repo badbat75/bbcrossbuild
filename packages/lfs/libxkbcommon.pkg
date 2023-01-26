@@ -5,4 +5,4 @@ PKG_DEPS="lfs/xkeyboard-config lfs/libxcb"
 #PKG_DEPS+=" lfs/Wayland lfs/waylandprotocols"
 BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Denable-wayland=false"
-INST_CMD="install"
+#PKG_MAKETARGETS="all,install"

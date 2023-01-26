@@ -3,4 +3,4 @@ PKG_VER=3.4.3
 PKG_URL="https://sourceware.org/pub/libffi/libffi-${PKG_VER}.tar.gz"
 BUILD_PROCESS=configmake
 CONF_FLAGS="enable_multi_os_directory=no"
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"

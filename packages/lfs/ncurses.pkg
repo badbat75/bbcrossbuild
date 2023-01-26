@@ -11,6 +11,6 @@ if [ "${BUILD_LIBSHARED}" -eq "1" ]
 then
 	CONF_FLAGS+=" --with-shared"
 fi
-INST_CMD="install"
+#PKG_MAKETARGETS="all,install"
 PKG_PREBUILD="sed -i '/INSTALL_OPT_S=\"-s\"/ s/-s/--strip-program \${STRIP} -s/' configure"
 PKG_POSTBUILD="echo \"INPUT(-lncursesw)\" > ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libncurses.so"

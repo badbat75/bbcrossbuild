@@ -5,6 +5,6 @@ PKG_DEPS="lfs/libxml2"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--without-crypto"
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"
 PKG_PREBUILD="sed -i s/3000/5000/ libxslt/transform.c doc/xsltproc.{1,xml}"
 #PATCHDEB=""

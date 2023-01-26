@@ -4,4 +4,4 @@ PKG_URL="https://www.x.org/archive/individual/data/xkeyboard-config/xkeyboard-co
 PKG_DEPS="lfs/libX11"
 BUILD_PROCESS=mesonninja
 CONF_FLAGS=""
-INST_CMD="install"
+#PKG_MAKETARGETS="all,install"

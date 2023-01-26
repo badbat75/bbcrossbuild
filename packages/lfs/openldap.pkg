@@ -16,13 +16,13 @@ esac
 case ${PKG_TARGET} in
 	bootstrap)
 		CONF_FLAGS+=" --disable-slapd"
-		PKG_TWOSTEPSBUILD=0
 		PKG_PREBUILD="sed 's/^SUBDIRS=.*/SUBDIRS= include libraries/' -i Makefile.in"
-		INST_CMD="install-strip"
+		PKG_MAKETARGETS="install"
 	;;
 	client)
 		PKG_DEPS+=" lfs/cyrus-sasl"
 		CONF_FLAGS+=" --disable-slapd"
+		#PKG_MAKETARGETS="all,install"
 	;;
 	*)
 		PKG_DEPS+=" lfs/cyrus-sasl"
@@ -36,6 +36,7 @@ case ${PKG_TARGET} in
 		CONF_FLAGS+=" --disable-sql"
 		CONF_FLAGS+=" --disable-wt"
 		CONF_FLAGS+=" --enable-overlays=mod"
+		#PKG_MAKETARGETS="all,install"
 		PKG_POSTINSTALL="if ! getent group ldap; then
 	groupadd --system -g 83 ldap
 fi
@@ -44,4 +45,3 @@ if ! getent passwd ldap; then
 fi"
 	;;
 esac
-INST_CMD=install

@@ -14,7 +14,7 @@ CONF_FLAGS+=" -Dpam_module_dir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/security"
 CONF_FLAGS+=" -Dtests=false"
 CONF_FLAGS+=" -Dexamples=false"
 BUILD_PROCESS=mesonninja
-INST_CMD=install
+#PKG_MAKETARGETS="all,install"
 PKG_POSTBUILD="chmod -v 04755 ${PKG_PKGPATH}${INSTALL_LIBDIR}/polkit-1/polkit-agent-helper-1"
 PKG_POSTINSTALL="if ! getent group polkitd; then
 	groupadd --system -fg 27 polkitd

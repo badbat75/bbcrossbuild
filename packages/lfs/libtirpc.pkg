@@ -6,4 +6,4 @@ BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS=""
 CONF_VARS="ac_cv_prog_ac_ct_KRB5_CONFIG=\${SYSROOT}${INSTALL_EXECDIR}/bin/krb5-config"
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"

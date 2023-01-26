@@ -8,12 +8,11 @@ CONF_FLAGS="--disable-option-checking \
 case ${PKG_TARGET} in
     cross)
         PKG_MAKETARGETS="-Clib/et install-strip,-Clib/ss install-strip"
-        PKG_SKIPINSTALL=1
     ;;
     *)
         CONF_FLAGS+=" --with-root-prefix=\"\""
         PKG_DEPS+=" lfs/e2fsprogs:cross"
         #PKG_DEPS+=" lfs/systemd"
-        INST_CMD="-j1 install install-strip"
+        PKG_MAKETARGETS="all,-j1 install install-strip"
    ;;
 esac

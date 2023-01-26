@@ -5,4 +5,4 @@ PKG_DEPS="lfs/ncurses lfs/readline"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--enable-libgdbm-compat"
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"

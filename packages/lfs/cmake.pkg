@@ -4,4 +4,4 @@ PKG_URL="https://github.com/Kitware/CMake/releases/download/v${PKG_VER}/cmake-${
 PKG_DEPS=
 BUILD_PROCESS=cmakebuild
 CONF_FLAGS=
-INST_CMD="install/strip"
+PKG_MAKETARGETS="all,install/strip"

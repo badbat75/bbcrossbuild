@@ -25,7 +25,7 @@ CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSU
     --disable-werror --enable-gold=default --enable-ld --enable-gprofng=yes --enable-lto \
     --enable-new-dtags --disable-rpath --enable-threads=yes --enable-plugins --enable-64-bit-bfd \
     --enable-compressed-debug-sections=all --enable-separate-code=yes --enable-plugins"
-INST_CMD="-j1 install-strip"
+PKG_MAKETARGETS="all,-j1 install-strip"
 PKG_MAKEENV="env -u CPP -u CPPFLAGS"
 PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
     CFLAGS_FOR_TARGET=\"\${CFLAGS} -fno-lto\" \

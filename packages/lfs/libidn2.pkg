@@ -5,7 +5,7 @@ PKG_DEPS="lfs/libunistring"
 BUILD_PROCESS=configmake
 CONF_FLAGS=""
 PKG_AUTOCONF=1
-INST_CMD=install-strip
+PKG_MAKETARGETS="all,install-strip"
 
 # Dependencies:
 

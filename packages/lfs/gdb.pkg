@@ -37,7 +37,7 @@ PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
 	RANLIB_FOR_TARGET=\"\${RANLIB}\" \
 "
 PKG_TOOLCHAIN=gnu
-INST_CMD="-C gdb install-strip"
+PKG_MAKETARGETS="all,-C gdb install-strip"
 
 case ${GDB_VER} in
     *)

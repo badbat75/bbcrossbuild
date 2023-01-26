@@ -13,7 +13,7 @@ CONF_FLAGS="--without-libiconv-prefix \
     --without-libpthread-prefix \
     --without-libdl-prefix \
     --without-libz-prefix"
-INST_CMD=install-strip
+PKG_MAKETARGETS="all,install-strip"
 PKG_CFLAGS="-Wno-analyzer-use-of-uninitialized-value"
 
 # Dependencies:

@@ -5,8 +5,7 @@ PKG_DEPS="lfs/ncurses lfs/readline"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--with-readline"
-PKG_MAKEVARS=""
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"
 
 PKG_PREBUILD='cat <<EOF | patch -s -p1 || true
 diff -Naur bc-1.07.orig/bc/Makefile.am bc-1.07/bc/Makefile.am

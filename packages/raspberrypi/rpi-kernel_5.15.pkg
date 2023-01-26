@@ -2,7 +2,7 @@
 PKG_SUFFIX=.89
 PKG_URL="https://github.com/raspberrypi/linux/archive/a5104907a1ece374bb4a61664ccb91291498db7c.tar.gz"
 BUILD_PROCESS=kernelbuild
-INST_CMD="INSTALL_MOD_STRIP=1"
+PKG_MAKEVARS="INSTALL_MOD_STRIP=1"
 
 case ${KERNEL_ARCH:-none} in
 	arm)

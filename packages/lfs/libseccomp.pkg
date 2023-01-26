@@ -4,7 +4,7 @@ PKG_URL="https://github.com/seccomp/libseccomp/releases/download/v${PKG_VER}/lib
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS=""
-INST_CMD=install-strip
+PKG_MAKETARGETS="all,install-strip"
 
 PKG_PREBUILD="sed '/@CODE_COVERAGE_RULES@/d' -i Makefile.am"
 

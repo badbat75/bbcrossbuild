@@ -5,4 +5,4 @@ PKG_DEPS="lfs/xorg-sgml-doc-tools lfs/libSM lfs/libICE lfs/libX11 lfs/xorgproto"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--disable-malloc0returnsnull"
-INST_CMD="install-strip"
+PKG_MAKETARGETS="all,install-strip"

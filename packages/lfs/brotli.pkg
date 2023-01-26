@@ -4,6 +4,6 @@ PKG_URL="https://github.com/google/brotli/archive/v${PKG_VER}/brotli-${PKG_VER}.
 PKG_DEPS=""
 BUILD_PROCESS=cmakebuild
 CONF_FLAGS=
-INST_CMD="install/strip"
+PKG_MAKETARGETS="all,install/strip"
 
 PKG_PREBUILD="sed -i 's@-R..libdir.@@' scripts/*.pc.in"
