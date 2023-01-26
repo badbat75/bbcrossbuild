@@ -1031,7 +1031,14 @@ function cargobuild () {
 	source environment.source
 	local CARGO_BIN=${CARGO_BIN:-${INSTALL_EXECPREFIX}/bin}
 	local CARGO_LIB=${CARGO_LIB:-${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}}
-	local CARGO_TARGET=$(echo ${HARCH} | sed 's/-/-unknown-/' )
+	case ${PKG_TARGET_ENV} in
+		native|cross)
+bb			local CARGO_TARGET=${BM}-unknown-${BOS}-${BLIBC}
+		;;
+		target)
+			local CARGO_TARGET=${HM}-unknown-${HOS}-${HLIBC}
+		;;
+	esac
 	export CARGO_PROFILE_RELEASE_OPT_LEVEL=${OPTLEVEL}
 	case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 		1|fat) export CARGO_PROFILE_RELEASE_LTO=fat
@@ -1045,7 +1052,7 @@ function cargobuild () {
 	done
 	export RUSTFLAGS+=" ${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}"
 	echo "RUSTFLAGS=${RUSTFLAGS}" | log_buffer info
-	run_cmd "cargo build $( [${MAKEVERBOSE:-0} -eq 1 ] && echo -n "--verbose" ) --release ${CONF_FLAGS} --target=${CARGO_TARGET}"
+	run_cmd "cargo build $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -n "--verbose" ) --release ${CONF_FLAGS} --target=${CARGO_TARGET}"
 	for file in ${CARGO_BINLIST}
 	do
 		if [ ! -d ${PKG_PKGPATH}${CARGO_BIN} ]
@@ -1728,14 +1735,9 @@ function build () {
 			local INSTALL_LIBSUFFIX=
 			local INSTALL_INCLUDEDIR=${NATIVE_INCLUDEDIR}
 			local INSTALL_SYSCONFDIR=${NATIVE_SYSCONFDIR}
-			local INSTALL_LOCALSTATEDIR=${NATIVE_LCALSTATEDIR}
+			local INSTALL_LOCALSTATEDIR=${NATIVE_LOCALSTATEDIR}
 			local INSTALL_SHAREDIR=${NATIVE_SHAREDIR}
 			local NOSAVESTATUS=1
-			if [ -z ${PKG_CHECK} ]
-			then
-				echo "PKG_CHECK not specified and target is native. Exiting..."
-				return 1
-			fi
 		;;
 		cross)
 			local PKG_TARGET_ENV=cross
@@ -1781,8 +1783,13 @@ function build () {
 
 	echo "Package ${PKG_NAME}${PKG_TARGET:+:${PKG_TARGET}}"
 
-	if [ -z ${PKG_CHECK} ]
+	if [ -z "${PKG_CHECK}" ]
 	then
+		if [ "${PKG_TARGET}" == "native" ]
+		then
+			echo "PKG_CHECK is empty and PKG_TARGET is native. Exiting..."
+			return 1
+		fi
 		### Check if target package or default package has already built
 		local PKG_CHKSUM="$( md5sum ${PKG_PATH}/${PKG_FILE}.pkg )"
 		if [ -f ${STATUS_FILE_DEFAULT_TARGET} ]
@@ -1804,7 +1811,7 @@ function build () {
 			fi
 		fi
 	else
-		echo -e "Check command:\n${PKG_CHECK}" | log_buffer info	
+		echo -e "Check command:\n${PKG_CHECK}"
 		if eval ${PKG_CHECK} > /dev/null 2>&1
 		then
 			echo "${SPACES}Package ${PKG_NAME}${PKG_TARGET:+:${PKG_TARGET}} already built."

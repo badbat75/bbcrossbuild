@@ -87,6 +87,10 @@ function set_gnu_buildenv () {
 		exit 1
 	fi
 	BARCH=$(gcc -dumpmachine)
+	BM=$(echo ${BARCH} | cut -d- -f1)
+	BOS=$(echo ${BARCH} | cut -d- -f3)
+	BLIBC=$(echo ${BARCH} | cud -d- -f4)
+	BLIBC=${BLIBC:-gnu}
 	CC_FOR_BUILD=$(which gcc)
 	CXX_FOR_BUILD=$(which g++)
 	CPP_FOR_BUILD="$(which gcc) -E"
@@ -164,113 +168,6 @@ function setup_rust () {
 	echo -n "adding ${CARGO_TARGET} libraries... "
 	run_cmd "rustup -v target add ${CARGO_TARGET}" >> ${GLOBAL_LOG_PATH}/toolchain_rust.log
 	echo "done."
-
-	trap ERR
-}
-
-function setup_sccache () {
-	trap 'local STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log ]; \
-		then \
-			echo "Log ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log:"; \
-			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log; \
-		fi; \
-		set +x; \
-		trap - ERR; \
-		return ${STATUS}' ERR
-
-	echo -n "Setting up sccache-${SCCACHE_VER}... "
-
-	if [ "$( [ -f ${GLOBAL_TOOLCHAIN_PATH}/bin/sccache ] && ${GLOBAL_TOOLCHAIN_PATH}/bin/sccache --version | awk 'NR==1{print $2}' || true)" != "${SCCACHE_VER}" ]
-	then
-		local SCCACHE_URL="https://github.com/mozilla/sccache/archive/refs/tags/v${SCCACHE_VER}.tar.gz"
-		download_uncompress "${SCCACHE_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/sccache-${SCCACHE_VER} > ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
-		echo -n "building... "
-		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/sccache-${SCCACHE_VER} ]
-		then
-			run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/sccache-${SCCACHE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
-		fi
-		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/sccache-${SCCACHE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
-		run_cmd "cp -rp ${GLOBAL_TOOLCHAIN_SRCPATH}/sccache-${SCCACHE_VER} ${GLOBAL_TOOLCHAIN_BLDPATH}" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
-		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/sccache-${SCCACHE_VER} >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log 2>&1
-		run_cmd "export CARGO_PROFILE_RELEASE_OPT_LEVEL=3; \\
-			export CARGO_PROFILE_RELEASE_LTO=thin; \\
-			cargo build $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -n "--verbose" ) --release" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
-		run_cmd "cp -fv target/release/sccache ${GLOBAL_TOOLCHAIN_PATH}/bin" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
-		run_cmd "ln -fsv sccache ${GLOBAL_TOOLCHAIN_PATH}/bin/ccache" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
-		### Clean-up build environment
-		popd >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log 2>&1
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/sccache-${SCCACHE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/sccache-${SCCACHE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_sccache-${SCCACHE_VER}.log
-		echo "done."
-	else
-		echo "already there."
-	fi
-
-	CCWRAPPER="${GLOBAL_TOOLCHAIN_PATH}/bin/sccache"
-	export RUSTC_WRAPPER="${CCWRAPPER}"
-	export SCCACHE_DIR=${GLOBAL_CACHE_PATH}/sccache
-	export SCCACHE_CACHE_SIZE="20G"
-	export SCCACHE_NO_DAEMON=0
-	if [ ! -d ${SCCACHE_DIR} ]
-	then
-		run_cmd "mkdir -p ${SCCACHE_DIR}" >> ${GLOBAL_LOG_PATH}/toolchain_rust.log
-	fi
-	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/sccache -s" >> ${GLOBAL_LOG_PATH}/toolchain_rust.log
-
-	trap ERR
-}
-
-function setup_make () {
-	trap 'local STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log ]; \
-		then \
-			echo "Log ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log:"; \
-			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log; \
-		fi; \
-		set +x; \
-		trap - ERR; \
-		return ${STATUS}' ERR
-
-	echo -n "Setting up make-${MAKE_VER}... "
-
-	if [ "$( [ -f ${GLOBAL_TOOLCHAIN_PATH}/bin/make ] && ${GLOBAL_TOOLCHAIN_PATH}/bin/make --version | awk 'NR==1{print $3}')" != "${MAKE_VER}" ]
-	then
-		local MAKE_URL="https://ftp.gnu.org/gnu/make/make-${MAKE_VER}.tar.gz"
-		download_uncompress "${MAKE_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/make-${MAKE_VER} > ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
-		echo -n "building... "
-		pushd ${GLOBAL_TOOLCHAIN_SRCPATH}/make-${MAKE_VER} >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log 2>&1
-		popd >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log 2>&1
-		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/make-${MAKE_VER} ]
-		then
-			run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/make-${MAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
-		fi
-		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/make-${MAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
-		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/make-${MAKE_VER} >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log 2>&1
-		#### Build for target
-		(	setbuildenv
-			run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
-				CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
-				LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
-					${GLOBAL_TOOLCHAIN_SRCPATH}/make-${MAKE_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH} --with-guile" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
-		)
-		run_cmd "./build.sh" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
-		run_cmd "./make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
-		run_cmd "ln -fs make ${GLOBAL_TOOLCHAIN_PATH}/bin/gmake" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
-		### Clean-up build environment
-		popd >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log 2>&1
-		run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_BLDPATH}/make-${MAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
-		run_cmd "rm -rfv ${GLOBAL_TOOLCHAIN_SRCPATH}/make-${MAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_make-${MAKE_VER}.log
-		echo "done."
-	else
-		echo "already there."
-	fi
 
 	trap ERR
 }
@@ -488,138 +385,6 @@ function setup_autotools () {
 	then
 		pathadd PATH "${AUTOTOOLS_PATH}/bin"
 	fi
-	trap ERR
-}
-
-function setup_pkgconfig () {
-	trap 'local STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log ]; \
-		then \
-			echo "Log ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log:"; \
-			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log; \
-		fi; \
-		set +x; \
-		trap - ERR; \
-		return ${STATUS}' ERR
-
-	echo -n "Setting up pkgconf-${PKGCONFIG_VER}... "
-	if [ "$( [ -f ${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config ] && ${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config --version)" != "${PKGCONFIG_VER}" ] || \
-		[ "$( [ -f ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config ] && ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config --version)" != "${PKGCONFIG_VER}" ]
-	then
-		local PKGCONFIG_URL="https://github.com/pkgconf/pkgconf/archive/refs/tags/pkgconf-${PKGCONFIG_VER}.tar.gz"
-		download_uncompress "${PKGCONFIG_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/pkgconf-${PKGCONFIG_VER} > ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-		smart_autoreconf "${GLOBAL_TOOLCHAIN_SRCPATH}/pkgconf-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-	else
-		echo -n "already there."
-	fi
-	### Build for host
-	if [ "$( [ -f ${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config ] && ${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config --version)" != "${PKGCONFIG_VER}" ]
-	then
-		echo -n "building for host..."
-		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER} ]
-		then
-			run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-		fi
-		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER} >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
-				CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
-				LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
-					${GLOBAL_TOOLCHAIN_SRCPATH}/pkgconf-${PKGCONFIG_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH} \
-					--with-pkg-config-dir=${LIBRARY_PATH_FOR_BUILD}/pkgconfig:/usr/share/pkgconfig \
-					--with-system-include-path=${INCLUDE_PATH_FOR_BUILD} \
-					--with-system-library-path=${LIBRARY_PATH_FOR_BUILD}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-		run_cmd "ln -fsv pkgconf ${GLOBAL_TOOLCHAIN_PATH}/bin/pkg-config" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-		### Clean-up build environment
-		popd >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log 2>&1
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-		echo -n "done. "
-	fi
-	### Build for target
-	if [ "$( [ -f ${TOOLCHAIN_PATH}/bin/${HARCH}-pkgconf ] && ${TOOLCHAIN_PATH}/bin/${HARCH}-pkgconf --version)" != "${PKGCONFIG_VER}" ]
-	then
-		echo -n "building for target... "
-		if [ -d ${TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER} ]
-		then
-			run_cmd "rm -rf ${TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-		fi
-		run_cmd "mkdir -pv ${TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-		pushd ${TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER} >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-		#### Build for target
-		(	setbuildenv
-			run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
-				CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
-				LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
-					${GLOBAL_TOOLCHAIN_SRCPATH}/pkgconf-${PKGCONFIG_VER}/configure --prefix=${TOOLCHAIN_PATH} \
-					--program-prefix=${HARCH}- \
-					--with-pkg-config-dir=${SYSROOT}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/pkgconfig:${SYSROOT}${TARGET_PREFIX}/share \
-					--with-system-include-path=${SYSROOT}${TARGET_INCLUDEDIR} \
-					--with-system-library-path=${SYSROOT}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-		)
-		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-		run_cmd "ln -fsv ${HARCH}-pkgconf ${TOOLCHAIN_PATH}/bin/${HARCH}-pkg-config" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-		### Clean-up build environment
-		popd >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log 2>&1
-		run_cmd "rm -rf ${TOOLCHAIN_BLDPATH}/pkgconf-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-		echo -n "done."
-	fi
-	if [ -d ${GLOBAL_TOOLCHAIN_SRCPATH}/pkgconf-${PKGCONFIG_VER} ]
-	then
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/pkgconf-${PKGCONFIG_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_pkgconf-${PKGCONFIG_VER}.log
-	fi
-	echo
-	trap ERR
-}
-
-function setup_bison () {
-	trap 'local STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log ]; \
-		then \
-			echo "Log ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log:"; \
-			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log; \
-		fi; \
-		set +x; \
-		trap - ERR; \
-		return ${STATUS}' ERR
-
-	echo -n "Setting up bison-${BISON_VER}... "
-
-	if [ "$( [ -f ${GLOBAL_TOOLCHAIN_PATH}/bin/bison ] && ${GLOBAL_TOOLCHAIN_PATH}/bin/bison -V | awk 'NR==1{print $4}' || true)" != "${BISON_VER}" ]
-	then
-		local BISON_URL="https://ftp.gnu.org/gnu/bison/bison-${BISON_VER}.tar.xz"
-		download_uncompress "${BISON_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/bison-${BISON_VER} > ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log
-		smart_autoreconf "${GLOBAL_TOOLCHAIN_SRCPATH}/bison-${BISON_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log
-		echo -n "building... "
-		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/bison-${BISON_VER} ]
-		then
-			run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/bison-${BISON_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log
-		fi
-		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/bison-${BISON_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log
-		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/bison-${BISON_VER} >> ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log 2>&1
-		run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
-			CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
-			LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
-				${GLOBAL_TOOLCHAIN_SRCPATH}/bison-${BISON_VER}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH}" >> ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log
-		run_cmd "make V=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log
-		### Clean-up build environment
-		popd >> ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log 2>&1
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/bison-${BISON_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/bison-${BISON_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_bison-${BISON_VER}.log
-		echo "done."
-	else
-		echo "already there."
-	fi
-
 	trap ERR
 }
 
@@ -1931,11 +1696,12 @@ function setup_full_toolchain () {
 	fi
 
 	setup_rust
-	setup_sccache
-	setup_make
+	build lfs/sccache:native
+	build lfs/make:native
 	setup_autotools --default
-	setup_pkgconfig
-	setup_bison
+	build lfs/pkgconf:native
+	build lfs/pkgconf:cross
+	build lfs/bison:native
 	setup_binutils
 	setup_gcc ${SETUP_GCC}
 	setup_toolchain_wrapper

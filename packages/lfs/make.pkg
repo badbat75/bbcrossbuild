@@ -1,12 +1,12 @@
 # make
-PKG_VER=${MAKE_VER}
-PKG_URL="https://ftp.gnu.org/gnu/make/make-${MAKE_VER}.tar.gz"
+PKG_VER=4.4
+PKG_URL="https://ftp.gnu.org/gnu/make/make-${PKG_VER}.tar.gz"
 
-case ${PKG_TARGET} in
+case "${PKG_TARGET}" in
     native)
-        PKG_CHECK="[ x\$( ${GLOBAL_TOOLCHAIN}/bin/make -v | head -n1 | awk '{print \$3}' ) == x${PKG_VER} ]"
+        PKG_CHECK="[ x\$( ${INSTALL_EXECPREFIX}/bin/make -v | head -n1 | awk '{print \$3}' ) == x${PKG_VER} ]"
         BUILD_PROCESS=custom
-        PKG_BUILDSCRIPT="\${PKG_SRCPATH}/configure --prefix=${GLOBAL_TOOLCHAIN_PATH} --with-guile
+        PKG_BUILDSCRIPT="\${PKG_SRCPATH}/configure --prefix=${INSTALL_EXECPREFIX} --with-guile
             ./build.sh
             ./make V=${MAKEVERBOSE:-0} install"
     ;;
@@ -17,3 +17,5 @@ case ${PKG_TARGET} in
         PKG_MAKETARGETS="all,install-strip"
     ;;
 esac
+
+PKG_POSTBUILD="ln -fsv make ${INSTALL_EXECPREFIX}/bin/gmake"
