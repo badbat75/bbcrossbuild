@@ -89,7 +89,7 @@ function set_gnu_buildenv () {
 	BARCH=$(gcc -dumpmachine)
 	BM=$(echo ${BARCH} | cut -d- -f1)
 	BOS=$(echo ${BARCH} | cut -d- -f3)
-	BLIBC=$(echo ${BARCH} | cud -d- -f4)
+	BLIBC=$(echo ${BARCH} | cut -d- -f4)
 	BLIBC=${BLIBC:-gnu}
 	CC_FOR_BUILD=$(which gcc)
 	CXX_FOR_BUILD=$(which g++)
@@ -168,7 +168,7 @@ function setup_rust () {
 	echo -n "adding ${CARGO_TARGET} libraries... "
 	run_cmd "rustup -v target add ${CARGO_TARGET}" >> ${GLOBAL_LOG_PATH}/toolchain_rust.log
 	echo "done."
-
+	echo
 	trap ERR
 }
 
@@ -385,6 +385,7 @@ function setup_autotools () {
 	then
 		pathadd PATH "${AUTOTOOLS_PATH}/bin"
 	fi
+	echo
 	trap ERR
 }
 

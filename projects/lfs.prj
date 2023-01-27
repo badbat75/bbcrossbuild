@@ -135,6 +135,8 @@ KERNEL_LTOENABLE=thin
 		build lfs/pkgconf
 		build lfs/sccache
 		build lfs/cmake
+		build lfs/ninja
+		build lfs/meson
 	else
 		LFS_REMOVE_DEVFILES="--remove_devfiles"
 	fi
