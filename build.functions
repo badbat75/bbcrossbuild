@@ -1356,11 +1356,11 @@ function pythonbuild () {
 	fi
 	case ${PKG_TARGET_ENV} in
 		native|cross)
-			run_cmd "${PYTHON_FOR_BUILD} -m pip ${VERBOSE} install --no-deps ${PYTHONBUILD} --prefix=${INSTALL_PREFIX} ${PIPPKG}"
+			run_cmd "PIP_CACHE_DIR=${DOWNLOAD_PATH}/pip ${PYTHON_FOR_BUILD} -m pip ${VERBOSE} install --no-deps ${PYTHONBUILD} --prefix=${INSTALL_PREFIX} ${PIPPKG}"
 		;;
 		target)
 			run_cmd "cross-python -m site"
-			run_cmd "cross-python -m pip ${VERBOSE} install --no-deps ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${INSTALL_PREFIX} ${PIPPKG}"
+			run_cmd "PIP_CACHE_DIR=${DOWNLOAD_PATH}/pip cross-python -m pip ${VERBOSE} install --no-deps ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${INSTALL_PREFIX} ${PIPPKG}"
 			if [ ${PYTHON_PKGDIR} == dist-packages ]
 			then
 				run_cmd "mv ${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
