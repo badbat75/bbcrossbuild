@@ -494,7 +494,7 @@ function create_environment_source () {
 	settcenv --target ${TARGET_ENV}
 	cat <<-EOF > environment.source
 		#################################################################################
-		###### ${PKG_NAME}
+		###### ${PKG_FULLNAME}
 		### Source file with all the environment specified
 		### Tool chain: ${PKG_TOOLCHAIN:-${TOOLCHAIN}}
 		### C Wrapper: ${CCWRAPPER}
@@ -609,6 +609,7 @@ function create_environment_source () {
 
 	cat <<-EOF >> environment.source
 
+		export PYTHON_FOR_BUILD=${PYTHON_FOR_BUILD}
 		export PYTHONPATH=${PYTHONPATH}
 
 		export CARGO_HOME='${CARGO_HOME}'
@@ -859,6 +860,8 @@ function cmakebuild () {
 		CONF_FLAGS+=" -DBUILD_STATIC_LIBS=OFF"
 	fi
 	local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v') -j${NPROCS}"
+	local CMAKE_GENERATOR=${CMAKE_GENERATOR:-Ninja}
+
 	echo "CCWRAPPER=\"\" create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	CCWRAPPER="" create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
@@ -866,7 +869,7 @@ function cmakebuild () {
 	cat >runconfig.sh <<-EOF
 		#!/bin/bash -x
 		${CONF_ENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/cmake ${PKG_SRCPATH} \\
-		   -G Ninja \\
+		   -G "${CMAKE_GENERATOR}" \\
 		   -DCMAKE_BUILD_TYPE="Release" \\
 		   -DTOOLCHAIN_PREFIX=${HARCH}- \\
 		   -DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \\
@@ -882,10 +885,20 @@ function cmakebuild () {
 		   -DCMAKE_INSTALL_DATADIR="${INSTALL_SHAREDIR}" \\
 		   ${CONF_FLAGS}
 	EOF
-	cat >runmake.sh <<-EOF
-		#!/bin/bash -x
-		${PKG_MAKEENV} DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}
-	EOF
+	case "${CMAKE_GENERATOR}" in
+		"Ninja")
+			cat >runmake.sh <<-EOF
+				#!/bin/bash -x
+				${PKG_MAKEENV} DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}
+			EOF
+		;;
+		"Unix Makefiles")
+			cat >runmake.sh <<-EOF
+				#!/bin/bash -x
+				${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
+			EOF
+		;;
+	esac
 	run_cmd "chmod +x runconfig.sh runmake.sh"
 	run_cmd "./runconfig.sh"
 	IFS=,
@@ -962,7 +975,7 @@ function mesonninja () {
 
 	trap 'STATUS=${?}; \
 		trap - ERR; \
-		echo "fail. [mesonninja - ${PKG_NAME}]"; \
+		echo "fail. [mesonninja - ${PKG_FULLNAME}]"; \
 		echo; \
 		return ${STATUS}' ERR
 
@@ -1271,120 +1284,89 @@ function pythonbuild () {
 	trap - ERR; \
 	return ${STATUS};' ERR
 
-	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
+	if [ -z ${PKG_URL} ]
+	then
+		run_cmd "mkdir -pv ${PKG_BLDPATH}"
+		local PIPPKG=${PKG_NAME}${PKG_VER:+==${PKG_VER}}
+	else
+		run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
+		local PIPPKG=.
+	fi
 	cd ${PKG_BLDPATH}
-	local PYTHONBIN_VER=$(cut -d. -f1,2 <<<$(awk '{print $2}' <<<$(python -V)))
-	local PYTHONBIN_MAJVER=$(cut -d. -f1 <<<${PYTHONBIN_VER})
-	if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
-	then
-		COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
-		COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
-	fi
-	if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER} ]
-	then
-		COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
-		COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
-	fi
-	if [ -f ${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libpython${PYTHONBIN_VER}m ]
-	then
-		COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
-	fi
-	if [ -f ${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libpython${PYTHONBIN_VER} ]
-	then
-		COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}"
-	fi
+	case ${PKG_TARGET_ENV} in
+		native)
+			COMMON_CFLAGS+=" -I${GLOBAL_TOOLCHAIN_PATH}/include/python${PYTHONBIN_VER}"
+			COMMON_CPPFLAGS+=" -I${GLOBAL_TOOLCHAIN_PATH}/include/python${PYTHONBIN_VER}"
+			local PYTHON_LIB_PATH="$(dirname $(ldd ${PYTHON_FOR_BUILD} | grep libpython${PYTHONBIN_VER} | awk '{print $3}'))"
+			COMMON_LDFLAGS+=" -L${PYTHON_LIB_PATH}"
+		;;
+		cross)
+			COMMON_CFLAGS+=" -I${GLOBAL_TOOLCHAIN_PATH}/include/python${PYTHONBIN_VER}"
+			COMMON_CFLAGS+=" -I${TOOLCHAIN_PATH}/include/python${PYTHONBIN_VER}"
+			COMMON_CPPFLAGS+=" -I${GLOBAL_TOOLCHAIN_PATH}/include/python${PYTHONBIN_VER}"
+			COMMON_CPPFLAGS+=" -I${TOOLCHAIN_PATH}/include/python${PYTHONBIN_VER}"
+			local PYTHON_LIB_PATH="$(dirname $(ldd ${PYTHON_FOR_BUILD} | grep libpython${PYTHONBIN_VER} | awk '{print $3}'))"
+			COMMON_LDFLAGS+=" -L${PYTHON_LIB_PATH}"
+		;;
+		target)
+			if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
+			then
+				COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
+				COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
+			fi
+			if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER} ]
+			then
+				COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
+				COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
+			fi
+			if [ -f ${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libpython${PYTHONBIN_VER}m ]
+			then
+				COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
+			fi
+			if [ -f ${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libpython${PYTHONBIN_VER} ]
+			then
+				COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}"
+			fi
+			if [ -f ${DISTOS_PATH}/etc/debian_version ]
+			then
+				local PYTHON_PKGDIR="dist-packages"
+			else
+				local PYTHON_PKGDIR="site-packages"
+			fi
+			pathadd PYTHONPATH ${BIN_PATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}
+			for pythonpkgdir in python${PYTHONBIN_MAJVER} python${PYTHONBIN_VER}
+			do
+				if [ -d ${DISTOS_PATH}${INSTALL_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR} ]
+				then
+					pathadd PYTHONPATH ${DISTOS_PATH}${INSTALL_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR}
+				fi
+			done
+		,,
+	esac
 	if [ ${MAKEVERBOSE:-0} -eq 1 ]
 	then
 		local VERBOSE="-v"
 	fi
-	if [ -f ${DISTOS_PATH}/etc/debian_version ]
-	then
-		local PYTHON_PKGDIR="dist-packages"
-	else
-		local PYTHON_PKGDIR="site-packages"
-	fi
-	local INSTALL_TARGET="--install-lib=${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
-	PYTHONPATH=${BIN_PATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}
-	for pythonpkgdir in python${PYTHONBIN_MAJVER} python${PYTHONBIN_VER}
-	do
-		if [ -d ${DISTOS_PATH}${INSTALL_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR} ]
-		then
-			PYTHONPATH+=:${DISTOS_PATH}${INSTALL_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR}
-		fi
-		export PYTHONPATH
-	done
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	create_environment_source --target ${PKG_TARGET_ENV}
 	source environment.source
-	run_cmd "cross-python -m site"
-	run_cmd "${PKG_BUILDVARS} cross-python setup.py build -j${NPROCS} ${CONF_FLAGS}"
-	run_cmd "${PKG_BUILDVARS} cross-python setup.py install --root=${PKG_PKGPATH} --prefix=${INSTALL_PREFIX} --exec-prefix=${INSTALL_EXECPREFIX} ${INSTALL_TARGET}"
-	cd ${BB_HOME}
-	trap - ERR
-}
-
-function pythonpip () {
-	trap 'STATUS=${?}; \
-	trap - ERR; \
-	return ${STATUS};' ERR
-
-	run_cmd "mkdir -pv ${PKG_BLDPATH}"
-	cd ${PKG_BLDPATH}
-	local PYTHONBIN_VER=$(cut -d. -f1,2 <<<$(awk '{print $2}' <<<$(python -V)))
-	local PYTHONBIN_MAJVER=$(cut -d. -f1 <<<${PYTHONBIN_VER})
-	if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
-	then
-		COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
-		COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
-	fi
-	if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER} ]
-	then
-		COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
-		COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
-	fi
-	if [ -f ${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libpython${PYTHONBIN_VER}m ]
-	then
-		COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
-	fi
-	if [ -f ${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libpython${PYTHONBIN_VER} ]
-	then
-		COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}"
-	fi
-	if [ ${MAKEVERBOSE:-0} -eq 1 ]
-	then
-		local VERBOSE="-v"
-	fi
-	if [ -f ${DISTOS_PATH}/etc/debian_version ]
-	then
-		local PYTHON_PKGDIR="dist-packages"
-	else
-		local PYTHON_PKGDIR="site-packages"
-	fi
-	PYTHONPATH="${BIN_PATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
-	for pythonpkgdir in python${PYTHONBIN_MAJVER} python${PYTHONBIN_VER}
-	do
-		if [ -d ${DISTOS_PATH}${INSTALL_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR} ]
-		then
-			PYTHONPATH+=":${DISTOS_PATH}${INSTALL_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR}"
-		fi
-	done
-	#PYTHONUSERBASE="${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
-	#export PYTHONUSERBASE
-	export PYTHONPATH
-	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	create_environment_source --target ${PKG_TARGET_ENV}
-	source environment.source
-	run_cmd "cross-python -m site"
 	if [ ${PKG_PYTHONBUILD:-1} -eq 1 ]
 	then
 		local PYTHONBUILD="--no-binary :all:"
 	fi
-	#build-python -m pip ${VERBOSE} install --upgrade ${PKG_NAME}
-	run_cmd "cross-python -m pip ${VERBOSE} install -I ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${INSTALL_PREFIX} ${PKG_NAME}"
-	if [ ${PYTHON_PKGDIR} == dist-packages ]
-	then
-		run_cmd "mv ${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
-	fi
+	case ${PKG_TARGET_ENV} in
+		native|cross)
+			run_cmd "${PYTHON_FOR_BUILD} -m pip ${VERBOSE} install --no-deps ${PYTHONBUILD} --prefix=${INSTALL_PREFIX} ${PIPPKG}"
+		;;
+		target)
+			run_cmd "cross-python -m site"
+			run_cmd "cross-python -m pip ${VERBOSE} install --no-deps ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${INSTALL_PREFIX} ${PIPPKG}"
+			if [ ${PYTHON_PKGDIR} == dist-packages ]
+			then
+				run_cmd "mv ${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
+			fi
+		;;
+	esac
 	cd ${BB_HOME}
 	trap - ERR
 }
@@ -1622,7 +1604,7 @@ function build () {
 
 	trap 'STATUS=${?}; \
 		trap - ERR; \
-		echo "fail. [build - ${PKG_NAME}]"; \
+		echo "fail. [build - ${PKG_FULLNAME}]"; \
 		echo; \
 		if [ -f ${LOG_FILE} ]; \
 		then \
@@ -1640,6 +1622,7 @@ function build () {
 		CARGO_LIB \
 		CARGO_BINLIST \
 		CARGO_LIBLIST \
+		CMAKE_GENERATOR \
 		CONF_CMD \
 		CONF_ENV \
 		CONF_FLAGS \
@@ -1722,9 +1705,10 @@ function build () {
 		return 1
 	fi
 	
-	local PKG_NAME=$(basename ${PKG_FILE})\${PKG_SUFFIX}\${PKG_VER:+_\${PKG_VER}}
-	local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_NAME}}
-	local PKG_BLDPATH=${BLD_PATH}/${PKG_NAME}${PKG_TARGET:+-${PKG_TARGET}}
+	local PKG_NAME=$(basename ${PKG_FILE})
+	local PKG_FULLNAME=\${PKG_NAME}\${PKG_SUFFIX}\${PKG_VER:+_\${PKG_VER}}
+	local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_FULLNAME}}
+	local PKG_BLDPATH=${BLD_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}
 	case ${PKG_TARGET} in
 		native)
 			local PKG_TARGET_ENV=native
@@ -1753,7 +1737,7 @@ function build () {
 		;;
 		*)
 			local PKG_TARGET_ENV=target
-			local PKG_PKGPATH=${PACKAGES_PATH}/${PKG_NAME}${PKG_TARGET:+-${PKG_TARGET}}
+			local PKG_PKGPATH=${PACKAGES_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}
 			local INSTALL_PREFIX=${TARGET_PREFIX}
 			local INSTALL_EXECPREFIX=${TARGET_EXECPREFIX}
 			local INSTALL_LIBDIR=${TARGET_LIBDIR}
@@ -1772,16 +1756,16 @@ function build () {
 	PKG_TOOLCHAIN=${_param_toolchain:-${PKG_TOOLCHAIN}}
 	PKG_KERNEL_BUILD_MODULES="${_param_with_extra_modules:-${PKG_KERNEL_BUILD_MODULES}}"
 
-	eval local PKG_NAME=${PKG_NAME}
+	eval local PKG_FULLNAME=${PKG_FULLNAME}
 	eval export PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
 	eval export PKG_BLDPATH=${PKG_BLDPATH}
 	eval export PKG_PKGPATH=${PKG_PKGPATH}
 
-	local STATUS_FILE=${STATUS_PATH}/${PKG_NAME}${PKG_TARGET:+-${PKG_TARGET}}${TEMPORARY_STATUS}
-	local STATUS_FILE_DEFAULT_TARGET=${STATUS_PATH}/${PKG_NAME}
-	local LOG_FILE=${LOG_PATH}/${PKG_NAME}${PKG_TARGET:+-${PKG_TARGET}}.log
+	local STATUS_FILE=${STATUS_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}${TEMPORARY_STATUS}
+	local STATUS_FILE_DEFAULT_TARGET=${STATUS_PATH}/${PKG_FULLNAME}
+	local LOG_FILE=${LOG_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}.log
 
-	echo "Package ${PKG_NAME}${PKG_TARGET:+:${PKG_TARGET}}"
+	echo "Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}"
 
 	if [ -z "${PKG_CHECK}" ]
 	then
@@ -1802,7 +1786,7 @@ function build () {
 		then
 			if [ "${PKG_CHKSUM}" == "$( cat ${STATUS_CHK_FILE} )" ]
 			then
-				echo "${SPACES}Package ${PKG_NAME}${PKG_TARGET:+:${PKG_TARGET}} already built."
+				echo "${SPACES}Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}} already built."
 				echo
 				trap - ERR
 				return 0
@@ -1811,10 +1795,10 @@ function build () {
 			fi
 		fi
 	else
-		#echo -e "Check command:\n${PKG_CHECK}"
+		#echo -e "Check command: ${PKG_CHECK}"
 		if eval ${PKG_CHECK} > /dev/null 2>&1
 		then
-			echo "${SPACES}Package ${PKG_NAME}${PKG_TARGET:+:${PKG_TARGET}} already built."
+			echo "${SPACES}Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}} already built."
 			echo
 			trap - ERR
 			return 0
@@ -1872,9 +1856,9 @@ function build () {
 	echo "==================" >> ${LOG_FILE}
 	echo >> ${LOG_FILE}
 
-	if [ ! -z "${PKG_URL}" ] || [ ! -z "${GIT_URL}" ] || [ "${BUILD_PROCESS}" == "pythonpip" ]
+	if [ ! -z "${PKG_URL}" ] || [ ! -z "${GIT_URL}" ]
 	then
-		echo -n "Downloading ${PKG_NAME}..."
+		echo -n "Downloading ${PKG_FULLNAME}..."
 		downloadsources >> ${LOG_FILE}
 		echo "Done."
 		preparesources >> ${LOG_FILE}
@@ -1909,7 +1893,7 @@ function build () {
 	fi
 	if [ ! ${BUILD_PROCESS:-none} == none ]
 	then
-		echo -n "${SPACES}Building ${PKG_NAME}${PKG_TARGET:+:${PKG_TARGET}} [${BUILD_PROCESS}]..."
+		echo -n "${SPACES}Building ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}} [${BUILD_PROCESS}]..."
 		${BUILD_PROCESS} >> ${LOG_FILE} 2>&1
 	fi
 	if [ -n "${PKG_POSTBUILD}" ]
@@ -1930,8 +1914,8 @@ function build () {
 	if [ -n "${PKG_POSTINSTALL}" ]
 	then
 		run_cmd "mkdir -p ${PKG_PKGPATH}/postinst_scripts" >> ${LOG_FILE}
-		echo "${PKG_POSTINSTALL}" > ${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_NAME}${PKG_TARGET:+-${PKG_TARGET}}
-		run_cmd "cat ${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_NAME}${PKG_TARGET:+-${PKG_TARGET}}" >> ${LOG_FILE}
+		echo "${PKG_POSTINSTALL}" > ${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}
+		run_cmd "cat ${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}" >> ${LOG_FILE}
 	fi
 
 	##### Create package
