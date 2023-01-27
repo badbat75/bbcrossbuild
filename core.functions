@@ -222,8 +222,7 @@ pathadd () {
 
 	if [ -z "${2}" ]
 	then
-		echo "Path not defined."
-		return 1
+		return 0
 	fi
 
 	eval "

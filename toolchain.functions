@@ -1016,52 +1016,6 @@ function setup_toolchain_wrapper () {
 	done
 }
 
-function setup_cmake () {
-	trap 'local STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log ]; \
-		then \
-			echo "Log ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log:"; \
-			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log; \
-		fi; \
-		set +x; \
-		trap - ERR; \
-		return ${STATUS}' ERR
-
-	echo -n "Setting up cmake-${CMAKE_VER}... "
-
-	if [ "$( [ -f ${GLOBAL_TOOLCHAIN_PATH}/bin/cmake ] && ${GLOBAL_TOOLCHAIN_PATH}/bin/cmake --version | awk 'NR==1{print $3}' || true)" != "${CMAKE_VER}" ]
-	then
-		local CMAKE_URL="https://github.com/Kitware/CMake/releases/download/v${CMAKE_VER}/cmake-${CMAKE_VER}.tar.gz"
-		download_uncompress "${CMAKE_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/cmake-${CMAKE_VER} > ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log
-		echo -n "building... "
-		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/cmake-${CMAKE_VER} ]
-		then
-			run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/cmake-${CMAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log
-		fi
-		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/cmake-${CMAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log
-		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/cmake-${CMAKE_VER} >> ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log 2>&1
-		run_cmd "CC=\"${CC_FOR_BUILD}\" CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
-			CXX=\"${CXX_FOR_BUILD}\" CXXFLAGS=\"${CXXFLAGS_FOR_BUILD}\" \\
-			LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
-				${GLOBAL_TOOLCHAIN_SRCPATH}/cmake-${CMAKE_VER}/bootstrap --prefix=${GLOBAL_TOOLCHAIN_PATH} \\
-					--parallel=${NPROCS} --enable-ccache $(if [ ${MAKEVERBOSE:-0} -eq 1 ]; then echo --verbose; fi)" >> ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log
-		run_cmd "make VERBOSE=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log
-		run_cmd "make VERBOSE=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log
-		### Clean-up build environment
-		popd >> ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log 2>&1
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/cmake-${CMAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/cmake-${CMAKE_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_cmake-${CMAKE_VER}.log
-		echo "done."
-	else
-		echo "already there."
-	fi
-
-	trap ERR
-}
-
 function setup_llvm () {
 	function download_llvm () {
 		trap 'STATUS=${?}; \
@@ -1378,97 +1332,6 @@ function setup_llvm () {
 	trap ERR
 }
 
-function setup_ninja () {
-	trap 'local STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log ]; \
-		then \
-			echo "Log ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log:"; \
-			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log; \
-		fi; \
-		set +x; \
-		trap - ERR; \
-		return ${STATUS}' ERR
-
-	echo -n "Setting up ninja-${NINJA_VER}... "
-
-	if [ "$( [ -f ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ] && ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja --version || true)" != "${NINJA_VER}" ]
-	then
-		local NINJA_URL="https://github.com/ninja-build/ninja/archive/refs/tags/v${NINJA_VER}.tar.gz"
-		download_uncompress "${NINJA_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/ninja-${NINJA_VER} > ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log
-		echo -n "building... "
-		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/ninja-${NINJA_VER} ]
-		then
-			run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/ninja-${NINJA_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log
-		fi
-		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_BLDPATH}/ninja-${NINJA_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log
-		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/ninja-${NINJA_VER} >> ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log 2>&1
-		run_cmd "CC=\"${CC_FOR_BUILD}\" CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
-			CXX=\"${CXX_FOR_BUILD}\" CXXFLAGS=\"${CXXFLAGS_FOR_BUILD}\" \\
-			LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
-				${GLOBAL_TOOLCHAIN_PATH}/bin/cmake ${GLOBAL_TOOLCHAIN_SRCPATH}/ninja-${NINJA_VER} -DCMAKE_BUILD_TYPE=\"Release\" \\
-					-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} -DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \\
-					-DCMAKE_INSTALL_PREFIX=${GLOBAL_TOOLCHAIN_PATH}" >> ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log
-		run_cmd "make VERBOSE=${MAKEVERBOSE:-0}" >> ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log
-		run_cmd "make VERBOSE=${MAKEVERBOSE:-0} install" >> ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log
-		### Clean-up build environment
-		popd >> ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log 2>&1
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/ninja-${NINJA_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/ninja-${NINJA_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_ninja-${NINJA_VER}.log
-		echo "done."
-	else
-		echo "already there."
-	fi
-
-	trap ERR
-}
-
-function setup_meson () {
-	trap 'local STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log ]; \
-		then \
-			echo "Log ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log:"; \
-			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log; \
-		fi; \
-		set +x; \
-		trap - ERR; \
-		return ${STATUS}' ERR
-
-	echo -n "Setting up meson-${MESON_VER}... "
-
-	local MESON_LIBPATH="$(find ${GLOBAL_TOOLCHAIN_PATH}/lib/python3* -name "meson-${MESON_VER}*egg" 2>/dev/null)"
-	if [ -z ${MESON_LIBPATH} ]
-	then
-		local MESON_URL="https://github.com/mesonbuild/meson/archive/refs/tags/${MESON_VER}.tar.gz"
-		download_uncompress "${MESON_URL}" ${GLOBAL_TOOLCHAIN_SRCPATH}/meson-${MESON_VER} > ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
-		echo -n "building... "
-		if [ -d ${GLOBAL_TOOLCHAIN_BLDPATH}/meson-${MESON_VER} ]
-		then
-			run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/meson-${MESON_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
-		fi
-		run_cmd "mkdir -pv ${GLOBAL_TOOLCHAIN_SRCPATH}/meson-${MESON_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
-		run_cmd "cp -rp ${GLOBAL_TOOLCHAIN_SRCPATH}/meson-${MESON_VER} ${GLOBAL_TOOLCHAIN_BLDPATH}" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
-		pushd ${GLOBAL_TOOLCHAIN_BLDPATH}/meson-${MESON_VER} >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log 2>&1
-		run_cmd "python3 setup.py build" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
-		run_cmd "python3 setup.py install --prefix=${GLOBAL_TOOLCHAIN_PATH}" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
-		### Clean-up build environment
-		popd >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log 2>&1
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_BLDPATH}/meson-${MESON_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
-		run_cmd "rm -rf ${GLOBAL_TOOLCHAIN_SRCPATH}/meson-${MESON_VER}" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
-		echo "done."
-	else
-		echo "already there."
-	fi
-	pathadd PYTHONPATH $(find ${GLOBAL_TOOLCHAIN_PATH}/lib/python3* -name "meson-${MESON_VER}*egg")
-	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/meson --version" >> ${GLOBAL_LOG_PATH}/toolchain_meson-${MESON_VER}.log
-	trap ERR
-}
-
 function setup_python () {
 	function download_pyton () {
 		trap 'STATUS=${?}; \
@@ -1705,27 +1568,33 @@ function setup_full_toolchain () {
 	setup_binutils
 	setup_gcc ${SETUP_GCC}
 	setup_toolchain_wrapper
-	setup_cmake
+	build lfs/cmake:native
 	if [ ${WITH_LLVM} -eq 1 ] || [ "${TOOLCHAIN}" = "llvm" ]
 	then
 		setup_llvm ${SETUP_LLVM}
 	fi
-	setup_ninja
-	setup_meson
+	build lfs/ninja:native
 	if [ ${WITH_PYTHON} -eq 1 ]
 	then
 		set +e
 		setup_python
 		case ${?} in
+			0) set -e ;;
 			2)
 				set -e
 				NUMSPACES=1 build lfs/python3
 				setup_python
-				set +e
 			;;
 			*) return ${?};;
 		esac
 	fi
+	PYTHON_FOR_BUILD=${PYTHON_FOR_BUILD:-$(which python3)}
+	PYTHON_VER=${PYTHON_VER:-$(${PYTHON_FOR_BUILD} --version | awk '{print $2}')}
+	PYTHONBIN_VER=${PYTHONBIN_VER:-$(cut -d. -f1,2 <<<${PYTHON_VER})}
+	PYTHONBIN_MAJVER=${PYTHONBIN_VER:-$(cut -d. -f1 <<<${PYTHON_VER})}
+	pathadd PYTHONPATH ${GLOBAL_TOOLCHAIN_PATH}/lib/python${PYTHONBIN_VER}/site-packages
+	build lfs/meson:native
+	set +e
 }
 
 function prepare_sysroot () {

@@ -1,5 +1,5 @@
 # RPi.GPIO
-BUILD_PROCESS=pythonpip
+BUILD_PROCESS=pythonbuild
 PKG_TOOLCHAIN=gnu
 [ ${TOOLCHAIN}=llvm ] && PKG_CFLAGS="-Wno-implicit-function-declaration -Wno-deprecated-declarations"
 

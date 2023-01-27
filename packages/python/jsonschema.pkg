@@ -1,3 +1,3 @@
 # jsonschema
-BUILD_PROCESS=pythonpip
+BUILD_PROCESS=pythonbuild
 PKG_PYTHONBUILD=0
