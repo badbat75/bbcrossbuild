@@ -14,49 +14,31 @@ case ${BINUTILS_VER} in
 		;;
 esac
 BUILD_PROCESS=configmake
-AUTOCONF_PATH=".,libsframe,bfd,binutils,gas,gold,gprof,gprofng/libcollector,gprofng,intl,ld,libctf,libiberty,opcodes"
 STD_CONF_FLAGS=0
-CONF_ENV="env -u CPP -u CPPFLAGS"
 CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} --with-sysroot=/ --with-build-sysroot=\${SYSROOT} \
     --build=${BARCH} --host=${HARCH} --target=${HARCH} \
     --disable-werror \
     --enable-shared --enable-static \
-    --with-mpc-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpc-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
-    --with-mpfr-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpfr-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
-    --with-isl-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-isl-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
-    --with-system-zlib \
     --enable-gold=default --enable-ld --enable-gprofng=yes --enable-lto \
     --enable-new-dtags --disable-rpath --enable-threads=yes --enable-plugins --enable-64-bit-bfd \
     --enable-compressed-debug-sections=all --enable-separate-code=yes --enable-plugins"
-PKG_MAKETARGETS="all,-j1 install-strip"
-PKG_MAKEENV="env -u CPP -u CPPFLAGS"
-PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
-    CFLAGS_FOR_TARGET=\"\${CFLAGS} -fno-lto\" \
-    CXXFLAGS_FOR_TARGET=\"\${CXXFLAGS} -fno-lto\" \
-    AR_FOR_TARGET=\"\${AR}\" \
-	NM_FOR_TARGET=\"\${NM}\" \
-	RANLIB_FOR_TARGET=\"\${RANLIB}\" \
-"
+CONF_FLAGS+=" --with-system-zlib"
+CONF_FLAGS+=" --with-mpc-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpc-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
+CONF_FLAGS+=" --with-mpfr-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpfr-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
+CONF_FLAGS+=" --with-gmp-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-gmp-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
+CONF_FLAGS+=" --with-isl-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-isl-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
+PKG_MAKETARGETS="all,install,install-strip"
+PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\""
+PKG_MAKEVARS+="AR_FOR_TARGET=\"\${AR}\""
+PKG_MAKEVARS+="NM_FOR_TARGET=\"\${NM}\""
+PKG_MAKEVARS+="RANLIB_FOR_TARGET=\"\${RANLIB}\""
 PKG_TOOLCHAIN=gnu
 
 case ${BINUTILS_VER} in
-    2.40)
-        #PKG_AUTOCONF=2.69
-        #PKG_AUTOMAKE=1.15.1
-        #PKG_LIBTOOL=2.4.7
-        #PKG_GETTEXT=0.14.6
-    ;;
-    *)
-        PKG_AUTOCONF=2.69
-        PKG_AUTOMAKE=1.15.1
-        PKG_LIBTOOL=2.2.8
-        PKG_GETTEXT=0.14.6
-        CONF_FLAGS+=" --disable-dependency-tracking"
-    ;;
+    2.3*)
+		CONF_ENV="env -u CPP -u CPPFLAGS"
+		PKG_MAKEENV="env -u CPP -u CPPFLAGS"
+	;;
 esac
 
-PKG_PREBUILD="sed '/^AC_INIT/a LT_INIT' -i configure.ac
-    sed '/^AC_INIT/a AC_CONFIG_MACRO_DIR([../config])' -i libiberty/configure.ac
-    sed -i '/^AC_CONFIG_MACRO_DIR/d' libctf/configure.ac
-    sed -i '/^AC_CONFIG_SRCDIR/a AC_CONFIG_MACRO_DIRS([.. ../config ../bfd])' libctf/configure.ac
-    sed -i '/^AC_CONFIG_MACRO_DIRS/d' gprofng/libcollector/configure.ac"
+PKG_PREBUILD="sed '/^AM_CFLAGS_FOR_BUILD/ s/\\\$(ZSTD_CFLAGS)//' -i binutils/Makefile.in"

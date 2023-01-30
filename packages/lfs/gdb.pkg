@@ -37,22 +37,19 @@ PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
 	RANLIB_FOR_TARGET=\"\${RANLIB}\" \
 "
 PKG_TOOLCHAIN=gnu
-PKG_MAKETARGETS="all,-C gdb install-strip"
+PKG_MAKETARGETS="all,-C gdb install-strip,-C gdbserver install-strip"
 
 case ${GDB_VER} in
-    *)
+    12.*)
         PKG_AUTOCONF=2.69
         PKG_AUTOMAKE=1.15.1
-        PKG_LIBTOOL=2.2.8
+        PKG_LIBTOOL=2.4.7
         PKG_GETTEXT=0.14.6
+        PKG_PREBUILD="sed -i '/multilib.am/d' libbacktrace/Makefile.am
+            sed -i '/^AC_CONFIG_MACRO_DIR/d' libctf/configure.ac
+            sed -i '/return/s/rl.*characters/(char *) &/' gdb/completer.c
+            rm -fv libbacktrace/{aclocal.m4,config.h.in}
+            sed '/AC_DISABLE_OPTION_CHECKING/a LT_INIT' -i configure.ac
+            "
     ;;
 esac
-
-PKG_PREBUILD="sed -i '/multilib.am/d' libbacktrace/Makefile.am
-    sed -i '/^AC_CONFIG_MACRO_DIR/d' libctf/configure.ac
-    sed -i '/return/s/rl.*characters/(char *) &/' gdb/completer.c
-    rm -fv libbacktrace/{aclocal.m4,config.h.in}
-    sed '/AC_DISABLE_OPTION_CHECKING/a LT_INIT' -i configure.ac
-    "
-PKG_POSTBUILD="./runmake.sh DESTDIR=\${PKG_PKGPATH} -C gdbserver install-strip"
-
