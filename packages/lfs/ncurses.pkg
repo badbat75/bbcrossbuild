@@ -1,7 +1,6 @@
 # ncurses
 PKG_VER=6.4
 PKG_URL="https://github.com/mirror/ncurses/archive/refs/tags/v6.4.tar.gz"
-
 BUILD_PROCESS=configmake
 CONF_FLAGS="--with-pkg-config-libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/pkgconfig \
 	--without-debug --without-ada --without-normal --enable-widec --enable-pc-files"
@@ -13,4 +12,5 @@ then
 fi
 #PKG_MAKETARGETS="all,install"
 PKG_PREBUILD="sed -i '/INSTALL_OPT_S=\"-s\"/ s/-s/--strip-program \${STRIP} -s/' configure"
-PKG_POSTBUILD="echo \"INPUT(-lncursesw)\" > ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libncurses.so"
+PKG_POSTBUILD="echo \"INPUT(-lncursesw)\" > ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libncurses.so
+	sed -e 's/^Libs: .*-l/Libs: -L\\\${libdir} -l/' -e 's/^Cflags:  -D/Cflags: -I\\\${includedir} -D/' -i ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/pkgconfig/{formw,menuw,ncursesw,panelw}.pc"

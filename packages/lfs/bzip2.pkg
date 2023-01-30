@@ -29,17 +29,17 @@ EOF
 	sed -i '/all:/ s/ test$//' Makefile-libbz2_a
 
 	cat >bzip2.pc <<-EOF
-		prefix=/usr
-		exec_prefix=/usr
-		bindir=/usr/bin
-		libdir=
-		includedir=/usr/include
+		prefix=${INSTALL_PREFIX}
+		exec_prefix=${INSTALL_EXECPREFIX}
+		bindir=${INSTALL_PREFIX}/bin
+		libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
+		includedir=${INSTALL_INCLUDEDIR}
 
 		Name: bzip2
 		Description: A file compression library
 		Version: 1.0.6
-		Libs: -L${libdir} -lbz2
-		Cflags: -I${includedir}
+		Libs: -L\\\${libdir} -lbz2
+		Cflags: -I\\\${includedir}
 	EOF
 
 	cat >Makefile <<EOF

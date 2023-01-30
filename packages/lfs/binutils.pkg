@@ -14,7 +14,7 @@ case ${BINUTILS_VER} in
 		;;
 esac
 BUILD_PROCESS=configmake
-AUTOCONF_PATH=".,bfd,binutils,gas,gold,gprof,gprofng,intl,ld,libctf,libiberty,opcodes"
+AUTOCONF_PATH=".,libsframe,bfd,binutils,gas,gold,gprof,gprofng/libcollector,gprofng,intl,ld,libctf,libiberty,opcodes"
 STD_CONF_FLAGS=0
 CONF_ENV="env -u CPP -u CPPFLAGS"
 CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} --with-sysroot=/ --with-build-sysroot=\${SYSROOT} \
@@ -40,6 +40,12 @@ PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
 PKG_TOOLCHAIN=gnu
 
 case ${BINUTILS_VER} in
+    2.40)
+        #PKG_AUTOCONF=2.69
+        #PKG_AUTOMAKE=1.15.1
+        #PKG_LIBTOOL=2.4.7
+        #PKG_GETTEXT=0.14.6
+    ;;
     *)
         PKG_AUTOCONF=2.69
         PKG_AUTOMAKE=1.15.1
@@ -52,4 +58,5 @@ esac
 PKG_PREBUILD="sed '/^AC_INIT/a LT_INIT' -i configure.ac
     sed '/^AC_INIT/a AC_CONFIG_MACRO_DIR([../config])' -i libiberty/configure.ac
     sed -i '/^AC_CONFIG_MACRO_DIR/d' libctf/configure.ac
-    sed -i '/^AC_CONFIG_SRCDIR/a AC_CONFIG_MACRO_DIRS([.. ../config ../bfd])' libctf/configure.ac"
+    sed -i '/^AC_CONFIG_SRCDIR/a AC_CONFIG_MACRO_DIRS([.. ../config ../bfd])' libctf/configure.ac
+    sed -i '/^AC_CONFIG_MACRO_DIRS/d' gprofng/libcollector/configure.ac"

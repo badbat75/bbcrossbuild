@@ -24,4 +24,5 @@ PKG_POSTBUILD="sed -e '/locking_dir =/{s/#//;s/var/run/}' \
 if [ ${TOOLCHAIN} == gnu ]
 then
     PKG_OVERRIDELD=bfd
+    PKG_LDFLAGS="-Wl,-rpath-link -Wl,\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 fi
