@@ -10,6 +10,7 @@ LFS_ENABLESSH=${LFS_ENABLESSH:-1}
 LFS_ENABLEDEV=${LFS_ENABLEDEV:-0}
 LFS_HOSTNAME=${LFS_HOSTNAME:-lfs}
 LFS_FSTYPE=${LFS_FSTYPE:-ext4}
+LFS_FSSIZE=${LFS_FSSIZE:-4G}
 LFS_WLANDEV=${LFS_WLANDEV:-wlan0}
 
 echo "Tool chain: ${TOOLCHAIN}"
@@ -205,7 +206,7 @@ esac
 
 function build_lfs_image () {
 	set -e
-	create_image lfs --rootfstype ${LFS_FSTYPE} --size 3G
+	create_image lfs --rootfstype ${LFS_FSTYPE} --size ${LFS_FSSIZE}
 	mount_tag lfs --mountlist "2:/ 1:/boot"
 	inject_into_mount_tag lfs binaries ${LFS_REMOVE_DEVFILES}
 	run_postinstall_scripts lfs

@@ -1047,7 +1047,7 @@ function cargobuild () {
 	local CARGO_LIB=${CARGO_LIB:-${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}}
 	case ${PKG_TARGET_ENV} in
 		native|cross)
-bb			local CARGO_TARGET=${BM}-unknown-${BOS}-${BLIBC}
+			local CARGO_TARGET=${BM}-unknown-${BOS}-${BLIBC}
 		;;
 		target)
 			local CARGO_TARGET=${HM}-unknown-${HOS}-${HLIBC}
@@ -1342,7 +1342,7 @@ function pythonbuild () {
 					pathadd PYTHONPATH ${DISTOS_PATH}${INSTALL_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR}
 				fi
 			done
-		,,
+		;;
 	esac
 	if [ ${MAKEVERBOSE:-0} -eq 1 ]
 	then
@@ -1361,7 +1361,7 @@ function pythonbuild () {
 		;;
 		target)
 			run_cmd "cross-python -m site"
-			run_cmd "PIP_CACHE_DIR=${DOWNLOAD_PATH}/pip cross-python -m pip ${VERBOSE} install --no-deps ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${INSTALL_PREFIX} ${PIPPKG}"
+			run_cmd "PIP_CACHE_DIR=${DOWNLOAD_PATH}/pip cross-python -m pip ${VERBOSE} install --compile --force-reinstall --no-deps ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${INSTALL_PREFIX} ${PIPPKG}"
 			if [ ${PYTHON_PKGDIR} == dist-packages ]
 			then
 				run_cmd "mv ${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
