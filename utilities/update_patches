@@ -1,60 +1,59 @@
 #!/bin/sh -e
 
 function url4pkg {
-    case ${PACKAGE} in
-        glibc) echo "https://sourceware.org/git/glibc.git" ;;
-        gcc) echo "https://sourceware.org/git/gcc.git" ;;
-        binutils) echo "https://sourceware.org/git/binutils-gdb.git" ;;
-        gdb) echo "https://sourceware.org/git/binutils-gdb.git" ;;
-    esac
+	case ${PACKAGE} in
+		glibc) echo "https://sourceware.org/git/glibc.git" ;;
+		gcc) echo "https://sourceware.org/git/gcc.git" ;;
+		binutils) echo "https://sourceware.org/git/binutils-gdb.git" ;;
+		gdb) echo "https://sourceware.org/git/binutils-gdb.git" ;;
+	esac
 }
 
 function gitrepo4pkg {
-    case ${PACKAGE} in
-        glibc) echo "glibc" ;;
-        gcc) echo "gcc" ;;
-        binutils) echo "binutils-gdb" ;;
-        gdb) echo "binutils-gdb" ;;
-    esac
+	case ${PACKAGE} in
+		glibc) echo "glibc" ;;
+		gcc) echo "gcc" ;;
+		binutils) echo "binutils-gdb" ;;
+		gdb) echo "binutils-gdb" ;;
+	esac
 }
 
 function gitrepo_additional_params {
-    case ${PACKAGE} in
-        binutils) echo "-- . "':!libbacktrace/';;
-    esac
+	case ${PACKAGE} in
+		binutils) echo "-- . "':!libbacktrace/';;
+	esac
 }
 
 function rel4pkg {
-    case ${PACKAGE} in
-        glibc) echo "refs/tags/glibc-${PKG_VER}" ;;
-        gcc) echo "refs/tags/releases/gcc-${PKG_VER}" ;;
-        binutils) echo "refs/tags/binutils-${PKG_USCOREVER}";;
-        gdb) echo "refs/tags/gdb-${PKG_VER}-release";;
-    esac
+	case ${PACKAGE} in
+		glibc) echo "refs/tags/glibc-${PKG_VER}" ;;
+		gcc) echo "refs/tags/releases/gcc-${PKG_VER}" ;;
+		binutils) echo "refs/tags/binutils-${PKG_USCOREVER}";;
+		gdb) echo "refs/tags/gdb-${PKG_VER}-release";;
+	esac
 }
 
 function head4pkg {
-    case ${PACKAGE} in
-        glibc) echo "origin/release/${PKG_VER}/master" ;;
-        gcc) echo "origin/releases/gcc-${PKG_MAJVER}" ;;
-        binutils) echo "origin/binutils-${PKG_USCOREVER}-branch" ;;
-        gdb) echo "origin/gdb-${PKG_MAJVER}-branch" ;;
-    esac
+	case ${PACKAGE} in
+		glibc) echo "origin/release/${PKG_VER}/master" ;;
+		gcc) echo "origin/releases/gcc-${PKG_MAJVER}" ;;
+		binutils) echo "origin/binutils-${PKG_USCOREVER}-branch" ;;
+		gdb) echo "origin/gdb-${PKG_MAJVER}-branch" ;;
+	esac
 }
 
 function generate_patch_and_print {
-    local LAST_COMMIT=$(git -C /tmp/$(gitrepo4pkg) rev-parse --short -1 $(head4pkg))
-    local PKG_SUFFIX=_${PKG_VER}+${LAST_COMMIT}
-    local PATCH_FILE=${PACKAGE}_${PKG_VER}+${LAST_COMMIT}.patch
-    local LINK_FILE=${PACKAGE}_${PKG_VER}.patch
-    git -C /tmp/$(gitrepo4pkg) branch -m $(head4pkg)
-    mkdir -p ${BBXB_PATH}/patches/${PACKAGE}
-    git -C /tmp/$(gitrepo4pkg) diff $(rel4pkg)..${LAST_COMMIT} $(gitrepo_additional_params) > ${BBXB_PATH}/patches/${PACKAGE}/${PATCH_FILE}
-    ln -fs ${PATCH_FILE} ${BBXB_PATH}/patches/${PACKAGE}/${LINK_FILE}
-    echo -n "\\\t${PKG_VER})\n"
-    echo -n "\\t\\tPKG_SUFFIX=${PKG_SUFFIX}\n"
-    echo -n "\\t\\tPATCHES=${PACKAGE}/${PATCH_FILE}\n"
-    echo -n "\\t\\t;;"
+	local LAST_COMMIT=$(git -C /tmp/$(gitrepo4pkg) rev-parse --short -1 $(head4pkg))
+	local PATCH_FILE=${PACKAGE}_${PKG_VER}+${LAST_COMMIT}.patch
+	local LINK_FILE=${PACKAGE}_${PKG_VER}.patch
+	git -C /tmp/$(gitrepo4pkg) branch -m $(head4pkg)
+	mkdir -p ${BBXB_PATH}/patches/${PACKAGE}
+	git -C /tmp/$(gitrepo4pkg) diff $(rel4pkg)..${LAST_COMMIT} $(gitrepo_additional_params) > ${BBXB_PATH}/patches/${PACKAGE}/${PATCH_FILE}
+	ln -fs ${PATCH_FILE} ${BBXB_PATH}/patches/${PACKAGE}/${LINK_FILE}
+	echo -n "\\\t${PKG_VER})\n"
+	echo -n "\\t\\tPKG_VER=${PKG_VER}+${LAST_COMMIT}\n"
+	echo -n "\\t\\tPATCHES=${PACKAGE}/${PATCH_FILE}\n"
+	echo -n "\\t\\t;;"
 }
 
 BBXB_PATH=$(realpath "$(dirname ${0})/..")
@@ -65,44 +64,44 @@ VERSIONS=${@}
 
 if [ -z "${VERSIONS}" ] && [ -z ${PACKAGE} ]
 then
-    echo "No package and versions has been specified"
-    echo
-    echo "Usage:"
-    echo
-    echo "$(basename ${0}) <package> <ver1> [<ver2..n>]"
-    echo
-    exit 1
+	echo "No package and versions has been specified"
+	echo
+	echo "Usage:"
+	echo
+	echo "$(basename ${0}) <package> <ver1> [<ver2..n>]"
+	echo
+	exit 1
 fi
 
 case ${PACKAGE} in
-    gcc|binutils|glibc|gdb)
-    ;;
-    *)
-        echo "Only gcc binutils and glibc supported."
-        echo
-        exit 1
-    ;;
+	gcc|binutils|glibc|gdb)
+	;;
+	*)
+		echo "Only gcc binutils and glibc supported."
+		echo
+		exit 1
+	;;
 esac
 
 if [ ! -d /tmp/$(gitrepo4pkg) ]
 then
-    mkdir /tmp/$(gitrepo4pkg)
-    git -C /tmp/$(gitrepo4pkg) init
-    git -C /tmp/$(gitrepo4pkg) remote add origin $(url4pkg)
+	mkdir /tmp/$(gitrepo4pkg)
+	git -C /tmp/$(gitrepo4pkg) init
+	git -C /tmp/$(gitrepo4pkg) remote add origin $(url4pkg)
 fi
 git -C /tmp/$(gitrepo4pkg) fetch
 
 if [ -f ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak ] && [ ${SAFE:-1} -eq 1 ]
 then
-    echo "Please remove or restore ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak before update"
+	echo "Please remove or restore ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak before update"
 else
-    cp ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak
-    for PKG_VER in ${VERSIONS}
-    do
-        PKG_MAJVER=$(echo ${PKG_VER} | cut -d'.' -f1)
-        PKG_USCOREVER=$(echo ${PKG_VER} | sed 's/\./_/g')
-        echo -n "Generating patch for ${PACKAGE}_${PKG_VER}... "
-        eval "sed -i '/^\t${PKG_VER})/,/\t\t;;/c $(generate_patch_and_print)' ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg"
-        echo "done."
-    done
+	cp ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak
+	for PKG_VER in ${VERSIONS}
+	do
+		PKG_MAJVER=$(echo ${PKG_VER} | cut -d'.' -f1)
+		PKG_USCOREVER=$(echo ${PKG_VER} | sed 's/\./_/g')
+		echo -n "Generating patch for ${PACKAGE}_${PKG_VER}... "
+		eval "sed -i '/^\t${PKG_VER})/,/\t\t;;/c $(generate_patch_and_print)' ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg"
+		echo "done."
+	done
 fi

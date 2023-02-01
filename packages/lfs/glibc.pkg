@@ -2,20 +2,19 @@
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${GLIBC_VER}.tar.xz"
 PKG_DEPS="lfs/kernel:headers"
 case ${GLIBC_VER} in
+	2.37)
+		PKG_VER=2.37
+		;;
 	2.36)
-		PKG_SUFFIX=_2.36+e05036b194
+		PKG_VER=2.36+e05036b194
 		PATCHES=glibc/glibc_2.36+e05036b194.patch
 		;;
 	2.35)
-		PKG_SUFFIX=_2.35+82663d3c03
+		PKG_VER=2.35+82663d3c03
 		PATCHES=glibc/glibc_2.35+82663d3c03.patch
 		;;
-	2.34)
-		PKG_SUFFIX=_2.34+bbe4bbb6e8
-		PATCHES=glibc/glibc_2.34+bbe4bbb6e8.patch
-		;;
 	*)
-		PKG_SUFFIX=_${GLIBC_VER}
+		PKG_VER=${GLIBC_VER}
 		;;
 esac
 PATCHES+=",http://www.linuxfromscratch.org/patches/lfs/development/glibc-${GLIBC_VER}-fhs-1.patch"

@@ -4,11 +4,11 @@ PKG_URL="http://ftp.gnu.org/gnu/gdb/gdb-${GDB_VER}.tar.xz"
 PKG_DEPS="lfs/libgmp lfs/libmpfr lfs/libmpc"
 case ${GDB_VER} in
 	12.1)
-		PKG_SUFFIX=_12.1+a4418a9c6f9
+		PKG_VER=12.1+a4418a9c6f9
 		PATCHES=gdb/gdb_12.1+a4418a9c6f9.patch
 		;;
 	*)
-		PKG_SUFFIX=_${GDB_VER}
+		PKG_VER=${GDB_VER}
 		;;
 esac
 BUILD_PROCESS=configmake

@@ -3,14 +3,14 @@ PKG_URL="https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.bz2"
 PKG_DEPS="lfs/libgmp lfs/libmpfr lfs/libmpc lfs/libisl"
 case ${BINUTILS_VER} in
     2.40)
-        PKG_SUFFIX=_${BINUTILS_VER}
+        PKG_VER=${BINUTILS_VER}
         ;;
 	2.39)
-		PKG_SUFFIX=_2.39+4e3ee240162
+		PKG_VER=2.39+4e3ee240162
 		PATCHES=binutils/binutils_2.39+4e3ee240162.patch
 		;;
 	*)
-		PKG_SUFFIX=_${BINUTILS_VER}
+		PKG_VER=${BINUTILS_VER}
 		;;
 esac
 BUILD_PROCESS=configmake
