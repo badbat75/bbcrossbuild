@@ -24,6 +24,7 @@ function create_image() {
 			echo; \
 			tail -n24 ${LOG_PATH}/images_${_param_1}.log; \
 		fi; \
+		pause; \
 		echo "Unmounting ${MOUNT_DIR}" ; \
 		run_cmd -s "umount -R ${MOUNT_DIR}" >> ${LOG_PATH}/images_${_param_1}.log; \
 		run_cmd -s "losetup -D" >> ${LOG_PATH}/images_${_param_1}.log; \
@@ -93,6 +94,12 @@ function create_image() {
 		EOF
 		'" >> ${LOG_PATH}/images_${_param_1}.log
 	echo "ok."
+	case ${ROOTFS_TYPE} in
+		btrfs)
+			run_cmd -s "mkdir -pv ${MOUNT_DIR}/var/log/journal" >> ${LOG_PATH}/images_${_param_1}.log
+			run_cmd -s "chattr -RV +C ${MOUNT_DIR}/var/log/journal" >> ${LOG_PATH}/images_${_param_1}.log
+		;;
+	esac
 	echo -n "Unmounting image... "
 	run_cmd -s "umount -R ${MOUNT_DIR}/boot ${MOUNT_DIR}" >> ${LOG_PATH}/images_${_param_1}.log
 	run_cmd "rmdir ${MOUNT_DIR}" >> ${LOG_PATH}/images_${_param_1}.log
