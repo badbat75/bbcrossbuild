@@ -1,5 +1,9 @@
 # systemd
 case ${SYSTEMD_VER:-251} in
+	253)
+		PKG_VER=253-rc2
+		PKG_URL="https://github.com/systemd/systemd/archive/refs/tags/v${PKG_VER}.tar.gz"
+	;;
 	252)
 		PKG_VER=252.5
 	;;
@@ -59,6 +63,7 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Dopenssl=false"
 		CONF_FLAGS+=" -Dpam=false"
 		CONF_FLAGS+=" -Dpcre2=false"
+		CONF_FLAGS+=" -Dtpm2=false"
 	;;
 	*)
 		PKG_DEPS+=" lfs/D-Bus lfs/gnu-efi lfs/libcap2 lfs/libaudit lfs/openssl lfs/Linux-PAM lfs/polkit lfs/GLib lfs/kmod lfs/util-linux"
@@ -98,6 +103,7 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Ddbuspolicydir=${INSTALL_SHAREDIR}/dbus-1/system.d"
 		CONF_FLAGS+=" -Ddbus-interfaces-dir=${INSTALL_SHAREDIR}/dbus-1/interfaces"
 		CONF_FLAGS+=" -Dbashcompletiondir=${INSTALL_SHAREDIR}/bash-completion/completions/"
+		CONF_FLAGS+=" -Defi-cflags=-lgcc_s"
 		CONF_FLAGS+=" -Defi-includedir=${BIN_PATH}${INSTALL_INCLUDEDIR}/efi"
 		CONF_FLAGS+=" -Defi-libdir=${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 		CONF_FLAGS+=" -Dquotaon-path=${INSTALL_EXECPREFIX}/sbin/quotaon"
