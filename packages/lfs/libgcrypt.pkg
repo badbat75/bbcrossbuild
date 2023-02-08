@@ -6,4 +6,4 @@ PKG_AUTOCONF=1
 CONF_FLAGS="--disable-instrumentation-munging --with-gpg-error-prefix=${BIN_PATH}${INSTALL_PREFIX}"
 PKG_MAKETARGETS="all,install-strip"
 PKG_DEPS="lfs/libgpg-error"
-#PKG_DEPS+=" lfs/Pth"
+PKG_DEPS+=" lfs/Pth"
