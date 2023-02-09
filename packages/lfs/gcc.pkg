@@ -12,6 +12,7 @@ case ${GCC_VER} in
 esac
 BUILD_PROCESS=configmake
 STD_CONF_FLAGS=0
+CONF_ENV="env -u CPP -u CPPFLAGS"
 CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR} --with-sysroot=/ --with-build-sysroot=\${SYSROOT} \
 	--build=${BARCH} --host=${HARCH} --target=${HARCH} \
 	--enable-shared --enable-static \
@@ -26,59 +27,21 @@ CONF_FLAGS+=" --with-mpc-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpc-lib
 CONF_FLAGS+=" --with-mpfr-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpfr-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 CONF_FLAGS+=" --with-gmp-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-gmp-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 CONF_FLAGS+=" --with-isl-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-isl-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
+PKG_MAKEENV="env -u CPP -u CPPFLAGS"  
 PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\" \
 	CFLAGS_FOR_TARGET=\"\${CFLAGS} -fno-lto\" \
 	CXXFLAGS_FOR_TARGET=\"\${CXXFLAGS} -fno-lto\" \
 	AR_FOR_TARGET=\"\${AR}\" \
 	NM_FOR_TARGET=\"\${NM}\" \
 	RANLIB_FOR_TARGET=\"\${RANLIB}\" \
+	gcc_cv_objdump=\"\${OBJDUMP}\" \
+	libsuffix=\"\${INSTALL_LIBSUFFIX}\" \
 "
 PKG_TOOLCHAIN=gnu
 
-PKG_CXXFLAGS="-Wno-stringop-overflow -Wno-maybe-uninitialized"
+PKG_PREBUILD="sed '/all-build-libcpp/,/TARGET-build-libcpp/ s/\\\$(BASE_FLAGS_TO_PASS) //' -i Makefile.in;"
 
-case ${GCC_VER} in
-	12*)
-		AUTOCONF_PATH=autoscan
-		PKG_AUTOCONF=2.69
-		PKG_AUTOMAKE=1.15.1
-		PKG_LIBTOOL=2.4.7
-		PKG_GETTEXT=0.14.6
-		CONF_ENV="env -u CPP -u CPPFLAGS"
-		PKG_MAKEENV="env -u CPP -u CPPFLAGS"
-		PKG_PREBUILD+="sed '/^AC_INIT/a LT_INIT' -i configure.ac
-			sed '/^AC_INIT/a AC_CONFIG_MACRO_DIR([../config])' \
-			-i fixincludes/configure.ac gcc/configure.ac libobjc/configure.ac libiberty/configure.ac
-			sed '/all-build-libcpp/,/TARGET-build-libcpp/ s/\\\$(BASE_FLAGS_TO_PASS) //' -i Makefile.in;"
-		PKG_PREBUILD+='patch -p1 <<EOF
---- a/libcc1/configure.ac	2022-08-19 10:10:15.000000000 +0200
-+++ b/libcc1/configure.ac	2022-11-28 11:56:45.797060138 +0100
-@@ -74,6 +74,21 @@
- fi
- AC_SUBST(libsuffix)
- 
-+# Figure out what objdump we will be using.
-+AS_VAR_SET_IF(gcc_cv_objdump,, [
-+if test -f \$gcc_cv_binutils_srcdir/configure.ac \\
-+     && test -f ../binutils/Makefile \\
-+     && test x\$build = x\$host; then
-+        # Single tree build which includes binutils.
-+        gcc_cv_objdump=../binutils/objdump\$build_exeext
-+elif test -x objdump\$build_exeext; then
-+        gcc_cv_objdump=./objdump\$build_exeext
-+elif ( set dummy \$OBJDUMP_FOR_TARGET; test -x \$[2] ); then
-+        gcc_cv_objdump="\$OBJDUMP_FOR_TARGET"
-+else
-+        AC_PATH_PROG(gcc_cv_objdump, \$OBJDUMP_FOR_TARGET)
-+fi])
-+
- dnl Test for -lsocket and -lnsl.  Copied from libgo/configure.ac.
- AC_CACHE_CHECK([for socket libraries], libcc1_cv_lib_sockets,
-   [libcc1_cv_lib_sockets=
-EOF
-'
-	;;
-esac
+PKG_CXXFLAGS="-Wno-stringop-overflow -Wno-maybe-uninitialized"
 
 PKG_POSTBUILD="eval export PKG_PKGPATH=${PKG_PKGPATH}
 	mkdir -pv \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
