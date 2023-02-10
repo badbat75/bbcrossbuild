@@ -5,6 +5,7 @@ PKG_DEPS="lfs/zlib lfs/bzip2 lfs/ncurses lfs/readline"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="ADJTIME_PATH=/var/lib/hwclock/adjtime \
+            --with-systemdsystemunitdir=/lib/systemd/system \
             --disable-chfn-chsh \
             --disable-login \
             --disable-nologin \

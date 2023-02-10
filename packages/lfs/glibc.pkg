@@ -26,7 +26,7 @@ CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}${INSTALL_INCLUDEDIR} \
 	--enable-pt_chown --enable-tunables --enable-bind-now \
 	--disable-profile --disable-crypt \
 	--disable-werror --disable-sanity-checks --without-cvs"
-if [ ${ENABLE_NSCD:-0} -eq 1 ]
+if [ ${LFS_ENABLENSCD:-0} -eq 1 ]
 then
 	CONF_FLAGS+=" --enable-build-nscd --enable-nscd"
 else
@@ -134,7 +134,7 @@ case ${PKG_TARGET} in
 			I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i tr_TR -f UTF-8 tr_TR.UTF-8
 			I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i zh_CN -f GB18030 zh_CN.GB18030
 			I18NPATH=${PKG_PKGPATH}/usr/share/i18n localedef --prefix=${PKG_PKGPATH} -i zh_HK -f BIG5-HKSCS zh_HK.BIG5-HKSCS;"
-		if [ ${ENABLE_NSCD:-0} -eq 1 ]
+		if [ ${LFS_ENABLENSCD:-0} -eq 1 ]
 		then
 			PKG_POSTBUILD+="cp -fv \${PKG_SRCPATH}/nscd/nscd.conf ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/nscd.conf
 				install -vdm755 ${PKG_PKGPATH}/var/cache/nscd
