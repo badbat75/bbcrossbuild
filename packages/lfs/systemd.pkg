@@ -97,7 +97,7 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Ddbus=true"
 		CONF_FLAGS+=" -Dpam=true"
 		CONF_FLAGS+=" -Dpamlibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/security"
-		CONF_FLAGS+=" -Dpamconfdir=no"
+		CONF_FLAGS+=" -Dpamconfdir=${INSTALL_SYSCONFDIR}/pam.d"
 		CONF_FLAGS+=" -Ddbussystemservicedir=${INSTALL_SHAREDIR}/dbus-1/system-services"
 		CONF_FLAGS+=" -Ddbussessionservicedir=${INSTALL_SHAREDIR}/dbus-1/services"
 		CONF_FLAGS+=" -Ddbuspolicydir=${INSTALL_SHAREDIR}/dbus-1/system.d"
@@ -128,9 +128,10 @@ case "${PKG_TARGET}" in
 
 				session  required    pam_env.so
 				session  required    pam_limits.so
+				session  required    pam_unix.so
+				session  required    pam_loginuid.so
 				session  optional    pam_keyinit.so force revoke
-				session  required    pam_namespace.so
-				session  include     system-session
+				session  optional    pam_systemd.so
 
 				auth     required    pam_deny.so
 				password required    pam_deny.so
