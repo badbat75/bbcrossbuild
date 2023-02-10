@@ -214,8 +214,9 @@ function mount_tag () {
 	if [ "${ROOTREADY}" -eq 1 ]
 	then
 		run_cmd -s "mount --bind /dev ${MOUNT_DIR}/dev" >> ${LOG_PATH}/images_${_param_1}.log
-		run_cmd -s "mount -t proc /proc ${MOUNT_DIR}/proc" >> ${LOG_PATH}/images_${_param_1}.log
-
+		run_cmd -s "mount -t proc proc ${MOUNT_DIR}/proc" >> ${LOG_PATH}/images_${_param_1}.log
+		run_cmd -s "mkdir -pv ${MOUNT_DIR}/sys" >> ${LOG_PATH}/images_${_param_1}.log
+		run_cmd -s "mount -t sysfs sysfs ${MOUNT_DIR}/sys" >> ${LOG_PATH}/images_${_param_1}.log
 		if [ ! -d ${MOUNT_DIR}/tmp/bbxb ]
 		then
 			run_cmd "mkdir -p ${MOUNT_DIR}/tmp/bbxb" >> ${LOG_PATH}/images_${_param_1}.log
