@@ -5,6 +5,7 @@ PKG_DEPS="lfs/expat lfs/libaudit:bootstrap lfs/libcap2 lfs/systemd:bootstrap lfs
 PKG_AUTOCONF=1
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-user-session"
+CONF_FLAGS+=" --enable-inotify"
 CONF_FLAGS+=" --enable-libaudit"
 CONF_FLAGS+=" --enable-systemd"
 CONF_FLAGS+=" --disable-asserts"
@@ -18,6 +19,8 @@ CONF_FLAGS+=" --with-systemdsystemunitdir=/lib/systemd/system"
 CONF_FLAGS+=" --with-systemduserunitdir=${INSTALL_LIBDIR}/systemd/user"
 CONF_FLAGS+=" --docdir=${INSTALL_SHAREDIR}/doc/dbus-${PKG_VER}"
 PKG_MAKETARGETS="all,install-strip"
+
+PKG_PREBUILD="sed 's/static dbus_bool_t fatal_warnings_on_check_failed = TRUE/static dbus_bool_t fatal_warnings_on_check_failed = FALSE/' -i dbus/dbus-internals.c"
 
 PKG_POSTINSTALL="chown -v root:messagebus ${INSTALL_PREFIX}/libexec/dbus-daemon-launch-helper
 chmod -v 4750 ${INSTALL_PREFIX}/libexec/dbus-daemon-launch-helper
