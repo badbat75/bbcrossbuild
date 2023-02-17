@@ -1,4 +1,5 @@
-BB_HOME=$(dirname $(realpath ${BASH_SOURCE}))
+#!/bin/bash
+
 NPROCS=$(nproc --ignore=1)
 LTOPROCS=$(( $(nproc) / 4 ))
 
@@ -9,9 +10,10 @@ if [ -f ${BB_HOME}/bbxb.conf ] ; then source ${BB_HOME}/bbxb.conf ; fi
 
 # Check platform consistency
 PLATFORM=${BB_HOME}/${PLATFORM_DIR:-platforms}/${PLATFORM_NAME}.conf
-if [ -f ${PLATFORM} ]
+if [ -f "${PLATFORM}" ]
 then
-	. ${PLATFORM}
+	# shellcheck source=platforms/*
+	source "${PLATFORM}"
 	HARCH=${HM}-${HOS}-${HLIBC}
 else
 	echo "Platform file ${PLATFORM} does not exists!!! Proceeding as no platform specified."
@@ -120,6 +122,6 @@ LIBTOOL_VER=${LIBTOOL_VER:-2.4.7}
 GETTEXT_VER=${GETTEXT_VER:-0.21.1}
 export AUTOMAKE_VER
 ### Bootstrap libraries and headers versions
-KERNEL_VER=${KERNEL_VER:-6.1.10}
+KERNEL_VER=${KERNEL_VER:-6.1.11}
 GLIBC_VER=${GLIBC_VER:-2.37}
 LIBXCRYPT_VER=${LIBXCRYPT_VER:-4.4.33}

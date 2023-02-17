@@ -1,8 +1,7 @@
 # systemd
 case ${SYSTEMD_VER:-251} in
 	253)
-		PKG_VER=253-rc3
-		PKG_URL="https://github.com/systemd/systemd/archive/refs/tags/v${PKG_VER}.tar.gz"
+		PKG_VER=253
 	;;
 	252)
 		PKG_VER=252.5
