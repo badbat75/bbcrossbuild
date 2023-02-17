@@ -3,42 +3,47 @@
 check_core_functions
 
 function create_key_sscertificate () {
-	if [ ! -d ${USERDATA_PATH}/pki ]
+	if [ ! -d "${USERDATA_PATH}/pki" ]
 	then
-		mkdir -p ${USERDATA_PATH}/pki
+		run_cmd "mkdir -p \"${USERDATA_PATH}/pki\""
 	fi
-	> ${LOG_PATH}/pki.log
-	if [ ! -f ${USERDATA_PATH}/pki/${PKI_KEY_NAME}.key.pem ] && [ ! -f ${USERDATA_PATH}/pki/${PKI_KEY_NAME}.x509.pem ]
+	true > "${LOG_PATH}/pki.log"
+	if [ ! -f "${USERDATA_PATH}/pki/${PKI_KEY_NAME}.key.pem" ] && [ ! -f "${USERDATA_PATH}/pki/${PKI_KEY_NAME}.x509.pem" ]
 	then
-		openssl req -newkey rsa:2048 -nodes -keyout ${USERDATA_PATH}/pki/${PKI_KEY_NAME}.key.pem -x509 -days 1461 -subj "${PKI_SUBJECT}" -out ${USERDATA_PATH}/pki/${PKI_KEY_NAME}.x509.pem >> ${LOG_PATH}/pki.log 2>&1
+		run_cmd "openssl req -newkey rsa:2048 -nodes -keyout \"${USERDATA_PATH}/pki/${PKI_KEY_NAME}.key.pem\" -x509 -days 1461 -subj \"${PKI_SUBJECT}\" -out \"${USERDATA_PATH}/pki/${PKI_KEY_NAME}.x509.pem\"" >> "${LOG_PATH}/pki.log" 2>&1
 	fi
 }
+
 function generate_ssh_keys () {
 	(
+	local IS_SUDO
 	OPTS="" OPTS_WITH_VALUE="--install" param2value "${@}"
-	[ ${_param_v:-0} -eq 1 ] && set -x || true
-
-	echo Generating SSH Keys in ${USERDATA_PATH}...
-	if [ ! -d ${USERDATA_PATH}/etc/ssh ]
+	if [ "${_param_v:-0}" -eq 1 ]
 	then
-		mkdir -pv ${USERDATA_PATH}/etc/ssh
+		set -x
 	fi
-	ssh-keygen -A -v -f ${USERDATA_PATH}
-	find ${USERDATA_PATH}/etc/ssh -name "ssh_host_*.pub" | xargs sed -i "s/$(id -un)@$(uname -n)/${PRJ_NAME}/"			
-	if [ ! -z ${_param_install} ]
+
+	echo "Generating SSH Keys in ${USERDATA_PATH}..."
+	if [ ! -d "${USERDATA_PATH}/etc/ssh" ]
 	then
-		if [ -d ${PLATFORM_PATH}/${_param_install} ]
+		run_cmd "mkdir -pv \"${USERDATA_PATH}/etc/ssh\""
+	fi
+	run_cmd "ssh-keygen -A -v -f \"${USERDATA_PATH}\""
+	run_cmd "find \"${USERDATA_PATH}/etc/ssh\" -name \"ssh_host_*.pub\" -print0 | xargs -0 sed -i \"s/\$(id -un)@\$(uname -n)/${PRJ_NAME}/\""			
+	if [ -n "${_param_install}" ]
+	then
+		if [ -d "${PLATFORM_PATH}/${_param_install}" ]
 		then
-			if [ ! $(stat -c '%u' ${PLATFORM_PATH}/${_param_install}) -eq $(id -u) ]
+			if [ ! "$(stat -c '%u' "${PLATFORM_PATH}/${_param_install}")" -eq "$(id -u)" ]
 			then
-				local SUDO_CMD='sudo' 
+				IS_SUDO='-s' 
 			fi
 		fi
 		echo -e "Done.\n"
-		echo Installing SSH keys in ${PLATFORM_PATH}/${_param_install}
-		eval ${SUDO_CMD} mkdir -pv ${PLATFORM_PATH}/${_param_install}/etc/ssh
-		eval ${SUDO_CMD} cp -fpv ${USERDATA_PATH}/etc/ssh/* ${PLATFORM_PATH}/${_param_install}/etc/ssh/
+		echo "Installing SSH keys in ${PLATFORM_PATH}/${_param_install}"
+		run_cmd ${IS_SUDO} "mkdir -pv \"${PLATFORM_PATH}/${_param_install}/etc/ssh\""
+		run_cmd ${IS_SUDO} "cp -fpv \"${USERDATA_PATH}/etc/ssh/*\" \"${PLATFORM_PATH}/${_param_install}/etc/ssh/\""
 		echo -e "Done.\n"
 	fi
-	) >> ${LOG_PATH}/sshkeys.log 2>&1 
+	) >> "${LOG_PATH}/sshkeys.log" 2>&1 
 }

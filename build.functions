@@ -47,7 +47,7 @@ function setbuildenv () {
 			COMMON_PKG_CONFIG_LIBDIR+=":${TOOLCHAIN_PATH}/share/pkgconfig"
 		;;
 		target)
-			if [ ${HARCH} != ${BARCH} ]
+			if [ "${HARCH}" != "${BARCH}" ]
 			then
 				export CROSS_COMPILING=yes
 				export PKG_CONFIG_ALLOW_CROSS=1
@@ -63,9 +63,9 @@ function setbuildenv () {
 			unset SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH
 			# Construct build tools flags
 			# Build Include search paths
-			if [ -d ${DISTOS_PATH}${TARGET_INCLUDEDIR} ]
+			if [ -d "${DISTOS_PATH}${TARGET_INCLUDEDIR}" ]
 			then
-				SYSROOT_GCCVER="$(find ${DISTOS_PATH}${TARGET_LIBDIR}/gcc/${HARCH}/ -mindepth 1 -maxdepth 1 -type d -printf '%P\n' | sort -hr | head -n1)"
+				SYSROOT_GCCVER="$(find "${DISTOS_PATH}${TARGET_LIBDIR}/gcc/${HARCH}/" -mindepth 1 -maxdepth 1 -type d -printf '%P\n' | sort -hr | head -n1)"
 				SYSROOT="${DISTOS_PATH}"
 				### If sysroot is DISTROOT, we need to include BIN_PATH headers and libraries
 				COMMON_CFLAGS="-I${BIN_PATH}${TARGET_INCLUDEDIR}"
@@ -102,20 +102,21 @@ function setbuildenv () {
 						esac			
 					fi
 				else
-				SYSROOT_GCCVER=$(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -dumpversion 2>/dev/null)
+				SYSROOT_GCCVER=$("${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" -dumpversion 2>/dev/null)
 				fi
 			else
 				SYSROOT="${BIN_PATH}"
-				if ${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -dumpversion >/dev/null 2>&1
+				if "${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" -dumpversion >/dev/null 2>&1
 				then
-					SYSROOT_GCCVER=$(${TOOLCHAIN_PATH}/bin/${HARCH}-gcc -dumpversion 2>/dev/null)
+					SYSROOT_GCCVER=$("${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" -dumpversion 2>/dev/null)
 					if [ -d "$(gcc_toolchain_print_searchdirs)" ]
 					then
 						QEMU_LD_LIBRARY_PATH="$(gcc_toolchain_print_searchdirs):"
 					fi
 					### Search path in the toolchain gcc libs
 					# -enable-version-specific-runtime-libs workaround to fing libgcc_s under lib64 path instead of ${GCC_VER}
-					local GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE="$(realpath -m $(gcc_toolchain_print_searchdirs)/../lib64)"
+					local GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE
+					GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE="$(realpath -m "$(gcc_toolchain_print_searchdirs)/../lib64")"
 					#if [ -n "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ] && [ -d "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ]
 					#then
 					#	QEMU_LD_LIBRARY_PATH+="${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}:"
@@ -150,9 +151,10 @@ function setllvmpollyenv () {
 	unset LLVM_EXTRAPOLLYFLAGSLIBS
 	unset LLVM_KERNELPOLLYFLAGSLIBS
 
-	local OPTIONS="${@}"
-
-	local LIBCLANG_RTBUILTINS="${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
+	local OPTIONS
+	OPTIONS=${*}
+	#local LIBCLANG_RTBUILTINS
+	#LIBCLANG_RTBUILTINS="${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
 	#if [ ! -z "${OPTIONS}" ] && [ -f ${LIBCLANG_RTBUILTINS} ]
 
 	case x${HMARCH} in
@@ -177,7 +179,7 @@ function setllvmpollyenv () {
 			;;
 	esac
 
-	if [ ! -z "${OPTIONS}" ]
+	if [ -n "${OPTIONS}" ]
 	then
 		LLVM_EXTRAPOLLYFLAGS="-mllvm -polly"
 		#### Missing _mulodi4 symbol, skip polly build for kernel 
@@ -194,7 +196,7 @@ function setllvmpollyenv () {
 				;;
 		esac
 
-		if [ "$( echo ${OPTIONS} | grep -o "all" )" == "all" ]
+		if [ "$( echo "${OPTIONS}" | grep -o "all" )" == "all" ]
 		then
 			local OPTIONS="polly vectorizer parallel"
 		fi 
@@ -261,20 +263,22 @@ function settcenv () {
 		OPTCOMP_FLAGS \
 		OPTLINK_FLAGS
 
-	OPTS="" OPTS_WITH_VALUE="--target" param2value "${@}"
-	local TARGET_ENV=${_param_target:-target}
-	setbuildenv --target ${TARGET_ENV}
+	local TARGET_ENV
 
-	local TOOLCHAIN=${PKG_TOOLCHAIN:-${TOOLCHAIN}}
-	echo Toolchain: ${TOOLCHAIN}
-	if [ ${TOOLCHAIN} == llvm ]
+	OPTS="" OPTS_WITH_VALUE="--target" param2value "${@}"
+	TARGET_ENV="${_param_target:-target}"
+	setbuildenv --target "${TARGET_ENV}"
+
+	local TOOLCHAIN="${PKG_TOOLCHAIN:-${TOOLCHAIN}}"
+	echo "Toolchain: ${TOOLCHAIN}"
+	if [ "${TOOLCHAIN}" == llvm ]
 	then
 		if [ -z "${PKG_LLVMPOLLYFEATURES}" ]
 		then
-			setllvmpollyenv ${LLVM_POLLY_FEATURES}
+			setllvmpollyenv "${LLVM_POLLY_FEATURES}"
 		else
 			eval "echo 'Override LLVM Polly features: ${PKG_LLVMPOLLYFEATURES}' >> ${LOG_FILE}"
-			setllvmpollyenv ${PKG_LLVMPOLLYFEATURES}
+			setllvmpollyenv "${PKG_LLVMPOLLYFEATURES}"
 		fi
 	fi
 	echo "Target Environment: ${TARGET_ENV}"
@@ -285,7 +289,7 @@ function settcenv () {
 			if g++ --version > /dev/null 2>&1
 			then
 				TOOLCHAIN_CXX_FOR_BUILD=$(which g++)
-				TOOLCHAIN_CXXCPP_FOR_BUILD="$(which g++) -E"
+				#TOOLCHAIN_CXXCPP_FOR_BUILD="$(which g++) -E"
 			fi
 			if gfortran --version > /dev/null 2>&1
 			then
@@ -301,7 +305,7 @@ function settcenv () {
 			TOOLCHAIN_OBJDUMP_FOR_BUILD=$(which objdump)
 			TOOLCHAIN_READELF_FOR_BUILD=$(which readelf)
 			TOOLCHAIN_LINKER_FOR_BUILD=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
-			TOOLCHAIN_LINKER_EXE_FOR_BUILD=$(which ld.${TOOLCHAIN_LINKER_FOR_BUILD})
+			TOOLCHAIN_LINKER_EXE_FOR_BUILD=$(which "ld.${TOOLCHAIN_LINKER_FOR_BUILD}")
 			TOOLCHAIN_LINKERFLAGS_FOR_BUILD="-fuse-ld=${TOOLCHAIN_LINKER_FOR_BUILD}"
 
 			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
@@ -336,31 +340,31 @@ function settcenv () {
 					TOOLCHAIN_LINKERFLAGS="-fuse-ld=${TOOLCHAIN_LINKER} ${GNU_EXTRALDFLAGS}"
 				;;
 				target)
-					if ${HARCH}-gcc --version > /dev/null 2>&1
+					if "${HARCH}-gcc" --version > /dev/null 2>&1
 					then
-						TOOLCHAIN_CC=$(which ${HARCH}-gcc)
-						TOOLCHAIN_CPP="$(which ${HARCH}-gcc) -E"
-						if ${HARCH}-g++ --version > /dev/null 2>&1
+						TOOLCHAIN_CC=$(which "${HARCH}-gcc")
+						TOOLCHAIN_CPP="$(which "${HARCH}-gcc") -E"
+						if "${HARCH}-g++" --version > /dev/null 2>&1
 						then
-							TOOLCHAIN_CXX=$(which ${HARCH}-g++)
+							TOOLCHAIN_CXX=$(which "${HARCH}-g++")
 						fi
-						if ${HARCH}-gfortran --version > /dev/null 2>&1
+						if "${HARCH}-gfortran" --version > /dev/null 2>&1
 						then
-							TOOLCHAIN_FC=$(which ${HARCH}-gfortran)
-							TOOLCHAIN_F90=$(which ${HARCH}-gfortran)
+							TOOLCHAIN_FC=$(which "${HARCH}-gfortran")
+							TOOLCHAIN_F90=$(which "${HARCH}-gfortran")
 						fi
-						TOOLCHAIN_AR=$(which ${HARCH}-gcc-ar)
-						TOOLCHAIN_AS=$(which ${HARCH}-as)
-						TOOLCHAIN_NM=$(which ${HARCH}-gcc-nm)
-						TOOLCHAIN_RANLIB=$(which ${HARCH}-gcc-ranlib)
-						TOOLCHAIN_STRIP=$(which ${HARCH}-strip)
-						TOOLCHAIN_OBJCOPY=$(which ${HARCH}-objcopy)
-						TOOLCHAIN_OBJDUMP=$(which ${HARCH}-objdump)
-						TOOLCHAIN_READELF=$(which ${HARCH}-readelf)
+						TOOLCHAIN_AR=$(which "${HARCH}-gcc-ar")
+						TOOLCHAIN_AS=$(which "${HARCH}-as")
+						TOOLCHAIN_NM=$(which "${HARCH}-gcc-nm")
+						TOOLCHAIN_RANLIB=$(which "${HARCH}-gcc-ranlib")
+						TOOLCHAIN_STRIP=$(which "${HARCH}-strip")
+						TOOLCHAIN_OBJCOPY=$(which "${HARCH}-objcopy")
+						TOOLCHAIN_OBJDUMP=$(which "${HARCH}-objdump")
+						TOOLCHAIN_READELF=$(which "${HARCH}-readelf")
 						TOOLCHAIN_LINKER=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
-						TOOLCHAIN_LINKER_EXE=$(which ${HARCH}-ld.${TOOLCHAIN_LINKER})
+						TOOLCHAIN_LINKER_EXE=$(which "${HARCH}-ld.${TOOLCHAIN_LINKER}")
 					fi
-					if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
+					if [ "${PKG_FAULTYCFLAGS:-0}" -eq 1 ]
 					then
 						TOOLCHAIN_COMPFLAGS="${GNU_EXTRAGCCFLAGS}"
 						TOOLCHAIN_EXTRA_C_CMD="${SYSROOT_FLAGS}"
@@ -391,7 +395,7 @@ function settcenv () {
 			TOOLCHAIN_OBJDUMP_FOR_BUILD=$(which llvm-objdump)
 			TOOLCHAIN_READELF_FOR_BUILD=$(which llvm-readelf)
 			TOOLCHAIN_LINKER_FOR_BUILD=${PKG_OVERRIDELD:-${LLVM_DEFAULT_LD:-lld}}
-			TOOLCHAIN_LINKER_EXE_FOR_BUILD=$(which ld.${TOOLCHAIN_LINKER})
+			TOOLCHAIN_LINKER_EXE_FOR_BUILD=$(which "ld.${TOOLCHAIN_LINKER}")
 			TOOLCHAIN_LINKERFLAGS_FOR_BUILD="-fuse-ld=${TOOLCHAIN_LINKER} -Wl,--threads=${NPROCS}"
 			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 				1|fat)
@@ -422,7 +426,7 @@ function settcenv () {
 					TOOLCHAIN_READELF=${TOOLCHAIN_READELF_FOR_BUILD}
 					TOOLCHAIN_LINKER=${TOOLCHAIN_LINKER_FOR_BUILD}
 					TOOLCHAIN_LINKER_EXE=${TOOLCHAIN_LINKER_EXE_FOR_BUILD}
-					if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
+					if [ "${PKG_FAULTYCFLAGS:-0}" -eq 1 ]
 					then
 						TOOLCHAIN_COMPFLAGS="${LLVM_EXTRACLANGFLAGS}"
 						TOOLCHAIN_EXTRA_C_CMD="${LLVM_EXTRAPOLLYFLAGS}"
@@ -450,8 +454,8 @@ function settcenv () {
 					TOOLCHAIN_OBJDUMP=$(which llvm-objdump)
 					TOOLCHAIN_READELF=$(which llvm-readelf)
 					TOOLCHAIN_LINKER=${PKG_OVERRIDELD:-${LLVM_DEFAULT_LD:-lld}}
-					TOOLCHAIN_LINKER_EXE=$(which ld.${TOOLCHAIN_LINKER})
-					if [ ${PKG_FAULTYCFLAGS:-0} -eq 1 ]
+					TOOLCHAIN_LINKER_EXE=$(which "ld.${TOOLCHAIN_LINKER}")
+					if [ "${PKG_FAULTYCFLAGS:-0}" -eq 1 ]
 					then
 						TOOLCHAIN_COMPFLAGS="${LLVM_EXTRACLANGFLAGS}"
 						TOOLCHAIN_EXTRA_C_CMD="--target=${HARCH} ${SYSROOT_FLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
@@ -475,7 +479,7 @@ function settcenv () {
 			;;
 	esac
 			
-	if [ ${PKG_DEBUG:-${DEBUG:-0}} -eq 1 ]
+	if [ "${PKG_DEBUG:-${DEBUG:-0}}" -eq 1 ]
 	then
 		OPTLEVEL=2
 		OPTCOMP_FLAGS+="-g"
@@ -492,7 +496,7 @@ function create_environment_source () {
 	###		target:	Build Arch_A / Host Arch_B = Target Arch_B - Installed in SYSROOT (Default)
 	OPTS="" OPTS_WITH_VALUE="--target" param2value "${@}"
 	local TARGET_ENV=${_param_target:-target}
-	settcenv --target ${TARGET_ENV}
+	settcenv --target "${TARGET_ENV}"
 	cat <<-EOF > environment.source
 		#################################################################################
 		###### ${PKG_FULLNAME}
@@ -514,14 +518,14 @@ function create_environment_source () {
 		export CPP_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CPP_FOR_BUILD}'
 		export CPPFLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS}'
 	EOF
-	if [ ! -z "${TOOLCHAIN_CXX_FOR_BUILD}" ]
+	if [ -n "${TOOLCHAIN_CXX_FOR_BUILD}" ]
 	then
 		cat <<-EOF >> environment.source
 			export CXX_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX_FOR_BUILD}'
 			export CXXFLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS}'
 		EOF
 	fi
-	if [ ! -z "${TOOLCHAIN_FC_FOR_BUILD}" ]
+	if [ -n "${TOOLCHAIN_FC_FOR_BUILD}" ]
 	then
 		cat <<-EOF >> environment.source
 			export FC_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_FC_FOR_BUILD}'
@@ -543,7 +547,7 @@ function create_environment_source () {
 		export READELF_FOR_BUILD='${TOOLCHAIN_READELF_FOR_BUILD}'
 
 	EOF
-	if [ ! -z "${TOOLCHAIN_CC}" ]
+	if [ -n "${TOOLCHAIN_CC}" ]
 	then
 		cat <<-EOF >> environment.source
 		export CC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
@@ -552,14 +556,14 @@ function create_environment_source () {
 		export CPPFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CPPFLAGS} ${PLATFORM_CFLAGS} ${PKG_CPPFLAGS}'
 	EOF
 	fi
-	if [ ! -z "${TOOLCHAIN_CXX}" ]
+	if [ -n "${TOOLCHAIN_CXX}" ]
 	then
 		cat <<-EOF >> environment.source
 			export CXX='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 			export CXXFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}'
 		EOF
 	fi
-	if [ ! -z "${TOOLCHAIN_FC}" ]
+	if [ -n "${TOOLCHAIN_FC}" ]
 	then
 		cat <<-EOF >> environment.source
 			export FC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_FC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
@@ -596,12 +600,12 @@ function create_environment_source () {
 		;;
 		target)
 			cat <<-EOF >> environment.source
-				export PKG_CONFIG='$(which ${HARCH}-pkg-config)'
+				export PKG_CONFIG='$(which "${HARCH}-pkg-config")'
 				export PKG_CONFIG_LIBDIR='${COMMON_PKG_CONFIG_LIBDIR}'
 				export PKG_CONFIG_SYSROOT_DIR='${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}'
 				export PKG_CONFIG_ALLOW_CROSS='${PKG_CONFIG_ALLOW_CROSS}'
 			EOF
-			if [ -f ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate ] && [ ${PKG_DISABLECROSSPYTHON:-0} -eq 0 ]
+			if [ -f "${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate" ] && [ "${PKG_DISABLECROSSPYTHON:-0}" -eq 0 ]
 			then
 				echo -e "\nsource ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate\n" >> environment.source
 			fi
@@ -617,11 +621,11 @@ function create_environment_source () {
 		export RUSTUP_HOME='${RUSTUP_HOME}'
 
 		export QEMU_LD_PREFIX='${SYSROOT}'
-		export QEMU_LD_LIBRARY_PATH='${QEMU_LD_LIBRARY_PATH}'
+		export QEMU_LD_LIBRARY_PATH='${QEMU_LD_LIBRARY_PATH}'preparesources
 
 		export ENVIRONMENT_SOURCE_PATH='${PWD}'
 	EOF
-	if [ "$(basename ${CCWRAPPER:-nope})" == "sccache" ]
+	if [ "$(basename "${CCWRAPPER:-nope}")" == "sccache" ]
 	then
 		cat <<-EOF >> environment.source
 			
@@ -636,39 +640,42 @@ function create_environment_source () {
 
 function preparesources () {
 	trap 'STATUS=${?} \
+		set +x; \
 		echo "preparesources fail."; \
 		trap - ERR; \
 		trap - SIGINT; \
-		#[ -d ${PKG_SRCPATH} ] && run_cmd "rm -rf ${PKG_SRCPATH}" || true; \
+		pause; \
 		return ${STATUS};' ERR
 
 	trap 'trap - ERR; \
-		trap - SIGINT; \ 
+		set +x; \
+		trap - SIGINT; \
 		[ -d ${PKG_SRCPATH} ] && run_cmd "rm -rf ${PKG_SRCPATH}" || true; \
 		return 100' SIGINT
 
-	cd ${PKG_SRCPATH}
-	if [ "x${PATCHDEB}" != "x" ]
+	#set -x
+	cd "${PKG_SRCPATH}"
+	if [ "x${PATCHDEB}" != x ]
 	then
 		echo -n "${SPACES}Retrieve DEB patch info..."
-		[ ! -d ${PKG_SRCPATH}/debian ] && mkdir -p ${PKG_SRCPATH}/debian
-		run_cmd "ARCHIVEDIRS=\"debian\" download_uncompress \"${PATCHDEB}\" ${PKG_SRCPATH}/debian"
+		[ ! -d "${PKG_SRCPATH}/debian" ] && mkdir -p "${PKG_SRCPATH}/debian"
+		ARCHIVEDIRS="debian" download_uncompress "${PATCHDEB}" ${PKG_SRCPATH}/debian
 		echo "Done."
-		if [ -f ${PKG_SRCPATH}/debian/patches/series ]
+		if [ -f "${PKG_SRCPATH}/debian/patches/series" ]
 		then
-			while read patch
+			while read -r patch
 			do
 				if [[ ! "${patch}" =~ ^\#.*|^//.* ]]
 				then
-					local PATCHARRAY=(${patch})
-					if [ ! -z ${PATCHARRAY[0]} ]
+					local PATCHARRAY=("${patch}")
+					if [ -n "${PATCHARRAY[0]}" ]
 					then
 						echo -n "${SPACES}Applying ${PATCHARRAY[0]} patch..."
 						run_cmd "patch ${PATCHARRAY[1]:--p1} < ${PKG_SRCPATH}/debian/patches/${PATCHARRAY[0]}"
 						echo "Done."
 					fi
 				fi
-			done <${PKG_SRCPATH}/debian/patches/series
+			done <"${PKG_SRCPATH}/debian/patches/series"
 		else
 			echo "${SPACES}\"series\" patch list file does not exist."
 		fi
@@ -679,40 +686,42 @@ function preparesources () {
 		if [[ ${scanpatch} =~ ^https?://|^ftp:// ]]
 		then
 			echo -n "${SPACES}Downloading patch[set]..."	
-			NODELETEDESTDIR=1 download_uncompress ${scanpatch} ${PKG_SRCPATH}/bbxb_patches
+			NODELETEDESTDIR=1 download_uncompress "${scanpatch}" "${PKG_SRCPATH}/bbxb_patches"
 		else
 			echo -n "${SPACES}Copying $scanpatch patch..."
-			run_cmd "mkdir -pv ${PKG_SRCPATH}/bbxb_patches"
-			run_cmd "cp -v ${PATCH_PATH}/$scanpatch ${PKG_SRCPATH}/bbxb_patches"
+			run_cmd "mkdir -pv \"${PKG_SRCPATH}/bbxb_patches\""
+			run_cmd "cp -v \"${PATCH_PATH}/${scanpatch}\" \"${PKG_SRCPATH}/bbxb_patches\""
 		fi
 	done
 	unset IFS
-	if [ -d ${PKG_SRCPATH}/bbxb_patches ]
+	if [ -d "${PKG_SRCPATH}/bbxb_patches" ]
 	then
-		find ${PKG_SRCPATH}/bbxb_patches -type f | xargs -I{} -d'\n' -n1 bash -c "
+		find "${PKG_SRCPATH}/bbxb_patches" -type f -print0 | xargs -0 -I{} -n1 bash -c "
 			PATCH=\"\$(basename {})\"
 			echo -n \"Applying \${PATCH} patch...\"
 			echo \"\$ patch -p1 < {}\"
 			patch -f -p1 < \"{}\" >> ${LOG_FILE} 2>&1
-			echo "Done."
+			echo \"Done.\"
 		"
 	fi
 	if [ -f "${PKG_SRCPATH}/${CONF_CMD}" ] && [ ! -x "${PKG_SRCPATH}/${CONF_CMD}" ]
 	then
-		run_cmd "chmod +x ${PKG_SRCPATH}/${CONF_CMD}" >> ${LOG_FILE}
+		run_cmd "chmod +x ${PKG_SRCPATH}/${CONF_CMD}" >> "${LOG_FILE}"
 	fi
 	echo -n "${SPACES}"
-	cd ${BB_HOME}
+	cd "${BB_HOME}"
 	trap - ERR
 	trap - SIGINT
+	set +x
 }
 
 function downloadonly () {
-	if [ -d ${PKG_BLDPATH} ]
+	if [ -d "${PKG_BLDPATH}" ]
 	then
-		cd ${PKG_BLDPATH}
+		cd "${PKG_BLDPATH}"
 		echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 		create_environment_source
+		# shellcheck source=/dev/null
 		source environment.source
 	fi
 }
@@ -724,43 +733,43 @@ function configmake () {
 		echo; \
 		trap - ERR; \
 		return ${STATUS}' ERR
-	if [ "${PKG_AUTOCONF:-0}" != "0" ]
+	if [ "${PKG_AUTOCONF:-0}" != 0 ]
 	then
-		if [ "${PKG_AUTOCONF:-0}" == "1" ]
+		if [ "${PKG_AUTOCONF:-0}" == 1 ]
 		then
 			PKG_AUTOCONF=${AUTOCONF_VER}
 		fi
 		echo "# Setting up ${PKG_AUTOCONF:-${AUTOCONF_VER}} ${PKG_AUTOMAKE:-${AUTOMAKE_VER}} ${PKG_LIBTOOL:-${LIBTOOL_VER}} ${PKG_GETTEXT:-${GETTEXT_VER}}"
-		setup_autotools ${PKG_AUTOCONF:-${AUTOCONF_VER}} ${PKG_AUTOMAKE:-${AUTOMAKE_VER}} ${PKG_LIBTOOL:-${LIBTOOL_VER}} ${PKG_GETTEXT:-${GETTEXT_VER}}
+		setup_autotools "${PKG_AUTOCONF:-${AUTOCONF_VER}}" "${PKG_AUTOMAKE:-${AUTOMAKE_VER}}" "${PKG_LIBTOOL:-${LIBTOOL_VER}}" "${PKG_GETTEXT:-${GETTEXT_VER}}"
 		if [ "${AUTOCONF_PATH}" == "autoscan" ]
 		then
-			if [ ${PKG_COPYSRC:-0} -eq 0 ]
+			if [ "${PKG_COPYSRC:-0}" -eq 0 ]
 			then
-				pushd ${PKG_SRCPATH}
+				pushd "${PKG_SRCPATH}"
 			else
-				pushd ${PKG_BLDPATH}
+				pushd "${PKG_BLDPATH}"
 			fi
 			AUTOCONF_PATH="$(find . -name "configure.ac" -printf '%P\n' | xargs dirname | sort | tr '\n' ',' | sed 's/,$//' )"
 			echo "Scanned AUTOCONF_PATH: ${AUTOCONF_PATH}"
 			popd
 		fi
 		#### Multi process autoreconf 
-		echo -n "${AUTOCONF_PATH:-.}" | xargs --verbose -P${AUTOCONF_THREADS:-${NPROCS}} -d',' -I{} bash -c "PKG_AUTOMAKE=${PKG_AUTOMAKE} smart_autoreconf ${PKG_SRCPATH}/{} || exit 255"
+		echo -n "${AUTOCONF_PATH:-.}" | xargs --verbose -P"${AUTOCONF_THREADS:-${NPROCS}}" -d',' -I{} bash -c "PKG_AUTOMAKE=${PKG_AUTOMAKE} smart_autoreconf ${PKG_SRCPATH}/{} || exit 255"
 	fi
 	run_cmd "mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
-	pushd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
-	if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
+	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
+	if [ "${STD_CONF_FLAGS:-1}" -eq 1 ]
 	then
 		CONF_FLAGS="--prefix=${INSTALL_PREFIX} --exec-prefix=${INSTALL_EXECPREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
 					--includedir=${INSTALL_INCLUDEDIR} --sysconfdir=${INSTALL_SYSCONFDIR} --localstatedir=${INSTALL_LOCALSTATEDIR} \
 					${CONF_FLAGS}"
-		if [ ${BUILD_LIBSHARED} -eq 1 ]
+		if [ "${BUILD_LIBSHARED}" -eq 1 ]
 		then
 			CONF_FLAGS=" --enable-shared ${CONF_FLAGS}"
 		else
 			CONF_FLAGS=" --disable-shared ${CONF_FLAGS}"
 		fi
-		if [ ${BUILD_LIBSTATIC} -eq 1 ]
+		if [ "${BUILD_LIBSTATIC}" -eq 1 ]
 		then
 			CONF_FLAGS=" --enable-static ${CONF_FLAGS}"
 		else
@@ -779,13 +788,14 @@ function configmake () {
 		esac
 	fi
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	create_environment_source --target ${PKG_TARGET_ENV}
+	create_environment_source --target "${PKG_TARGET_ENV}"
+	# shellcheck source=/dev/null
 	source environment.source
 	if [[ "${CONF_CMD}" =~ ^\./.* ]]
 	then
 		local RUNCONFIG_CMD="${CONF_CMD}"
 	else
-		if [ ${PKG_COPYSRC:-0} -eq 0 ]
+		if [ "${PKG_COPYSRC:-0}" -eq 0 ]
 		then
 			local RUNCONFIG_CMD="${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}}/${CONF_CMD:-configure}"
 		else
@@ -820,9 +830,10 @@ function simplemake () {
 	trap - ERR; \
 	return ${STATUS};' ERR
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
-	cd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
+	cd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	create_environment_source --target ${PKG_TARGET_ENV}
+	create_environment_source --target "${PKG_TARGET_ENV}"
+	# shellcheck source=/dev/null
 	source environment.source
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -x
@@ -837,7 +848,7 @@ function simplemake () {
 		run_cmd "./runmake.sh ${target}"
 	done
 	unset IFS
-	cd ${BB_HOME}
+	cd "${BB_HOME}"
 	trap - ERR
 }
 
@@ -847,24 +858,28 @@ function cmakebuild () {
 	return ${STATUS};' ERR
 
 	run_cmd "mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
-	cd ${PKG_BLDPATH}
-	if [ ${BUILD_LIBSHARED} -eq 1 ]
+	cd "${PKG_BLDPATH}"
+	if [ "${BUILD_LIBSHARED}" -eq 1 ]
 	then
 		CONF_FLAGS+=" -DBUILD_SHARED_LIBS=ON"
 	else
 		CONF_FLAGS+=" -DBUILD_SHARED_LIBS=OFF"
 	fi
-	if [ ${BUILD_LIBSTATIC} -eq 1 ]
+	if [ "${BUILD_LIBSTATIC}" -eq 1 ]
 	then
 		CONF_FLAGS+=" -DBUILD_STATIC_LIBS=ON"
 	else
 		CONF_FLAGS+=" -DBUILD_STATIC_LIBS=OFF"
 	fi
-	local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v') -j${NPROCS}"
-	local CMAKE_GENERATOR=${CMAKE_GENERATOR:-Ninja}
+	local NINJA_FLAGS
+	local CMAKE_GENERATOR
+
+	NINJA_FLAGS="$(if [ "${MAKEVERBOSE}" -eq 1 ]; then echo -n '-v'; fi) -j${NPROCS}"
+	CMAKE_GENERATOR=${CMAKE_GENERATOR:-Ninja}
 
 	echo "CCWRAPPER=\"\" create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	CCWRAPPER="" create_environment_source --target ${PKG_TARGET_ENV}
+	CCWRAPPER="" create_environment_source --target "${PKG_TARGET_ENV}"
+	# shellcheck source=/dev/null
 	source environment.source
 
 	cat >runconfig.sh <<-EOF
@@ -910,7 +925,7 @@ function cmakebuild () {
 		run_cmd "./runmake.sh ${target}"
 	done
 	unset IFS
-	cd ${BB_HOME}
+	cd "${BB_HOME}"
 	trap - ERR
 }
 
@@ -929,24 +944,25 @@ function mesonninja () {
 			done
 			echo
 		}
-		local C=$(buildmesonargs "${CC}")
-		local C_ARGS=$(buildmesonargs "${CFLAGS}")
-		local C_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
-		local CPP=$(buildmesonargs "${CXX}")
-		local CPP_ARGS=$(buildmesonargs "${CXXFLAGS}")
-		local CPP_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
-		if [ ! -z "${FC}" ]
+		local C C_ARGS C_LINK_ARGS CPP CPP_ARGS CPP_LINK_ARGS FORTRAN FORTRAN_ARGS FORTRAN_LINK_ARGS
+		C=$(buildmesonargs "${CC}")
+		C_ARGS=$(buildmesonargs "${CFLAGS}")
+		C_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
+		CPP=$(buildmesonargs "${CXX}")
+		CPP_ARGS=$(buildmesonargs "${CXXFLAGS}")
+		CPP_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
+		if [ -n "${FC}" ]
 		then
-			local FORTRAN=$(buildmesonargs "${FC}")
-			local FORTRAN_ARGS=$(buildmesonargs "${FFLAGS}")
-			local FORTRAN_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
+			FORTRAN=$(buildmesonargs "${FC}")
+			FORTRAN_ARGS=$(buildmesonargs "${FFLAGS}")
+			FORTRAN_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
 		fi
-		cat > cross-${PLATFORM_NAME} <<-EOF
+		cat > "cross-${PLATFORM_NAME}" <<-EOF
 			[binaries]
 			c = [${C}]
-			c_ld = '$(echo ${LD} | sed "s/ld.//;s/${HARCH}-//" )'
+			c_ld = '$(echo "${LD}" | sed "s/ld.//;s/${HARCH}-//" )'
 			cpp = [${CPP}]
-			cpp_ld = '$(echo ${LD} | sed "s/ld.//;s/${HARCH}-//" )'
+			cpp_ld = '$(echo "${LD}" | sed "s/ld.//;s/${HARCH}-//" )'
 			fortran = [${FORTRAN}]
 			ar = '${AR}'
 			strip = '${STRIP}'
@@ -981,19 +997,20 @@ function mesonninja () {
 		return ${STATUS}' ERR
 
 	run_cmd "mkdir -p ${PKG_BLDPATH}"
-	cd ${PKG_BLDPATH}
+	cd "${PKG_BLDPATH}"
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	create_environment_source --target ${PKG_TARGET_ENV}
+	create_environment_source --target "${PKG_TARGET_ENV}"
+	# shellcheck source=/dev/null
 	source environment.source
-	if [ ${STD_CONF_FLAGS:-1} -eq 1 ]
+	if [ "${STD_CONF_FLAGS:-1}" -eq 1 ]
 	then
 		CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} --includedir=${INSTALL_INCLUDEDIR} \
 			--sysconfdir=${INSTALL_SYSCONFDIR} --localstatedir=${INSTALL_LOCALSTATEDIR} --datadir=${INSTALL_SHAREDIR} ${CONF_FLAGS}"
-		if [ ${BUILD_LIBSHARED} -eq 0 ] && [ ${BUILD_LIBSTATIC} -eq 1 ]
+		if [ "${BUILD_LIBSHARED}" -eq 0 ] && [ "${BUILD_LIBSTATIC}" -eq 1 ]
 		then
 			CONF_FLAGS+=" --default-library=static"
 		fi
-		if [ ${BUILD_LIBSHARED} -eq 1 ] && [ ${BUILD_LIBSTATIC} -eq 0 ]
+		if [ "${BUILD_LIBSHARED}" -eq 1 ] && [ "${BUILD_LIBSTATIC}" -eq 0 ]
 		then
 			CONF_FLAGS+=" --default-library=shared"
 		fi
@@ -1003,7 +1020,8 @@ function mesonninja () {
 		0) ;;
 		*) RUNCONFIG_CMD+=" -Db_lto=true" ;;
 	esac
-	local NINJA_FLAGS="$([ $MAKEVERBOSE -eq 1 ] && echo -n ' -v') -j${NPROCS}"
+	local NINJA_FLAGS
+	NINJA_FLAGS="$( if [ "${MAKEVERBOSE}" -eq 1 ]; then echo -n ' -v'; fi ) -j${NPROCS}"
 	case ${PKG_TARGET} in
 		cross|native) ;;
 		*)
@@ -1029,7 +1047,7 @@ function mesonninja () {
 		run_cmd "./runmake.sh ${target}"
 	done
 	unset IFS
-	cd ${BB_HOME}
+	cd "${BB_HOME}"
 	trap - ERR
 }
 
@@ -1041,7 +1059,8 @@ function cargobuild () {
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
 	cd ${PKG_BLDPATH}
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	create_environment_source --target ${PKG_TARGET_ENV}
+	create_environment_source --target "${PKG_TARGET_ENV}"
+	# shellcheck source=/dev/null
 	source environment.source
 	local CARGO_BIN=${CARGO_BIN:-${INSTALL_EXECPREFIX}/bin}
 	local CARGO_LIB=${CARGO_LIB:-${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}}
@@ -1066,24 +1085,24 @@ function cargobuild () {
 	done
 	export RUSTFLAGS+=" ${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}"
 	echo "RUSTFLAGS=${RUSTFLAGS}" | log_buffer info
-	run_cmd "cargo build $( [ ${MAKEVERBOSE:-0} -eq 1 ] && echo -n "--verbose" ) --release ${CONF_FLAGS} --target=${CARGO_TARGET}"
+	run_cmd "cargo build $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -n "--verbose"; fi ) --release ${CONF_FLAGS} --target=${CARGO_TARGET}"
 	for file in ${CARGO_BINLIST}
 	do
-		if [ ! -d ${PKG_PKGPATH}${CARGO_BIN} ]
+		if [ ! -d "${PKG_PKGPATH}${CARGO_BIN}" ]
 		then
-			run_cmd "mkdir -p ${PKG_PKGPATH}${CARGO_BIN}"
+			run_cmd "mkdir -p \"${PKG_PKGPATH}${CARGO_BIN}\""
 		fi
-		run_cmd "cp -p target/${CARGO_TARGET}/release/${file} ${PKG_PKGPATH}${CARGO_BIN}/${file}"
+		run_cmd "cp -p \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${CARGO_BIN}/${file}\""
 	done
 	for file in ${CARGO_LIBLIST}
 	do
-		if [ ! -d ${PKG_PKGPATH}${CARGO_LIB} ]
+		if [ ! -d "${PKG_PKGPATH}${CARGO_LIB}" ]
 		then
-			run_cmd "mkdir -p ${PKG_PKGPATH}${CARGO_LIB}"
+			run_cmd "mkdir -p \"${PKG_PKGPATH}${CARGO_LIB}\""
 		fi
-		run_cmd "cp -p target/${CARGO_TARGET}/release/${file} ${PKG_PKGPATH}${CARGO_LIB}/${file}"
+		run_cmd "cp -p \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${CARGO_LIB}/${file}\""
 	done
-	cd ${BB_HOME}
+	cd "${BB_HOME}"
 	trap - ERR
 }
 
@@ -1161,11 +1180,12 @@ function kernelbuild () {
 		return ${STATUS};' ERR
 
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
-	cd ${PKG_BLDPATH}
+	cd "${PKG_BLDPATH}"
 
 	echo "GCC_DEFAULT_LD=bfd  create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	GCC_DEFAULT_LD=bfd create_environment_source --target ${PKG_TARGET_ENV}
+	GCC_DEFAULT_LD=bfd create_environment_source --target "${PKG_TARGET_ENV}"
 	sed -e 's/FLAGS=.*/FLAGS=/g' -e 's/PKG_CONFIG\(.*\)=.*/PKG_CONFIG\1=/' -i environment.source
+	# shellcheck source=/dev/null
 	source environment.source
 
 	make4kern
@@ -1182,11 +1202,11 @@ function kernelbuild () {
 		return
 	fi
 
-	if [ -f arch/${KERNEL_ARCH}/configs/${KERNEL_DEFCONFIG} ]
+	if [ -f "arch/${KERNEL_ARCH}/configs/${KERNEL_DEFCONFIG}" ]
 	then
-		run_cmd "cp -v arch/${KERNEL_ARCH}/configs/${KERNEL_DEFCONFIG} .config"
+		run_cmd "cp -v \"arch/${KERNEL_ARCH}/configs/${KERNEL_DEFCONFIG}\" .config"
 	else
-		run_cmd "cp -v ${KERNEL_DEFCONFIG} .config"
+		run_cmd "cp -v \"${KERNEL_DEFCONFIG}\" .config"
 	fi
 	# Config kernel build
 
@@ -1209,7 +1229,7 @@ function kernelbuild () {
 		run_cmd "scripts/config ${CONF_FLAGS}"
 	fi
 
-	if [ ${PKG_TOOLCHAIN:-${TOOLCHAIN}} == llvm ]
+	if [ "${PKG_TOOLCHAIN:-${TOOLCHAIN}}" == llvm ]
 	then
 		echo "LTO type: ${PKG_OVERRIDELTO:-${KERNEL_LTOENABLE:-0}}"
 		case ${PKG_OVERRIDELTO:-${KERNEL_LTOENABLE:-0}} in
@@ -1229,41 +1249,45 @@ function kernelbuild () {
 
 	run_cmd "./make4kern.sh olddefconfig"
 
-	if [ ! -d ${PKG_PKGPATH}/boot ]
+	if [ ! -d "${PKG_PKGPATH}/boot" ]
 	then
-		run_cmd "mkdir -p ${PKG_PKGPATH}/boot"
+		run_cmd "mkdir -p \"${PKG_PKGPATH}/boot\""
 	fi
 
 	# Build and install kernel
-	run_cmd "./make4kern.sh ${KERNEL_IMAGE}"
+	run_cmd "./make4kern.sh \"${KERNEL_IMAGE}\""
 	case ${KERNEL_NAME}
 	in
 		kernel*)
-			run_cmd "cp arch/${KERNEL_ARCH}/boot/${KERNEL_IMAGE} ${PKG_PKGPATH}/boot/${KERNEL_NAME}"
+			run_cmd "cp \"arch/${KERNEL_ARCH}/boot/${KERNEL_IMAGE}\" \"${PKG_PKGPATH}/boot/${KERNEL_NAME}\""
 			local STATUS=${?}
 			;;
 		*)
-			[ ! -d ${PKG_PKGPATH}/boot ] && mkdir ${PKG_PKGPATH}/boot
-			run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_PATH=${PKG_PKGPATH}/boot ${PKG_MAKEVARS} install"
+			if [ ! -d "${PKG_PKGPATH}/boot" ]
+			then
+				mkdir "${PKG_PKGPATH}/boot"
+			fi
+			run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=\"${KERNEL_ARCH}\"} ${HARCH:+CROSS_COMPILE=\"${HARCH}-\"} INSTALL_PATH=\"${PKG_PKGPATH}/boot\" ${PKG_MAKEVARS} install"
 			;;
 	esac
 	
 	# Build and install modules
 
 	run_cmd "./make4kern.sh modules"
-	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_MOD_PATH=${PKG_PKGPATH} ${PKG_MAKEVARS} modules_install"
-	local KERNELRELEASE=$(cat include/config/kernel.release)
+	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=\"${KERNEL_ARCH}\"} ${HARCH:+CROSS_COMPILE=\"${HARCH}-\"} INSTALL_MOD_PATH=\"${PKG_PKGPATH}\" ${PKG_MAKEVARS} modules_install"
+	local KERNELRELEASE
+	KERNELRELEASE=$(cat include/config/kernel.release)
 	run_cmd "rm ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/build ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/source"
 
 	# Build and install DTBS
-	if [ ${KERNEL_DTBS:-0} -eq 1 ] && [ ${STATUS} -eq 0 ]
+	if [ "${KERNEL_DTBS:-0}" -eq 1 ] && [ "${STATUS}" -eq 0 ]
 	then
-		if [ ! -d ${PKG_PKGPATH}/boot/overlays ]
+		if [ ! -d "${PKG_PKGPATH}/boot/overlays" ]
 		then
-			run_cmd "mkdir -p ${PKG_PKGPATH}/boot/overlays"
+			run_cmd "mkdir -p \"${PKG_PKGPATH}/boot/overlays\""
 		fi
 		run_cmd "./make4kern.sh dtbs"
-		run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=${KERNEL_ARCH}} ${HARCH:+CROSS_COMPILE=${HARCH}-} INSTALL_DTBS_PATH=${PKG_PKGPATH}/boot ${PKG_MAKEVARS} dtbs_install"
+		run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=\"${KERNEL_ARCH}\"} ${HARCH:+CROSS_COMPILE=\"${HARCH}-\"} INSTALL_DTBS_PATH=\"${PKG_PKGPATH}/boot\" ${PKG_MAKEVARS} dtbs_install"
 	fi
 
 	PKG_KERNEL_BLDPATH="${PWD}"
@@ -1272,11 +1296,11 @@ function kernelbuild () {
 	IFS=,
 	for module in ${PKG_KERNEL_BUILD_MODULES}
 	do
-		build --force ${module}
+		build --force "${module}"
 	done
 	unset IFS
 
-	cd ${BB_HOME}
+	cd "${BB_HOME}"
 	trap - ERR
 }
 
@@ -1285,20 +1309,21 @@ function pythonbuild () {
 	trap - ERR; \
 	return ${STATUS};' ERR
 
-	if [ -z ${PKG_URL} ]
+	local PYTHON_LIB_PATH PIPPKG
+	if [ -z "${PKG_URL}" ]
 	then
-		run_cmd "mkdir -pv ${PKG_BLDPATH}"
-		local PIPPKG=${PKG_NAME}${PKG_VER:+==${PKG_VER}}
+		run_cmd "mkdir -pv \"${PKG_BLDPATH}\""
+		PIPPKG=${PKG_NAME}${PKG_VER:+==${PKG_VER}}
 	else
-		run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
-		local PIPPKG=.
+		run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\""
+		PIPPKG=.
 	fi
-	cd ${PKG_BLDPATH}
+	cd "${PKG_BLDPATH}"
 	case ${PKG_TARGET_ENV} in
 		native)
 			COMMON_CFLAGS+=" -I${GLOBAL_TOOLCHAIN_PATH}/include/python${PYTHONBIN_VER}"
 			COMMON_CPPFLAGS+=" -I${GLOBAL_TOOLCHAIN_PATH}/include/python${PYTHONBIN_VER}"
-			local PYTHON_LIB_PATH="$(dirname $(ldd ${PYTHON_FOR_BUILD} | grep libpython${PYTHONBIN_VER} | awk '{print $3}'))"
+			PYTHON_LIB_PATH="$(dirname "$(ldd "${PYTHON_FOR_BUILD}" | grep "libpython${PYTHONBIN_VER}" | awk '{print $3}')")"
 			COMMON_LDFLAGS+=" -L${PYTHON_LIB_PATH}"
 		;;
 		cross)
@@ -1306,52 +1331,53 @@ function pythonbuild () {
 			COMMON_CFLAGS+=" -I${TOOLCHAIN_PATH}/include/python${PYTHONBIN_VER}"
 			COMMON_CPPFLAGS+=" -I${GLOBAL_TOOLCHAIN_PATH}/include/python${PYTHONBIN_VER}"
 			COMMON_CPPFLAGS+=" -I${TOOLCHAIN_PATH}/include/python${PYTHONBIN_VER}"
-			local PYTHON_LIB_PATH="$(dirname $(ldd ${PYTHON_FOR_BUILD} | grep libpython${PYTHONBIN_VER} | awk '{print $3}'))"
+			PYTHON_LIB_PATH="$(dirname "$(ldd "${PYTHON_FOR_BUILD}" | grep "libpython${PYTHONBIN_VER}" | awk '{print $3}')")"
 			COMMON_LDFLAGS+=" -L${PYTHON_LIB_PATH}"
 		;;
 		target)
-			if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
+			if [ -d "${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m" ]
 			then
 				COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
 				COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
 			fi
-			if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER} ]
+			if [ -d "${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}" ]
 			then
 				COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
 				COMMON_CPPFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
 			fi
-			if [ -f ${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libpython${PYTHONBIN_VER}m ]
+			if [ -f "${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libpython${PYTHONBIN_VER}m" ]
 			then
 				COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}m"
 			fi
-			if [ -f ${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libpython${PYTHONBIN_VER} ]
+			if [ -f "${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libpython${PYTHONBIN_VER}" ]
 			then
 				COMMON_LDFLAGS+=" -lpython${PYTHONBIN_VER}"
 			fi
-			if [ -f ${DISTOS_PATH}/etc/debian_version ]
+			if [ -f "${DISTOS_PATH}/etc/debian_version" ]
 			then
 				local PYTHON_PKGDIR="dist-packages"
 			else
 				local PYTHON_PKGDIR="site-packages"
 			fi
-			pathadd PYTHONPATH ${BIN_PATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}
+			pathadd PYTHONPATH "${BIN_PATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/${PYTHON_PKGDIR}"
 			for pythonpkgdir in python${PYTHONBIN_MAJVER} python${PYTHONBIN_VER}
 			do
-				if [ -d ${DISTOS_PATH}${INSTALL_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR} ]
+				if [ -d "${DISTOS_PATH}${INSTALL_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR}" ]
 				then
-					pathadd PYTHONPATH ${DISTOS_PATH}${INSTALL_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR}
+					pathadd PYTHONPATH "${DISTOS_PATH}${INSTALL_LIBDIR}/${pythonpkgdir}/${PYTHON_PKGDIR}"
 				fi
 			done
 		;;
 	esac
-	if [ ${MAKEVERBOSE:-0} -eq 1 ]
+	if [ "${MAKEVERBOSE:-0}" -eq 1 ]
 	then
 		local VERBOSE="-v"
 	fi
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	create_environment_source --target ${PKG_TARGET_ENV}
+	create_environment_source --target "${PKG_TARGET_ENV}"
+	# shellcheck source=/dev/null
 	source environment.source
-	if [ ${PKG_PYTHONBUILD:-1} -eq 1 ]
+	if [ "${PKG_PYTHONBUILD:-1}" -eq 1 ]
 	then
 		local PYTHONBUILD="--no-binary :all:"
 	fi
@@ -1362,13 +1388,13 @@ function pythonbuild () {
 		target)
 			run_cmd "cross-python -m site"
 			run_cmd "PIP_CACHE_DIR=${DOWNLOAD_PATH}/pip cross-python -m pip ${VERBOSE} install --compile --force-reinstall --no-deps ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${INSTALL_PREFIX} ${PIPPKG}"
-			if [ ${PYTHON_PKGDIR} == dist-packages ]
+			if [ "${PYTHON_PKGDIR}" == dist-packages ]
 			then
-				run_cmd "mv ${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/site-packages ${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
+				run_cmd "mv \"${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/site-packages\" \"${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/dist-packages\""
 			fi
 		;;
 	esac
-	cd ${BB_HOME}
+	cd "${BB_HOME}"
 	trap - ERR
 }
 
@@ -1377,29 +1403,29 @@ function boostbuild () {
 	trap - ERR; \
 	return ${STATUS};' ERR
 
-	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
-	cd ${PKG_BLDPATH}
-	if [ -d ${DISTOS_PATH}${INSTALL_INCLUDEDIR} ]
+	run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\""
+	cd "${PKG_BLDPATH}"
+	if [ -d "${DISTOS_PATH}${INSTALL_INCLUDEDIR}" ]
 	then
 		local ICU_INCLUDEDIR=${DISTOS_PATH}${INSTALL_INCLUDEDIR}
 	else
 		local ICU_INCLUDEDIR=${BIN_PATH}${INSTALL_INCLUDEDIR}
 	fi
-	if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m ]
+	if [ -d "${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m" ]
 	then
 		COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
 	fi
-	if [ -d ${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER} ]
+	if [ -d "${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}" ]
 	then
 		COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
 	fi
-	if [ ${MAKEVERBOSE} -eq 1 ]
+	if [ "${MAKEVERBOSE}" -eq 1 ]
 	then
 		local B2_FLAGS="-d+2"
 	else
 		local B2_FLAGS="-d+1"
 	fi
-	if [ ${BUILD_LIBSHARED} -eq 1 ]
+	if [ "${BUILD_LIBSHARED}" -eq 1 ]
 	then
 		local B2_FLAGS="${B2_FLAGS} link=shared runtime-link=shared"
 	else
@@ -1493,7 +1519,7 @@ function boostbuild () {
 		cxxflags=\"${COMMON_CXXFLAGS} -fPIC ${PKG_CXXFLAGS}\" \\
 		linkflags=\"${WORKAROUND}${SYSROOT_FLAGS} ${LINKER_FLAGS} ${COMMON_LDFLAGS} ${PKG_LDFLAGS}\" \\
 		install"
-	cd ${BB_HOME}
+	cd "${BB_HOME}"
 	trap - ERR
 }
 
@@ -1505,10 +1531,11 @@ function custom () {
 		trap - ERR; \
 		return ${STATUS}' ERR
 
-	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
-	pushd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
+	run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\""
+	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	create_environment_source --target ${PKG_TARGET_ENV}
+	create_environment_source --target "${PKG_TARGET_ENV}"
+	# shellcheck source=/dev/null
 	source environment.source
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -ex
@@ -1529,10 +1556,11 @@ function perlmodule () {
 		trap - ERR; \
 		return ${STATUS}' ERR
 
-	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
-	pushd ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}
+	run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\""
+	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	create_environment_source --target ${PKG_TARGET_ENV}
+	create_environment_source --target "${PKG_TARGET_ENV}"
+	# shellcheck source=/dev/null
 	source environment.source
 	pwd
 	cat > runconfig.sh <<-EOF
@@ -1542,7 +1570,7 @@ function perlmodule () {
 		AR='${AR}' CC='${CC}' CPPRUN='${CPP}' FULL_AR='${AR}' LD='${CC}' \\
 		PERL_INC='${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/5.36/CORE' \\
 	EOF
-	sudo chroot ${SYSROOT} \
+	sudo chroot "${SYSROOT}" \
 		perl -V | \
 		grep -o '[^ ].*=.*' | \
 		sed -e 's/ =/=/g' -e 's/^[a-z0-9_]*=/\U&/' -e '/=\x27/! s/=/=\x27/' -e '/\x27$/! s/$/\x27/' | \
@@ -1564,22 +1592,21 @@ function perlmodule () {
 }
 
 
-function build () {
-(
+function build () {(
 	function downloadsources () {
 		trap 'STATUS=${?}; \
 			trap - ERR SIGINT; \
 			return ${STATUS};' ERR	
 		trap 'trap - ERR SIGINT; \
-			[ -d ${PKG_SRCPATH} ] && run_cmd "rm -rf ${PKG_SRCPATH}" || true;
+			if [ -d ${PKG_SRCPATH} ]; then run_cmd "rm -rf ${PKG_SRCPATH}"; fi; \
 			return 100' SIGINT
 
-		if [ ! -z "${PKG_URL}" ]
+		if [ -n "${PKG_URL}" ]
 		then
-			[ -d ${PKG_SRCPATH} ] && rm -rf ${PKG_SRCPATH}
+			[ -d "${PKG_SRCPATH}" ] && rm -rf "${PKG_SRCPATH}"
 			for url in ${PKG_URL}
 			do
-				if [ ${MAKEDIR:-0} -eq 1 ]
+				if [ "${MAKEDIR:-0}" -eq 1 ]
 				then
 					NODELETEDESTDIR=1 STRIPCOMPONENTS=0 download_uncompress "${url}" "${PKG_SRCPATH}"
 				else
@@ -1587,12 +1614,12 @@ function build () {
 				fi
 			done
 		else
-			if [ ! -z ${GIT_URL} ]
+			if [ -n "${GIT_URL}" ]
 			then
-				if [ ! -d ${PKG_SRCPATH} ]
+				if [ ! -d "${PKG_SRCPATH}" ]
 				then
 					run_cmd "git clone --recursive \"${GIT_URL}\" \"${PKG_SRCPATH}\""
-					if  [ ! -z ${GIT_COMMIT} ]
+					if  [ -n "${GIT_COMMIT}" ]
 					then
 						run_cmd "git -C \"${PKG_SRCPATH}\" checkout \"${GIT_COMMIT}\""
 					fi
@@ -1607,6 +1634,7 @@ function build () {
 		trap - ERR; \
 		echo "fail. [build - ${PKG_FULLNAME}]"; \
 		echo; \
+		pause; \
 		if [ -f ${LOG_FILE} ]; \
 		then \
 			echo "Log ${LOG_FILE}:"; \
@@ -1677,27 +1705,59 @@ function build () {
 		VAR_INSTALL_CONFDIR \
 
 	OPTS="--force --no_gcc_check --no_save_status --temporary --keep_builddir" OPTS_WITH_VALUE="--toolchain --with_extra_modules" param2value "${@}"
-	[ ${_param_v:-0} -eq 1 ] && set -x || true
-	# Split dependency in Package name and its Target separated by ':'
-	local PKG_FILE=$(cut -d':' -f1 <<<${_param_1})
-	local PKG_TARGET=$(cut -s -d':' -f2 <<<${_param_1})
-	local GCC_CHECK=${_param_no_gcc_check:-0}
-	local FORCE=${_param_force:-0}
-	local NOSAVESTATUS=${_param_no_save_status:-0}
-	local KEEPBUILDDIR=${_param_keep_builddir:-0}
-	local TEMPORARY_STATUS=
-
-	if [ ${_param_temporary:-0} -eq 1 ]
+	if [ "${_param_v:-0}" -eq 1 ]
 	then
-		local TEMPORARY_STATUS=.tmp
+		set -x
+	fi
+	# Split dependency in Package name and its Target separated by ':'
+
+	local \
+		FORCE \
+		GCC_CHECK \
+		INSTALL_PREFIX \
+		INSTALL_EXECPREFIX \
+		INSTALL_LIBDIR \
+		INSTALL_LIBSUFFIX \
+		INSTALL_INCLUDEDIR \
+		INSTALL_SYSCONFDIR \
+		INSTALL_LOCALSTATEDIR \
+		INSTALL_SHAREDIR \
+		KEEPBUILDDIR \
+		LOG_FILE \
+		NOSAVESTATUS \
+		PKG_BLDPATH \
+		PKG_CHKSUM \
+		PKG_FILE \
+		PKG_FULLNAME \
+		PKG_NAME \
+		PKG_PKGPATH \
+		PKG_SRCDIR \
+		PKG_TARGET \
+		PKG_TARGET_ENV \
+		STATUS_CHK_FILE \
+		STATUS_FILE \
+		STATUS_FILE_DEFAULT_TARGET \
+		TEMPORARY_STATUS
+
+	PKG_FILE=$(cut -d':' -f1 <<<"${_param_1}")
+	PKG_TARGET=$(cut -s -d':' -f2 <<<"${_param_1}")
+	GCC_CHECK=${_param_no_gcc_check:-0}
+	FORCE=${_param_force:-0}
+	NOSAVESTATUS=${_param_no_save_status:-0}
+	KEEPBUILDDIR=${_param_keep_builddir:-0}
+	TEMPORARY_STATUS=
+
+	if [ "${_param_temporary:-0}" -eq 1 ]
+	then
+		TEMPORARY_STATUS=.tmp
 	fi
 
 	if [ -z "${NUMSPACES}" ]
 	then
-		local NUMSPACES=0
+		NUMSPACES=0
 	fi
 
-	if [ ! -f ${PKG_PATH}/${PKG_FILE}.pkg ]
+	if [ ! -f "${PKG_PATH}/${PKG_FILE}.pkg" ]
 	then
 		echo "Package ${PKG_FILE} does not exists."
 		echo
@@ -1706,65 +1766,66 @@ function build () {
 		return 1
 	fi
 	
-	local PKG_NAME=$(basename ${PKG_FILE})
-	local PKG_FULLNAME=\${PKG_NAME}\${PKG_SUFFIX}\${PKG_VER:+_\${PKG_VER}}
-	local PKG_SRCDIR=${PKG_SRCDIR:-${PKG_FULLNAME}}
-	local PKG_BLDPATH=${BLD_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}
+	PKG_NAME=$(basename "${PKG_FILE}")
+	PKG_FULLNAME="\${PKG_NAME}\${PKG_SUFFIX}\${PKG_VER:+_\${PKG_VER}}"
+	PKG_SRCDIR=${PKG_SRCDIR:-${PKG_FULLNAME}}
+	PKG_BLDPATH=${BLD_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}
 	case ${PKG_TARGET} in
 		native)
-			local PKG_TARGET_ENV=native
-			local PKG_PKGPATH=
-			local INSTALL_PREFIX=${NATIVE_PREFIX}
-			local INSTALL_EXECPREFIX=${NATIVE_EXECPREFIX}
-			local INSTALL_LIBDIR=${NATIVE_LIBDIR}
-			local INSTALL_LIBSUFFIX=
-			local INSTALL_INCLUDEDIR=${NATIVE_INCLUDEDIR}
-			local INSTALL_SYSCONFDIR=${NATIVE_SYSCONFDIR}
-			local INSTALL_LOCALSTATEDIR=${NATIVE_LOCALSTATEDIR}
-			local INSTALL_SHAREDIR=${NATIVE_SHAREDIR}
-			local NOSAVESTATUS=1
+			PKG_TARGET_ENV=native
+			PKG_PKGPATH=
+			INSTALL_PREFIX=${NATIVE_PREFIX}
+			INSTALL_EXECPREFIX=${NATIVE_EXECPREFIX}
+			INSTALL_LIBDIR=${NATIVE_LIBDIR}
+			INSTALL_LIBSUFFIX=
+			INSTALL_INCLUDEDIR=${NATIVE_INCLUDEDIR}
+			INSTALL_SYSCONFDIR=${NATIVE_SYSCONFDIR}
+			INSTALL_LOCALSTATEDIR=${NATIVE_LOCALSTATEDIR}
+			INSTALL_SHAREDIR=${NATIVE_SHAREDIR}
+			NOSAVESTATUS=1
 		;;
 		cross)
-			local PKG_TARGET_ENV=cross
-			local PKG_PKGPATH=
-			local INSTALL_PREFIX=${CROSS_PREFIX}
-			local INSTALL_EXECPREFIX=${CROSS_EXECPREFIX}
-			local INSTALL_LIBDIR=${CROSS_LIBDIR}
-			local INSTALL_LIBSUFFIX=
-			local INSTALL_INCLUDEDIR=${CROSS_INCLUDEDIR}
-			local INSTALL_SYSCONFDIR=${CROSS_SYSCONFDIR}
-			local INSTALL_LOCALSTATEDIR=${CROSS_LOCALSTATEDIR}
-			local INSTALL_SHAREDIR=${CROSS_SHAREDIR}
+			PKG_TARGET_ENV=cross
+			PKG_PKGPATH=
+			INSTALL_PREFIX=${CROSS_PREFIX}
+			INSTALL_EXECPREFIX=${CROSS_EXECPREFIX}
+			INSTALL_LIBDIR=${CROSS_LIBDIR}
+			INSTALL_LIBSUFFIX=
+			INSTALL_INCLUDEDIR=${CROSS_INCLUDEDIR}
+			INSTALL_SYSCONFDIR=${CROSS_SYSCONFDIR}
+			INSTALL_LOCALSTATEDIR=${CROSS_LOCALSTATEDIR}
+			INSTALL_SHAREDIR=${CROSS_SHAREDIR}
 		;;
 		*)
-			local PKG_TARGET_ENV=target
-			local PKG_PKGPATH=${PACKAGES_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}
-			local INSTALL_PREFIX=${TARGET_PREFIX}
-			local INSTALL_EXECPREFIX=${TARGET_EXECPREFIX}
-			local INSTALL_LIBDIR=${TARGET_LIBDIR}
-			local INSTALL_LIBSUFFIX=${TARGET_LIBSUFFIX}
-			local INSTALL_INCLUDEDIR=${TARGET_INCLUDEDIR}
-			local INSTALL_SYSCONFDIR=${TARGET_SYSCONFDIR}
-			local INSTALL_LOCALSTATEDIR=${TARGET_LOCALSTATEDIR}
-			local INSTALL_SHAREDIR=${TARGET_SHAREDIR}
+			PKG_TARGET_ENV=target
+			PKG_PKGPATH=${PACKAGES_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}
+			INSTALL_PREFIX=${TARGET_PREFIX}
+			INSTALL_EXECPREFIX=${TARGET_EXECPREFIX}
+			INSTALL_LIBDIR=${TARGET_LIBDIR}
+			INSTALL_LIBSUFFIX=${TARGET_LIBSUFFIX}
+			INSTALL_INCLUDEDIR=${TARGET_INCLUDEDIR}
+			INSTALL_SYSCONFDIR=${TARGET_SYSCONFDIR}
+			INSTALL_LOCALSTATEDIR=${TARGET_LOCALSTATEDIR}
+			INSTALL_SHAREDIR=${TARGET_SHAREDIR}
 		;;
 	esac
 
-	#setbuildenv
-	source ${PKG_PATH}/${PKG_FILE}.pkg
-	#setbuildenv
+	# shellcheck source=packages/*.pkg
+	source "${PKG_PATH}/${PKG_FILE}.pkg"
 
 	PKG_TOOLCHAIN=${_param_toolchain:-${PKG_TOOLCHAIN}}
 	PKG_KERNEL_BUILD_MODULES="${_param_with_extra_modules:-${PKG_KERNEL_BUILD_MODULES}}"
 
-	eval local PKG_FULLNAME=${PKG_FULLNAME}
-	eval export PKG_SRCPATH=${SRC_PATH}/${PKG_SRCDIR}
-	eval export PKG_BLDPATH=${PKG_BLDPATH}
-	eval export PKG_PKGPATH=${PKG_PKGPATH}
+	eval PKG_FULLNAME=${PKG_FULLNAME}
+	eval PKG_SRCPATH="${SRC_PATH}/${PKG_SRCDIR}"
+	eval PKG_BLDPATH="${PKG_BLDPATH}"
+	eval PKG_PKGPATH="${PKG_PKGPATH}"
 
-	local STATUS_FILE=${STATUS_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}${TEMPORARY_STATUS}
-	local STATUS_FILE_DEFAULT_TARGET=${STATUS_PATH}/${PKG_FULLNAME}
-	local LOG_FILE=${LOG_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}.log
+	export PKG_SRCPATH PKG_BLDPATH PKG_PKGPATH
+
+	STATUS_FILE=${STATUS_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}${TEMPORARY_STATUS}
+	STATUS_FILE_DEFAULT_TARGET=${STATUS_PATH}/${PKG_FULLNAME}
+	LOG_FILE=${LOG_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}.log
 
 	echo "Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}"
 
@@ -1776,28 +1837,28 @@ function build () {
 			return 1
 		fi
 		### Check if target package or default package has already built
-		local PKG_CHKSUM="$( md5sum ${PKG_PATH}/${PKG_FILE}.pkg )"
-		if [ -f ${STATUS_FILE_DEFAULT_TARGET} ]
+		PKG_CHKSUM="$( md5sum "${PKG_PATH}/${PKG_FILE}.pkg" )"
+		if [ -f "${STATUS_FILE_DEFAULT_TARGET}" ]
 		then
-			local STATUS_CHK_FILE=${STATUS_FILE_DEFAULT_TARGET}
+			STATUS_CHK_FILE=${STATUS_FILE_DEFAULT_TARGET}
 		else
-			local STATUS_CHK_FILE=${STATUS_FILE}
+			STATUS_CHK_FILE=${STATUS_FILE}
 		fi
-		if [ -f ${STATUS_CHK_FILE} ] && [ ${FORCE} -eq 0 ]
+		if [ -f "${STATUS_CHK_FILE}" ] && [ "${FORCE}" -eq 0 ]
 		then
-			if [ "${PKG_CHKSUM}" == "$( cat ${STATUS_CHK_FILE} )" ]
+			if [ "${PKG_CHKSUM}" == "$( cat "${STATUS_CHK_FILE}" )" ]
 			then
 				echo "${SPACES}Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}} already built."
 				echo
 				trap - ERR
 				return 0
 			else
-				rm -f ${STATUS_FILE}
+				rm -f "${STATUS_FILE}"
 			fi
 		fi
 	else
 		#echo -e "Check command: ${PKG_CHECK}"
-		if eval ${PKG_CHECK} > /dev/null 2>&1
+		if eval "${PKG_CHECK}" > /dev/null 2>&1
 		then
 			echo "${SPACES}Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}} already built."
 			echo
@@ -1807,23 +1868,22 @@ function build () {
 	fi
 	for dep in ${PKG_DEPS}
 	do
-		local NUMSPACES=$((NUMSPACES+1))
-		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
+		NUMSPACES=$((NUMSPACES+1))
+		SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
 		echo -n "${SPACES}Requires "
 		#echo "Called from ${PKG_FILE}"
-		build \
-			$( if [ ${NOSAVESTATUS} -eq 1 ] || [ "${TEMPORARY_STATUS}" == ".tmp" ]; then echo "--temporary"; fi) \
-			$( if [ ${GCC_CHECK} -eq 1 ]; then echo "--no_gcc_check"; fi ) \
-			${dep}$( if [ "${PKG_TARGET_ENV}" == "native" ] || [ "${PKG_TARGET_ENV}" == "cross" ]; then echo ":${PKG_TARGET_ENV}"; fi )
-		local NUMSPACES=$((NUMSPACES-1))
-		local SPACES=$(for ((i = 0 ; i < ${NUMSPACES} ; i++ )); do echo -n "   "; done)
+		build $( if [ "${NOSAVESTATUS}" -eq 1 ] || [ "${TEMPORARY_STATUS}" == .tmp ]; then echo "--temporary"; fi ) \
+			$( if [ "${GCC_CHECK}" -eq 1 ]; then echo "--no_gcc_check"; fi ) \
+			"${dep}$( if [ "${PKG_TARGET_ENV}" == native ] || [ "${PKG_TARGET_ENV}" == cross ]; then echo ":${PKG_TARGET_ENV}"; fi )"
+		NUMSPACES=$((NUMSPACES-1))
+		SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
 	done
 
 	eval "> ${LOG_FILE}"
 	
-	if [ ${GCC_CHECK} -eq 0 ] && [ "${BUILD_PROCESS}" != "none" ] && [ "${BUILD_PROCESS}" != "downloadonly" ] && [ ${PKG_TARGET_ENV} == target ]
+	if [ "${GCC_CHECK}" -eq 0 ] && [ "${BUILD_PROCESS}" != "none" ] && [ "${BUILD_PROCESS}" != "downloadonly" ] && [ ${PKG_TARGET_ENV} == target ]
 	then
-		check_${PKG_TOOLCHAIN:-${TOOLCHAIN}}_c
+		"check_${PKG_TOOLCHAIN:-${TOOLCHAIN}}_c"
 	fi
 
 	echo -n "${SPACES}"
@@ -1833,128 +1893,128 @@ function build () {
 	#then
 	#	rm -rf ${PKG_SRCPATH}
 	#fi
-	if [ ! -d ${BLD_PATH} ]
+	if [ ! -d "${BLD_PATH}" ]
 	then
-		run_cmd "mkdir -p ${BLD_PATH}" >> ${LOG_FILE}
+		run_cmd "mkdir -p \"${BLD_PATH}\"" >> "${LOG_FILE}"
 	fi
-	if [ ! -d ${BIN_PATH} ]
+	if [ ! -d "${BIN_PATH}" ]
 	then
-		run_cmd "mkdir -p ${BIN_PATH}" >> ${LOG_FILE}
+		run_cmd "mkdir -p \"${BIN_PATH}\"" >> "${LOG_FILE}"
 	fi
-	echo "Pre build script:" >> ${LOG_FILE}
-	echo "==================" >> ${LOG_FILE}
-	echo "${PKG_PREBUILD}" >> ${LOG_FILE}
-	echo "==================" >> ${LOG_FILE}
-	echo >> ${LOG_FILE}
-	echo "Post build script:" >> ${LOG_FILE}
-	echo "==================" >> ${LOG_FILE}
-	echo "${PKG_POSTBUILD}" >> ${LOG_FILE}
-	echo "==================" >> ${LOG_FILE}
-	echo >> ${LOG_FILE}
-	echo "Post install script:" >> ${LOG_FILE}
-	echo "==================" >> ${LOG_FILE}
-	echo "${PKG_POSTINSTALL}" >> ${LOG_FILE}
-	echo "==================" >> ${LOG_FILE}
-	echo >> ${LOG_FILE}
+	cat <<-EOF >> "${LOG_FILE}"
+		Pre build script:
+		==================
+		${PKG_PREBUILD}
+		==================
 
-	if [ ! -z "${PKG_URL}" ] || [ ! -z "${GIT_URL}" ]
+		Post build script:
+		==================
+		${PKG_POSTBUILD} 
+		==================
+
+		Post install script:
+		==================
+		${PKG_POSTINSTALL}
+		==================
+
+	EOF
+	if [ -n "${PKG_URL}" ] || [ -n "${GIT_URL}" ]
 	then
 		echo -n "Downloading ${PKG_FULLNAME}..."
-		downloadsources >> ${LOG_FILE}
+		downloadsources >> "${LOG_FILE}"
 		echo "Done."
-		preparesources >> ${LOG_FILE}
+		preparesources >> "${LOG_FILE}"
 	fi
-	if [ -d ${PKG_BLDPATH} ]
+	if [ -d "${PKG_BLDPATH}" ]
 	then
-		run_cmd "rm -rf ${PKG_BLDPATH}" >> ${LOG_FILE}
+		run_cmd "rm -rf \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
 	fi
-	if [ ! -z ${PKG_PKGPATH} ]
+	if [ -n "${PKG_PKGPATH}" ]
 	then
-		if [ -d ${PKG_PKGPATH} ]
+		if [ -d "${PKG_PKGPATH}" ]
 		then
-			run_cmd -s "rm -rf ${PKG_PKGPATH}" >> ${LOG_FILE}
+			run_cmd -s "rm -rf \"${PKG_PKGPATH}\"" >> "${LOG_FILE}"
 		fi
-		run_cmd "mkdir -p ${PKG_PKGPATH}" >> ${LOG_FILE}
+		run_cmd "mkdir -p \"${PKG_PKGPATH}\"" >> "${LOG_FILE}"
 	fi
 	if [ -n "${PKG_PREBUILD}" ]
 	then
-		if [ -d ${PKG_SRCPATH} ]
+		if [ -d "${PKG_SRCPATH}" ]
 		then
-			cd ${PKG_SRCPATH}
+			cd "${PKG_SRCPATH}"
 		fi
-		echo "Running pre build script..." | log_buffer info >> ${LOG_FILE}
+		echo "Running pre build script..." | log_buffer info >> "${LOG_FILE}"
 		(run_cmd "set -x
 			set +o pipefail
 			${PKG_PREBUILD}
-			set +x") >> ${LOG_FILE}
+			set +x") >> "${LOG_FILE}"
 	fi
-	if [ ${PKG_COPYSRC:-0} -eq 1 ] 
+	if [ "${PKG_COPYSRC:-0}" -eq 1 ] 
 	then
-		run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}" >> ${LOG_FILE}
+		run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
 	fi
-	if [ ! ${BUILD_PROCESS:-none} == none ]
+	if [ ! "${BUILD_PROCESS:-none}" == none ]
 	then
 		echo -n "${SPACES}Building ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}} [${BUILD_PROCESS}]..."
-		${BUILD_PROCESS} >> ${LOG_FILE} 2>&1
+		${BUILD_PROCESS} >> "${LOG_FILE}" 2>&1
 	fi
 	if [ -n "${PKG_POSTBUILD}" ]
 	then
-		if [ ! -d ${PKG_BLDPATH} ]
+		if [ ! -d "${PKG_BLDPATH}" ]
 		then
-			run_cmd "mkdir -p ${PKG_BLDPATH}" >> ${LOG_FILE}
+			run_cmd "mkdir -p \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
 		fi
-		cd ${PKG_BLDPATH}
-		echo "Running post build script..." | log_buffer info >> ${LOG_FILE}
+		cd "${PKG_BLDPATH}"
+		echo "Running post build script..." | log_buffer info >> "${LOG_FILE}"
 		(run_cmd "set -ex
 			set +o pipefail
 			${PKG_POSTBUILD} 2>&1
-			set +ex") >> ${LOG_FILE}
+			set +ex") >> "${LOG_FILE}"
 	fi
-	#run_cmd "rm -rf ${PKG_SRCPATH}"
+	#run_cmd "rm -rf \"${PKG_SRCPATH}\""
 
 	if [ -n "${PKG_POSTINSTALL}" ]
 	then
-		run_cmd "mkdir -p ${PKG_PKGPATH}/postinst_scripts" >> ${LOG_FILE}
-		echo "${PKG_POSTINSTALL}" > ${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}
-		run_cmd "cat ${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}" >> ${LOG_FILE}
+		run_cmd "mkdir -p ${PKG_PKGPATH}/postinst_scripts" >> "${LOG_FILE}"
+		echo "${PKG_POSTINSTALL}" > "${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}"
+		run_cmd "cat \"${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}\"" >> "${LOG_FILE}"
 	fi
 
 	##### Create package
-	if [ ! -z ${PKG_PKGPATH} ]
+	if [ -n "${PKG_PKGPATH}" ]
 	then
 		(
 			set -e
 			pwd
-			if [ ${NOSAVESTATUS} -eq 0 ] && [ -z "${TEMPORARY_STATUS}" ]
+			if [ "${NOSAVESTATUS}" -eq 0 ] && [ -z "${TEMPORARY_STATUS}" ]
 			then
-				create_sfx_package ${PKG_PKGPATH}
+				create_sfx_package "${PKG_PKGPATH}"
 			fi
-			run_cmd "rsync -aK --devices --specials ${PKG_PKGPATH}/ ${BIN_PATH}"
-			run_cmd -s "rm -rf ${PKG_PKGPATH}"
+			run_cmd "rsync -aK --devices --specials \"${PKG_PKGPATH}/\" \"${BIN_PATH}\""
+			run_cmd -s "rm -rf \"${PKG_PKGPATH}\""
 			set +e
-		) >> ${LOG_FILE} 2>&1
+		) >> "${LOG_FILE}" 2>&1
 	fi
-	if [ ${KEEPBUILDDIR} -eq 0 ]
+	if [ "${KEEPBUILDDIR}" -eq 0 ]
 	then
-		run_cmd "rm -rf ${PKG_BLDPATH}" >> ${LOG_FILE}
+		run_cmd "rm -rf \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
 	fi
 	### Save build status
-	if [ ! -d ${STATUS_PATH} ]
+	if [ ! -d "${STATUS_PATH}" ]
 	then
-		run_cmd "mkdir -p ${STATUS_PATH}" >> ${LOG_FILE}
+		run_cmd "mkdir -p \"${STATUS_PATH}\"" >> "${LOG_FILE}"
 	fi
-	if [ ${NOSAVESTATUS} -eq 0 ]
+	if [ "${NOSAVESTATUS}" -eq 0 ]
 	then
-		run_cmd "md5sum ${PKG_PATH}/${PKG_FILE}.pkg > ${STATUS_FILE}" >> ${LOG_FILE}
+		run_cmd "md5sum \"${PKG_PATH}/${PKG_FILE}.pkg\" > \"${STATUS_FILE}\"" >> "${LOG_FILE}"
 	else
-		run_cmd "rm -f ${STATUS_PATH}/*.tmp" >> ${LOG_FILE}
+		run_cmd "rm -f \"${STATUS_PATH}/*.tmp\"" >> "${LOG_FILE}"
 	fi
 	set +x
 	echo "Done."
 	echo
 	trap - ERR
-)
-}
+)}
 
 function is_build_functions () {
 	return 0

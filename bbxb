@@ -19,18 +19,21 @@ trap 'set +x; \
 
 set -o pipefail
 
-START_PWD=${PWD}
-BB_HOME=$(dirname $(realpath ${BASH_SOURCE}))
-PROGRAM_NAME=$(basename ${BASH_SOURCE})
+BB_HOME=$(dirname "$(realpath "${BASH_SOURCE[0]}")")
+#PROGRAM_NAME="$(basename "${BASH_SOURCE[0]}")"
 
-. ${BB_HOME}/core.functions
+# shellcheck source=core.functions
+source "${BB_HOME}/core.functions"
 check_core_functions
 
 OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
-[ ${_param_v:-0} -eq 1 ] && set -x || true
+if [ "${_param_v:-0}" -eq 1 ]
+then
+	set -x
+fi
 
-PRJ_NAME=${_param_1}
-PLATFORM_NAME=${_param_2:-generic_x64}
+PRJ_NAME="${_param_1}"
+PLATFORM_NAME="${_param_2:-generic_x64}"
 
 if [ -z "${PRJ_NAME}" ]
 then
@@ -38,15 +41,21 @@ then
 	exit 1
 fi
 
-. setenv
-. ${BB_HOME}/build.functions
-. ${BB_HOME}/project.functions
-. ${BB_HOME}/toolchain.functions
-. ${BB_HOME}/images.functions
-. ${BB_HOME}/data.functions
+# shellcheck source=setenv
+source "${BB_HOME}/setenv"
+# shellcheck source=build.functions
+source "${BB_HOME}/build.functions"
+# shellcheck source=project.functions
+source "${BB_HOME}/project.functions"
+# shellcheck source=toolchain.functions
+source "${BB_HOME}/toolchain.functions"
+# shellcheck source=images.functions
+source "${BB_HOME}/images.functions"
+# shellcheck source=/data.functions
+source "${BB_HOME}/data.functions"
 
 PRJ=${PRJ_PATH}/${PRJ_NAME}.prj
-if [ ! -f ${PRJ} ]
+if [ ! -f "${PRJ}" ]
 then
 	echo "Project ${PRJ} does not exist."
 	exit 1
@@ -54,6 +63,10 @@ fi
 
 echo "Project path: ${DATA_PATH}/${PRJ_NAME}"
 echo
-source ${PRJ}
-check_images_functions && unmount_tag --all || true
+# shellcheck source=projects/*
+source "${PRJ}"
+if check_images_functions
+then
+	unmount_tag --all
+fi
 trap - ERR SIGINT

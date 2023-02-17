@@ -14,8 +14,10 @@ param2value () {
 	# Requires at least one OPTS or OPTS_WITH_VALUE to run
 	# OPTS="-a -b -c" OPTS_WITH_VALUE="-d" param2value "${@}"
 
-	local OPTS+=" -v "
-	local NUM=0
+	local NUM OPTION OPTS PARAMETER
+
+	OPTS+=" -v "
+	NUM=0
 
 	unset $( ( set -o posix ; set ) | grep ^_param_ | sed 's/=.*$//g' | xargs )
 
@@ -24,12 +26,12 @@ param2value () {
 		then
 			if [ "${1} " == "$(echo "${OPTS} ${OPTS_WITH_VALUE} " | grep -o -- "${1} ")" ]
 				then
-					local OPTION=${1}
-					local PARAMETER=$(echo ${1} | sed -e 's/^--\?//;s/-/_/g')
+					OPTION=${1}
+					PARAMETER=$(echo "${1}" | sed -e 's/^--\?//;s/-/_/g')
 					if [ "${1} " == "$(echo "${OPTS_WITH_VALUE} " | grep -o -- "${1} ")" ]
 					then
 						shift
-						if [ ! "x${1}" == "x" ]
+						if [ ! "${1}" == "" ]
 						then 
 							eval "_param_${PARAMETER}='${1}'"
 						else
@@ -44,11 +46,14 @@ param2value () {
 				return 1
 			fi
 		else
-				local NUM=$((NUM+1))
+				NUM=$((NUM+1))
 				eval "_param_${NUM}='${1}'"
-				local PARAMETER=${NUM}
+				PARAMETER=${NUM}
 		fi
-		[ ${_param_v:-0} -eq 1 ] && eval echo "_param_${PARAMETER}=\$_param_${PARAMETER}" || true
+		if [ "${_param_v:-0}" -eq 1 ]
+		then
+			eval echo "_param_${PARAMETER}=\$_param_${PARAMETER}"
+		fi
 		shift
 	done
 }
@@ -60,97 +65,124 @@ download_uncompress () {
 	## NODELETEDESTDIR=<num>: if 1 don't delete ${DEST_DIR}
 
 	trap 'STATUS=${?}; \
-		echo "download_uncompress fail."; \
+		set +x; \
 		trap - ERR; \
+		echo "download_uncompress fail."; \
+		pause; \
 		return ${STATUS};' ERR
 
-	local URL=${1}
-	local URL_HASH=$(echo -n "${URL}" | md5sum -t | awk '{print $1}')
-	local DEST_DIR=${2}
-	shift 2
-	local FILES2EXTRACT="${@}"
-	local STRIPCOMPONENTS=${STRIPCOMPONENTS:-1}
-	local NODELETEDESTDIR=${NODELETEDESTDIR:-0}
-	if [ ${STRIPCOMPONENTS} -gt 0 ]
+	local URL \
+		URL_HASH \
+		DEST_DIR \
+		FILES2EXTRACT \
+		STRIPCOMPONENTS \
+		NODELETEDESTDIR \
+		TARFLAGS \
+		HASH_ROW \
+		DOWNLOAD_FILE \
+		DOWNLOAD_HASH_FILE \
+		FILE_ENCODING \
+		DOWNLOAD_FILE_TYPE \
+		UNCOMPRESSED_FILE_TYPE
+
+	echo "download_uncompress ${*}" | log_buffer
+
+	#set -x
+
+	URL=${1}
+	URL_HASH=$(echo -n "${URL}" | md5sum -t | awk '{print $1}')
+	DEST_DIR=${2}
+	if shift 2 
 	then
-		local TARFLAGS="--strip-components=${STRIPCOMPONENTS}"
+		FILES2EXTRACT="${*}"
+	else
+		FILES2EXTRACT=
 	fi
-	if [ ! -d ${DOWNLOAD_PATH} ]
+	STRIPCOMPONENTS=${STRIPCOMPONENTS:-1}
+	NODELETEDESTDIR=${NODELETEDESTDIR:-0}
+	if [ "${STRIPCOMPONENTS}" -gt 0 ]
 	then
-		run_cmd "mkdir -pv ${DOWNLOAD_PATH}"
+		TARFLAGS="--strip-components=${STRIPCOMPONENTS}"
 	fi
-	if [ -f "${DOWNLOAD_PATH}/url2file.map" ]
+	if [ ! -d "${DOWNLOAD_PATH}" ]
 	then
-		run_cmd "touch ${DOWNLOAD_PATH}/url2file.map"
+		run_cmd "mkdir -pv \"${DOWNLOAD_PATH}\""
 	fi
-	local HASH_ROW=$( test -f "${DOWNLOAD_PATH}/url2file.map" && grep ${URL_HASH} "${DOWNLOAD_PATH}/url2file.map" || true )
+	if [ ! -f "${DOWNLOAD_PATH}/url2file.map" ]
+	then
+		run_cmd "touch \"${DOWNLOAD_PATH}/url2file.map\""
+	fi
+	HASH_ROW=$( if [ -f "${DOWNLOAD_PATH}/url2file.map" ]; then grep "${URL_HASH}" "${DOWNLOAD_PATH}/url2file.map" || true ; fi )
 	# if download file does not exists in database download package
 	if [ -z "${HASH_ROW}" ]
 	then
-		echo "\$ curl -k -vLsI -o /dev/null ${URL}"
-		local DOWNLOAD_FILE="$(curl -k -vLsI -o /dev/null ${URL} 2>&1 | egrep -i '^< content-disposition:' | tr -d "\n\r" | sed -e 's/^.*filename="\?//;s/".*//')"
-		if [ -z ${DOWNLOAD_FILE} ]
+		echo "\$ curl -k -vLsI -o /dev/null \"${URL}\"" | log_buffer info
+		DOWNLOAD_FILE="$( curl -k -vLsI -o /dev/null "${URL}" 2>&1 | grep -E -i '^< content-disposition:' | tr -d "\n\r" | sed -e 's/^.*filename="\?//;s/".*//' || true )"
+		if [ -z "${DOWNLOAD_FILE}" ]
 		then
-			local DOWNLOAD_FILE="$(basename ${URL})"
+			DOWNLOAD_FILE="$(basename "${URL}")"
 		else
-			local DOWNLOAD_FILE="$(basename ${DOWNLOAD_FILE})"
+			DOWNLOAD_FILE="$(basename "${DOWNLOAD_FILE}")"
 		fi
-		local DOWNLOAD_HASH_FILE="${URL_HASH}_$(basename ${DOWNLOAD_FILE})"
-		echo "${URL_HASH} ${DOWNLOAD_FILE}" >> ${DOWNLOAD_PATH}/url2file.map
+		DOWNLOAD_HASH_FILE="${URL_HASH}_$(basename "${DOWNLOAD_FILE}")"
+		echo "${URL_HASH} ${DOWNLOAD_FILE}" >> "${DOWNLOAD_PATH}/url2file.map"
 	else
-	local DOWNLOAD_HASH_FILE=$(echo ${HASH_ROW} | awk '{print $1 "_" $2}')
-	local DOWNLOAD_FILE=$(echo ${HASH_ROW} | awk '{print $2}')
+	DOWNLOAD_HASH_FILE=$(echo "${HASH_ROW}" | awk '{print $1 "_" $2}')
+	DOWNLOAD_FILE=$(echo "${HASH_ROW}" | awk '{print $2}')
 	fi
 	# if download file does not exists in filesystem
 	if [ ! -f "${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}" ]
 	then
-		run_cmd "curl -k -LsR -o ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} \"${URL}\""
+		run_cmd "curl -k -LsR -o \"${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}\" \"${URL}\""
 	fi
-	if [ -d ${DEST_DIR} ] && [ ${NODELETEDESTDIR} -eq 0 ]
+	if [ -d "${DEST_DIR}" ] && [ "${NODELETEDESTDIR}" -eq 0 ]
 	then
 		run_cmd "rm -rf ${DEST_DIR}"
 	fi
-	local FILE_ENCODING=$(file -iz ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE})
-	local DOWNLOAD_FILE_TYPE=$(echo ${FILE_ENCODING} | egrep -o "compressed-encoding=[^;]*" | sed 's/compressed-encoding=//')
-	local UNCOMPRESSED_FILE_TYPE=$(echo ${FILE_ENCODING} | awk '{print $2}' | sed 's/;$//')
-	if [ ! -d ${DEST_DIR} ] ; then run_cmd "mkdir -pv ${DEST_DIR}" ; fi
+	FILE_ENCODING=$(file -iz "${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}")
+	DOWNLOAD_FILE_TYPE=$(echo "${FILE_ENCODING}" | grep -E -o "compressed-encoding=[^;]*" | sed 's/compressed-encoding=//' || true )
+	UNCOMPRESSED_FILE_TYPE=$(echo "${FILE_ENCODING}" | awk '{print $2}' | sed 's/;$//')
+	if [ ! -d "${DEST_DIR}" ] ; then run_cmd "mkdir -pv \"${DEST_DIR}\"" ; fi
 	case ${UNCOMPRESSED_FILE_TYPE} in
 		application/x-tar)
-			run_cmd "tar xf ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${TARFLAGS} -C ${DEST_DIR} ${ARCHIVE_DIRS}"
+			run_cmd "tar xf \"${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}\" ${TARFLAGS} -C \"${DEST_DIR}\" ${ARCHIVE_DIRS}"
 			;;
 		*)
 			case ${DOWNLOAD_FILE_TYPE} in
 				application/x-xz)
-					run_cmd "cp ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${DEST_DIR}/${DOWNLOAD_FILE}"
-					run_cmd "xz --uncompress ${DEST_DIR}/${DOWNLOAD_FILE}"
+					run_cmd "cp \"${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}\" \"${DEST_DIR}/${DOWNLOAD_FILE}\""
+					run_cmd "xz --uncompress \"${DEST_DIR}/${DOWNLOAD_FILE}\""
 					;;
 				application/zip)
 					if [ -z "${FILES2EXTRACT}" ]
 					then
-						run_cmd "unzip -n ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} -d ${DEST_DIR}"
+						run_cmd "unzip -n \"${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}\" -d \"${DEST_DIR}\""
 					else
-						run_cmd "unzip -j -n ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} "${FILES2EXTRACT}" -d ${DEST_DIR}"
+						run_cmd "unzip -j -n \"${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}\" \"${FILES2EXTRACT}\" -d \"${DEST_DIR}\""
 					fi
 					;;
 				*)
-					run_cmd "cp ${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE} ${DEST_DIR}/${DOWNLOAD_FILE}"
+					run_cmd "cp \"${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}\" \"${DEST_DIR}/${DOWNLOAD_FILE}\""
 					;;
 			esac
 			;;
 	esac
 	trap ERR
+	set +x
 }
 
 test_version () {
-	test -z ${3} && echo "I need 2 arguments to compare and an operator." && return 255
+	test -z "${3}" && echo "I need 2 arguments to compare and an operator." && return 255
 
-	local SORTED="$(echo -e "${1}\n${3}" | sort -Vru -)"
-	local BIGGEST="$(echo -e "${SORTED}" | head -n1)"
-	local NO=$(echo -e "${SORTED}" | wc -l)
+	local SORTED BIGGEST NO
+
+	SORTED="$(echo -e "${1}\n${3}" | sort -Vru -)"
+	BIGGEST="$(echo -e "${SORTED}" | head -n1)"
+	NO="$(echo -e "${SORTED}" | wc -l)"
 
 	case ${2} in
 		-gt)
-			if [ "${BIGGEST}" == "${1}" ] && [ ${NO} -gt 1 ]
+			if [ "${BIGGEST}" == "${1}" ] && [ "${NO}" -gt 1 ]
 			then
 					return 0
 			else
@@ -166,7 +198,7 @@ test_version () {
 			fi
 		;;
 		-lt)
-			if [ "${BIGGEST}" != "${1}" ] && [ ${NO} -gt 1 ]
+			if [ "${BIGGEST}" != "${1}" ] && [ "${NO}" -gt 1 ]
 			then
 					return 0
 			else
@@ -174,7 +206,7 @@ test_version () {
 			fi
 		;;
 		-le)
-			if [ "${BIGGEST}" != "${1}" ] || [ ${NO} -eq 1 ]
+			if [ "${BIGGEST}" != "${1}" ] || [ "${NO}" -eq 1 ]
 			then
 					return 0
 			else
@@ -182,7 +214,7 @@ test_version () {
 			fi
 		;;
 		-eq)
-			if [ ${NO} -eq 1 ]
+			if [ "${NO}" -eq 1 ]
 			then
 					return 0
 			else
@@ -190,7 +222,7 @@ test_version () {
 			fi
 		;;
 		-ne)
-			if [ ${NO} -eq 2 ]
+			if [ "${NO}" -eq 2 ]
 			then
 					return 0
 			else
@@ -225,24 +257,21 @@ pathadd () {
 		return 0
 	fi
 
-	eval "
-	while read sp
-	do
-		if [ \"\${sp}\" == \"\${2}\" ]
-		then
-			#echo "\${2} already found in \${1}"
-			return 0
-		fi
-	done < <(tr ':' '\n' <<< \"\${${1}}\")
+	eval "while read sp
+		do
+			if [ \"\${sp}\" == \"\${2}\" ]
+			then
+				return 0
+			fi
+		done < <(tr ':' '\n' <<< \"\${${1}}\")
 
-	if [ -z \"\${${1}}\" ]
-	then
-		export ${1}="\${2}"
-	else
-		export ${1}="\${2}:\${${1}}"
-	fi
-	#echo "\${2} added to \${1}"
-	"
+		if [ -z \"\${${1}}\" ]
+		then
+			${1}=\"\${2}\"
+		else
+			${1}=\"\${2}:\${${1}}\"
+		fi
+		export ${1}"
 }
 
 pathremove () {
@@ -261,30 +290,26 @@ pathremove () {
 		return 1
 	fi
 
-	local i=1
-	local FPATH=
-	local FOUND=0
+	eval "local i FPATH FOUND
+		i=1
+		FPATH=
+		FOUND=0
 
-	eval "
-	while read sp
-	do
-		if [ \"\${sp}\" != \"\${2}\" ]
+		while read sp
+		do
+			if [ \"\${sp}\" != \"\${2}\" ]
+			then
+				local FPATH+=\"\$( [ \$i -gt 1 ] && echo \":\" )\${sp}\"
+				let \"i+=1\"
+			else
+				local FOUND=1
+			fi
+		done < <(tr ':' '\n' <<< \"\${${1}}\")
+
+		if [ \${FOUND} -eq 1 ]
 		then
-			local FPATH+=\"\$( [ \$i -gt 1 ] && echo \":\" )\${sp}\"
-			let \"i+=1\"
-		else
-			local FOUND=1
-		fi
-	done < <(tr ':' '\n' <<< \"\${${1}}\")
-
-	if [ \${FOUND} -eq 1 ]
-	then
-		export ${1}=\"\${FPATH}\"
-		#echo \"\${2} removed from PATH\"
-	#else
-		#echo \"\${2} not found in PATH\"
-	fi
-	"
+			export ${1}=\"\${FPATH}\"
+		fi"
 }
 
 log_buffer () {
@@ -302,7 +327,7 @@ log_buffer () {
 		esac
 		while read -r line
 		do
-			printf "%s - [%s]${LOG_CHAR} %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$(basename ${PWD})" "${line}" >> ${LOG_FILE}
+			printf "%s - [%s]${LOG_CHAR} %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$(basename "${PWD}")" "${line}" >> "${LOG_FILE}"
 		done < /dev/stdin
 	)
 }
@@ -321,6 +346,8 @@ run_cmd () {
 		trap - SIGINT; \
 		return 100;' SIGINT
 	
+	local CMDLINE STATUS RETRIES
+
 	unset RUNCMD_SUDO
 	case "${1}" in
 		"-S") 
@@ -332,17 +359,16 @@ run_cmd () {
 			shift
 			;;
 	esac
-	local CMDLINE="${@}"
-	local STATUS=255
-	local RETRIES=0
-	local LOG_PROMPT="[$(basename ${PWD})]"
-	while [ ${STATUS} -ne 0 ] && [ ${RETRIES} -lt ${MAX_RETRIES:-1} ]
+	CMDLINE="${*}"
+	STATUS=255
+	RETRIES=0
+	while [ "${STATUS}" -ne 0 ] && [ "${RETRIES}" -lt "${MAX_RETRIES:-1}" ]
 	do
 		local RETRIES=$((RETRIES+1))
 		if [ ${RETRIES} -gt 1 ]
 		then
 			# Sleep random between 6 and 10 seconds
-			sleep $((6 + $RANDOM % 5))
+			sleep $((6 + "${RANDOM}" % 5))
 			echo "Try ${RETRIES}" | log_buffer info
 		fi
 		(
@@ -369,7 +395,7 @@ run_cmd () {
 	done
 	trap - ERR
 	trap - SIGINT
-	return ${STATUS}
+	return "${STATUS}"
 }
 
 export -f run_cmd log_buffer

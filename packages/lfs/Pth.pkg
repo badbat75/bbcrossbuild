@@ -4,7 +4,7 @@ PKG_URL="https://ftp.gnu.org/gnu/pth/pth-2.0.7.tar.gz"
 PKG_DEPS="lfs/libnsl"
 #PKG_AUTOCONF=1
 BUILD_PROCESS=configmake
-CONF_FLAGS="--mandir=${INSTALL_SHAREDIR}/man"
+CONF_FLAGS="--mandir=${INSTALL_SHAREDIR}/man --build= --host="
 PKG_MAKETARGETS="all,-j1 install-strip"
 
 ### This packages does not support newer .la libraries file so they will be temporary moved somewhere else

@@ -1,5 +1,3 @@
-#!/bin/bash
-
 NPROCS=$(nproc --ignore=1)
 LTOPROCS=$(( $(nproc) / 4 ))
 
