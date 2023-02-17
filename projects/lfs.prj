@@ -194,7 +194,7 @@ case ${PLATFORM_NAME} in
 			esac
 		fi
 		cat >>${BIN_PATH}/postinst_scripts/99-lfs-configurations <<-EOF
-			echo "net.ifnames=0 console=tty1 root=PARTUUID=\$(blkid -o value --match-tag PARTUUID \$(findmnt -nu -o SOURCE /)) rootfstype=${LFS_FSTYPE} fsck.repair=yes rootwait systemd.gpt_auto=no" >/boot/cmdline.txt
+			echo "net.ifnames=0 console=tty1 root=PARTUUID=\$(blkid -o value --match-tag PARTUUID \$(findmnt -nu -o SOURCE /)) rootfstype=${LFS_FSTYPE} fsck.repair=yes rootwait cgroup_enable=memory systemd.gpt_auto=no" >/boot/cmdline.txt
 		EOF
 		#cat >>${BIN_PATH}/postinst_scripts/99-lfs-configurations <<-EOF
 		#	systemctl disable systemd-oomd.socket
