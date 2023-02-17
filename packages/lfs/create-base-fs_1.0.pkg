@@ -29,7 +29,8 @@ PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/{dev,proc,sys,run,etc,var}
 	ln -sfv /proc/self/mounts ${PKG_PKGPATH}/etc/mtab
 	mkdir -pv ${PKG_PKGPATH}/var/log
 	touch ${PKG_PKGPATH}/var/log/{btmp,lastlog,faillog,wtmp}
-	#chgrp -v utmp ${PKG_PKGPATH}/var/log/lastlog
 	chmod -v 664 ${PKG_PKGPATH}/var/log/lastlog
 	chmod -v 600 ${PKG_PKGPATH}/var/log/btmp
 "
+
+PKG_POSTINSTALL="chgrp -v utmp /var/log/lastlog"
