@@ -2,7 +2,14 @@ BUILD_PROCESS=none
 ####### Basic configuration files ##########
 PKG_POSTBUILD="set -x
 	install -d -m755 ${PKG_PKGPATH}/etc
-	echo '127.0.0.1 localhost' > ${PKG_PKGPATH}/etc/hosts
+	cat > ${PKG_PKGPATH}/etc/hosts <<-EOF
+		# Begin /etc/hosts
+		127.0.0.1 localhost.localdomain localhost
+		::1       localhost ip6-localhost ip6-loopback
+		ff02::1   ip6-allnodes
+		ff02::2   ip6-allrouters
+		# End /etc/hosts
+	EOF
 	cat > ${PKG_PKGPATH}/etc/passwd <<-EOF
 		root:x:0:0:root:/root:/bin/bash
 		bin:x:1:1:bin:/dev/null:/usr/bin/false
