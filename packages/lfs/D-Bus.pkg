@@ -26,11 +26,4 @@ PKG_POSTINSTALL="chown -v root:messagebus ${INSTALL_PREFIX}/libexec/dbus-daemon-
 chmod -v 4750 ${INSTALL_PREFIX}/libexec/dbus-daemon-launch-helper
 ln -sfv /etc/machine-id ${INSTALL_LOCALSTATEDIR}/lib/dbus/machine-id
 
-if ! getent group systemd-oom; then
-	groupadd --system systemd-oom
-fi
-
-if ! getent passwd systemd-oom; then
-	useradd --system -c \"systemd OOM Daemon\" -d ${INSTALL_SYSCONFDIR}/dbus-1 -g systemd-oom -s /sbin/nologin systemd-oom
-fi"
 PKG_POSTINSTALL_PRIO=11
