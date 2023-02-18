@@ -24,6 +24,6 @@ PKG_PREBUILD="sed 's/static dbus_bool_t fatal_warnings_on_check_failed = TRUE/st
 
 PKG_POSTINSTALL="chown -v root:messagebus ${INSTALL_PREFIX}/libexec/dbus-daemon-launch-helper
 chmod -v 4750 ${INSTALL_PREFIX}/libexec/dbus-daemon-launch-helper
-ln -sfv /etc/machine-id ${INSTALL_LOCALSTATEDIR}/lib/dbus/machine-id
+ln -sfv /etc/machine-id ${INSTALL_LOCALSTATEDIR}/lib/dbus/machine-id"
 
 PKG_POSTINSTALL_PRIO=11
