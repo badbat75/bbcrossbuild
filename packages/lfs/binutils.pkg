@@ -2,9 +2,10 @@
 PKG_URL="https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.bz2"
 PKG_DEPS="lfs/libgmp lfs/libmpfr lfs/libmpc lfs/libisl"
 case ${BINUTILS_VER} in
-    2.40)
-        PKG_VER=${BINUTILS_VER}
-        ;;
+	2.40)
+		PKG_VER=2.40+e310116ffd9
+		PATCHES=binutils/binutils_2.40+e310116ffd9.patch
+		;;
 	2.39)
 		PKG_VER=2.39+4e3ee240162
 		PATCHES=binutils/binutils_2.39+4e3ee240162.patch
@@ -16,12 +17,12 @@ esac
 BUILD_PROCESS=configmake
 STD_CONF_FLAGS=0
 CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} --with-sysroot=/ --with-build-sysroot=\${SYSROOT} \
-    --build=${BARCH} --host=${HARCH} --target=${HARCH} \
-    --disable-werror \
-    --enable-shared --enable-static \
-    --enable-gold=default --enable-ld --enable-gprofng=yes --enable-lto \
-    --enable-new-dtags --disable-rpath --enable-threads=yes --enable-plugins --enable-64-bit-bfd \
-    --enable-compressed-debug-sections=all --enable-separate-code=yes --enable-plugins"
+	--build=${BARCH} --host=${HARCH} --target=${HARCH} \
+	--disable-werror \
+	--enable-shared --enable-static \
+	--enable-gold=default --enable-ld --enable-gprofng=yes --enable-lto \
+	--enable-new-dtags --disable-rpath --enable-threads=yes --enable-plugins --enable-64-bit-bfd \
+	--enable-compressed-debug-sections=all --enable-separate-code=yes --enable-plugins"
 CONF_FLAGS+=" --with-system-zlib"
 CONF_FLAGS+=" --with-mpc-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpc-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 CONF_FLAGS+=" --with-mpfr-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpfr-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
@@ -36,7 +37,7 @@ PKG_TOOLCHAIN=gnu
 PKG_LDFLAGS="-s"
 
 case ${BINUTILS_VER} in
-    2.3*)
+	2.3*)
 		CONF_ENV="env -u CPP -u CPPFLAGS"
 		PKG_MAKEENV="env -u CPP -u CPPFLAGS"
 	;;
