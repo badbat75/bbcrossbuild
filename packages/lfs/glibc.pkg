@@ -102,13 +102,21 @@ case ${PKG_TARGET} in
 	;;
 	stage1)
 		PKG_MAKETARGETS="csu/subdir_lib,install-headers"
-		PKG_POSTBUILD+="mkdir -pv \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
+		PKG_POSTBUILD="mkdir -pv \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
 			install csu/crt1.o csu/crti.o csu/crtn.o \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
 			\${CC} \${CFLAGS} \${LDFLAGS} -nostdlib -nostartfiles -shared -x c /dev/null -o \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libc.so;"
 	;;
 	stage2)	;;
 	*)
+		if [ -n "${INSTALL_LIBSUFFIX}" ]
+		then
+			PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}/lib
+				LD_LINUX_NAME=\$(basename elf/ld-linux-*.so.*)
+				ln -sfv \"${INSTALL_LIBSUFFIX/#\//}/\${LD_LINUX_NAME}\" \"${PKG_PKGPATH}/lib\"
+				"
+		fi
 		PKG_POSTBUILD+="touch ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/ld.so.conf
+
 			cat > ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/nsswitch.conf <<-EOF
 				# Begin /etc/nsswitch.conf
 
@@ -178,6 +186,6 @@ then
 	PKG_MAKEVARS+=" -s"
 fi
 PKG_POSTBUILD+="if [ ! -f \${PKG_PKGPATH}${INSTALL_INCLUDEDIR}/gnu/stubs.h ]
-then
-	install -vDm644 /dev/null ${PKG_PKGPATH}${INSTALL_INCLUDEDIR}/gnu/stubs.h
-fi"
+	then
+		install -vDm644 /dev/null ${PKG_PKGPATH}${INSTALL_INCLUDEDIR}/gnu/stubs.h
+	fi"
