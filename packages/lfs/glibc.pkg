@@ -62,6 +62,12 @@ case ${PKG_TARGET} in
 			--enable-pt_chown --enable-tunables --enable-bind-now \
 			--disable-profile --disable-crypt \
 			--disable-werror --disable-sanity-checks --without-cvs"
+		if [ ${LFS_ENABLENSCD:-0} -eq 1 ]
+		then
+			CONF_FLAGS+=" --enable-build-nscd --enable-nscd"
+		else
+			CONF_FLAGS+=" --disable-build-nscd --disable-nscd"
+		fi
 		case ${PKG_TARGET} in
 			stage1|stage2) ;;
 			*) 	
@@ -77,12 +83,6 @@ case ${PKG_TARGET} in
 					PKG_DEPS+=" lfs/annobin"
 					CONF_FLAGS+=" --with-nonshared-cflags="'"-fplugin=annobin -fplugin-arg-annobin-disable -Wa,--generate-missing-build-notes=yes"'
 					PKG_MAKEVARS+=" ASFLAGS="'"-g -Wa,--generate-missing-build-notes=yes"'
-				fi
-				if [ ${LFS_ENABLENSCD:-0} -eq 1 ]
-				then
-					CONF_FLAGS+=" --enable-build-nscd --enable-nscd"
-				else
-					CONF_FLAGS+=" --disable-build-nscd --disable-nscd"
 				fi
 			;;
 		esac
