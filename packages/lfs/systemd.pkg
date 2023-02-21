@@ -4,10 +4,10 @@ case ${SYSTEMD_VER:-251} in
 		PKG_VER=253
 	;;
 	252)
-		PKG_VER=252.5
+		PKG_VER=252.6
 	;;
 	251)
-		PKG_VER=251.11
+		PKG_VER=251.12
 	;;
 	*)
 		PKG_VER=${SYSTEMD_VER}

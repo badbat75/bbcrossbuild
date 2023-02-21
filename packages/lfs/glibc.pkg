@@ -1,17 +1,17 @@
 # glibc
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${GLIBC_VER}.tar.xz"
-PKG_DEPS="lfs/kernel:headers"
 case ${GLIBC_VER} in
 	2.37)
-		PKG_VER=2.37
+		PKG_VER=2.37+590d0e089b
+		PATCHES=glibc/glibc_2.37+590d0e089b.patch
 		;;
 	2.36)
-		PKG_VER=2.36+e05036b194
-		PATCHES=glibc/glibc_2.36+e05036b194.patch
+		PKG_VER=2.36+fb1bd9f003
+		PATCHES=glibc/glibc_2.36+fb1bd9f003.patch
 		;;
 	2.35)
-		PKG_VER=2.35+82663d3c03
-		PATCHES=glibc/glibc_2.35+82663d3c03.patch
+		PKG_VER=2.35+3f63f9dfe1
+		PATCHES=glibc/glibc_2.35+3f63f9dfe1.patch
 		;;
 	*)
 		PKG_VER=${GLIBC_VER}
@@ -21,40 +21,82 @@ PATCHES="${PATCHES:+${PATCHES},}http://www.linuxfromscratch.org/patches/lfs/deve
 
 PKG_OVERRIDELTO=0
 BUILD_PROCESS=configmake
-CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}${INSTALL_INCLUDEDIR} \
-	--enable-kernel=5.0.0 \
-	--enable-pt_chown --enable-tunables --enable-bind-now \
-	--disable-profile --disable-crypt \
-	--disable-werror --disable-sanity-checks --without-cvs"
-if [ ${LFS_ENABLENSCD:-0} -eq 1 ]
-then
-	CONF_FLAGS+=" --enable-build-nscd --enable-nscd"
-else
-	CONF_FLAGS+=" --disable-build-nscd --disable-nscd"
-fi
-CONF_VARS="libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes"
-PKG_MAKEVARS="slibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} rootsbindir=${INSTALL_PREFIX}/sbin \
-	complocaledir=${INSTALL_LIBDIR}/locale cross-compiling=yes"
+CONF_VARS="libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes libc_cv_slibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
+PKG_MAKEVARS="cross-compiling=yes"
 PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd
-#PKG_PREBUILD="sed '/MAKEFLAGS :=/s/)r/) -r/' -i Makerules"
-
+PKG_PREBUILD="mkdir -pv \${PKG_BLDPATH}"
+### Configuration
 case ${PKG_TARGET} in
 	cross)
+		PKG_PREBUILD+="
+			cat <<-EOF > \${PKG_BLDPATH}/configparms
+				rootsbindir=${INSTALL_EXECPREFIX}/bin
+				complocaledir=${TARGET_LIBDIR}/locale
+				datadir=${TARGET_SHAREDIR}
+			EOF
+			"
 		CONF_FLAGS="--libdir=${INSTALL_LIBDIR} \
 			--disable-profile --disable-crypt \
 			--disable-build-nscd --disable-nscd \
 			--disable-werror --disable-sanity-checks --without-cvs"
-		PKG_DEPS=
-		PKG_MAKEVARS=" slibdir=${INSTALL_LIBDIR} complocaledir=${TARGET_LIBDIR}/locale datadir=${TARGET_SHAREDIR}"
-		PKG_MAKETARGETS="lib,elf/subdir_lib,locale/others,elf/ldso_install,${TOOLCHAIN_PATH}/lib/libc.so.6,${TOOLCHAIN_PATH}/lib/libc.so,locale/subdir_install"
-		PKG_POSTBUILD="patchelf --remove-rpath ${INSTALL_LIBDIR}/ld-linux*.so.*;"
 	;;
 	headers)
+		PKG_DEPS="lfs/kernel:headers"
 		STD_CONF_FLAGS=0
 		CONF_FLAGS="--build=${BARCH} --host=${HARCH} --target=${HARCH} --prefix=${INSTALL_PREFIX} --includedir=${INSTALL_INCLUDEDIR} \
 			--with-headers=${BIN_PATH}${INSTALL_INCLUDEDIR}"
 		CONF_ENV="unset CXX CXXFLAGS; CC=\"${CC_FOR_BUILD}\" CFLAGS=\"${CFLAGS_FOR_BUILD}\" CC=\"${CPP_FOR_BUILD}\" CPPFLAGS=\"${CPPLAGS_FOR_BUILD}\""
+	;;
+	*)
+		PKG_DEPS="lfs/kernel:headers"
+		PKG_PREBUILD+="
+			cat <<-EOF > \${PKG_BLDPATH}/configparms
+				rootsbindir=${INSTALL_EXECPREFIX}/sbin
+				complocaledir=${INSTALL_LIBDIR}/locale
+				datadir=${INSTALL_SHAREDIR}
+			EOF
+		"
+		CONF_FLAGS="--target=${HARCH} --with-headers=${BIN_PATH}${INSTALL_INCLUDEDIR} \
+			--enable-kernel=5.0.0 \
+			--enable-pt_chown --enable-tunables --enable-bind-now \
+			--disable-profile --disable-crypt \
+			--disable-werror --disable-sanity-checks --without-cvs"
+		case ${PKG_TARGET} in
+			stage1|stage2) ;;
+			*) 	
+				PKG_DEPS+=" lfs/glibc:cross"
+				CONF_FLAGS+=" --enable-stackguard-randomization --enable-stack-protector=strong"
+				if [ ${GLIBC_SYSTEMTAP:-0} -eq 1 ]
+				then
+					PKG_DEPS+=" lfs/systemtap"
+					CONF_FLAGS+=" --enable-systemtap"
+				fi
+				if [ ${GLIBC_WITH_ANNOBIN:-0} -eq 1 ]
+				then
+					PKG_DEPS+=" lfs/annobin"
+					CONF_FLAGS+=" --with-nonshared-cflags="'"-fplugin=annobin -fplugin-arg-annobin-disable -Wa,--generate-missing-build-notes=yes"'
+					PKG_MAKEVARS+=" ASFLAGS="'"-g -Wa,--generate-missing-build-notes=yes"'
+				fi
+				if [ ${LFS_ENABLENSCD:-0} -eq 1 ]
+				then
+					CONF_FLAGS+=" --enable-build-nscd --enable-nscd"
+				else
+					CONF_FLAGS+=" --disable-build-nscd --disable-nscd"
+				fi
+			;;
+		esac
+	;;
+esac
+#PKG_PREBUILD="sed '/MAKEFLAGS :=/s/)r/) -r/' -i Makerules"
+
+### Make
+case ${PKG_TARGET} in
+	cross)
+		PKG_MAKETARGETS="lib,elf/subdir_lib,locale/others,elf/ldso_install,${TOOLCHAIN_PATH}/lib/libc.so.6,${TOOLCHAIN_PATH}/lib/libc.so,locale/subdir_install"
+		PKG_POSTBUILD="patchelf --remove-rpath ${INSTALL_LIBDIR}/ld-linux*.so.*;"
+	;;
+	headers)
 		PKG_MAKEVARS+=" install-bootstrap-headers=yes"
 		PKG_MAKETARGETS="install-headers"
 	;;
@@ -64,22 +106,8 @@ case ${PKG_TARGET} in
 			install csu/crt1.o csu/crti.o csu/crtn.o \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
 			\${CC} \${CFLAGS} \${LDFLAGS} -nostdlib -nostartfiles -shared -x c /dev/null -o \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libc.so;"
 	;;
-	stage2)
-	;;
+	stage2)	;;
 	*)
-		PKG_DEPS+=" lfs/glibc:cross"
-		CONF_FLAGS+=" --enable-stackguard-randomization --enable-stack-protector=strong"
-		if [ ${GLIBC_SYSTEMTAP:-0} -eq 1 ]
-		then
-			PKG_DEPS+=" lfs/systemtap"
-			CONF_FLAGS+=" --enable-systemtap"
-		fi
-		if [ ${GLIBC_WITH_ANNOBIN:-0} -eq 1 ]
-		then
-			PKG_DEPS+=" lfs/annobin"
-			CONF_FLAGS+=" --with-nonshared-cflags="'"-fplugin=annobin -fplugin-arg-annobin-disable -Wa,--generate-missing-build-notes=yes"'
-			PKG_MAKEVARS+=" ASFLAGS="'"-g -Wa,--generate-missing-build-notes=yes"'
-		fi
 		PKG_POSTBUILD+="touch ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/ld.so.conf
 			cat > ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/nsswitch.conf <<-EOF
 				# Begin /etc/nsswitch.conf
@@ -142,6 +170,7 @@ case ${PKG_TARGET} in
 				install -vDm644 \${PKG_SRCPATH}/nscd/nscd.service ${PKG_PKGPATH}/lib/systemd/system/nscd.service;"
 			PKG_POSTINSTALL+="systemctl disable nscd"
 		fi
+		PKG_POSTINSTALL_PRIO=01
 	;;
 esac
 if [ ${MAKEVERBOSE:-0} -eq 0 ]
@@ -152,4 +181,3 @@ PKG_POSTBUILD+="if [ ! -f \${PKG_PKGPATH}${INSTALL_INCLUDEDIR}/gnu/stubs.h ]
 then
 	install -vDm644 /dev/null ${PKG_PKGPATH}${INSTALL_INCLUDEDIR}/gnu/stubs.h
 fi"
-PKG_POSTINSTALL_PRIO=01
