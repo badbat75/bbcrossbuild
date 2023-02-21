@@ -20,7 +20,7 @@ function gitrepo4pkg {
 
 function gitrepo_additional_params {
 	case ${PACKAGE} in
-		binutils) echo "-- . "':!libbacktrace/';;
+		binutils) echo "-- . "':!libbacktrace/'" "':!gas/doc/.dirstamp';;
 	esac
 }
 
