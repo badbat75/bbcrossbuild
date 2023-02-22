@@ -10,7 +10,7 @@ PKG_AUTOCONF=1
 		CONF_FLAGS+=" --with-tls=openssl"
 		CONF_FLAGS+=" --with-yielding_select=yes"
 case ${HM} in
-	arm|aarch64) CONF_VARS="ac_cv_func_memcmp_working=1" ;;
+	arm|aarch64|x86_64) CONF_VARS="ac_cv_func_memcmp_working=yes" ;;
 esac
 case ${PKG_TARGET} in
 	bootstrap)

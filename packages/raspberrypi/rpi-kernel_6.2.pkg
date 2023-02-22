@@ -3,7 +3,8 @@ PKG_SUFFIX=
 PKG_URL="https://github.com/raspberrypi/linux/archive/e93ed361c73019568ccf6e5e5439408be1e8a18c.tar.gz"
 BUILD_PROCESS=kernelbuild
 PKG_MAKEVARS="INSTALL_MOD_STRIP=1"
-CONF_FLAGS="-e PSI"
+CONF_FLAGS="-d WERROR"
+CONF_FLAGS+=" -e PSI"
 
 case ${KERNEL_ARCH:-none} in
 	arm)
@@ -24,12 +25,12 @@ esac
 case ${WITH_EXTOPTS:-1} in
 	yes|1)
 		CONF_FLAGS+=" -e BTRFS_FS -e BTRFS_FS_POSIX_ACL "
-		CONF_FLAGS+=" -e F2FS_FS -e CONFIG_F2FS_FS_SECURITY -e F2FS_FS_COMPRESSION"
+		CONF_FLAGS+=" -e F2FS_FS -e F2FS_FS_SECURITY -e F2FS_FS_COMPRESSION"
 		;;
 esac
 case ${WITH_RT:-0} in
 	yes|1)
 	# Enable preemptive/realtime kernel
-		CONF_FLAGS+=" -d CONFIG_PREEMPT_NONE -d CONFIG_PREEMPT_VOLUNTARY -e CONFIG_PREEMPT"
+		CONF_FLAGS+=" -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT"
 		;;
 esac
