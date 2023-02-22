@@ -29,4 +29,5 @@ PKG_PREBUILD="
     -e \"s/__EDIT_DB_VERSION_UNIQUE_NAME__/\$DB_VERSION_UNIQUE_NAME/g\" \
     -e \"s/__EDIT_DB_VERSION__/\$DB_VERSION/g\" -i dist/configure.ac
     mkdir -pv dist/m4
-    cp -fv dist/aclocal/*.m4 dist/aclocal_java/*.m4 dist/m4/"
+    cp -fv dist/aclocal/*.m4 dist/aclocal_java/*.m4 dist/m4/
+    sed -i 's/\(__atomic_compare_exchange\)/\1_db/' src/dbinc/atomic.h"
