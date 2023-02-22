@@ -872,7 +872,6 @@ function cmakebuild () {
 		CONF_FLAGS+=" -DBUILD_STATIC_LIBS=OFF"
 	fi
 	local NINJA_FLAGS
-	local CMAKE_GENERATOR
 
 	NINJA_FLAGS="$(if [ "${MAKEVERBOSE}" -eq 1 ]; then echo -n '-v'; fi) -j${NPROCS}"
 	CMAKE_GENERATOR=${CMAKE_GENERATOR:-Ninja}
@@ -901,6 +900,7 @@ function cmakebuild () {
 		   -DCMAKE_INSTALL_DATADIR="${INSTALL_SHAREDIR}" \\
 		   ${CONF_FLAGS}
 	EOF
+	echo -e "\nCMake generator: \"${CMAKE_GENERATOR}\"\n" | log_buffer info
 	case "${CMAKE_GENERATOR}" in
 		"Ninja")
 			cat >runmake.sh <<-EOF

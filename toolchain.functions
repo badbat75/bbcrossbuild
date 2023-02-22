@@ -917,12 +917,14 @@ function setup_gcc () {
 			RTD=${RTD:+${RTD} }${RTLDLIST}
 			if [ -n "${RTD}" ]
 			then
-				if [ ! -d "${TOOLCHAIN_PATH}/bin" ]
-				then
-					run_cmd "mkdir \"${TOOLCHAIN_PATH}/bin\""
-				fi
-				run_cmd "sed 's#^RTLDLIST=.*#RTLDLIST=\"${RTD}\"#' \"${LDD_PATH}/usr/bin/ldd\" > \"${TOOLCHAIN_PATH}/bin/ldd\""
-				run_cmd "chmod +x \"${TOOLCHAIN_PATH}/bin/ldd\""
+				{
+					if [ ! -d "${TOOLCHAIN_PATH}/bin" ]
+					then
+						run_cmd "mkdir -pv \"${TOOLCHAIN_PATH}/bin\""
+					fi
+					run_cmd "sed 's#^RTLDLIST=.*#RTLDLIST=\"${RTD}\"#' \"${LDD_PATH}/usr/bin/ldd\" > \"${TOOLCHAIN_PATH}/bin/ldd\""
+					run_cmd "chmod +x \"${TOOLCHAIN_PATH}/bin/ldd\""
+				} > "${LOG_PATH}/toolchain_ldd.log"
 			fi
 		fi
 	}
