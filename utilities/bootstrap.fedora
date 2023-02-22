@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # GCC build
-PACKAGES="bc parted e2fsprogs btrfs-progs bzip2-devel rsync vim-common gcc g++ binutils binutils-devel dwarves elfutils-libelf-devel patchelf libzstd libzstd-devel tree curl gawk flex git xmltoman docbook-utils swig doxygen texinfo python3-docutils"
+PACKAGES="bc parted e2fsprogs btrfs-progs bzip2-devel rsync vim-common gcc g++ binutils dwarves elfutils-libelf-devel patchelf libzstd libzstd-devel tree curl gawk flex git xmltoman docbook-utils swig doxygen texinfo python3-docutils"
 
 # CLang build
-PACKAGES+=" binutils-devel python3-devel libedit-devel lua-devel ocaml-findlib ocaml-ctypes ocaml-ocamldoc"
+PACKAGES+=" libedit-devel lua-devel ocaml-findlib ocaml-ctypes ocaml-ocamldoc"
 
 # Debian Packages
 #PACKAGES+=" dpkg-dev devscripts apt debhelper perl-ExtUtils-MakeMaker perl-Archive-Zip"
@@ -15,8 +15,8 @@ PACKAGES+=" qemu-user-static"
 # for meson-ninja
 #PACKAGES+=" python3-pip"
 
-# for Python 3.7
-PACKAGES+=" openssl-devel libffi-devel"
+# for Python3
+PACKAGES+=" openssl-devel libffi-devel libuuid-devel tcl-devel tk-devl"
 
 # for moode
 PACKAGES+=" sqlite"

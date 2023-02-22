@@ -1429,7 +1429,7 @@ function setup_python () {
 				ax_cv_c_float_words_bigendian=no"
 		#--with-address-sanitizer --with-undefined-behavior-sanitizer
 		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/make\""
-		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/make install\""
+		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/make\" install"
 		run_cmd "${BUILD_PYTHON} \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py\""
 		popd
 		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}\""
