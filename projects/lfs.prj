@@ -151,9 +151,23 @@ fi
 echo "LANG=en_US.UTF-8" > ${BIN_PATH}/etc/locale.conf
 
 >${BIN_PATH}/postinst_scripts/99-lfs-configurations
-if [ ! -x ${LFS_WLANSSID} ] && [ ! -x ${LFS_WLANPSK} ] && [ ! -x ${LFS_WLANDEV} ]
+
+if [ -n "${LFS_LANDEV}" ]
 then
-	echo Configuring WiFi
+	echo Configuring LAN: ${LFS_LANDEV}
+	cat > ${BIN_PATH}/etc/systemd/network/${LFS_LANDEV}.network <<-EOF
+		[Match]
+		Name=${LFS_LANDEV}
+
+		[Network]
+		DHCP=yes
+	EOF
+	echo
+fi
+
+if [ -n "${LFS_WLANSSID}" ] && [ -n "${LFS_WLANPSK}" ] && [ -n "${LFS_WLANDEV}" ]
+then
+	echo Configuring WiFi: ${LFS_WLANDEV}
 	wpa_passphrase ${LFS_WLANSSID} ${LFS_WLANPSK} > ${BIN_PATH}/etc/wpa_supplicant/wpa_supplicant-${LFS_WLANDEV}.conf
 	cat >>${BIN_PATH}/postinst_scripts/99-lfs-configurations <<-EOF
 		systemctl enable wpa_supplicant@${LFS_WLANDEV}

@@ -23,7 +23,7 @@ case ${KERNEL_ARCH:-none} in
 esac
 case ${WITH_EXTOPTS:-1} in
 	yes|1)
-		CONF_FLAGS+=" -e BTRFS_FS"
+		CONF_FLAGS+=" -e BTRFS_FS -e BTRFS_FS_POSIX_ACL "
 		CONF_FLAGS+=" -e F2FS_FS -e CONFIG_F2FS_FS_SECURITY -e F2FS_FS_COMPRESSION"
 		;;
 esac

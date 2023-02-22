@@ -3,3 +3,17 @@ PKG_SUFFIX=_${KERNEL_VER}
 PKG_URL="https://cdn.kernel.org/pub/linux/kernel/v$( echo ${KERNEL_VER} | cut -d'.' -f1 ).x/linux-${KERNEL_VER}.tar.xz"
 BUILD_PROCESS=kernelbuild
 PKG_MAKEVARS="INSTALL_MOD_STRIP=1"
+CONF_FLAGS="-d WERROR"
+
+case ${WITH_EXTOPTS:-1} in
+	yes|1)
+		CONF_FLAGS+=" -e BTRFS_FS -e BTRFS_FS_POSIX_ACL "
+		CONF_FLAGS+=" -e F2FS_FS -e F2FS_FS_SECURITY -e F2FS_FS_COMPRESSION"
+		;;
+esac
+case ${WITH_RT:-0} in
+	yes|1)
+	# Enable preemptive/realtime kernel
+		CONF_FLAGS+=" -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT"
+		;;
+esac
