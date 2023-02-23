@@ -1731,6 +1731,7 @@ function build () {(
 		PKG_FULLNAME \
 		PKG_NAME \
 		PKG_PKGPATH \
+		PKG_REMOVELAFILES \
 		PKG_SRCDIR \
 		PKG_TARGET \
 		PKG_TARGET_ENV \
@@ -1985,7 +1986,19 @@ function build () {(
 	then
 		(
 			set -e
-			pwd
+			if [ "${PKG_REMOVELAFILES:-1}" -eq 1 ]
+			then
+				if [ -d "${PKG_PKGPATH}/lib${INSTALL_LIBSUFFIX}" ]
+				then
+				run_cmd "find \"${PKG_PKGPATH}/lib${INSTALL_LIBSUFFIX}\" -name "*.la" -print0 \
+					| xargs -0 -I{} rm -fv \"{}\""
+				fi
+				if [ -d  "${PKG_PKGPATH}${INSTALL_LIBDIR}" ]
+				then
+				run_cmd "find \"${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}\" -name "*.la" -print0 \
+					| xargs -0 -I{} rm -fv \"{}\""
+				fi
+			fi
 			if [ "${NOSAVESTATUS}" -eq 0 ] && [ -z "${TEMPORARY_STATUS}" ]
 			then
 				create_sfx_package "${PKG_PKGPATH}"
