@@ -18,7 +18,7 @@ CONF_FLAGS+=" --localstatedir=${INSTALL_LOCALSTATEDIR}"
 CONF_FLAGS+=" --runstatedir=/run"
 CONF_FLAGS+=" --with-system-socket=/run/dbus/system_bus_socket"
 CONF_FLAGS+=" --with-systemdsystemunitdir=/lib/systemd/system"
-CONF_FLAGS+=" --with-systemduserunitdir=${INSTALL_LIBDIR}/systemd/user"
+CONF_FLAGS+=" --with-systemduserunitdir=${INSTALL_PREFIX}/lib/systemd/user"
 CONF_FLAGS+=" --docdir=${INSTALL_SHAREDIR}/doc/dbus-${PKG_VER}"
 PKG_MAKETARGETS="all,install-strip"
 

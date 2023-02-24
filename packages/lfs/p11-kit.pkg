@@ -5,7 +5,7 @@ PKG_DEPS="lfs/libtasn1 lfs/libffi"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--with-trust-paths=${INSTALL_SYSCONFDIR}/pki/anchors"
-CONF_VARS="systemduserunitdir=${INSTALL_LIBDIR}/systemd/user"
+CONF_VARS="systemduserunitdir=${INSTALL_PREFIX}/lib/systemd/user"
 PKG_MAKETARGETS="install-strip"
 PKG_PREBUILD="if [ -f trust/trust-extract-compat.orig ]
 		then

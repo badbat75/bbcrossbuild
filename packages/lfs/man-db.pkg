@@ -3,7 +3,7 @@ PKG_VER=2.11.1
 PKG_URL="https://gitlab.com/man-db/man-db/-/archive/${PKG_VER}/man-db-${PKG_VER}.tar.bz2"
 PKG_DEPS="lfs/libpipeline lfs/gdbm lfs/zlib lfs/gzip lfs/bzip2 lfs/xz lfs/zstd"
 BUILD_PROCESS=configmake
-CONF_FLAGS="--with-systemdsystemunitdir=/lib/systemd/system --with-systemduserunitdir=${INSTALL_LIBDIR}/systemd/user \
+CONF_FLAGS="--with-systemdsystemunitdir=/lib/systemd/system --with-systemduserunitdir=${INSTALL_PREFIX}/lib/systemd/user \
     --with-systemdtmpfilesdir=${INSTALL_LIBDIR}/tmpfiles.d \
     --with-browser=${INSTALL_PREFIX}/bin/lynx --with-vgrind=${INSTALL_PREFIX}/bin/vgrind --with-grap=${INSTALL_PREFIX}/bin/grap \
     --disable-setuid --enable-cache-owner=bin"
