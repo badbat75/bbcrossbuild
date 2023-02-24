@@ -1,8 +1,7 @@
-# python_3
+# python3
 PYTHON_BINVER=$(echo ${PYTHON_VER} | cut -d"." -f1,2)
-PKG_SUFFIX=_${PYTHON_VER}
-PKG_URL="https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PYTHON_VER}.tar.xz"
-PKG_DEPS="lfs/ncurses lfs/zlib lfs/bzip2 lfs/expat lfs/libffi lfs/libmpdec lfs/gdbm lfs/readline lfs/openssl"
+PKG_VER=${PYTHON_VER}
+PKG_URL="https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PKG_VER}.tar.xz"
 PKG_AUTOCONF=1
 BUILD_PROCESS=configmake
 PKG_TWOSTEPSBUILD=1
@@ -11,9 +10,16 @@ if [ "${LTOENABLE:-0}" != "0" ]
 then
 	CONF_FLAGS+=" --with-lto"
 fi
-CONF_VARS="CROSS_COMPILE=${HARCH}- CROSS_COMPILE_TARGET=yes \
-	ax_cv_c_float_words_bigendian=$([ ${HMENDIAN} != little ] && echo yes || echo no) \
-	ac_cv_file__dev_ptmx=yes ac_cv_file__dev_ptc=no"
+case ${PKG_TARGET} in
+	cross|native)
+		;;
+	*)
+		PKG_DEPS="lfs/ncurses lfs/zlib lfs/bzip2 lfs/expat lfs/libffi lfs/libmpdec lfs/gdbm lfs/readline lfs/openssl"
+		CONF_VARS="CROSS_COMPILE=${HARCH}- CROSS_COMPILE_TARGET=yes \
+			ax_cv_c_float_words_bigendian=$([ ${HMENDIAN} != little ] && echo yes || echo no) \
+			ac_cv_file__dev_ptmx=yes ac_cv_file__dev_ptc=no"
+		;;
+esac
 #PKG_MAKETARGETS="all,install"
 PKG_OVERRIDELTO=0
 case ${TOOLCHAIN} in
