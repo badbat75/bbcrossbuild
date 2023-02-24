@@ -15,6 +15,7 @@ CONF_FLAGS+=" -Dtests=false"
 CONF_FLAGS+=" -Dexamples=false"
 BUILD_PROCESS=mesonninja
 #PKG_MAKETARGETS="all,install"
+PKG_MAKEENV="LD_LIBRARY_PATH=${TOOLCHAIN_PATH}/lib"
 PKG_POSTBUILD="chmod -v 04755 ${PKG_PKGPATH}${INSTALL_LIBDIR}/polkit-1/polkit-agent-helper-1"
 PKG_POSTINSTALL="if ! getent group polkitd; then
 	groupadd --system -fg 27 polkitd

@@ -1,5 +1,5 @@
 # GLib
-PKG_VER=2.75.2
+PKG_VER=2.75.3
 PKG_URL="https://download.gnome.org/sources/glib/$(echo ${PKG_VER} | cut -d'.' -f1,2)/glib-${PKG_VER}.tar.xz"
 case "${PKG_TARGET}" in
 	bootstrap)
@@ -14,5 +14,6 @@ case "${PKG_TARGET}" in
 esac
 DBUS_TARGET=bootstrap
 BUILD_PROCESS=mesonninja
-CONF_FLAGS="-Dman=true -Dtests=false"
+CONF_FLAGS="-Dglib_debug=disabled -Dman=true -Dtests=false"
 #PKG_MAKETARGETS="all,install"
+PKG_OVERRIDESTATIC=1
