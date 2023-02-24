@@ -19,7 +19,7 @@ CONF_FLAGS="--disable-libevent \
     --with-distro=none \
     --with-systemdsystemunitdir=/lib/systemd/system \
     --with-dbus-system-address="'unix:path=/run/dbus/system_bus_socket'
-#PKG_MAKEVARS="INTROSPECTION_SCANNER=${TOOLCHAIN_PATH}/bin/g-ir-scanner INTROSPECTION_COMPILER=${TOOLCHAIN_PATH}/bin/g-ir-compiler"
+PKG_MAKEENV="LD_LIBRARY_PATH=${TOOLCHAIN_PATH}/lib"
 PKG_MAKETARGETS="all,install-strip"
 
 PKG_PREBUILD="sed '426a if (events & AVAHI_WATCH_HUP) { \\
