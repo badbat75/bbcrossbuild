@@ -4,7 +4,7 @@ PKG_URL="https://github.com/elogind/elogind/archive/v${PKG_VER}/elogind-${PKG_VE
 PKG_DEPS="lfs/D-Bus lfs/Linux-PAM lfs/polkit"
 PKG_DEPS+=" lfs/gobject-introspection lfs/kexec-tools"
 BUILD_PROCESS=mesonninja
-CONF_FLAGS="-Drootlibdir=/lib${INSTALL_LIBSUFFIX}"
+CONF_FLAGS="-Drootlibdir=/lib${HARCH_LIB}${INSTALL_LIBSUFFIX}"
 CONF_FLAGS+=" -Dcgroup-controller=elogind"
 CONF_FLAGS+=" -Ddbuspolicydir=${INSTALL_SYSCONFDIR}/dbus-1/system.d"
 CONF_FLAGS+=" -Dman=auto"

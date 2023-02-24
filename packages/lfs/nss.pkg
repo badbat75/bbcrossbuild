@@ -6,7 +6,10 @@ PKG_DEPS="lfs/zlib lfs/nspr lfs/p11-kit:bootstrap"
 BUILD_PROCESS=custom
 #PKG_DEPS+=" lfs/SQLite"
 PKG_BUILDSCRIPT="pushd nss
-./build.sh $([ ${MAKEVERBOSE:-0} -eq 1 ] && echo "-v" || true) -c --opt --disable-tests --target ${HM} --system-nspr --enable-libpkix -j ${NPROCS}
+./build.sh $([ ${MAKEVERBOSE:-0} -eq 1 ] && echo "-v" || true) -c --opt --disable-tests --target $(case ${HM} in
+        x86_64) echo x64;; 
+        *) echo ${HM};;
+    esac) --system-nspr --enable-libpkix -j ${NPROCS}
 popd"
 PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}${INSTALL_INCLUDEDIR}/nss
     install -vdm755 ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}

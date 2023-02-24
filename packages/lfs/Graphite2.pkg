@@ -7,7 +7,7 @@ case ${PKG_TARGET} in
     *) PKG_DEPS+=" lfs/HarfBuzz lfs/FreeType" ;;
 esac
 BUILD_PROCESS=cmakebuild
-CONF_FLAGS=""
+CONF_FLAGS="-DLIB_SUFFIX=${HARCH_LIB}${INSTALL_LIBSUFFIX}"
 PKG_MAKETARGETS="all,install/strip"
 PKG_OVERRIDELTO=0
 

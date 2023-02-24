@@ -2001,13 +2001,11 @@ function build () {(
 			then
 				if [ -d "${PKG_PKGPATH}/lib${INSTALL_LIBSUFFIX}" ]
 				then
-				run_cmd "find \"${PKG_PKGPATH}/lib${INSTALL_LIBSUFFIX}\" -name "*.la" -print0 \
-					| xargs -0 -I{} rm -fv \"{}\""
+				run_cmd "find \"${PKG_PKGPATH}/lib${INSTALL_LIBSUFFIX}\" -name \"*.la\" -print0 | xargs -0 -I{} rm -fv \"{}\""
 				fi
 				if [ -d "${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}" ]
 				then
-				run_cmd "find \"${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}\" -name "*.la" -print0 \
-					| xargs -0 -I{} rm -fv \"{}\""
+				run_cmd "find \"${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}\" -name \"*.la\" -print0 | xargs -0 -I{} rm -fv \"{}\""
 				fi
 			fi
 			if [ "${NOSAVESTATUS}" -eq 0 ] && [ -z "${TEMPORARY_STATUS}" ]
