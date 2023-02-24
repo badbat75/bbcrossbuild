@@ -65,8 +65,9 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Dtpm2=false"
 	;;
 	*)
-		PKG_DEPS+=" lfs/D-Bus lfs/gnu-efi lfs/libcap2 lfs/libaudit lfs/openssl lfs/Linux-PAM lfs/polkit lfs/GLib lfs/kmod lfs/util-linux"
+		PKG_DEPS+=" lfs/D-Bus lfs/libcap2 lfs/libaudit lfs/openssl lfs/Linux-PAM lfs/polkit lfs/GLib lfs/kmod lfs/util-linux"
 		### Optional packages
+		#PKG_DEPS+=" lfs/gnu-efi"
 		PKG_DEPS+=" lfs/gnutls"
 		PKG_DEPS+=" lfs/btrfs-progs"
 		PKG_DEPS+=" lfs/curl"
@@ -102,9 +103,9 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Ddbuspolicydir=${INSTALL_SHAREDIR}/dbus-1/system.d"
 		CONF_FLAGS+=" -Ddbus-interfaces-dir=${INSTALL_SHAREDIR}/dbus-1/interfaces"
 		CONF_FLAGS+=" -Dbashcompletiondir=${INSTALL_SHAREDIR}/bash-completion/completions/"
-		CONF_FLAGS+=" -Defi-cflags=-lgcc_s"
-		CONF_FLAGS+=" -Defi-includedir=${BIN_PATH}${INSTALL_INCLUDEDIR}/efi"
-		CONF_FLAGS+=" -Defi-libdir=${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
+		#CONF_FLAGS+=" -Defi-cflags=-lgcc_s"
+		#CONF_FLAGS+=" -Defi-includedir=${BIN_PATH}${INSTALL_INCLUDEDIR}/efi"
+		#CONF_FLAGS+=" -Defi-libdir=${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 		CONF_FLAGS+=" -Dquotaon-path=${INSTALL_EXECPREFIX}/sbin/quotaon"
 		CONF_FLAGS+=" -Dquotacheck-path=${INSTALL_EXECPREFIX}/sbin/quotacheck"
 		CONF_FLAGS+=" -Dkexec-path=${INSTALL_EXECPREFIX}/sbin/kexec"
