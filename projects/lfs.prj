@@ -55,6 +55,7 @@ KERNEL_LTOENABLE=thin
 	#build lfs/glibc
 	build lfs/tzdata
 	build lfs/shadow
+	build lfs/Linux-PAM
 ### Core services
 	build lfs/systemd
 	build lfs/D-Bus
