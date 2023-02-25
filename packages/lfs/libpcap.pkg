@@ -1,7 +1,7 @@
 # libpcap
 PKG_VER=1.10.3
 PKG_URL="https://www.tcpdump.org/release/libpcap-${PKG_VER}.tar.gz"
-PKG_DEPS="lfs/D-Bus"
+PKG_DEPS="lfs/systemd:bootstrap lfs/D-Bus"
 BUILD_PROCESS=cmakebuild
 PKG_MAKETARGETS="all,install/strip"
 PKG_OVERRIDELTO=0

@@ -21,6 +21,14 @@ CONF_FLAGS+=" --with-systemduserunitdir=${INSTALL_PREFIX}/lib/systemd/user"
 CONF_FLAGS+=" --docdir=${INSTALL_SHAREDIR}/doc/dbus-${PKG_VER}"
 PKG_MAKETARGETS="all,install-strip"
 
+PKG_OVERRIDELTO=0
+case ${TOOLCHAIN} in
+	gnu)
+		PKG_OVERRIDELD=bfd
+		PKG_LDFLAGS="-Wl,-rpath-link -Wl,${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
+	;;
+esac
+
 PKG_PREBUILD="sed 's/static dbus_bool_t fatal_warnings_on_check_failed = TRUE/static dbus_bool_t fatal_warnings_on_check_failed = FALSE/' -i dbus/dbus-internals.c"
 
 PKG_POSTINSTALL="ln -sfv /etc/machine-id ${INSTALL_LOCALSTATEDIR}/lib/dbus/machine-id
