@@ -820,7 +820,8 @@ function setup_gcc () {
 			run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" all-target-${OBJECT}"
 			echo "Installing ${OBJECT} in the toolchain dir" | log_buffer info
 			run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" install-strip-target-${OBJECT}"
-			relink_la_libraries "${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER}"
+			run_cmd "rm -fv ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER}/*.la"
+			#relink_la_libraries "${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER}"
 			if [ "${OBJECT}" != "libsanitizer" ]
 			then
 				echo "Creating package for ${PKG_NAME}" | log_buffer info
@@ -829,7 +830,8 @@ function setup_gcc () {
 					run_cmd "rm -rf \"${PACKAGES_PATH}/gcc-${OBJECT}_${GCC_VER}\""
 				fi
 				run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" DESTDIR=\"${PACKAGES_PATH}/${PKG_NAME}\" prefix=${TARGET_PREFIX} install-strip-target-${OBJECT}"
-				relink_la_libraries "${PACKAGES_PATH}/${PKG_NAME}${TARGET_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}"
+				run_cmd "rm -fv ${PACKAGES_PATH}/${PKG_NAME}${TARGET_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}/*.la"
+				#relink_la_libraries "${PACKAGES_PATH}/${PKG_NAME}${TARGET_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}"
 				if [ "${GCC_BOOTSTRAP}" -eq 0 ]
 				then
 					if [ "${GCC_IS_MAIN}" -eq 1 ]

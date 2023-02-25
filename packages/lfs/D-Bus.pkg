@@ -1,14 +1,13 @@
 # D-Bus
 PKG_VER=1.14.6
 PKG_URL="https://dbus.freedesktop.org/releases/dbus/dbus-${PKG_VER}.tar.xz"
-PKG_DEPS="lfs/expat lfs/libaudit:bootstrap lfs/libcap2 lfs/GLib:bootstrap lfs/libX11"
-PKGDEPS+=" lfs/systemd:bootstrap"
+PKG_DEPS="lfs/expat lfs/libX11"
+PKG_DEPS+=" lfs/systemd:bootstrap"
 PKG_AUTOCONF=1
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-user-session"
-CONF_FLAGS+=" --disable-traditional-activation"
 CONF_FLAGS+=" --enable-inotify"
-CONF_FLAGS+=" --enable-libaudit"
+#CONF_FLAGS+=" --enable-libaudit"
 CONF_FLAGS+=" --enable-systemd"
 CONF_FLAGS+=" --disable-asserts"
 CONF_FLAGS+=" --disable-doxygen-docs"
@@ -24,8 +23,8 @@ PKG_MAKETARGETS="all,install-strip"
 
 PKG_PREBUILD="sed 's/static dbus_bool_t fatal_warnings_on_check_failed = TRUE/static dbus_bool_t fatal_warnings_on_check_failed = FALSE/' -i dbus/dbus-internals.c"
 
-PKG_POSTINSTALL="chown -v root:messagebus ${INSTALL_PREFIX}/libexec/dbus-daemon-launch-helper
-chmod -v 4750 ${INSTALL_PREFIX}/libexec/dbus-daemon-launch-helper
-ln -sfv /etc/machine-id ${INSTALL_LOCALSTATEDIR}/lib/dbus/machine-id"
+PKG_POSTINSTALL="ln -sfv /etc/machine-id ${INSTALL_LOCALSTATEDIR}/lib/dbus/machine-id
+chown -v root:messagebus ${INSTALL_PREFIX}/libexec/dbus-daemon-launch-helper
+chmod -v 4750 ${INSTALL_PREFIX}/libexec/dbus-daemon-launch-helper"
 
 PKG_POSTINSTALL_PRIO=11

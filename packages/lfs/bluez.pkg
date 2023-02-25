@@ -2,7 +2,7 @@
 PKG_VER=5.66
 PKG_URL="http://www.kernel.org/pub/linux/bluetooth/bluez-${PKG_VER}.tar.xz"
 PATCHES="https://www.linuxfromscratch.org/patches/blfs/svn/bluez-${PKG_VER}-obexd_without_systemd-1.patch"
-PKG_DEPS="lfs/readline lfs/GLib lfs/libical lfs/ell lfs/json-c"
+PKG_DEPS="lfs/D-Bus lfs/readline lfs/GLib lfs/libical lfs/ell lfs/json-c"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-backtrace"
 CONF_FLAGS+=" --enable-btpclient"
