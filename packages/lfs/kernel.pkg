@@ -5,7 +5,6 @@ BUILD_PROCESS=kernelbuild
 PKG_MAKEVARS="INSTALL_MOD_STRIP=1"
 CONF_FLAGS="-d WERROR"
 CONF_FLAGS+=" -d DEBUG_INFO_BTF"
-CONF_FLAGS+=" -e VIRTIO_BLK -e CONFIG_SCSI_VIRTIO"
 
 case ${WITH_EXTOPTS:-1} in
 	yes|1)
@@ -20,6 +19,9 @@ case ${WITH_RT:-0} in
 		;;
 esac
 
-case ${HM} in
-	x86_64) PATCHES="kernel/x86_64-$( echo ${PKG_VER} | cut -d'.' -f1,2 ).patch" ;;
-esac
+#case ${HM} in
+#	x86_64)
+#		PATCHES="kernel/x86_64-$( echo ${PKG_VER} | cut -d'.' -f1,2 ).patch"
+#		CONF_FLAGS+=" -e VIRTIO_BLK -e CONFIG_SCSI_VIRTIO"
+#	;;
+#esac
