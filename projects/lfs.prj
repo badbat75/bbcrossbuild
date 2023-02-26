@@ -236,6 +236,29 @@ function build_lfs_image () {
 	run_on_root_dir lfs root "useradd -G wheel -m lfs"
 	#run_on_root_dir lfs root "echo root:changeme | chpasswd"
 	run_on_root_dir lfs root "echo lfs:lfs | chpasswd"
+	LFS_LBROOT="$(findmnt -nu -o SOURCE ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/lfs)"
+	echo "Loopback of lfs root: ${LFS_LBROOT}"
+	LFS_PARTUUID="$(blkid -o value --match-tag PARTUUID ${LFS_LBROOT})"
+	echo "PARTUUID of lfs root: ${LFS_PARTUUID}"
+	case ${PLATFORM_NAME} in
+		generic-x64)
+			cat >${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/lfs.qemu <<-EOF
+				#!/bin/sh
+				sudo qemu-system-${HM} \\
+				   -accel kvm \\
+				   -M q35 -cpu host -smp 4 -m 6144 \\
+				   -device virtio-balloon-pci -device virtio-rng-pci \\
+				   -device virtio-blk-pci,drive=disk0 -drive file=lfs.img,if=none,format=raw,id=disk0 \\
+				   -device virtio-net-pci,netdev=eth0 -netdev user,id=eth0,hostfwd=tcp::5022-:22,hostfwd=tcp::5080-:80 \\
+				   -usb -device usb-ehci -device usb-kbd -device usb-mouse \\
+				   -device intel-hda -audiodev alsa,id=default \\
+				   -nographic \\
+				   -kernel ${BIN_PATH}/boot/vmlinuz-${KERNEL_VER} \\
+				   -append "console=ttyS0 root=PARTUUID=${LFS_PARTUUID} rootfstype=${LFS_FSTYPE} fsck.repair=yes rootwait"
+			EOF
+			chmod +x "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.qemu"
+		;;
+	esac
 	pause
 	unmount_tag --finalize lfs
 	set +e

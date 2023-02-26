@@ -4,6 +4,8 @@ PKG_URL="https://cdn.kernel.org/pub/linux/kernel/v$( echo ${PKG_VER} | cut -d'.'
 BUILD_PROCESS=kernelbuild
 PKG_MAKEVARS="INSTALL_MOD_STRIP=1"
 CONF_FLAGS="-d WERROR"
+CONF_FLAGS+=" -d DEBUG_INFO_BTF"
+CONF_FLAGS+=" -e VIRTIO_BLK -e CONFIG_SCSI_VIRTIO"
 
 case ${WITH_EXTOPTS:-1} in
 	yes|1)

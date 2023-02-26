@@ -1604,8 +1604,18 @@ function setup_full_toolchain () {
 	fi
 
 	setup_rust
+
 	build lfs/sccache:native
 	CCWRAPPER=${GLOBAL_TOOLCHAIN_PATH}/bin/sccache
+	SCCACHE_DIR=${GLOBAL_CACHE_PATH}/sccache
+	SCCACHE_CACHE_SIZE=${SCCACHE_CACHE_SIZE:-16G}
+	SCCACHE_NO_DAEMON=${SCCACHE_NO_DAEMON:-1}
+	export SCCACHE_DIR SCCACHE_CACHE_SIZE SCCACHE_NO_DAEMON
+	if [ ! -d "${SCCACHE_DIR}" ]
+	then
+		run_cmd "mkdir -pv \"${SCCACHE_DIR}\""
+	fi
+
 	build lfs/make:native
 	setup_autotools --default
 	build lfs/pkgconf:native
@@ -1615,11 +1625,14 @@ function setup_full_toolchain () {
 	setup_gcc ${SETUP_GCC}
 	setup_toolchain_wrapper
 	build lfs/cmake:native
+
 	if [ "${WITH_LLVM}" -eq 1 ] || [ "${TOOLCHAIN}" = llvm ]
 	then
 		setup_llvm ${SETUP_LLVM}
 	fi
+
 	build lfs/ninja:native
+
 	if [ "${WITH_PYTHON}" -eq 1 ]
 	then
 		set +e
@@ -1639,6 +1652,7 @@ function setup_full_toolchain () {
 	PYTHONBIN_VER=${PYTHONBIN_VER:-$(cut -d. -f1,2 <<<"${PYTHON_VER}")}
 	PYTHONBIN_MAJVER=${PYTHONBIN_VER:-$(cut -d. -f1 <<<"${PYTHON_VER}")}
 	pathadd PYTHONPATH "${GLOBAL_TOOLCHAIN_PATH}/lib/python${PYTHONBIN_VER}/site-packages"
+	
 	build lfs/meson:native
 	set +e
 }

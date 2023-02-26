@@ -1263,6 +1263,8 @@ function kernelbuild () {
 		run_cmd "mkdir -p \"${PKG_PKGPATH}/boot\""
 	fi
 
+	run_cmd "cp -pv .config \"${PKG_PKGPATH}/boot/config-$(./make4kern.sh kernelversion)\""
+
 	# Build and install kernel
 	run_cmd "./make4kern.sh \"${KERNEL_IMAGE}\""
 	case ${KERNEL_NAME}
