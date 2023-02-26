@@ -1,6 +1,6 @@
 # bs_kernel
-PKG_SUFFIX=_${KERNEL_VER}
-PKG_URL="https://cdn.kernel.org/pub/linux/kernel/v$( echo ${KERNEL_VER} | cut -d'.' -f1 ).x/linux-${KERNEL_VER}.tar.xz"
+PKG_VER=${KERNEL_VER}
+PKG_URL="https://cdn.kernel.org/pub/linux/kernel/v$( echo ${PKG_VER} | cut -d'.' -f1 ).x/linux-${PKG_VER}.tar.xz"
 BUILD_PROCESS=kernelbuild
 PKG_MAKEVARS="INSTALL_MOD_STRIP=1"
 CONF_FLAGS="-d WERROR"
@@ -16,4 +16,8 @@ case ${WITH_RT:-0} in
 	# Enable preemptive/realtime kernel
 		CONF_FLAGS+=" -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT"
 		;;
+esac
+
+case ${HM} in
+	x86_64) PATCHES="kernel/x86_64-$( echo ${PKG_VER} | cut -d'.' -f1,2 ).patch" ;;
 esac
