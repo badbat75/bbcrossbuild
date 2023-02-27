@@ -1,10 +1,13 @@
 # elfutils
 PKG_VER=0.188
 PKG_URL="https://sourceware.org/ftp/elfutils/${PKG_VER}/elfutils-${PKG_VER}.tar.bz2"
-PKG_DEPS="lfs/zlib lfs/gzip lfs/bzip2 lfs/zstd lfs/xz"
+case ${PKG_TARGET} in
+    cross|native) ;;
+    *) PKG_DEPS="lfs/zlib lfs/gzip lfs/bzip2 lfs/zstd lfs/xz";;
+esac
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
-CONF_FLAGS="--disable-debuginfod --disable-werror --enable-libdebuginfod=dummy --program-prefix="
+CONF_FLAGS="--program-prefix=eu- --disable-debuginfod --disable-werror --enable-libdebuginfod=dummy"
 PKG_MAKEVARS="STRIPPROG=${HARCH}-strip"
 PKG_MAKETARGETS="all,install-strip"
 #PKG_OVERRIDELTO=0 ### LLVM build successfully

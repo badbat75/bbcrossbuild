@@ -19,6 +19,11 @@ case ${WITH_RT:-0} in
 		;;
 esac
 
+case ${PKG_TARGET} in
+	headers) ;;
+	*) PKG_DEPS="lfs/elfutils:cross" ;;
+esac
+
 #case ${HM} in
 #	x86_64)
 #		PATCHES="kernel/x86_64-$( echo ${PKG_VER} | cut -d'.' -f1,2 ).patch"
