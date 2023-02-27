@@ -145,7 +145,16 @@ case "${PKG_TARGET}" in
 			EOF
 			ln -sfv /dev/null ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/systemd/system/tmp.mount
 			"
-		PKG_POSTINSTALL="systemd-machine-id-setup && systemctl preset-all"
+		PKG_POSTINSTALL="[ -w ${INSTALL_LOCALSTATEDIR} ] && mkdir -pv ${INSTALL_LOCALSTATEDIR}/log/journal
+[ -w ${INSTALL_LOCALSTATEDIR} ] && journalctl --update-catalog
+systemd-tmpfiles --create
+
+systemd-machine-id-setup
+systemctl preset-all
+systemctl --global preset-all
+
+udevadm hwdb --update
+"
 		PKG_POSTINSTALL_PRIO="10"
 		;;
 esac
