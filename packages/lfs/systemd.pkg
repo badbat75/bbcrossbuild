@@ -146,15 +146,16 @@ case "${PKG_TARGET}" in
 			ln -sfv /dev/null ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/systemd/system/tmp.mount
 			"
 		PKG_POSTINSTALL="[ -w ${INSTALL_LOCALSTATEDIR} ] && mkdir -pv ${INSTALL_LOCALSTATEDIR}/log/journal
-[ -w ${INSTALL_LOCALSTATEDIR} ] && journalctl --update-catalog
-systemd-tmpfiles --create
+[ -w ${INSTALL_LOCALSTATEDIR} ] && journalctl --update-catalog || :
+# systemd-sysusers || :
+systemd-tmpfiles --create || :
 
 systemd-machine-id-setup
 systemctl preset-all
 systemctl --global preset-all
 
 udevadm hwdb --update
-"
+#/lib/systemd/systemd-random-seed save 2>&1 | grep -v 'Failed to open /dev/urandom' || :"
 		PKG_POSTINSTALL_PRIO="10"
 		;;
 esac
