@@ -1613,7 +1613,7 @@ function setup_full_toolchain () {
 	export SCCACHE_DIR SCCACHE_CACHE_SIZE SCCACHE_NO_DAEMON
 	if [ ! -d "${SCCACHE_DIR}" ]
 	then
-		run_cmd "mkdir -pv \"${SCCACHE_DIR}\""
+		run_cmd "mkdir -pv \"${SCCACHE_DIR}\"" > ${GLOBAL_LOG_PATH}/toolchain_sccache.log
 	fi
 
 	build lfs/make:native

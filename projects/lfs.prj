@@ -14,13 +14,19 @@ LFS_FSSIZE=${LFS_FSSIZE:-4G}
 LFS_WLANDEV=${LFS_WLANDEV:-wlan0}
 
 echo "Tool chain: ${TOOLCHAIN}"
+echo "Architecture: ${HARCH}"
+echo
 echo "Is ssh enabled: $( [ ${LFS_ENABLESSH} -eq 1 ] && echo yes || no )"
 echo "LFS hostname: ${LFS_HOSTNAME}"
 echo "LFS filesystem type: ${LFS_FSTYPE}"
+if [ ! -x ${LFS_LANDEV} ]
+then
+	echo "LAN device: ${LFS_LANDEV}"
+fi
 if [ ! -x ${LFS_WLANSSID} ] && [ ! -x ${LFS_WLANPSK} ] && [ ! -x ${LFS_WLANDEV} ]
 then
-	echo "SSID: ${LFS_WLANSSID}"
 	echo "WLAN device: ${LFS_WLANDEV}"
+	echo "SSID: ${LFS_WLANSSID}"
 fi
 echo
 
