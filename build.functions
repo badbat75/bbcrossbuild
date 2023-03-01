@@ -1046,7 +1046,7 @@ function mesonninja () {
 		*) RUNCONFIG_CMD+=" -Db_lto=true" ;;
 	esac
 	local NINJA_FLAGS
-	NINJA_FLAGS="$( if [ "${MAKEVERBOSE}" -eq 1 ]; then echo -n ' -v'; fi ) -j${NPROCS}"
+	NINJA_FLAGS="$( if [ "${MAKEVERBOSE}" -eq 1 ]; then echo -n ' -v'; fi ) -j\"${NPROCS}\""
 	case ${PKG_TARGET} in
 		cross|native) ;;
 		*)
