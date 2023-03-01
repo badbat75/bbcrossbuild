@@ -1,5 +1,5 @@
 # openssh
-PKG_VER=9.2p1
+PKG_VER=9.1p1
 PKG_URL="http://ftp.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-${PKG_VER}.tar.gz"
 PKG_DEPS="lfs/Linux-PAM lfs/krb5 lfs/net-tools lfs/Linux-PAM lfs/libedit lfs/sysstat lfs/xauth lfs/zlib"
 BUILD_PROCESS=configmake
@@ -13,9 +13,9 @@ CONF_FLAGS="--sysconfdir=${INSTALL_SYSCONFDIR}/ssh \
 		--with-kerberos5=${INSTALL_PREFIX} \
 		--with-libedit \
 		--with-xauth=/usr/bin/xauth"
-#PKG_MAKETARGETS="all,install"
-PKG_PREBUILD="sed -e '/INSTALLKEYS_SH/s/)//' -e '260a\  )' -i contrib/ssh-copy-id
-	sed -i '/^STRIP_OPT/ s/-s$/\"-s --strip-program=\$STRIP\"/' configure.ac"
+PKG_MAKETARGETS=",install"
+PKG_LDFLAGS="-s"
+PKG_PREBUILD="sed -e '/INSTALLKEYS_SH/s/)//' -e '260a\  )' -i contrib/ssh-copy-id"
 PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/lib/systemd/system
 	cat <<-EOF >${PKG_PKGPATH}/lib/systemd/system/sshd.service
 		[Unit]

@@ -14,7 +14,7 @@ CONF_FLAGS+=" --disable-asserts"
 CONF_FLAGS+=" --disable-doxygen-docs"
 CONF_FLAGS+=" --disable-xml-docs"
 #CONF_FLAGS+=" --disable-tests"
-CONF_FLAGS+=" --enable-installed-tests"
+#CONF_FLAGS+=" --enable-installed-tests"
 CONF_FLAGS+=" --localstatedir=${INSTALL_LOCALSTATEDIR}"
 CONF_FLAGS+=" --runstatedir=/run"
 CONF_FLAGS+=" --with-system-socket=/run/dbus/system_bus_socket"
@@ -62,9 +62,7 @@ PKG_POSTBUILD="cat >>${PKG_PKGPATH}/lib/systemd/system/dbus.service <<-EOF
 PKG_POSTINSTALL="ln -sfv /etc/machine-id ${INSTALL_LOCALSTATEDIR}/lib/dbus/machine-id
 chown -v root:messagebus ${INSTALL_PREFIX}/libexec/dbus-daemon-launch-helper
 chmod -v 4750 ${INSTALL_PREFIX}/libexec/dbus-daemon-launch-helper
-if [ -x /usr/bin/systemctl ]; then
-    systemctl --no-reload preset dbus.socket &>/dev/null || :
-    systemctl --no-reload --global preset dbus.socket &>/dev/null || :
-fi"
+systemctl preset dbus.socket
+systemctl --global preset dbus.socket"
 
 PKG_POSTINSTALL_PRIO=11

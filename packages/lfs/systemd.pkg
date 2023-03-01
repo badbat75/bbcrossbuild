@@ -128,11 +128,9 @@ case "${PKG_TARGET}" in
 
 				session  required    pam_env.so
 				session  required    pam_limits.so
-				session  required    pam_unix.so
-				session  required    pam_loginuid.so
+				session  include     system-session
 				session  optional    pam_keyinit.so force revoke
 				session  required    pam_namespace.so
-				session  optional    pam_systemd.so
 
 				auth     required    pam_deny.so
 				password required    pam_deny.so
@@ -145,17 +143,17 @@ case "${PKG_TARGET}" in
 			EOF
 			ln -sfv /dev/null ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/systemd/system/tmp.mount
 			"
-		PKG_POSTINSTALL="[ -w ${INSTALL_LOCALSTATEDIR} ] && mkdir -pv ${INSTALL_LOCALSTATEDIR}/log/journal
-[ -w ${INSTALL_LOCALSTATEDIR} ] && journalctl --update-catalog || :
-# systemd-sysusers || :
-systemd-tmpfiles --create || :
+		PKG_POSTINSTALL="mkdir -pv ${INSTALL_LOCALSTATEDIR}/log/journal
+journalctl --update-catalog
+# systemd-sysusers
+# systemd-tmpfiles --create
 
 systemd-machine-id-setup
 systemctl preset-all
 systemctl --global preset-all
 
-udevadm hwdb --update
-#/lib/systemd/systemd-random-seed save 2>&1 | grep -v 'Failed to open /dev/urandom' || :"
+systemd-hwdb update
+/lib/systemd/systemd-random-seed save"
 		PKG_POSTINSTALL_PRIO="10"
 		;;
 esac

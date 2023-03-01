@@ -15,6 +15,7 @@ CONF_FLAGS="--prefix=${INSTALL_PREFIX} --openssldir=${INSTALL_SYSCONFDIR}/ssl $(
         ;;
     esac
     ) shared zlib-dynamic no-tests"
+CONF_VARS="-DDEVRANDOM="'\"\\\"/dev/urandom\\\"\"'
 BUILD_PROCESS=configmake
 #PKG_MAKETARGETS="all,install"
 PKG_MAKEVARS="MANSUFFIX=ssl LIBDIR=lib${HARCH_LIB}${INSTALL_LIBSUFFIX}"

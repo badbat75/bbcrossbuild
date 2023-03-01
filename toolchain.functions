@@ -593,7 +593,8 @@ function setup_gcc () {
 
 		### Config parameters in common with GCC and Binutils
 		COMMON_CONFIG="--with-sysroot=/ --with-sysroot=$(gcc_sysroot) --enable-shared --with-system-zlib"
-		GCC_CONFIG="--enable-languages=${GCC_LANGUAGES:-c,c++} --enable-multiarch --enable-version-specific-runtime-libs  \
+		GCC_CONFIG="--enable-languages=${GCC_LANGUAGES:-c,c++} --enable-version-specific-runtime-libs  \
+			$( if [ ${MULTI_ARCH} -eq 1 ] && [ -z "${HARCH_LIB}" ]; then echo --enable-multiarch; fi ) \
 			--enable-threads=posix --enable-tls --enable-checking=release --disable-multilib \
 			--enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object \
 			--enable-linker-build-id --with-gcc-major-version-only --enable-libstdcxx-backtrace \
@@ -1424,15 +1425,15 @@ function setup_python () {
 				;;
 		esac
 		export LDFLAGS+=" -Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/lib"
-		run_cmd "\"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configur\"e --prefix=\"${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}\" --enable-shared \
-			--with-system-ffi --with-ensurepip=yes --disable-test-modules \
-			--enable-optimizations --with-lto --enable-ipv6 \
-			--with-system-ffi --with-ensurepip=yes \
-				ax_cv_c_float_words_bigendian=no"
+		run_cmd "\"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configure\" \\
+			--prefix=\"${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}\" --enable-shared \\
+			--with-system-ffi --with-ensurepip=yes --disable-test-modules \\
+			--with-lto --enable-ipv6 \\
+			--with-system-ffi --with-ensurepip=yes"
 		#--with-address-sanitizer --with-undefined-behavior-sanitizer
 		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/make\""
 		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/make\" install"
-		run_cmd "${BUILD_PYTHON} \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py\""
+		run_cmd "${PYTHON_FOR_BUILD} \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py\""
 		popd
 		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}\""
 		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip\" -v install --upgrade setuptools pip jinja2 docutils"
@@ -1445,13 +1446,13 @@ function setup_python () {
 			trap - ERR; \
 			return ${STATUS}' ERR
 
-		run_cmd "${BUILD_PYTHONPIP} install crossenv"
-		if [ ! -f "${TARGET_PYTHON}" ]
+		run_cmd "${PIP_FOR_BUILD} install crossenv"
+		if [ ! -f "${PYTHON_FOR_TARGET}" ]
 		then
-			echo "${TARGET_PYTHON} not found!!! Run build python to build one." | log_buffer error
+			echo "${PYTHON_FOR_TARGET} not found!!! Run build python to build one." | log_buffer error
 			return 2
 		fi
-		run_cmd "\"${BUILD_PYTHON}\" -m crossenv \"${TARGET_PYTHON}\" \"${TOOLCHAIN_PATH}/venv-${HARCH}\""
+		run_cmd "\"${PYTHON_FOR_BUILD}\" -m crossenv \"${PYTHON_FOR_TARGET}\" \"${TOOLCHAIN_PATH}/venv-${HARCH}\""
 		run_cmd "rmdir -v \"${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include\""
 		run_cmd "ln -sfv \"${PYTHON_SEARCHPATH}${TARGET_INCLUDEDIR}/python${PYTHONBIN_VER}\" \"${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include\""
 		cat >"${TOOLCHAIN_PATH}/venv-${HARCH}/cross/bin/python3-config" <<-EOF
@@ -1514,13 +1515,17 @@ function setup_python () {
 	else
 		echo -n "-${PYTHON_VER}... "
 	fi
+
 	PYTHONBIN_VER=$( cut -d. -f1,2 <<<"${PYTHON_VER}")
-	BUILD_PYTHON=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/python${PYTHONBIN_VER}
-	BUILD_PYTHONPIP=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip${PYTHONBIN_VER}
-	TARGET_PYTHON=${PYTHON_SEARCHPATH}/usr/bin/python${PYTHONBIN_VER}
+	PYTHONBIN_MAJVER=${PYTHONBIN_VER:-$(cut -d. -f1 <<<"${PYTHON_VER}")}
+	PYTHON_FOR_BUILD=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/python${PYTHONBIN_VER}
+	PIP_FOR_BUILD=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip${PYTHONBIN_VER}
+	PYTHON_FOR_TARGET=${PYTHON_SEARCHPATH}/usr/bin/python${PYTHONBIN_VER}
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
 	pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin"
-	if [ ! -x "${BUILD_PYTHON}" ] || [ ! -x "${BUILD_PYTHONPIP}" ]
+	pathadd PYTHONPATH "${GLOBAL_TOOLCHAIN_PATH}/lib/python${PYTHONBIN_VER}/site-packages"
+
+	if [ ! -x "${PYTHON_FOR_BUILD}" ] || [ ! -x "${PIP_FOR_BUILD}" ]
 	then
 		echo -n "downloading... "
 		download_pyton | log_buffer > "${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log" 2>&1
@@ -1609,7 +1614,7 @@ function setup_full_toolchain () {
 	CCWRAPPER=${GLOBAL_TOOLCHAIN_PATH}/bin/sccache
 	SCCACHE_DIR=${GLOBAL_CACHE_PATH}/sccache
 	SCCACHE_CACHE_SIZE=${SCCACHE_CACHE_SIZE:-16G}
-	SCCACHE_NO_DAEMON=${SCCACHE_NO_DAEMON:-1}
+	SCCACHE_NO_DAEMON=${SCCACHE_NO_DAEMON:-0}
 	export SCCACHE_DIR SCCACHE_CACHE_SIZE SCCACHE_NO_DAEMON
 	if [ ! -d "${SCCACHE_DIR}" ]
 	then
@@ -1635,6 +1640,11 @@ function setup_full_toolchain () {
 
 	if [ "${WITH_PYTHON}" -eq 1 ]
 	then
+		#PYTHON_VER=${PYTHON_VER:-$(${PYTHON_FOR_BUILD} --version | awk '{print $2}')}
+		#PYTHONBIN_VER=${PYTHONBIN_VER:-$(cut -d. -f1,2 <<<"${PYTHON_VER}")}
+		#PYTHONBIN_MAJVER=${PYTHONBIN_VER:-$(cut -d. -f1 <<<"${PYTHON_VER}")}
+		#PYTHON_FOR_BUILD=${PYTHON_FOR_BUILD:-${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/python3}
+		#pathadd PYTHONPATH "${GLOBAL_TOOLCHAIN_PATH}/lib/python${PYTHONBIN_VER}/site-packages"
 		set +e
 		setup_python
 		case ${?} in
@@ -1647,12 +1657,7 @@ function setup_full_toolchain () {
 			*) return ${?};;
 		esac
 	fi
-	PYTHON_FOR_BUILD=${PYTHON_FOR_BUILD:-$(which python3)}
-	PYTHON_VER=${PYTHON_VER:-$(${PYTHON_FOR_BUILD} --version | awk '{print $2}')}
-	PYTHONBIN_VER=${PYTHONBIN_VER:-$(cut -d. -f1,2 <<<"${PYTHON_VER}")}
-	PYTHONBIN_MAJVER=${PYTHONBIN_VER:-$(cut -d. -f1 <<<"${PYTHON_VER}")}
-	pathadd PYTHONPATH "${GLOBAL_TOOLCHAIN_PATH}/lib/python${PYTHONBIN_VER}/site-packages"
-	
+
 	build lfs/meson:native
 	set +e
 }

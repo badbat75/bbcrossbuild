@@ -1,10 +1,9 @@
 # python3
-PYTHON_BINVER=$(echo ${PYTHON_VER} | cut -d"." -f1,2)
 PKG_VER=${PYTHON_VER}
-PKG_URL="https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PKG_VER}.tar.xz"
+PKG_URL="https://www.python.org/ftp/python/${PKG_VER}/Python-${PKG_VER}.tar.xz"
 PKG_AUTOCONF=1
 BUILD_PROCESS=configmake
-PKG_TWOSTEPSBUILD=1
+CONF_ENV="env -u PYTHON_FOR_BUILD PATH=\"${GLOBAL_TOOLCHAIN_PATH}/python3_${PYTHON_VER}/bin:\${PATH}\""
 CONF_FLAGS="--with-platlibdir=lib --with-system-expat --with-system-ffi --with-system-libmpdec --enable-ipv6 --with-ensurepip=yes --disable-test-modules"
 if [ "${LTOENABLE:-0}" != "0" ]
 then
@@ -20,10 +19,10 @@ case ${PKG_TARGET} in
 			ac_cv_file__dev_ptmx=yes ac_cv_file__dev_ptc=no"
 		;;
 esac
-#PKG_MAKETARGETS="all,install"
+PKG_LDFLAGS="-s"
+PKG_MAKETARGETS=",install"
 PKG_OVERRIDELTO=0
-case ${TOOLCHAIN} in
-	llvm) PKG_FAULTYCFLAGS=1;;
-esac
+PKG_FAULTYCFLAGS=1
 
+PKG_PREBUILD="sed -i 's/self.srcdir = sysconfig.get_config_var('\''srcdir'\'')/self.srcdir = os.path.dirname(os.path.abspath(__file__))/' -i setup.py"
 PKG_DISABLECROSSPYTHON=1

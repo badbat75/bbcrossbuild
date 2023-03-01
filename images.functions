@@ -571,7 +571,7 @@ function run_postinstall_scripts () {
 		echo "Running post install scripts on ${_param_1}... " | log_buffer info
 		export PLATFORM_PATH LOG_PATH
 		export -f param2value run_on_root_dir
-		find "${PLATFORM_PATH}/${_param_1}/postinst_scripts" -type f -printf '%P\0' | sort -nz | xargs -0 -I{} bash -c "run_on_root_dir \"${MOUNT_NAME}\" root 'source /postinst_scripts/{}'"
+		find "${PLATFORM_PATH}/${_param_1}/postinst_scripts" -type f -printf '%P\0' | sort -nz | xargs -0 -I{} bash -c "run_on_root_dir \"${MOUNT_NAME}\" root 'set -x; source /postinst_scripts/{}'"
 		run_cmd -s "rm -rfv ${PLATFORM_PATH}/${_param_1}/postinst_scripts"
 		echo "Done." | log_buffer info 
 	} >> "${LOG_PATH}/images_${_param_1}.log"
