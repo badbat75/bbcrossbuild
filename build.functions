@@ -674,7 +674,6 @@ function preparesources () {
 		[ -d ${PKG_SRCPATH} ] && run_cmd "rm -rf ${PKG_SRCPATH}" || true; \
 		return 100' SIGINT
 
-	#set -x
 	cd "${PKG_SRCPATH}"
 	if [ "x${PATCHDEB}" != x ]
 	then
@@ -1737,10 +1736,7 @@ function build () {(
 		VAR_INSTALL_CONFDIR \
 
 	OPTS="--force --no_gcc_check --no_save_status --temporary --keep_builddir" OPTS_WITH_VALUE="--toolchain --with_extra_modules" param2value "${@}"
-	if [ "${_param_v:-0}" -eq 1 ]
-	then
-		set -x
-	fi
+
 	# Split dependency in Package name and its Target separated by ':'
 
 	local \
