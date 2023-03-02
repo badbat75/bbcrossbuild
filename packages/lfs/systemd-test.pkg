@@ -1,19 +1,8 @@
 # systemd
-case ${SYSTEMD_VER:-251} in
-	253)
-		PKG_VER=253
-	;;
-	252)
-		PKG_VER=252.6
-	;;
-	251)
-		PKG_VER=251.12
-	;;
-	*)
-		PKG_VER=${SYSTEMD_VER}
-	;;
-esac
-PKG_URL="${PKG_URL:-https://github.com/systemd/systemd-stable/archive/refs/tags/v${PKG_VER}.tar.gz}"
+SYSTEMD_COMMIT=7eeedcfcb1c09e6c236c4ee61500f12a1c1d0186
+SYSTEMD_COMMITS=7eeedcf
+PKG_VER=251+${SYSTEMD_COMMITS}
+PKG_URL=https://github.com/systemd/systemd/archive/${SYSTEMD_COMMIT}.tar.gz
 PKG_DEPS="lfs/zlib lfs/xz lfs/bzip2 lfs/zstd lfs/libxml2"
 BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Drootlibdir=/lib${HARCH_LIB}${INSTALL_LIBSUFFIX}"
@@ -34,7 +23,7 @@ CONF_FLAGS+=" -Duserdb=false"
 CONF_FLAGS+=" -Dservice-watchdog="
 CONF_FLAGS+=" -Dstandalone-binaries=true"
 CONF_FLAGS+=" -Ddefault-kill-user-processes=false"
-CONF_FLAGS+=" -Dfirst-boot-full-preset=true"
+###CONF_FLAGS+=" -Dfirst-boot-full-preset=true"
 CONF_FLAGS+=" -Ddns-servers="
 CONF_FLAGS+=" -Ddefault-dnssec=no"
 CONF_FLAGS+=" -Ddefault-dns-over-tls=no"
@@ -167,8 +156,7 @@ systemd-hwdb update
 		;;
 esac
 PKG_CFLAGS="-Wno-error=return-type"
-PKG_PREBUILD="sed -i -e 's/GROUP=\"render\"/GROUP=\"video\"/' -e 's/GROUP=\"sgx\", //' rules.d/50-udev-default.rules.in
-	sed 's/-ftrivial-auto-var-init=zero//' -i meson.build"
+PKG_PREBUILD="sed -i -e 's/GROUP=\"render\"/GROUP=\"video\"/' -e 's/GROUP=\"sgx\", //' rules.d/50-udev-default.rules.in"
 ### Python modules does not pass sysroot flags...
 #PKG_FAULTYCFLAGS=1
 PKG_OVERRIDELTO=0

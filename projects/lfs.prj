@@ -272,7 +272,7 @@ function build_lfs_image () {
 			chmod +x "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.qemu"
 		;;
 	esac
-	pause
+	#pause
 	unmount_tag --finalize lfs
 	set +e
 }
