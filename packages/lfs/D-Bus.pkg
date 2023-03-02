@@ -4,6 +4,7 @@ PKG_URL="https://dbus.freedesktop.org/releases/dbus/dbus-${PKG_VER}.tar.xz"
 PKG_DEPS="lfs/expat lfs/libX11"
 PKG_DEPS+=" lfs/systemd:bootstrap"
 PKG_DEPS+=" lfs/libaudit:bootstrap"
+PKG_DEPS+=" lfs/libcap2:bootstrap"
 PKG_AUTOCONF=1
 BUILD_PROCESS=configmake
 CONF_FLAGS="--enable-user-session"
@@ -27,7 +28,6 @@ PKG_OVERRIDELTO=0
 case ${TOOLCHAIN} in
 	gnu)
 		PKG_OVERRIDELD=bfd
-		PKG_LDFLAGS="-Wl,-rpath-link -Wl,${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 	;;
 esac
 
@@ -63,6 +63,8 @@ PKG_POSTINSTALL="ln -sfv /etc/machine-id ${INSTALL_LOCALSTATEDIR}/lib/dbus/machi
 chown -v root:messagebus ${INSTALL_PREFIX}/libexec/dbus-daemon-launch-helper
 chmod -v 4750 ${INSTALL_PREFIX}/libexec/dbus-daemon-launch-helper
 systemctl preset dbus.socket
-systemctl --global preset dbus.socket"
+systemctl --global preset dbus.socket
+systemctl preset dbus.service
+systemctl --global preset dbus.service"
 
 PKG_POSTINSTALL_PRIO=11
