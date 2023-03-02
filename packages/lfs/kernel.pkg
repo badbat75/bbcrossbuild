@@ -5,7 +5,10 @@ BUILD_PROCESS=kernelbuild
 PKG_MAKEVARS="INSTALL_MOD_STRIP=1"
 CONF_FLAGS="-d WERROR"
 CONF_FLAGS+=" -d DEBUG_INFO_BTF"
+### To enable systemd oom support
 CONF_FLAGS+=" -e MEMCG -e PSI"
+### To enable systemd iptables support
+CONF_FLAGS+=" -e BPF_SYSCALL -e CGROUP_BPF"
 
 case ${WITH_EXTOPTS:-1} in
 	yes|1)
