@@ -1275,6 +1275,10 @@ function kernelbuild () {
 	fi
 
 	run_cmd "./make4kern.sh olddefconfig"
+	if [ "${KERNEL_PAUSE_FOR_CONFIG:-0}" -eq 1 ]
+	then
+		pause
+	fi
 
 	if [ ! -d "${PKG_PKGPATH}/boot" ]
 	then

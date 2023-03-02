@@ -67,14 +67,13 @@ case "${PKG_TARGET}" in
 	*)
 		PKG_DEPS+=" lfs/libcap2 lfs/libaudit lfs/openssl lfs/Linux-PAM lfs/polkit lfs/GLib lfs/kmod lfs/util-linux"
 		### Optional packages
-		#PKG_DEPS+=" lfs/gnu-efi"
 		PKG_DEPS+=" lfs/gnutls"
 		PKG_DEPS+=" lfs/btrfs-progs"
 		PKG_DEPS+=" lfs/curl"
 		PKG_DEPS+=" lfs/cryptsetup"
 		PKG_DEPS+=" lfs/elfutils"
 		PKG_DEPS+=" lfs/libgcrypt"
-		PKG_DEPS+=" lfs/libidn"
+		#PKG_DEPS+=" lfs/libidn"
 		PKG_DEPS+=" lfs/libidn2"
 		PKG_DEPS+=" lfs/libmicrohttpd"
 		PKG_DEPS+=" lfs/libpwquality"
@@ -93,6 +92,7 @@ case "${PKG_TARGET}" in
 		PKG_DEPS+=" lfs/kexec-tools"
 		###
 		CONF_FLAGS+=" -Dblkid=true"
+		CONF_FLAGS+=" -Dcryptolib=openssl"
 		CONF_FLAGS+=" -Dman=auto"
 		CONF_FLAGS+=" -Ddbus=true"
 		CONF_FLAGS+=" -Dpam=true"
@@ -103,12 +103,21 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Ddbuspolicydir=${INSTALL_SHAREDIR}/dbus-1/system.d"
 		CONF_FLAGS+=" -Ddbus-interfaces-dir=${INSTALL_SHAREDIR}/dbus-1/interfaces"
 		CONF_FLAGS+=" -Dbashcompletiondir=${INSTALL_SHAREDIR}/bash-completion/completions/"
-		#CONF_FLAGS+=" -Defi-cflags=-lgcc_s"
-		#CONF_FLAGS+=" -Defi-includedir=${BIN_PATH}${INSTALL_INCLUDEDIR}/efi"
-		#CONF_FLAGS+=" -Defi-libdir=${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 		CONF_FLAGS+=" -Dquotaon-path=${INSTALL_EXECPREFIX}/sbin/quotaon"
 		CONF_FLAGS+=" -Dquotacheck-path=${INSTALL_EXECPREFIX}/sbin/quotacheck"
 		CONF_FLAGS+=" -Dkexec-path=${INSTALL_EXECPREFIX}/sbin/kexec"
+
+		case "${HM}" in
+			x86_64|aarch64)
+				PKG_DEPS+=" lfs/gnu-efi"
+				CONF_FLAGS+=" -Defi=true"
+				# possible to add -lgcc_s to efi-cflags
+				CONF_FLAGS+=" -Defi-cflags=\"--sysroot=${BIN_PATH}\""
+				CONF_FLAGS+=" -Defi-includedir=${BIN_PATH}${INSTALL_INCLUDEDIR}/efi"
+				CONF_FLAGS+=" -Defi-libdir=${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
+			;;
+		esac
+		
 		PKG_POSTBUILD="install -v -m755 -d ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/pam.d
 			cat >> ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/pam.d/system-session <<-EOF
 				# Begin Systemd addition

@@ -267,7 +267,7 @@ function build_lfs_image () {
 				   -device intel-hda -audiodev alsa,id=default \\
 				   -nographic \\
 				   -kernel ${BIN_PATH}/boot/vmlinuz-${KERNEL_VER} \\
-				   -append "console=ttyS0 root=PARTUUID=${LFS_PARTUUID} rootfstype=${LFS_FSTYPE} fsck.repair=yes rootwait"
+				   -append "console=ttyS0 root=PARTUUID=${LFS_PARTUUID} rootfstype=${LFS_FSTYPE} fsck.repair=yes rootwait cgroup_enable=memory cgroup_memory=1 systemd.gpt_auto=no"
 			EOF
 			chmod +x "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.qemu"
 		;;
