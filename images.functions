@@ -14,7 +14,6 @@ check_images_functions () {
 function create_image() {
 	# create_image <tag_name> [--rootfstype <fs_type>] [--size <size_in_KiB> [--layout <layout_file>]
 	trap 'STATUS=${?}; \
-		set +x; \
 		trap - ERR; \
 		echo "fail [create_image: ${STATUS}]."; \
 		echo; \
@@ -109,7 +108,6 @@ function create_image() {
 	echo -n "Flushing loop devices... "
 	run_cmd -s "losetup -D" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 	echo "ok."
-	set +x
 	trap - ERR
 }
 
@@ -117,7 +115,6 @@ function mount_tag () {
 	# mount_tag <MountPointName> [--url <URL_of_image> --imgfile <imagename_inside_archive>] \
 	# --mountlist "<partnumber1:/> [partnumber2:mountpoint2]...[partnumbern:mountpointn] --resize <partnumber:size> "
 	trap 'STATUS=${?}; \
-		set +x; \
 		trap - ERR; \
 		echo "fail [mount_tag: ${STATUS}]."; \
 		echo; \
@@ -250,7 +247,6 @@ function mount_tag () {
 
 function unmount_tag () {
 	trap 'STATUS=${?}; \
-		set +x; \
 		trap - ERR; \
 		echo "fail [unmount_tag: ${STATUS}]."; \
 		echo; \
@@ -343,7 +339,6 @@ function mount_from () {
 	# mount_from --url <URL> --imgfile <Image2Mount> --tag <MountPointName> --resize <partnumber:size> \
 	#	--mountlist "<partnumber1:/> [partnumber2:mountpoint2]...[partnumbern:mountpointn]"
 	trap 'STATUS=${?}; \
-		set +x; \
 		trap - ERR; \
 		echo "fail [mount_from]."; \
 		echo; \
@@ -386,7 +381,6 @@ function mount_from () {
 function run_on_root_dir () {
 	# run_on_root_dir <mount tag> <user> "<command>"
 	trap 'STATUS=${?}; \
-		set +x; \
 		trap - ERR; \
 		echo; \
 		echo "fail [run_on_root_dir]."; \
@@ -461,7 +455,6 @@ function inject_into_mount_tag () {
 	export -f set_ownership
 
 	trap 'STATUS=${?}; \
-		set +x; \
 		trap - ERR; \
 		echo; \
 		echo "fail [inject_into_mount_tag: ${STATUS}]."; \
@@ -548,7 +541,6 @@ function inject_into_mount_tag () {
 
 function run_postinstall_scripts () {
 	trap 'STATUS=${?}; \
-		set +x; \
 		trap - ERR; \
 		echo; \
 		echo "fail [run_postinstall_scripts]."; \

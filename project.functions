@@ -21,7 +21,6 @@ function remove_devfiles () {
 	trap 'STATUS=${?}; \
 		echo "fail."; \
 		echo; \
-		set +x; \
 		trap - ERR; \
 		return ${STATUS};' ERR
 
@@ -80,7 +79,6 @@ function resume_devfiles () {
 	trap 'STATUS=${?}; \
 		echo "fail."; \
 		echo; \
-		set +x; \
 		trap - ERR; \
 		return ${STATUS};' ERR
 
@@ -99,7 +97,6 @@ function create_sfx_package () {
 	trap 'STATUS=${?}; \
 		echo "fail."; \
 		echo; \
-		set +x; \
 		trap - ERR; \
 		return ${STATUS};' ERR
 

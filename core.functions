@@ -65,7 +65,6 @@ download_uncompress () {
 	## NODELETEDESTDIR=<num>: if 1 don't delete ${DEST_DIR}
 
 	trap 'STATUS=${?}; \
-		set +x; \
 		trap - ERR; \
 		echo "download_uncompress fail."; \
 		pause; \
@@ -166,7 +165,6 @@ download_uncompress () {
 			;;
 	esac
 	trap ERR
-	set +x
 }
 
 test_version () {

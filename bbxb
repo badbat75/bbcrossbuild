@@ -1,6 +1,5 @@
 #!/bin/bash
 trap 'STATUS=${?}; \
-	set +x; \
 	echo "ERR received. [bbxb: ${STATUS}]"; \
 	echo; \
 	pause; \
@@ -9,8 +8,7 @@ trap 'STATUS=${?}; \
 	unmount_tag --all --kill || true; \
 	trap - ERR SIGINT; \
 	exit ${STATUS}' ERR
-trap 'set +x; \
-	echo "SIGINT received. [bbxb]"; \
+trap 'echo "SIGINT received. [bbxb]"; \
 	echo; \
 	set +o pipefail; \
 	unmount_tag --all --kill || true; \

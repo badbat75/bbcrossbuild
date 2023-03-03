@@ -122,7 +122,6 @@ function setup_rust () {
 			echo; \
 			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_rust.log; \
 		fi; \
-		set +x; \
 		trap - ERR; \
 		return ${STATUS}' ERR
 
@@ -245,7 +244,6 @@ function setup_autotools () {
 			echo; \
 			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log; \
 		fi;
-		set +x; \
 		trap - ERR; \
 		return ${STATUS}' ERR
 
@@ -929,7 +927,6 @@ function setup_gcc () {
 	}
 
 	trap 'local STATUS=${?}; \
-		set +x; \
 		trap - ERR; \
 		echo "fail."; \
 		echo; \
@@ -1304,7 +1301,6 @@ function setup_llvm () {
 			echo; \
 			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log; \
 		fi; \
-		set +x; \
 		trap - ERR; \
 		return ${STATUS}' ERR
 
@@ -1482,7 +1478,6 @@ function setup_python () {
 			echo; \
 			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log; \
 		fi;
-		set +x; \
 		trap - ERR; \
 		return ${STATUS}' ERR
 

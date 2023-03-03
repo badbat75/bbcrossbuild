@@ -661,14 +661,12 @@ function create_environment_source () {
 
 function preparesources () {
 	trap 'STATUS=${?} \
-		set +x; \
 		echo "preparesources fail."; \
 		trap - ERR; \
 		trap - SIGINT; \
 		return ${STATUS};' ERR
 
-	trap 'set +x; \
-		trap - ERR; \
+	trap 'trap - ERR; \
 		trap - SIGINT; \
 		[ -d ${PKG_SRCPATH} ] && run_cmd "rm -rf ${PKG_SRCPATH}" || true; \
 		return 100' SIGINT
@@ -731,7 +729,6 @@ function preparesources () {
 	cd "${BB_HOME}"
 	trap - ERR
 	trap - SIGINT
-	set +x
 }
 
 function downloadonly () {
@@ -1673,7 +1670,6 @@ function build () {(
 			echo; \
 			tail -n24 ${LOG_FILE}; \
 		fi; \
-		set +x; \
 		return ${STATUS}' ERR
 
 	unset \
@@ -1793,7 +1789,6 @@ function build () {(
 	then
 		echo "Package ${PKG_FILE} does not exists."
 		echo
-		set +x
 		trap - ERR;
 		return 1
 	fi
@@ -2052,7 +2047,6 @@ function build () {(
 	else
 		run_cmd "rm -f \"${STATUS_PATH}/*.tmp\"" >> "${LOG_FILE}"
 	fi
-	set +x
 	echo "Done."
 	echo
 	trap - ERR
