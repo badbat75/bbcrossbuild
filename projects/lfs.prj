@@ -114,7 +114,7 @@ KERNEL_LTOENABLE=thin
 	build lfs/wpa_supplicant
 	build lfs/hostapd
 	build lfs/iw
-	build lfs/wireless-tools
+	#build lfs/wireless-tools
 	build lfs/bluez
 ### Security
 	build lfs/sudo
