@@ -62,7 +62,7 @@ KERNEL_LTOENABLE=thin
 	TARNAME=$(echo lfs-kernel-${KERNEL_VER}-glibc-${GLIBC_VER} | sed 's/\./_/g' )
 	if [ ! -f ../"${TARNAME}".tar ];
 	then
-		tar cvf ../"${TARNAME}".tar binaries packages status toolchain;
+		tar cf ../"${TARNAME}".tar binaries packages status toolchain;
 	fi )
 ### Core Libraries
 	#build lfs/glibc
