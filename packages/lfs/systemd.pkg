@@ -146,10 +146,18 @@ case "${PKG_TARGET}" in
 
 				# End ${INSTALL_SYSCONFDIR}/pam.d/systemd-user
 			EOF
+
 			cat >> ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/systemd/system/getty@tty1.service.d <<-EOF
 				[Service]
 				TTYVTDisallocate=no			
 			EOF
+
+			cat >> ${PKG_PKGPATH}/lib/udev/rules.d/60-block-scheduler.rules <<-EOF
+				ACTION=="add", SUBSYSTEM=="block", ENV{DEVTYPE}=="disk", \
+				  KERNEL=="mmcblk*[0-9]|msblk*[0-9]|mspblk*[0-9]|sd*[!0-9]|sr*", \
+				  ATTR{queue/scheduler}="bfq"
+			EOF
+
 			ln -sfv /dev/null ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/systemd/system/tmp.mount
 			"
 		PKG_POSTINSTALL="mkdir -pv ${INSTALL_LOCALSTATEDIR}/log/journal
