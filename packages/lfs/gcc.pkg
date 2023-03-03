@@ -16,7 +16,8 @@ CONF_ENV="env -u CPP -u CPPFLAGS"
 CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR} --with-sysroot=/ --with-build-sysroot=\${SYSROOT} \
 	--build=${BARCH} --host=${HARCH} --target=${HARCH} \
 	--enable-shared --enable-static \
-	--enable-languages=${GCC_LANGUAGES:-c,c++} --enable-multiarch --enable-version-specific-runtime-libs  \
+	--enable-languages=${GCC_LANGUAGES:-c,c++} --enable-version-specific-runtime-libs  \
+	$( if [ ${MULTI_ARCH} -eq 1 ] && [ -z "${HARCH_LIB}" ]; then echo --enable-multiarch; fi ) \
 	--enable-threads=posix --enable-tls --enable-checking=release --disable-multilib \
 	--enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object \
 	--enable-linker-build-id --with-gcc-major-version-only --enable-libstdcxx-backtrace \

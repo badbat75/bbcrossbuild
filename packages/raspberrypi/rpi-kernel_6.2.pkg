@@ -1,10 +1,13 @@
 # rpi-kernel_6.2
-PKG_SUFFIX=
-PKG_URL="https://github.com/raspberrypi/linux/archive/e93ed361c73019568ccf6e5e5439408be1e8a18c.tar.gz"
+PKG_SUFFIX=.1
+PKG_URL="https://github.com/raspberrypi/linux/archive/d3cab1cb1b6d0722216918f7eeedaa42e79a47ed.tar.gz"
 BUILD_PROCESS=kernelbuild
 PKG_MAKEVARS="INSTALL_MOD_STRIP=1"
 CONF_FLAGS="-d WERROR"
-CONF_FLAGS+=" -e PSI"
+### To enable systemd oom support
+CONF_FLAGS+=" -e MEMCG -e PSI"
+### To enable systemd iptables support
+CONF_FLAGS+=" -e BPF_SYSCALL -e CGROUP_BPF"
 
 case ${KERNEL_ARCH:-none} in
 	arm)

@@ -14,7 +14,7 @@ CONF_FLAGS+=" --enable-systemd"
 CONF_FLAGS+=" --disable-asserts"
 CONF_FLAGS+=" --disable-doxygen-docs"
 CONF_FLAGS+=" --disable-xml-docs"
-#CONF_FLAGS+=" --disable-tests"
+CONF_FLAGS+=" --disable-tests"
 #CONF_FLAGS+=" --enable-installed-tests"
 CONF_FLAGS+=" --localstatedir=${INSTALL_LOCALSTATEDIR}"
 CONF_FLAGS+=" --runstatedir=/run"
@@ -23,13 +23,6 @@ CONF_FLAGS+=" --with-systemdsystemunitdir=/lib/systemd/system"
 CONF_FLAGS+=" --with-systemduserunitdir=${INSTALL_PREFIX}/lib/systemd/user"
 CONF_FLAGS+=" --docdir=${INSTALL_SHAREDIR}/doc/dbus-${PKG_VER}"
 PKG_MAKETARGETS="all,install-strip"
-
-PKG_OVERRIDELTO=0
-case ${TOOLCHAIN} in
-	gnu)
-		PKG_OVERRIDELD=bfd
-	;;
-esac
 
 PKG_PREBUILD="sed 's/static dbus_bool_t fatal_warnings_on_check_failed = TRUE/static dbus_bool_t fatal_warnings_on_check_failed = FALSE/' -i dbus/dbus-internals.c"
 PKG_POSTBUILD="cat >>${PKG_PKGPATH}/lib/systemd/system/dbus.service <<-EOF
