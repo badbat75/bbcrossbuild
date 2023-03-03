@@ -221,13 +221,6 @@ case ${PLATFORM_NAME} in
 				;;
 			esac
 		fi
-		cat >>${BIN_PATH}/postinst_scripts/99-lfs-configurations <<-EOF
-			echo "net.ifnames=0 console=tty1 root=PARTUUID=\$(blkid -o value --match-tag PARTUUID \$(findmnt -nu -o SOURCE /)) rootfstype=${LFS_FSTYPE} fsck.repair=yes rootwait cgroup_enable=memory systemd.gpt_auto=no" >/boot/cmdline.txt
-		EOF
-		#cat >>${BIN_PATH}/postinst_scripts/99-lfs-configurations <<-EOF
-		#	systemctl disable systemd-oomd.socket
-		#	systemctl disable systemd-oomd.service
-		#EOF
 	;;
 	*) ;;
 esac
@@ -238,6 +231,38 @@ function build_lfs_image () {
 	set -e
 	create_image lfs --rootfstype ${LFS_FSTYPE} --size ${LFS_FSSIZE}
 	mount_tag lfs --mountlist "2:/ 1:/boot"
+
+	### Boot configuration and support scripts
+	echo -n "Configuring boot parameters... "
+	LFS_LBROOT="$(findmnt -nu -o SOURCE ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/lfs)"
+	LFS_PARTUUID="$(blkid -o value --match-tag PARTUUID ${LFS_LBROOT})"
+	KERNEL_BOOTPARAMS="root=PARTUUID=${LFS_PARTUUID} rootfstype=${LFS_FSTYPE} fsck.repair=yes rootwait"
+	case ${PLATFORM_NAME} in
+		rpi*)
+			cat >>${BIN_PATH}/postinst_scripts/99-lfs-configurations <<-EOF
+				echo "${KERNEL_BOOTPARAMS} net.ifnames=0 console=tty1 systemd.gpt_auto=no" >/boot/cmdline.txt
+			EOF
+		;;
+		generic-x64)
+			cat >${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/lfs.qemu <<-EOF
+				#!/bin/sh
+				sudo qemu-system-${HM} \\
+				   -accel kvm \\
+				   -M q35 -cpu host -smp 4 -m 6144 \\
+				   -device virtio-balloon-pci -device virtio-rng-pci \\
+				   -device virtio-blk-pci,drive=disk0 -drive file=lfs.img,if=none,format=raw,id=disk0 \\
+				   -device virtio-net-pci,netdev=eth0 -netdev user,id=eth0,hostfwd=tcp::5022-:22 \\
+				   -usb -device usb-ehci -device usb-kbd -device usb-mouse \\
+				   -device intel-hda -audiodev alsa,id=default \\
+				   -nographic \\
+				   -kernel ${BIN_PATH}/boot/vmlinuz-${KERNEL_VER} \\
+				   -append "${KERNEL_BOOTPARAMS} net.ifnames=0 console=ttyS0 systemd.gpt_auto=no"
+			EOF
+			chmod +x "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.qemu"
+		;;
+	esac
+	echo "Done."
+
 	inject_into_mount_tag lfs binaries ${LFS_REMOVE_DEVFILES}
 	run_postinstall_scripts lfs
 	run_on_root_dir lfs root "systemctl enable console-getty"
@@ -249,29 +274,6 @@ function build_lfs_image () {
 	run_on_root_dir lfs root "useradd -G wheel -m lfs"
 	#run_on_root_dir lfs root "echo root:changeme | chpasswd"
 	run_on_root_dir lfs root "echo lfs:lfs | chpasswd"
-	LFS_LBROOT="$(findmnt -nu -o SOURCE ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/lfs)"
-	echo "Loopback of lfs root: ${LFS_LBROOT}"
-	LFS_PARTUUID="$(blkid -o value --match-tag PARTUUID ${LFS_LBROOT})"
-	echo "PARTUUID of lfs root: ${LFS_PARTUUID}"
-	case ${PLATFORM_NAME} in
-		generic-x64)
-			cat >${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/lfs.qemu <<-EOF
-				#!/bin/sh
-				sudo qemu-system-${HM} \\
-				   -accel kvm \\
-				   -M q35 -cpu host -smp 4 -m 6144 \\
-				   -device virtio-balloon-pci -device virtio-rng-pci \\
-				   -device virtio-blk-pci,drive=disk0 -drive file=lfs.img,if=none,format=raw,id=disk0 \\
-				   -device virtio-net-pci,netdev=eth0 -netdev user,id=eth0,hostfwd=tcp::5022-:22,hostfwd=tcp::5080-:80 \\
-				   -usb -device usb-ehci -device usb-kbd -device usb-mouse \\
-				   -device intel-hda -audiodev alsa,id=default \\
-				   -nographic \\
-				   -kernel ${BIN_PATH}/boot/vmlinuz-${KERNEL_VER} \\
-				   -append "console=ttyS0 root=PARTUUID=${LFS_PARTUUID} rootfstype=${LFS_FSTYPE} fsck.repair=yes rootwait cgroup_enable=memory cgroup_memory=1 systemd.gpt_auto=no"
-			EOF
-			chmod +x "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.qemu"
-		;;
-	esac
 	#pause
 	unmount_tag --finalize lfs
 	set +e
