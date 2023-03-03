@@ -665,11 +665,10 @@ function preparesources () {
 		echo "preparesources fail."; \
 		trap - ERR; \
 		trap - SIGINT; \
-		pause; \
 		return ${STATUS};' ERR
 
-	trap 'trap - ERR; \
-		set +x; \
+	trap 'set +x; \
+		trap - ERR; \
 		trap - SIGINT; \
 		[ -d ${PKG_SRCPATH} ] && run_cmd "rm -rf ${PKG_SRCPATH}" || true; \
 		return 100' SIGINT
@@ -2001,8 +2000,8 @@ function build () {(
 		echo "Running post build script..." | log_buffer info >> "${LOG_FILE}"
 		(run_cmd "set -ex
 			set +o pipefail
-			${PKG_POSTBUILD} 2>&1
-			set +ex") >> "${LOG_FILE}"
+			${PKG_POSTBUILD}
+			set +ex") >> "${LOG_FILE}" 2>&1
 	fi
 	#run_cmd "rm -rf \"${PKG_SRCPATH}\""
 

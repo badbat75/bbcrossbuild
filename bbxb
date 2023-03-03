@@ -27,10 +27,6 @@ source "${BB_HOME}/core.functions"
 check_core_functions
 
 OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
-if [ "${_param_v:-0}" -eq 1 ]
-then
-	set -x
-fi
 
 PRJ_NAME="${_param_1}"
 PLATFORM_NAME="${_param_2:-generic_x64}"

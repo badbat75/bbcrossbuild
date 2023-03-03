@@ -87,8 +87,6 @@ download_uncompress () {
 
 	echo "download_uncompress ${*}" | log_buffer
 
-	#set -x
-
 	URL=${1}
 	URL_HASH=$(echo -n "${URL}" | md5sum -t | awk '{print $1}')
 	DEST_DIR=${2}

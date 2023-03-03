@@ -250,10 +250,6 @@ function setup_autotools () {
 		return ${STATUS}' ERR
 
 	OPTS="--default" OPTS_WITH_VALUE="" param2value "${@}"
-	if [ "${_param_v:-0}" -eq 1 ]
-	then
-		set -x
-	fi
 
 	local FILETOPATCH
 
@@ -1313,10 +1309,6 @@ function setup_llvm () {
 		return ${STATUS}' ERR
 
 	OPTS="--install" OPTS_WITH_VALUE="--targets" param2value "${@}"
-	if [ "${_param_v:-0}" -eq 1 ]
-	then
-		set -x
-	fi
 
 	local LLVM_BUILTINS_INSTALL=${_param_install:-0}
 

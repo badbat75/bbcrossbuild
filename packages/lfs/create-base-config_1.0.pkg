@@ -1,7 +1,6 @@
 BUILD_PROCESS=none
 ####### Basic configuration files ##########
-PKG_POSTBUILD="set -x
-	install -d -m755 ${PKG_PKGPATH}/etc
+PKG_POSTBUILD="install -d -m755 ${PKG_PKGPATH}/etc
 	cat > ${PKG_PKGPATH}/etc/hosts <<-EOF
 		# Begin /etc/hosts
 		127.0.0.1 localhost.localdomain localhost

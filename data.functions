@@ -18,10 +18,6 @@ function generate_ssh_keys () {
 	(
 	local IS_SUDO
 	OPTS="" OPTS_WITH_VALUE="--install" param2value "${@}"
-	if [ "${_param_v:-0}" -eq 1 ]
-	then
-		set -x
-	fi
 
 	echo "Generating SSH Keys in ${USERDATA_PATH}..."
 	if [ ! -d "${USERDATA_PATH}/etc/ssh" ]

@@ -57,13 +57,6 @@ KERNEL_LTOENABLE=thin
 	build lfs/kmod
 	build firmwares/linux-firmware
 	build firmwares/wireless-regdb
-#### Needed to speed up testing with different systemd/dbus versions and configurations
-	( cd "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}"
-	TARNAME=$(echo lfs-kernel-${KERNEL_VER}-glibc-${GLIBC_VER} | sed 's/\./_/g' )
-	if [ ! -f ../"${TARNAME}".tar ];
-	then
-		tar cf ../"${TARNAME}".tar binaries packages status toolchain;
-	fi )
 ### Core Libraries
 	#build lfs/glibc
 	build lfs/tzdata
