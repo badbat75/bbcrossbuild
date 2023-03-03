@@ -54,10 +54,11 @@ PKG_POSTBUILD="cat >>${PKG_PKGPATH}/lib/systemd/system/dbus.service <<-EOF
 	install -vdm755 ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/X11/xinit/xinitrc.d/
 	cat >>${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/X11/xinit/xinitrc.d/00-start-message-bus.sh <<-EOF
 		#!/bin/sh
-		if [ -z \"\$DBUS_SESSION_BUS_ADDRESS\" ]; then
-				eval `dbus-launch --sh-syntax --exit-with-session`
+		if [ -z \"\\\$DBUS_SESSION_BUS_ADDRESS\" ]; then
+		   eval \\\`dbus-launch --sh-syntax --exit-with-session\\\`
 		fi
 	EOF
+	chmod +x ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/X11/xinit/xinitrc.d/00-start-message-bus.sh
 	"
 
 PKG_POSTINSTALL="ln -sfv /etc/machine-id ${INSTALL_LOCALSTATEDIR}/lib/dbus/machine-id
