@@ -236,7 +236,7 @@ function build_lfs_image () {
 	echo -n "Configuring boot parameters... "
 	LFS_LBROOT="$(findmnt -nu -o SOURCE ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/lfs)"
 	LFS_PARTUUID="$(blkid -o value --match-tag PARTUUID ${LFS_LBROOT})"
-	KERNEL_BOOTPARAMS="root=PARTUUID=${LFS_PARTUUID} rootfstype=${LFS_FSTYPE} fsck.repair=yes rootwait"
+	KERNEL_BOOTPARAMS="root=PARTUUID=${LFS_PARTUUID} rootfstype=${LFS_FSTYPE} fsck.repair=yes rootwait cgroup_enable=memory"
 	case ${PLATFORM_NAME} in
 		rpi*)
 			cat >${BIN_PATH}/boot/cmdline.txt <<-EOF
