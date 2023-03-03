@@ -248,7 +248,7 @@ function build_lfs_image () {
 				#!/bin/sh
 				sudo qemu-system-${HM} \\
 				   -accel kvm \\
-				   -M q35 -cpu host -smp 4 -m 6144 \\
+				   -M q35 -cpu host -smp 4 -m 3072 \\
 				   -device virtio-balloon-pci -device virtio-rng-pci \\
 				   -device virtio-blk-pci,drive=disk0 -drive file=lfs.img,if=none,format=raw,id=disk0 \\
 				   -device virtio-net-pci,netdev=eth0 -netdev user,id=eth0,hostfwd=tcp::5022-:22 \\
