@@ -239,8 +239,8 @@ function build_lfs_image () {
 	KERNEL_BOOTPARAMS="root=PARTUUID=${LFS_PARTUUID} rootfstype=${LFS_FSTYPE} fsck.repair=yes rootwait"
 	case ${PLATFORM_NAME} in
 		rpi*)
-			cat >>${BIN_PATH}/postinst_scripts/99-lfs-configurations <<-EOF
-				echo "${KERNEL_BOOTPARAMS} net.ifnames=0 console=tty1 systemd.gpt_auto=no" >/boot/cmdline.txt
+			cat >${BIN_PATH}/boot/cmdline.txt <<-EOF
+				${KERNEL_BOOTPARAMS} net.ifnames=0 console=tty1 systemd.gpt_auto=no
 			EOF
 		;;
 		generic-x64)
