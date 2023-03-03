@@ -175,5 +175,6 @@ PKG_PREBUILD="sed -i -e 's/GROUP=\"render\"/GROUP=\"video\"/' -e 's/GROUP=\"sgx\
 case ${TOOLCHAIN} in
 	gnu)
 		PKG_OVERRIDELD=bfd
+		PKG_LDFLAGS="-Wl,-rpath-link -Wl,${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 	;;
 esac
