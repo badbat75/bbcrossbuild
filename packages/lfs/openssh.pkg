@@ -14,8 +14,8 @@ CONF_FLAGS="--sysconfdir=${INSTALL_SYSCONFDIR}/ssh \
 		--with-libedit \
 		--with-xauth=/usr/bin/xauth"
 PKG_MAKETARGETS=",install"
-PKG_LDFLAGS="-s"
-PKG_PREBUILD="sed -e '/INSTALLKEYS_SH/s/)//' -e '260a\  )' -i contrib/ssh-copy-id"
+PKG_PREBUILD="sed -i '/^STRIP_OPT/ s/-s$/\"-s --strip-program=\$STRIP\"/' configure.ac
+	sed -e '/INSTALLKEYS_SH/s/)//' -e '260a\  )' -i contrib/ssh-copy-id"
 PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/lib/systemd/system
 	cat <<-EOF >${PKG_PKGPATH}/lib/systemd/system/sshd.service
 		[Unit]
