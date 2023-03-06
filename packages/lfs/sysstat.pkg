@@ -1,5 +1,5 @@
 # sysstat
-PKG_VER=12.7.2
+PKG_VER=12.6.2
 PKG_URL="http://sebastien.godard.pagesperso-orange.fr/sysstat-${PKG_VER}.tar.xz"
 PKG_AUTOCONF=1
 PKG_COPYSRC=1

@@ -1,5 +1,5 @@
 # make
-PKG_VER=4.4
+PKG_VER=4.4.1
 PKG_URL="https://ftp.gnu.org/gnu/make/make-${PKG_VER}.tar.gz"
 
 case "${PKG_TARGET}" in
