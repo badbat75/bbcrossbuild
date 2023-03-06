@@ -245,7 +245,7 @@ function build_lfs_image () {
 			mkdir -p ${BIN_PATH}/boot/grub
 			cat > ${BIN_PATH}/boot/grub/grub.cfg <<-EOF
 				# Begin /boot/grub/grub.cfg
-				set default=0
+				set default=1
 				set timeout=5
 
 				insmod part_gpt
@@ -261,6 +261,11 @@ function build_lfs_image () {
 				menuentry "GNU/Linux, Linux ${KERNEL_VER}"  {
 				   linux /vmlinuz-${KERNEL_VER} ${KERNEL_BOOTPARAMS} net.ifnames=0 systemd.gpt_auto=no ro
 				}
+
+				menuentry "GNU/Linux, Linux ${KERNEL_VER} - Serial output"  {
+				   linux /vmlinuz-${KERNEL_VER} ${KERNEL_BOOTPARAMS} net.ifnames=0 systemd.gpt_auto=no ro console=ttyS0
+				}
+
 			EOF
 			cat >${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/lfs.qemu <<-EOF
 				#!/bin/sh
@@ -272,9 +277,7 @@ function build_lfs_image () {
 				   -device virtio-net-pci,netdev=eth0 -netdev user,id=eth0,hostfwd=tcp::5022-:22 \\
 				   -usb -device usb-ehci -device usb-kbd -device usb-mouse \\
 				   -device intel-hda -audiodev alsa,id=default \\
-				   -nographic \\
-				   -kernel ${BIN_PATH}/boot/vmlinuz-${KERNEL_VER} \\
-				   -append "${KERNEL_BOOTPARAMS} net.ifnames=0 console=ttyS0 systemd.gpt_auto=no"
+				   -nographic
 			EOF
 			chmod +x "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.qemu"
 		;;

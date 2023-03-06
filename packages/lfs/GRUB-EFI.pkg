@@ -1,4 +1,4 @@
-# GRUB
+# GRUB-EFI
 PKG_VER=2.06
 PKG_URL="https://ftp.gnu.org/gnu/grub/grub-${PKG_VER}.tar.xz"
 PATCHES="https://www.linuxfromscratch.org/patches/blfs/svn/grub-2.06-upstream_fixes-1.patch"
