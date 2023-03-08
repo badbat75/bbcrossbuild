@@ -71,6 +71,7 @@ KERNEL_LTOENABLE=thin
 	build lfs/bash
 	build lfs/man-pages
 	build lfs/man-db
+	build lfs/python3
 	build perl/XML-Parser
 	build lfs/perl5
 ### Filesystem progs
