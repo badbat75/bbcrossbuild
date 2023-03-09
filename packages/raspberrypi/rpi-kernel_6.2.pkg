@@ -1,6 +1,6 @@
 # rpi-kernel_6.2
-PKG_SUFFIX=.1
-PKG_URL="https://github.com/raspberrypi/linux/archive/d3cab1cb1b6d0722216918f7eeedaa42e79a47ed.tar.gz"
+PKG_SUFFIX=.2
+PKG_URL="https://github.com/raspberrypi/linux/archive/78f589bbd99cfdbf05ddb41d200e7260fa814e99.tar.gz"
 PKG_DEPS="lfs/elfutils:cross"
 BUILD_PROCESS=kernelbuild
 PKG_MAKEVARS="INSTALL_MOD_STRIP=1"
