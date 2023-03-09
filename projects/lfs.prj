@@ -260,27 +260,14 @@ function build_lfs_image () {
 				fi
 
 				menuentry "GNU/Linux, Linux ${KERNEL_VER}"  {
-				   linux /vmlinuz-${KERNEL_VER} ${KERNEL_BOOTPARAMS} net.ifnames=0 systemd.gpt_auto=no ro
+				   linux /vmlinuz-${KERNEL_VER} ${KERNEL_BOOTPARAMS} systemd.gpt_auto=no ro
 				}
 
 				menuentry "GNU/Linux, Linux ${KERNEL_VER} - Serial output"  {
-				   linux /vmlinuz-${KERNEL_VER} ${KERNEL_BOOTPARAMS} net.ifnames=0 systemd.gpt_auto=no ro console=ttyS0
+				   linux /vmlinuz-${KERNEL_VER} ${KERNEL_BOOTPARAMS} systemd.gpt_auto=no ro console=ttyS0
 				}
 
 			EOF
-			cat >${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/lfs.qemu <<-EOF
-				#!/bin/sh
-				sudo qemu-system-${HM} \\
-				   -accel kvm \\
-				   -M q35 -cpu host -smp 4 -m 3072 \\
-				   -device virtio-balloon-pci -device virtio-rng-pci \\
-				   -device virtio-blk-pci,drive=disk0 -drive file=lfs.img,if=none,format=raw,id=disk0 \\
-				   -device virtio-net-pci,netdev=eth0 -netdev user,id=eth0,hostfwd=tcp::5022-:22 \\
-				   -usb -device usb-ehci -device usb-kbd -device usb-mouse \\
-				   -device intel-hda -audiodev alsa,id=default \\
-				   -nographic
-			EOF
-			chmod +x "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.qemu"
 		;;
 	esac
 	echo "Done."

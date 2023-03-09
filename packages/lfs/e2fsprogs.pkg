@@ -13,6 +13,9 @@ case ${PKG_TARGET} in
     cross)
         PKG_MAKETARGETS="-Clib/et install-strip,-Clib/ss install-strip"
     ;;
+    bootstrap)
+        PKG_MAKETARGETS="all,-j1 install install-strip"
+    ;;
     *)
         CONF_FLAGS+=" --with-systemd-unit-dir=/lib/systemd/system"
         CONF_FLAGS+=" --with-udev-rules-dir=/lib/udev/rules.d"
