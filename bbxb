@@ -1,66 +1,103 @@
 #!/bin/bash
 trap 'STATUS=${?}; \
-	echo "ERR received. [bbxb: ${STATUS}]"; \
+	echo "${ERROR_STRING:-ERR received.} [${CURRENT_FUNCTION} - ERR: ${STATUS}]" >&2; \
+	echo; \
+	set +o pipefail; \
+	trap - ERR SIGINT; \
+	exit ${STATUS}' ERR
+
+set -o pipefail
+CURRENT_FUNCTION=bbxb
+
+BB_HOME=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
+#PROGRAM_NAME="$(basename "${BASH_SOURCE[0]}")"
+
+# shellcheck source=./seterr
+source "${BB_HOME}/seterr"
+# shellcheck source=./core.functions
+source "${BB_HOME}/core.functions"
+check_core_functions
+
+OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
+
+# shellcheck disable=SC2154
+PROJECT_NAME="${_param_1}"
+# shellcheck disable=SC2154
+PLATFORM_NAME="${_param_2}"
+
+if [ -z "${PROJECT_NAME}" ]
+then
+	ERROR_STRING="No project name specified."
+	(exit "${ERROR_NOT_VALID_OPTION}")
+fi
+
+if [ -z "${PLATFORM_NAME}" ]
+then
+	ERROR_STRING="No platform name specified."
+	(exit "${ERROR_NOT_VALID_OPTION}")
+fi
+
+PROJECT=${BB_HOME}/${PRJ_PATH:-projects}/${PROJECT_NAME}.prj
+if [ ! -f "${PROJECT}" ]
+then
+	ERROR_STRING="Project ${PROJECT} does not exist."
+	(exit "${ERROR_FILE_NOT_FOUND}")
+fi
+
+PLATFORM=${BB_HOME}/${PLATFORM_DIR:-platforms}/${PLATFORM_NAME}.conf
+if [ ! -f "${PLATFORM}" ]
+then
+	ERROR_STRING="Platform ${PLATFORM} does not exist."
+	(exit "${ERROR_FILE_NOT_FOUND}")
+fi
+
+# shellcheck source=./setenv
+source "${BB_HOME}/setenv"
+# shellcheck source=./build.functions
+source "${BB_HOME}/build.functions"
+# shellcheck source=./project.functions
+source "${BB_HOME}/project.functions"
+# shellcheck source=./toolchain.functions
+source "${BB_HOME}/toolchain.functions"
+# shellcheck source=./images.functions
+source "${BB_HOME}/images.functions"
+# shellcheck source=./data.functions
+source "${BB_HOME}/data.functions"
+
+trap 'STATUS=${?}; \
+	echo "${ERROR_STRING:-ERR received.} [${CURRENT_FUNCTION} - ERR: ${STATUS}]" >&2; \
 	echo; \
 	pause; \
-	check_images_functions; \
 	set +o pipefail; \
 	unmount_tag --all --kill || true; \
 	trap - ERR SIGINT; \
 	exit ${STATUS}' ERR
-trap 'echo "SIGINT received. [bbxb]"; \
+trap 'echo "SIGINT received. [${CURRENT_FUNCTION}]"; \
 	echo; \
 	set +o pipefail; \
 	unmount_tag --all --kill || true; \
 	trap - ERR SIGINT; \
 	exit 0' SIGINT
 
-set -o pipefail
-
-BB_HOME=$(dirname "$(realpath "${BASH_SOURCE[0]}")")
-#PROGRAM_NAME="$(basename "${BASH_SOURCE[0]}")"
-
-# shellcheck source=core.functions
-source "${BB_HOME}/core.functions"
-check_core_functions
-
-OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
-
-PRJ_NAME="${_param_1}"
-PLATFORM_NAME="${_param_2:-generic_x64}"
-
-if [ -z "${PRJ_NAME}" ]
-then
-	echo "No project name specified!!!"
-	exit 1
-fi
-
-# shellcheck source=setenv
-source "${BB_HOME}/setenv"
-# shellcheck source=build.functions
-source "${BB_HOME}/build.functions"
-# shellcheck source=project.functions
-source "${BB_HOME}/project.functions"
-# shellcheck source=toolchain.functions
-source "${BB_HOME}/toolchain.functions"
-# shellcheck source=images.functions
-source "${BB_HOME}/images.functions"
-# shellcheck source=/data.functions
-source "${BB_HOME}/data.functions"
-
-PRJ=${PRJ_PATH}/${PRJ_NAME}.prj
-if [ ! -f "${PRJ}" ]
-then
-	echo "Project ${PRJ} does not exist."
-	exit 1
-fi
-
-echo "Project path: ${DATA_PATH}/${PRJ_NAME}"
+echo "Project path: ${DATA_PATH}/${PROJECT_NAME}"
 echo
-# shellcheck source=projects/*
-source "${PRJ}"
+
+if [ ! -d "${GLOBAL_LOG_PATH}" ]
+then
+	mkdir -p "${GLOBAL_LOG_PATH}"
+fi
+
+if [ ! -d "${USERDATA_PATH}" ]
+then
+	mkdir -p "${USERDATA_PATH}"
+fi
+
+# shellcheck source=./projects/lfs.prj
+source "${PROJECT}"
 if check_images_functions
 then
 	unmount_tag --all
 fi
+
+set +o pipefail
 trap - ERR SIGINT

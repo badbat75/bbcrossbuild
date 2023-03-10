@@ -169,11 +169,11 @@ then
 		mount_tag temp --mountlist "2:/ 1:/boot"
 		echo -n "Copying files..."
 
-		( set -x; sudo rsync -av "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/final/" "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/temp" \
+		( set -x; sudo rsync -av "${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/final/" "${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/temp" \
 			-r --exclude dev --exclude proc --exclude tmp --exclude etc/fstab; set +x ) >> ${LOG_PATH}/images_temp.log 2>&1
 		unmount_tag final
 		echo -n "Tuning boot parameters for ${MOODEIMG_FS:-f2fs}..."
-		PARTUUID=$(grep '/ ' ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/temp/etc/fstab | awk '{print $1}')
+		PARTUUID=$(grep '/ ' ${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/temp/etc/fstab | awk '{print $1}')
 		run_on_root_dir temp root "sed -i \"s/rootfstype=ext4/rootfstype=${MOODEIMG_FS:-f2fs}/;s/root=PARTUUID=[^ ]*/root=${PARTUUID}/\" /boot/cmdline.txt"
 		run_on_root_dir temp root "systemctl disable resize2fs_once.service"
 		run_on_root_dir temp root "systemctl disable e2scrub_all"
@@ -245,11 +245,11 @@ if [ -n "${QEMU_MACHINE}" ]
 then
 	echo "Creating QEMU Script for: ${QEMU_MACHINE}"
 	KERNEL=${BIN_PATH}/boot/${KERNEL_NAME}
-	IMAGE=${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.img
+	IMAGE=${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.img
 	QEMU_ARCH=${HM}
 	QEMU_CPU=${HMCPU}
 
-	cat >${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.qemu <<-EOF
+	cat >${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.qemu <<-EOF
 		#!/bin/sh
 
 		qemu-img resize ${IMAGE} 4G
@@ -271,6 +271,6 @@ then
 			-device sd-card,drive=disk0 -drive file=${IMAGE},if=none,format=raw,id=disk0 \\
 			--no-reboot
 	EOF
-	chmod +x ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.qemu
-	echo "Run ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.qemu to test it!!!"
+	chmod +x ${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.qemu
+	echo "Run ${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.qemu to test it!!!"
 fi

@@ -321,13 +321,13 @@ function unmount_tag () {
 	if [ "${FINALIZE}" -eq 1 ]
 	then
 		{
-		run_cmd "mv \"${LODEVIMAGES[${MOUNT_NAME}]}\" \"${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.img\""
-		run_cmd "cat >${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.dd <<-EOF
+		run_cmd "mv \"${LODEVIMAGES[${MOUNT_NAME}]}\" \"${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.img\""
+		run_cmd "cat >${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.dd <<-EOF
 			#!/bin/bash
-			sudo dd if=${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.img of=\\\${1:-/dev/mmcblk0} bs=1M status=progress oflag=direct
+			sudo dd if=${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.img of=\\\${1:-/dev/mmcblk0} bs=1M status=progress oflag=direct
 		EOF
 		"
-		run_cmd "chmod +x ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.dd" 
+		run_cmd "chmod +x ${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.dd" 
 		} >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 	fi
 

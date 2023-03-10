@@ -22,7 +22,7 @@ fi
 OPTS="--run --quiet" OPTS_WITH_VALUE="--rootdev --rootfs --rootpart --savecmd" param2value "${@}"
 
 # shellcheck disable=SC2154
-PRJ_NAME=${_param_1}
+PROJECT_NAME=${_param_1}
 # shellcheck disable=SC2154
 PLATFORM_NAME=${_param_2:-generic_x64}
 # shellcheck disable=SC2154
@@ -38,7 +38,7 @@ KERN_ROOTPARTITION=${_param_rootpart:-2}
 # shellcheck disable=SC2154
 SAVECMD=${_param_savecmd}
 
-if [ -z "${PRJ_NAME}" ]
+if [ -z "${PROJECT_NAME}" ]
 then
 	ERROR_STRING="No project name specified!!!"
 	ERROR_CODE=255
@@ -88,7 +88,7 @@ fi
 SPECS_HW+=" -smp ${QEMU_SMP:-2} -m ${QEMU_RAM:-2048}"
 
 ### Disk device specification
-IMAGE_FILE="${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/${PRJ_NAME}.img"
+IMAGE_FILE="${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.img"
 
 if [ ! -f "${IMAGE_FILE}" ]
 then

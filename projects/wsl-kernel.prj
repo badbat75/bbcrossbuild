@@ -15,4 +15,4 @@ KERNEL_VER=5.15.74
 setup_full_toolchain
 build microsoft/wsl-kernel_5.15
 
-cp -fv ${BIN_PATH}/boot/vmlinuz* ${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}
+cp -fv ${BIN_PATH}/boot/vmlinuz* ${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}

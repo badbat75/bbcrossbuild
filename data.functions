@@ -25,7 +25,7 @@ function generate_ssh_keys () {
 		run_cmd "mkdir -pv \"${USERDATA_PATH}/etc/ssh\""
 	fi
 	run_cmd "ssh-keygen -A -v -f \"${USERDATA_PATH}\""
-	run_cmd "find \"${USERDATA_PATH}/etc/ssh\" -name \"ssh_host_*.pub\" -print0 | xargs -0 sed -i \"s/\$(id -un)@\$(uname -n)/${PRJ_NAME}/\""			
+	run_cmd "find \"${USERDATA_PATH}/etc/ssh\" -name \"ssh_host_*.pub\" -print0 | xargs -0 sed -i \"s/\$(id -un)@\$(uname -n)/${PROJECT_NAME}/\""			
 	if [ -n "${_param_install}" ]
 	then
 		if [ -d "${PLATFORM_PATH}/${_param_install}" ]

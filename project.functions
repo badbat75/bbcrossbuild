@@ -6,7 +6,7 @@ check_build_functions
 function clean_project () {
 	[ -d "${BIN_PATH}" ] && rm -rf "${BIN_PATH}"
 	[ -d "${STATUS_PATH}" ] && rm -rf "${STATUS_PATH}"
- 	[ -f "${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.tar.xz" ] && rm -f "${DATA_PATH}/${PRJ_NAME}/${PRJ_NAME}.tar.xz"
+ 	[ -f "${DATA_PATH}/${PROJECT_NAME}/${PROJECT_NAME}.tar.xz" ] && rm -f "${DATA_PATH}/${PROJECT_NAME}/${PROJECT_NAME}.tar.xz"
 }
 
 function root_project () {
@@ -64,7 +64,7 @@ function remove_devfiles () {
 	fi
 	popd
 	pushd "${TMP_PATH}"
-	tar -cf - . | xz -T0 > "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/devfiles.tar.xz"
+	tar -cf - . | xz -T0 > "${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/devfiles.tar.xz"
 	popd
 	rm -rf "${TMP_PATH}"
 	if [ ! "$(echo "${@}" | grep -o no-exitstatus)" == "no-exitstatus" ]
@@ -83,8 +83,8 @@ function resume_devfiles () {
 		return ${STATUS};' ERR
 
 	echo -n "Resuming development files... "
-	tar xf "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/devfiles.tar.xz" -C"${BIN_PATH}"
-	rm -f "${DATA_PATH}/${PRJ_NAME}/${PLATFORM_NAME}/devfiles.tar.xz"
+	tar xf "${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/devfiles.tar.xz" -C"${BIN_PATH}"
+	rm -f "${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/devfiles.tar.xz"
 	if [ ! "$(echo "${@}" | grep -o no-exitstatus)" == "no-exitstatus" ]
 	then
 		echo "done."

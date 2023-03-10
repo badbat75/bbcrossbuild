@@ -1,24 +1,21 @@
+# shellcheck disable=SC2034
 NPROCS=$(nproc --ignore=1)
+# shellcheck disable=SC2034
 LTOPROCS=$(( $(nproc) / 4 ))
 
 ulimit -n 2048
 umask 0022
 
-if [ -f ${BB_HOME}/bbxb.conf ] ; then source ${BB_HOME}/bbxb.conf ; fi
+if [ -f "${BB_HOME}/bbxb.conf" ]
+then
+	# shellcheck source=./bbxb.conf
+	source "${BB_HOME}/bbxb.conf"
+fi
 
 # Check platform consistency
-PLATFORM=${BB_HOME}/${PLATFORM_DIR:-platforms}/${PLATFORM_NAME}.conf
-if [ -f "${PLATFORM}" ]
-then
-	# shellcheck source=platforms/*
-	source "${PLATFORM}"
-	HARCH=${HM}-${HOS}-${HLIBC}
-else
-	echo "Platform file ${PLATFORM} does not exists!!! Proceeding as no platform specified."
-	PLATFORM=native
-	HARCH=$(${TOOLCHAIN_CC:-gcc} -dumpmachine)
-	HMARCH=native
-fi
+# shellcheck source=platforms/generic-x64.conf
+source "${PLATFORM}"
+HARCH=${HM}-${HOS}-${HLIBC}
 
 DATA_PATH=${DATA_PATH:-${HOME}/.bbxb}
 
@@ -30,12 +27,7 @@ GLOBAL_CACHE_PATH=${DATA_PATH}/${CACHE_DIR:-cache}
 DOWNLOAD_PATH=${DATA_PATH}/${DOWNLOAD_DIR:-downloads}
 export GLOBAL_TOOLCHAIN_PATH
 
-if [ ! -d ${GLOBAL_LOG_PATH} ]
-then
-	mkdir -p ${GLOBAL_LOG_PATH}
-fi
-
-PROJECT_PATH=${DATA_PATH}/${PRJ_NAME}
+PROJECT_PATH=${DATA_PATH}/${PROJECT_NAME}
 PLATFORM_PATH=${PROJECT_PATH}/${PLATFORM_NAME}
 DISTOS_PATH=${PLATFORM_PATH}/${DISTOS_DIR:-distos}
 SRC_PATH=${PROJECT_PATH}/${SRC_DIR:-sources}
@@ -50,16 +42,6 @@ USERDATA_PATH=${PROJECT_PATH}/${USERDATA_DIR:-data}
 PACKAGES_PATH=${PLATFORM_PATH}/${PACKAGES_DIR:-packages}
 CACHE_PATH=${PLATFORM_PATH}/${CACHE_DIR:-cache}
 export DISTOS_PATH BIN_PATH TOOLCHAIN_PATH
-
-if [ ! -d ${LOG_PATH} ]
-then
-	mkdir -p ${LOG_PATH}
-fi
-
-if [ ! -d ${USERDATA_PATH} ]
-then
-	mkdir -p ${USERDATA_PATH}
-fi
 
 PRJ_PATH=${BB_HOME}/${PRJ_DIR:-projects}
 PKG_PATH=${BB_HOME}/${PKG_DIR:-packages}
