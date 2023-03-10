@@ -14,6 +14,7 @@ case ${PKG_TARGET} in
         PKG_MAKETARGETS="-Clib/et install-strip,-Clib/ss install-strip"
     ;;
     bootstrap)
+        PKG_DEPS+=" lfs/e2fsprogs:cross"
         PKG_MAKETARGETS="all,-j1 install install-strip"
     ;;
     *)

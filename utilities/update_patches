@@ -1,6 +1,6 @@
-#!/bin/sh -e
+#!/bin/bash -e
 
-function url4pkg {
+url4pkg () {
 	case ${PACKAGE} in
 		glibc) echo "https://sourceware.org/git/glibc.git" ;;
 		gcc) echo "https://sourceware.org/git/gcc.git" ;;
@@ -9,7 +9,7 @@ function url4pkg {
 	esac
 }
 
-function gitrepo4pkg {
+gitrepo4pkg () {
 	case ${PACKAGE} in
 		glibc) echo "glibc" ;;
 		gcc) echo "gcc" ;;
@@ -18,13 +18,13 @@ function gitrepo4pkg {
 	esac
 }
 
-function gitrepo_additional_params {
+gitrepo_additional_params () {
 	case ${PACKAGE} in
 		binutils) echo "-- . "':!libbacktrace/'" "':!gas/doc/.dirstamp';;
 	esac
 }
 
-function rel4pkg {
+rel4pkg () {
 	case ${PACKAGE} in
 		glibc) echo "refs/tags/glibc-${PKG_VER}" ;;
 		gcc) echo "refs/tags/releases/gcc-${PKG_VER}" ;;
@@ -33,7 +33,7 @@ function rel4pkg {
 	esac
 }
 
-function head4pkg {
+head4pkg () {
 	case ${PACKAGE} in
 		glibc) echo "origin/release/${PKG_VER}/master" ;;
 		gcc) echo "origin/releases/gcc-${PKG_MAJVER}" ;;
@@ -42,25 +42,26 @@ function head4pkg {
 	esac
 }
 
-function generate_patch_and_print {
-	local LAST_COMMIT=$(git -C /tmp/$(gitrepo4pkg) rev-parse --short -1 $(head4pkg))
-	local PATCH_FILE=${PACKAGE}_${PKG_VER}+${LAST_COMMIT}.patch
-	local LINK_FILE=${PACKAGE}_${PKG_VER}.patch
-	git -C /tmp/$(gitrepo4pkg) branch -m $(head4pkg)
-	mkdir -p ${BBXB_PATH}/patches/${PACKAGE}
-	git -C /tmp/$(gitrepo4pkg) diff $(rel4pkg)..${LAST_COMMIT} $(gitrepo_additional_params) > ${BBXB_PATH}/patches/${PACKAGE}/${PATCH_FILE}
-	ln -fs ${PATCH_FILE} ${BBXB_PATH}/patches/${PACKAGE}/${LINK_FILE}
-	echo -n "\\\t${PKG_VER})\n"
-	echo -n "\\t\\tPKG_VER=${PKG_VER}+${LAST_COMMIT}\n"
-	echo -n "\\t\\tPATCHES=${PACKAGE}/${PATCH_FILE}\n"
-	echo -n "\\t\\t;;"
+generate_patch_and_print () {
+	local LAST_COMMIT PATCH_FILE LINK_FILE
+	LAST_COMMIT=$(git -C "/tmp/$(gitrepo4pkg)" rev-parse --short -1 "$(head4pkg)")
+	PATCH_FILE=${PACKAGE}_${PKG_VER}+${LAST_COMMIT}.patch
+	LINK_FILE=${PACKAGE}_${PKG_VER}.patch
+	git -C "/tmp/$(gitrepo4pkg)" branch -m "$(head4pkg)"
+	mkdir -p "${BBXB_PATH}/patches/${PACKAGE}"
+	git -C "/tmp/$(gitrepo4pkg)" diff "$(rel4pkg)..${LAST_COMMIT}" "$(gitrepo_additional_params)" > "${BBXB_PATH}/patches/${PACKAGE}/${PATCH_FILE}"
+	ln -fs "${PATCH_FILE}" "${BBXB_PATH}/patches/${PACKAGE}/${LINK_FILE}"
+	echo -en "\\\t${PKG_VER})\n"
+	echo -en "\\t\\tPKG_VER=${PKG_VER}+${LAST_COMMIT}\n"
+	echo -en "\\t\\tPATCHES=${PACKAGE}/${PATCH_FILE}\n"
+	echo -en "\\t\\t;;"
 }
 
 BBXB_PATH=$(realpath "$(dirname ${0})/..")
 echo "bbxbuild path: ${BBXB_PATH}"
 PACKAGE=${1}
 shift
-VERSIONS=${@}
+VERSIONS=${*}
 
 if [ -z "${VERSIONS}" ] && [ -z ${PACKAGE} ]
 then
@@ -68,7 +69,7 @@ then
 	echo
 	echo "Usage:"
 	echo
-	echo "$(basename ${0}) <package> <ver1> [<ver2..n>]"
+	echo "$(basename "${0}") <package> <ver1> [<ver2..n>]"
 	echo
 	exit 1
 fi
@@ -83,23 +84,23 @@ case ${PACKAGE} in
 	;;
 esac
 
-if [ ! -d /tmp/$(gitrepo4pkg) ]
+if [ ! -d "/tmp/$(gitrepo4pkg)" ]
 then
-	mkdir /tmp/$(gitrepo4pkg)
-	git -C /tmp/$(gitrepo4pkg) init
-	git -C /tmp/$(gitrepo4pkg) remote add origin $(url4pkg)
+	mkdir "/tmp/$(gitrepo4pkg)"
+	git -C "/tmp/$(gitrepo4pkg)" init
+	git -C "/tmp/$(gitrepo4pkg)" remote add origin "$(url4pkg)"
 fi
-git -C /tmp/$(gitrepo4pkg) fetch
+git -C "/tmp/$(gitrepo4pkg)" fetch
 
-if [ -f ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak ] && [ ${SAFE:-1} -eq 1 ]
+if [ -f "${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak" ] && [ "${SAFE:-1}" -eq 1 ]
 then
 	echo "Please remove or restore ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak before update"
 else
-	cp ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak
+	cp "${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg" "${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak"
 	for PKG_VER in ${VERSIONS}
 	do
-		PKG_MAJVER=$(echo ${PKG_VER} | cut -d'.' -f1)
-		PKG_USCOREVER=$(echo ${PKG_VER} | sed 's/\./_/g')
+		PKG_MAJVER=$(echo "${PKG_VER}" | cut -d'.' -f1)
+		PKG_USCOREVER=${PKG_VER//./_}
 		echo -n "Generating patch for ${PACKAGE}_${PKG_VER}... "
 		eval "sed -i '/^\t${PKG_VER})/,/\t\t;;/c $(generate_patch_and_print)' ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg"
 		echo "done."

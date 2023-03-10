@@ -22,21 +22,21 @@ fi
 OPTS="--run --quiet" OPTS_WITH_VALUE="--rootdev --rootfs --rootpart --savecmd" param2value "${@}"
 
 # shellcheck disable=SC2154
-PRJ_NAME="${_param_1}"
+PRJ_NAME=${_param_1}
 # shellcheck disable=SC2154
-PLATFORM_NAME="${_param_2:-generic_x64}"
+PLATFORM_NAME=${_param_2:-generic_x64}
 # shellcheck disable=SC2154
-IS_RUN="${_param_run}"
+IS_RUN=${_param_run}
 # shellcheck disable=SC2154
-IS_QUIET="${_param_quiet}"
+IS_QUIET=${_param_quiet}
 # shellcheck disable=SC2154
-KERN_ROOTDEV="${_param_rootdev}"
+KERN_ROOTDEV=${_param_rootdev}
 # shellcheck disable=SC2154
-KERN_ROOTFS="${_param_rootfs:-ext4}"
+KERN_ROOTFS=${_param_rootfs:-ext4}
 # shellcheck disable=SC2154
-KERN_ROOTPARTITION="${_param_rootpart:-2}"
+KERN_ROOTPARTITION=${_param_rootpart:-2}
 # shellcheck disable=SC2154
-SAVECMD="${_param_savecmd}"
+SAVECMD=${_param_savecmd}
 
 if [ -z "${PRJ_NAME}" ]
 then
@@ -103,7 +103,7 @@ if [ -n "${KERN_ROOTDEV}" ]
 then
 	KERN_ROOT="root=${KERN_ROOTDEV}"
 else
-	case "${QEMU_STORAGE}" in
+	case ${QEMU_STORAGE} in
 		ide-hd)
 			KERN_ROOT="root=/dev/hda${KERN_ROOTPARTITION}" ;;
 		scsi-hd)
