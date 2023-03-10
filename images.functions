@@ -33,7 +33,9 @@ function create_image() {
 
 	local MOUNT_NAME MOUNT_LAYOUT IMAGE_PATH MOUNT_DIR ROOTFS_TYPE SIZEIEC LAYOUT
 
+	# shellcheck disable=SC2154
 	MOUNT_NAME=${_param_1}
+	# shellcheck disable=SC2154
 	MOUNT_LAYOUT=${_param_layout}
 	IMAGE_PATH=${DISKIMAGES_PATH}/${MOUNT_NAME}.img
 	MOUNT_DIR=${PLATFORM_PATH}/${MOUNT_NAME}
@@ -126,9 +128,13 @@ function mount_tag () {
 
 	local MOUNT_NAME RESIZE URL IMGFILE IMAGE_PATH IMAGEFILE_PATH MOUNT_DIR PARTNO IMGSIZE PARTINFO PARTNO MPOINT ROOTREADY
 
+	# shellcheck disable=SC2154
 	MOUNT_NAME=${_param_1}
+	# shellcheck disable=SC2154
 	RESIZE=${_param_resize}
+	# shellcheck disable=SC2154
 	URL=${_param_url}
+	# shellcheck disable=SC2154
 	IMGFILE=${_param_imgfile}
 	IMAGE_PATH=${DISKIMAGES_PATH}/${MOUNT_NAME}
 	IMAGEFILE_PATH=${DISKIMAGES_PATH}/${MOUNT_NAME}.img
@@ -353,6 +359,7 @@ function mount_from () {
 	OPTS="" OPTS_WITH_VALUE="--url --imgfile --tag --mountlist --resize" param2value "${@}"
 
 	local TAG IMGFILE MOUNTLIST RESIZE
+	# shellcheck disable=SC2154
 	TAG=${_param_tag}
 	IMGFILE=${_param_imgfile}
 	URL=${_param_url}
@@ -398,9 +405,13 @@ function run_on_root_dir () {
 
 	local CHROOT_DIR CHROOT_USER CHROOT_CMD CHROOT_PWD CHROOT_PROMPT
 
+	# shellcheck disable=SC2154
 	CHROOT_DIR=${_param_1}
+	# shellcheck disable=SC2154
 	CHROOT_USER=${_param_2}
+	# shellcheck disable=SC2154
 	CHROOT_CMD=${_param_3}
+	# shellcheck disable=SC2154
 	ALLOCATE_PTY=${_param_allocate_pty:-0}
 
 	{
@@ -425,6 +436,26 @@ function run_on_root_dir () {
 	trap - ERR
 }
 
+function set_ownership () {
+	### set_ownership <owner:group> <target_directory> <copy_ownership_from_directory> <file>
+	if [ -e "${2}/${3}" ]
+	then
+		chown -h "${1}" "${2}/${3}"	
+		# Check SUID from source path to change it on destination path
+		if [ -u "${4}/${3}" ]
+		then
+			chmod -v u+s "${2}/${3}"
+		fi
+		if [ -g "${4}/${3}" ]
+		then
+			chmod -v g+s "${2}/${3}"
+		fi
+	else
+		echo "${2}/${3} does not exists" >&2
+	fi
+}
+export -f set_ownership
+
 function inject_into_mount_tag () {
 	# inject_into_mount_tag <mount_tag> <object> <directory> <owner>
 	#   mount_tag: name of the mount tag
@@ -433,26 +464,6 @@ function inject_into_mount_tag () {
 	#		<filename>: copy the filename into mount tag
 	#	directory: directory where to copy under mount_tag
 	#   owner: file ownership (default: "root:root")
-
-	function set_ownership () {
-		### set_ownership <owner:group> <target_directory> <copy_ownership_from_directory> <file>
-		if [ -e "${2}/${3}" ]
-		then
-			chown -h "${1}" "${2}/${3}"	
-			# Check SUID from source path to change it on destination path
-			if [ -u "${4}/${3}" ]
-			then
-				chmod -v u+s "${2}/${3}"
-			fi
-			if [ -g "${4}/${3}" ]
-			then
-				chmod -v g+s "${2}/${3}"
-			fi
-		else
-			echo "${2}/${3} does not exists" >&2
-		fi
-	}
-	export -f set_ownership
 
 	trap 'STATUS=${?}; \
 		trap - ERR; \
@@ -507,9 +518,9 @@ function inject_into_mount_tag () {
 			run_cmd -s "chown -h ${TARGET_OWNER} ${TARGET_PATH}"
 		fi
 		echo -n "Syncing ${SOURCE_PATH} to ${TARGET_PATH}... " | log_buffer info
-		pushd "${SOURCE_PATH}"
+		pushd "${SOURCE_PATH}" || return "${ERROR_PATH_NOT_FOUND}"
 		run_cmd -s "rsync -K -a ${RSYNC_EXCLUDE} --devices --specials --no-owner --no-group ${TARGET_FILE} \"${TARGET_PATH}\""
-		popd > /dev/null
+		popd > /dev/null || return "${ERROR_PATH_NOT_FOUND}"
 		echo -e "Done.\n" | log_buffer info
 	} >> "${LOG_PATH}/images_${ROOT_DIR}.log"
 	echo -n "Setting ownership... "

@@ -40,9 +40,28 @@ SAVECMD=${_param_savecmd}
 
 if [ -z "${PROJECT_NAME}" ]
 then
-	ERROR_STRING="No project name specified!!!"
-	ERROR_CODE=255
-	program_exit
+	ERROR_STRING="No project name specified."
+	(exit "${ERROR_NOT_VALID_OPTION}")
+fi
+
+if [ -z "${PLATFORM_NAME}" ]
+then
+	ERROR_STRING="No platform name specified."
+	(exit "${ERROR_NOT_VALID_OPTION}")
+fi
+
+PROJECT=${BB_HOME}/${PRJ_PATH:-projects}/${PROJECT_NAME}.prj
+if [ ! -f "${PROJECT}" ]
+then
+	ERROR_STRING="Project ${PROJECT} does not exist."
+	(exit "${ERROR_FILE_NOT_FOUND}")
+fi
+
+PLATFORM=${BB_HOME}/${PLATFORM_DIR:-platforms}/${PLATFORM_NAME}.conf
+if [ ! -f "${PLATFORM}" ]
+then
+	ERROR_STRING="Platform ${PLATFORM} does not exist."
+	(exit "${ERROR_FILE_NOT_FOUND}")
 fi
 
 # shellcheck source=../setenv

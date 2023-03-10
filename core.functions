@@ -19,6 +19,7 @@ param2value () {
 	OPTS+=" -v "
 	NUM=0
 
+	# shellcheck disable=SC2046
 	unset $( ( set -o posix ; set ) | grep ^_param_ | sed 's/=.*$//g' | xargs )
 
 	while(($#)) ; do
@@ -382,10 +383,10 @@ run_cmd () {
 		case "${RUNCMD_SUDO}" in
 		"sudo/bash") 
 			sudo bash -c "${CMDLINE}" 2> >(log_buffer error) > >(log_buffer)
-			local STATUS=${PIPESTATUS[0]}
+			STATUS=${PIPESTATUS[0]}
 			;;
 		*)	eval "${RUNCMD_SUDO:+${RUNCMD_SUDO} }${CMDLINE}" 2> >(log_buffer error) > >(log_buffer)
-			local STATUS=${PIPESTATUS[0]}
+			STATUS=${PIPESTATUS[0]}
 			;;
 		esac
 	done

@@ -10,11 +10,11 @@ function clean_project () {
 }
 
 function root_project () {
-	pushd "${BIN_PATH}"
+	pushd "${BIN_PATH}" || return "${ERROR_PATH_NOT_FOUND}"
 	sudo find -gid "$(id -g)" -exec chgrp -h root {} \;
 	sudo find -uid "$(id -u)" -exec chown -h root {} \;
 	#sudo chown -R root:root *
-	popd
+	popd || return "${ERROR_PATH_NOT_FOUND}"
 }
 
 function remove_devfiles () {
@@ -31,9 +31,10 @@ function remove_devfiles () {
 		trap ERR
 		exit 0
 	fi
-	local TMP_PATH=$(mktemp -d)
+	local TMP_PATH
+	TMP_PATH=$(mktemp -d)
 	chmod 755 "${TMP_PATH}"
-	pushd "${BIN_PATH}"
+	pushd "${BIN_PATH}" || return "${ERROR_PATH_NOT_FOUND}"
 	#mkdir -p ${TMP_PATH}/${TARGET_LIBDIR}${TARGET_LIBSUFFIX}
 	TMP_PATH=${TMP_PATH} find . -type f \( -name '*.la' -o -name '*.a' \) -exec sh -c \
 		'mkdir -p ${TMP_PATH}/$(dirname ${1}) && mv ${1} ${TMP_PATH}/${1}' \
@@ -62,17 +63,17 @@ function remove_devfiles () {
 		fi
 		mv ".${TARGET_PREFIX}/src" "${TMP_PATH}/$(dirname ".${TARGET_PREFIX}/src")"
 	fi
-	popd
-	pushd "${TMP_PATH}"
+	popd || return "${ERROR_PATH_NOT_FOUND}"
+	pushd "${TMP_PATH}" || return "${ERROR_PATH_NOT_FOUND}"
 	tar -cf - . | xz -T0 > "${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/devfiles.tar.xz"
-	popd
+	popd || return "${ERROR_PATH_NOT_FOUND}"
 	rm -rf "${TMP_PATH}"
 	if [ ! "$(echo "${@}" | grep -o no-exitstatus)" == "no-exitstatus" ]
 	then
 		echo "done."
 		echo
 	fi
-	trap ERR
+	trap ERR || return "${ERROR_PATH_NOT_FOUND}"
 }
 
 function resume_devfiles () {
@@ -102,7 +103,9 @@ function create_sfx_package () {
 
 	OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
 
-	local PKG_OBJ="${_param_1}"
+	local PKG_OBJ
+	# shellcheck disable=SC2154
+	PKG_OBJ="${_param_1}"
 
 	if [ -d "${PKG_OBJ}" ]
 	then
