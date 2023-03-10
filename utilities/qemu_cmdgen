@@ -125,7 +125,7 @@ fi
 ### Graphics device specification
 if [ -n "${QEMU_GRAPHIC}" ]
 then
-	SPECS_GRAPHIC="-device ${QEMU_GRAPHIC}"
+	SPECS_GRAPHIC="-device ${QEMU_GRAPHIC} -device usb-kbd -device usb-mouse"
 	KERN_CONSOLE="console=${QEMU_CONSOLE:-tty1}"
 else
 	SPECS_GRAPHIC="-nographic"
@@ -151,7 +151,6 @@ KERN_APPEND="-append \"${KERN_CONSOLE} ${KERN_ROOT} rootwait cgroup_enable=memor
 
 CMDLINE="${QEMU_EXE}"
 CMDLINE+=" ${SPECS_HW}"
-CMDLINE+=" -usb -device usb-kbd -device usb-mouse"
 CMDLINE+=" ${SPECS_STORAGE}"
 CMDLINE+=" ${SPECS_NETWORK}"
 CMDLINE+=" ${SPECS_GRAPHIC}"
