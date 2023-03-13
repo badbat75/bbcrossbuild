@@ -363,6 +363,7 @@ run_cmd () {
 		)
 		case "${RUNCMD_SUDO}" in
 		"sudo/bash") 
+			# shellcheck disable=SC2024
 			sudo bash -c "${CMDLINE}" 2> >(log_buffer error) > >(log_buffer)
 			STATUS=${PIPESTATUS[0]}
 			;;

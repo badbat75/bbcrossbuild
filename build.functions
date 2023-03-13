@@ -565,6 +565,7 @@ function create_environment_source () {
 	EOF
 	if [ -n "${TOOLCHAIN_CC}" ]
 	then
+		# shellcheck disable=SC2153
 		cat <<-EOF >> environment.source
 		export CC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 		export CFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}'
@@ -574,6 +575,7 @@ function create_environment_source () {
 	fi
 	if [ -n "${TOOLCHAIN_CXX}" ]
 	then
+		# shellcheck disable=SC2153
 		cat <<-EOF >> environment.source
 			export CXX='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 			export CXXFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}'
@@ -581,6 +583,7 @@ function create_environment_source () {
 	fi
 	if [ -n "${TOOLCHAIN_FC}" ]
 	then
+		# shellcheck disable=SC2153
 		cat <<-EOF >> environment.source
 			export FC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_FC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 			export FFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
@@ -666,7 +669,7 @@ function preparesources () {
 	then
 		echo -n "${SPACES}Retrieve DEB patch info..."
 		[ ! -d "${PKG_SRCPATH}/debian" ] && mkdir -p "${PKG_SRCPATH}/debian"
-		ARCHIVEDIRS="debian" download_uncompress "${PATCHDEB}" ${PKG_SRCPATH}/debian
+		ARCHIVEDIRS="debian" download_uncompress "${PATCHDEB}" "${PKG_SRCPATH}/debian"
 		echo "Done."
 		if [ -f "${PKG_SRCPATH}/debian/patches/series" ]
 		then
@@ -1040,7 +1043,7 @@ function mesonninja () {
 function cargobuild () {
 
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
-	cd ${PKG_BLDPATH}
+	cd "${PKG_BLDPATH}"
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	create_environment_source --target "${PKG_TARGET_ENV}"
 	# shellcheck source=/dev/null
@@ -1062,7 +1065,7 @@ function cargobuild () {
 		2|thin)	export CARGO_PROFILE_RELEASE_LTO=thin
 			;;
 	esac
-	for param in $(echo ${TOOLCHAIN_EXTRA_C_CMD} ${SYSROOT_FLAGS} ${STRIP_FLAG} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS} ${TOOLCHAIN_LINKERFLAGS} ${PKG_LDFLAGS})
+	for param in ${TOOLCHAIN_EXTRA_C_CMD} ${SYSROOT_FLAGS} ${STRIP_FLAG} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS} ${TOOLCHAIN_LINKERFLAGS} ${PKG_LDFLAGS}
 	do
 		export RUSTFLAGS+=" -C link-arg=${param}"
 	done
@@ -1090,8 +1093,8 @@ function cargobuild () {
 
 function kernelmodbuild () {
 
-	cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
-	cd ${PKG_BLDPATH}
+	cp -rp "${PKG_SRCPATH}" "${PKG_BLDPATH}"
+	cd "${PKG_BLDPATH}"
 
 	if [ ! -f "${PKG_BLDPATH}/Makefile" ]
 	then
@@ -1104,17 +1107,18 @@ function kernelmodbuild () {
 	fi
 	run_cmd "cat ${PKG_BLDPATH}/Makefile"
 
-	if [ ${PKG_KERNEL_LOCALBUILD:-0} -eq 0 ]
+	if [ "${PKG_KERNEL_LOCALBUILD:-0}" -eq 0 ]
 	then
 		local BUILD_OPTION="-C ${PKG_KERNEL_BLDPATH} "
 	fi
 
 	run_cmd "KCFLAGS=\"${PKG_CFLAGS}\" ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} modules"
+	# shellcheck disable=SC2153
 	run_cmd "eval ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} INSTALL_MOD_PATH=${PKG_PKGPATH} INSTALL_MOD_DIR=${PKG_KERNEL_MODPATH} modules_install"
 	run_cmd "rm -f ${PKG_PKGPATH}/lib/modules/*/modules.*"
 
 	run_cmd "mkdir -pv ${PKG_PKGPATH}/postinst_scripts"
-	cat <<-EOF > ${PKG_PKGPATH}/postinst_scripts/49_kernmodpost
+	cat <<-EOF > "${PKG_PKGPATH}/postinst_scripts/49_kernmodpost"
 		depmod -a ${PKG_KERNEL_VERSION}
 	EOF
 	run_cmd "cat ${PKG_PKGPATH}/postinst_scripts/49_kernmodpost"
@@ -1675,6 +1679,7 @@ function build () {(
 		STATUS_FILE_DEFAULT_TARGET \
 		TEMPORARY_STATUS
 
+	# shellcheck disable=SC2154
 	PKG_FILE=$(cut -d':' -f1 <<<"${_param_1}")
 	PKG_TARGET=$(cut -s -d':' -f2 <<<"${_param_1}")
 	GCC_CHECK=${_param_no_gcc_check:-0}
@@ -1744,7 +1749,7 @@ function build () {(
 		;;
 	esac
 
-	# shellcheck source=packages/*.pkg
+	# shellcheck source=packages/lfs/systemd.pkg
 	source "${PKG_PATH}/${PKG_FILE}.pkg"
 
 	PKG_TOOLCHAIN=${_param_toolchain:-${PKG_TOOLCHAIN}}
@@ -1804,8 +1809,8 @@ function build () {(
 		SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
 		echo -n "${SPACES}Requires "
 		#echo "Called from ${PKG_FILE}"
-		build $( if [ "${NOSAVESTATUS}" -eq 1 ] || [ "${TEMPORARY_STATUS}" == .tmp ]; then echo "--temporary"; fi ) \
-			$( if [ "${GCC_CHECK}" -eq 1 ]; then echo "--no_gcc_check"; fi ) \
+		build "$( if [ "${NOSAVESTATUS}" -eq 1 ] || [ "${TEMPORARY_STATUS}" == .tmp ]; then echo "--temporary"; fi )" \
+			"$( if [ "${GCC_CHECK}" -eq 1 ]; then echo "--no_gcc_check"; fi )" \
 			"${dep}$( if [ "${PKG_TARGET_ENV}" == native ] || [ "${PKG_TARGET_ENV}" == cross ]; then echo ":${PKG_TARGET_ENV}"; fi )"
 		NUMSPACES=$((NUMSPACES-1))
 		SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)

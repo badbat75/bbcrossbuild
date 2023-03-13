@@ -4,6 +4,7 @@ check_core_functions
 check_build_functions
 
 function check_gnu_c () {
+	# shellcheck disable=SC2153
 	if ! "${HARCH}-gcc" -v > /dev/null 2>&1
 	then
 		echo "The GNU toolchain for cross-compile does not exist."
@@ -85,12 +86,15 @@ function set_gnu_buildenv () {
 		exit 1
 	fi
 	BARCH=$(gcc -dumpmachine)
+	# shellcheck disable=SC2034
 	BM=$(echo "${BARCH}" | cut -d- -f1)
+	# shellcheck disable=SC2034
 	BOS=$(echo "${BARCH}" | cut -d- -f3)
 	BLIBC=$(echo "${BARCH}" | cut -d- -f4)
 	BLIBC=${BLIBC:-gnu}
 	CC_FOR_BUILD=$(which gcc)
 	CXX_FOR_BUILD=$(which g++)
+	# shellcheck disable=SC2034
 	CPP_FOR_BUILD="$(which gcc) -E"
 	AR_FOR_BUILD=$(which gcc-ar)
 	NM_FOR_BUILD=$(which gcc-nm)
@@ -98,7 +102,9 @@ function set_gnu_buildenv () {
 	CFLAGS_FOR_BUILD="-O3 -march=native -flto=${LTOPROCS}"
 	CXXFLAGS_FOR_BUILD="-O3 -march=native -flto=${LTOPROCS}"
 	LDFLAGS_FOR_BUILD="-fuse-ld=gold -fuse-linker-plugin${OPTLINK_FLAGS:+ ${OPTLINK_FLAGS}}"
+	# shellcheck disable=SC2034
 	LIBRARY_PATH_FOR_BUILD=$(gcc_toolchain_print_searchdirs build 5)
+	# shellcheck disable=SC2034
 	INCLUDE_PATH_FOR_BUILD=$(find {/,/usr/} -mindepth 1 -maxdepth 1 -name include -type d)
 
 	GMPURL=https://gmplib.org/download/gmp/gmp-${GMP_VER}.tar.xz
@@ -109,6 +115,7 @@ function set_gnu_buildenv () {
 	GCCURL=https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz
 
 	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
+	# shellcheck disable=SC2034
 	PLATFORM_RUSTFLAGS="${HMCPU:+-C target-cpu=${HMCPU}}${HMARCH_RUST:+ -C target-feature=${HMARCH_RUST} }"
 }
 
@@ -117,7 +124,7 @@ function setup_rust () {
 	echo -n "Setting up RUST... "
 	export CARGO_HOME=${GLOBAL_TOOLCHAIN_PATH}
 	export RUSTUP_HOME=${GLOBAL_TOOLCHAIN_PATH}/var/rustup
-	CARGO_TARGET=$(sed 's/-/-unknown-/' <<<"${HARCH}")
+	CARGO_TARGET=${HARCH/-/-unknown-}
 	if [ ! -x "${GLOBAL_TOOLCHAIN_PATH}/bin/cargo" ] || [ ! -x "${GLOBAL_TOOLCHAIN_PATH}/bin/rustc" ]
 	then
 		echo -n "downloading... "
@@ -139,19 +146,21 @@ function setup_rust () {
 	then
 		echo -n "installing update tools... "
 		( set -e
-			export CARGO_PROFILE_RELEASE_OPT_LEVEL=3
-			export CARGO_PROFILE_RELEASE_LTO=thin
+			CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+			CARGO_PROFILE_RELEASE_LTO=thin
+			export CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO
 			run_cmd "cargo install cargo-update" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
 		)
 	fi
 	if [ "${RUST_UPDATE:-0}" -eq 1 ]
 	then
 		echo -n "upgrading packages... "
-			( set -e
-				export CARGO_PROFILE_RELEASE_OPT_LEVEL=3
-				export CARGO_PROFILE_RELEASE_LTO=thin
-				run_cmd "cargo -v install-update -a" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
-			)
+		( set -e
+			CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+			CARGO_PROFILE_RELEASE_LTO=thin
+			export CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO
+			run_cmd "cargo -v install-update -a" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
+		)
 	fi
 	echo -n "adding ${CARGO_TARGET} libraries... "
 	run_cmd "rustup -v target add \"${CARGO_TARGET}\"" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
@@ -422,6 +431,7 @@ function setup_binutils () {
 			*)	local PLATFORM_ARCHFLAGS=" ${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
 				;;
 		esac
+		# shellcheck disable=SC2153
 		local PLATFORM_ARCHFLAGS="--enable-targets=${HM}-${HOS}-${HLIBC} --with-arch-directory=${HM} ${HMARCH:+ --with-arch=${HMARCH}}${PLATFORM_ARCHFLAGS}"
 		if [ -d "${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}" ]
 		then
@@ -488,6 +498,7 @@ function setup_binutils () {
 	if [ ! -f "${TOOLCHAIN_PATH}/bin/${HARCH}-ld.bfd" ]
 	then
 		echo -n "building... "
+		# shellcheck disable=SC2153
 		binutils_make "${HARCH}" >> "${LOG_PATH}/toolchain_binutils-${BINUTILS_VER}.log"
 		echo -e "done.\n"
 	else
@@ -502,6 +513,26 @@ function setup_binutils () {
 		run_cmd "rm -rf \"${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}\"" >> "${LOG_PATH}/toolchain_binutils-${BINUTILS_VER}.log"
 	fi
 
+}
+
+function relink_library () {
+	local RELATIVE_TO SOURCE DESTINATION
+	RELATIVE_TO=${1}
+	SOURCE=$(realpath -m --relative-to="${RELATIVE_TO}" "${2}")
+	DESTINATION=${RELATIVE_TO}/$(basename "${2}")
+	run_cmd "ln -fsv \"${SOURCE}\" \"${DESTINATION}\""
+}
+export -f relink_library
+
+function relink_la_libraries () {
+	echo "Adapting .la libraries to ${1}" | log_buffer info
+	export LIB_LA_SEDTRANS="s&^dependency_libs=' -L${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/./ld&dependency_libs='&; s&^libdir='${TOOLCHAIN_PATH}&libdir='${TARGET_PREFIX}&"
+	echo "Sed command: ${LIB_LA_SEDTRANS}" | log_buffer info
+	if [ -d "${1}" ]
+	then
+		run_cmd "find \"${1}\" -mindepth 1 -name \"*.la\" -type f | xargs -r -I{} bash -c \
+			\"sed -i \\\"\\\${LIB_LA_SEDTRANS}\\\" {}\""
+	fi
 }
 
 function setup_gcc () {
@@ -531,7 +562,7 @@ function setup_gcc () {
 		### Config parameters in common with GCC and Binutils
 		COMMON_CONFIG="--with-sysroot=/ --with-sysroot=$(gcc_sysroot) --enable-shared --with-system-zlib"
 		GCC_CONFIG="--enable-languages=${GCC_LANGUAGES:-c,c++} --enable-version-specific-runtime-libs  \
-			$( if [ ${MULTI_ARCH} -eq 1 ] && [ -z "${HARCH_LIB}" ]; then echo --enable-multiarch; fi ) \
+			$( if [ "${MULTI_ARCH}" -eq 1 ] && [ -z "${HARCH_LIB}" ]; then echo --enable-multiarch; fi ) \
 			--enable-threads=posix --enable-tls --enable-checking=release --disable-multilib \
 			--enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object \
 			--enable-linker-build-id --with-gcc-major-version-only --enable-libstdcxx-backtrace \
@@ -681,35 +712,16 @@ function setup_gcc () {
 		fi
 	}
 
+
+
 	function gcc_make_target_libs () {
 
 		function relink_libraries () {
-
-			function relink_library () {
-				local RELATIVE_TO SOURCE DESTINATION
-				RELATIVE_TO=${1}
-				SOURCE=$(realpath -m --relative-to="${RELATIVE_TO}" "${2}")
-				DESTINATION=${RELATIVE_TO}/$(basename "${2}")
-				run_cmd "ln -fsv \"${SOURCE}\" \"${DESTINATION}\""
-			}
-			export -f relink_library
-
 			echo "Relinking libraries with their relative paths in ${1}" | log_buffer info
 			[ ! -d "${1}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}" ] && run_cmd "mkdir -v \"${1}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}\""
 			run_cmd "find \"${1}${TARGET_PREFIX}/lib/gcc/${HARCH}\" -type f,l \
 				\\( -name \"*.so*\" -a ! -name \"*.so*.py\" -o -name \"*.a*\" -o -name \"*.la*\" -o -name \"crt*.o\" \\) | xargs -r -I{} bash -c \
 				\"relink_library \\\"${1}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}\\\" {}\""
-		}
-
-		function relink_la_libraries () {
-			echo "Adapting .la libraries to ${1}" | log_buffer info
-			export LIB_LA_SEDTRANS="s&^dependency_libs=' -L${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/./ld&dependency_libs='&; s&^libdir='${TOOLCHAIN_PATH}&libdir='${TARGET_PREFIX}&"
-			echo "Sed command: ${LIB_LA_SEDTRANS}" | log_buffer info
-			if [ -d "${1}" ]
-			then
-				run_cmd "find \"${1}\" -mindepth 1 -name \"*.la\" -type f | xargs -r -I{} bash -c \
-					\"sed -i \\\"\\\${LIB_LA_SEDTRANS}\\\" {}\""
-			fi
 		}
 
 		function build_gcc_library () {
@@ -1138,7 +1150,7 @@ function setup_llvm () {
 			-DCMAKE_C_FLAGS=\"--target=${LLVM_TARGET} --sysroot=\"${SYSROOT}\" ${PLATFORM_CFLAGS} ${WA_CFLAGS}\" \\
 			-DCMAKE_CXX_FLAGS=\"--target=${LLVM_TARGET} --sysroot=\"${SYSROOT}\" ${PLATFORM_CFLAGS} ${WA_CXXFLAGS}\" \\
 			-DCMAKE_ASM_FLAGS=\"--target=${LLVM_TARGET} --sysroot=\"${SYSROOT}\" ${PLATFORM_CFLAGS}\" \\
-			-DCMAKE_EXE_LINKER_FLAGS=\"--target=${LLVM_TARGET} -fuse-ld=lld ${WA_LDFLAGS}\" \\
+			-DCMAKE_EXE_LINKER_FLAGS=\"--target=${LLVM_TARGET} -fuse-ld=lld\" \\
 			-DCMAKE_C_COMPILER_TARGET=\"${LLVM_TARGET}\" \\
 			-DCMAKE_ASM_COMPILER_TARGET=\"${LLVM_TARGET}\" \\
 			\\
@@ -1362,6 +1374,7 @@ function setup_python () {
 	fi
 
 	PYTHONBIN_VER=$( cut -d. -f1,2 <<<"${PYTHON_VER}")
+	# shellcheck disable=SC2034
 	PYTHONBIN_MAJVER=${PYTHONBIN_VER:-$(cut -d. -f1 <<<"${PYTHON_VER}")}
 	PYTHON_FOR_BUILD=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/python${PYTHONBIN_VER}
 	PIP_FOR_BUILD=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip${PYTHONBIN_VER}
@@ -1450,7 +1463,7 @@ function setup_full_toolchain () {
 	export SCCACHE_DIR SCCACHE_CACHE_SIZE SCCACHE_NO_DAEMON
 	if [ ! -d "${SCCACHE_DIR}" ]
 	then
-		run_cmd "mkdir -pv \"${SCCACHE_DIR}\"" > ${GLOBAL_LOG_PATH}/toolchain_sccache.log
+		run_cmd "mkdir -pv \"${SCCACHE_DIR}\"" > "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
 	fi
 
 	build lfs/make:native
@@ -1459,6 +1472,7 @@ function setup_full_toolchain () {
 	build lfs/pkgconf:cross
 	build lfs/bison:native
 	setup_binutils
+	# shellcheck disable=SC2086
 	setup_gcc ${SETUP_GCC}
 	setup_toolchain_wrapper
 	build lfs/cmake:native
@@ -1538,7 +1552,7 @@ function prepare_sysroot () {
 
 function create_sysroot () {
 
-	echo -n "Creating sysroot with $(basename ${1})... "
+	echo -n "Creating sysroot with $(basename "${1}")... "
 	if [ ! -d "${DISTOS_PATH}" ]
 	then
 		local ARCHIVE_DIRS="./boot ./bin ./lib ./usr/bin ./usr/include ./usr/lib ./usr/share ./usr/local/bin ./usr/local/include ./usr/local/lib ./etc ./opt"
@@ -1548,6 +1562,7 @@ function create_sysroot () {
 		then
 			ARCHIVE_DIRS=${ARCHIVE_DIRS} STRIP_COMPONENTS=0 download_uncompress "${1}" "${DISTOS_PATH}" >> "${LOG_PATH}/sysroot.log" 2>&1
 		else
+			# shellcheck disable=SC2086
 			tar xf "${IMG_PATH}/${1}" -C"${DISTOS_PATH}" ${ARCHIVE_DIRS} >> "${LOG_PATH}/sysroot.log 2>&1"
 		fi
 		prepare_sysroot
@@ -1564,6 +1579,7 @@ export MAKEFLAGS+=" --load-average=${NPROCS}"
 #export MAKEFLAGS+=" --output-sync=line"
 
 TOOLCHAIN_SRCPATH=${SRC_PATH}/toolchain
+# shellcheck disable=SC2153
 TOOLCHAIN_BLDPATH=${BLD_PATH}/toolchain
 if [ ! -d "${TOOLCHAIN_PATH}" ]
 then
