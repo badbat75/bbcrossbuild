@@ -660,16 +660,6 @@ function create_environment_source () {
 }
 
 function preparesources () {
-	trap 'STATUS=${?} \
-		echo "preparesources fail."; \
-		trap - ERR; \
-		trap - SIGINT; \
-		return ${STATUS};' ERR
-
-	trap 'trap - ERR; \
-		trap - SIGINT; \
-		[ -d ${PKG_SRCPATH} ] && run_cmd "rm -rf ${PKG_SRCPATH}" || true; \
-		return 100' SIGINT
 
 	cd "${PKG_SRCPATH}"
 	if [ "x${PATCHDEB}" != x ]
@@ -727,8 +717,6 @@ function preparesources () {
 	fi
 	echo -n "${SPACES}"
 	cd "${BB_HOME}"
-	trap - ERR
-	trap - SIGINT
 }
 
 function downloadonly () {
@@ -743,12 +731,6 @@ function downloadonly () {
 }
 
 function configmake () {	
-	trap 'local CMDERR="${BASH_COMMAND}" STATUS=${?}; \
-		echo "fail. [configmake]"; \
-		echo ${CMDERR}; \
-		echo; \
-		trap - ERR; \
-		return ${STATUS}' ERR
 	if [ "${PKG_AUTOCONF:-0}" != 0 ]
 	then
 		if [ "${PKG_AUTOCONF:-0}" == 1 ]
@@ -838,13 +820,9 @@ function configmake () {
 	done
 	unset IFS
 	popd
-	trap - ERR
 }
 
 function simplemake () {
-	trap 'STATUS=${?}; \
-	trap - ERR; \
-	return ${STATUS};' ERR
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
 	cd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
@@ -865,13 +843,9 @@ function simplemake () {
 	done
 	unset IFS
 	cd "${BB_HOME}"
-	trap - ERR
 }
 
 function cmakebuild () {
-	trap 'STATUS=${?}; \
-	trap - ERR; \
-	return ${STATUS};' ERR
 
 	run_cmd "mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	cd "${PKG_BLDPATH}"
@@ -942,7 +916,6 @@ function cmakebuild () {
 	done
 	unset IFS
 	cd "${BB_HOME}"
-	trap - ERR
 }
 
 function mesonninja () {
@@ -1006,12 +979,6 @@ function mesonninja () {
 		run_cmd "cat cross-${PLATFORM_NAME}"
 	}
 
-	trap 'STATUS=${?}; \
-		trap - ERR; \
-		echo "fail. [mesonninja - ${PKG_FULLNAME}]"; \
-		echo; \
-		return ${STATUS}' ERR
-
 	run_cmd "mkdir -p ${PKG_BLDPATH}"
 	cd "${PKG_BLDPATH}"
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
@@ -1068,13 +1035,9 @@ function mesonninja () {
 	done
 	unset IFS
 	cd "${BB_HOME}"
-	trap - ERR
 }
 
 function cargobuild () {
-	trap 'STATUS=${?}; \
-	trap - ERR; \
-	return ${STATUS};' ERR
 
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
 	cd ${PKG_BLDPATH}
@@ -1123,13 +1086,9 @@ function cargobuild () {
 		run_cmd "cp -p \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${CARGO_LIB}/${file}\""
 	done
 	cd "${BB_HOME}"
-	trap - ERR
 }
 
 function kernelmodbuild () {
-	trap 'STATUS=${?}; \
-	trap - ERR; \
-	return ${STATUS};' ERR
 
 	cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}
 	cd ${PKG_BLDPATH}
@@ -1161,7 +1120,6 @@ function kernelmodbuild () {
 	run_cmd "cat ${PKG_PKGPATH}/postinst_scripts/49_kernmodpost"
 
 	cd -
-	trap - ERR
 }
 
 function kernelbuild () {
@@ -1198,10 +1156,6 @@ function kernelbuild () {
 		run_cmd "chmod +x make4kern.sh"
 	}
 
-	trap 'STATUS=${?}; \
-		trap - ERR; \
-		return ${STATUS};' ERR
-
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
 	cd "${PKG_BLDPATH}"
 
@@ -1221,7 +1175,6 @@ function kernelbuild () {
 	# Break if only headers installation required
 	if [ "${PKG_TARGET}" == "headers" ]
 	then
-		trap - ERR
 		return
 	fi
 
@@ -1330,13 +1283,9 @@ function kernelbuild () {
 	unset IFS
 
 	cd "${BB_HOME}"
-	trap - ERR
 }
 
 function pythonbuild () {
-	trap 'STATUS=${?}; \
-	trap - ERR; \
-	return ${STATUS};' ERR
 
 	local PYTHON_LIB_PATH PIPPKG
 	if [ -z "${PKG_URL}" ]
@@ -1424,13 +1373,9 @@ function pythonbuild () {
 		;;
 	esac
 	cd "${BB_HOME}"
-	trap - ERR
 }
 
 function boostbuild () {
-	trap 'STATUS=${?}; \
-	trap - ERR; \
-	return ${STATUS};' ERR
 
 	run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\""
 	cd "${PKG_BLDPATH}"
@@ -1549,16 +1494,9 @@ function boostbuild () {
 		linkflags=\"${WORKAROUND}${SYSROOT_FLAGS} ${LINKER_FLAGS} ${COMMON_LDFLAGS} ${PKG_LDFLAGS}\" \\
 		install"
 	cd "${BB_HOME}"
-	trap - ERR
 }
 
 function custom () {
-	trap 'local CMDERR="${BASH_COMMAND}" STATUS=${?}; \
-		echo "fail. [configmake]"; \
-		echo ${CMDERR}; \
-		echo; \
-		trap - ERR; \
-		return ${STATUS}' ERR
 
 	run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\""
 	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
@@ -1574,17 +1512,9 @@ function custom () {
 	run_cmd "chmod +x runmake.sh"
 	run_cmd "./runmake.sh"
 	popd
-	trap - ERR
 }
 
 function perlmodule () {
-	trap 'local CMDERR="${BASH_COMMAND}" STATUS=${?}; \
-		echo "fail. [configmake]"; \
-		echo ${CMDERR}; \
-		echo; \
-		trap - ERR; \
-		return ${STATUS}' ERR
-
 	run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\""
 	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
@@ -1617,60 +1547,38 @@ function perlmodule () {
 	pause
 
 	popd
-	trap - ERR
 }
 
 
-function build () {(
-	function downloadsources () {
-		trap 'STATUS=${?}; \
-			trap - ERR SIGINT; \
-			return ${STATUS};' ERR	
-		trap 'trap - ERR SIGINT; \
-			if [ -d ${PKG_SRCPATH} ]; then run_cmd "rm -rf ${PKG_SRCPATH}"; fi; \
-			return 100' SIGINT
-
-		if [ -n "${PKG_URL}" ]
-		then
-			[ -d "${PKG_SRCPATH}" ] && rm -rf "${PKG_SRCPATH}"
-			for url in ${PKG_URL}
-			do
-				if [ "${MAKEDIR:-0}" -eq 1 ]
-				then
-					NODELETEDESTDIR=1 STRIPCOMPONENTS=0 download_uncompress "${url}" "${PKG_SRCPATH}"
-				else
-					NODELETEDESTDIR=1 download_uncompress "${url}" "${PKG_SRCPATH}"
-				fi
-			done
-		else
-			if [ -n "${GIT_URL}" ]
+function downloadsources () {
+	if [ -n "${PKG_URL}" ]
+	then
+		[ -d "${PKG_SRCPATH}" ] && rm -rf "${PKG_SRCPATH}"
+		for url in ${PKG_URL}
+		do
+			if [ "${MAKEDIR:-0}" -eq 1 ]
 			then
-				if [ ! -d "${PKG_SRCPATH}" ]
+				NODELETEDESTDIR=1 STRIPCOMPONENTS=0 download_uncompress "${url}" "${PKG_SRCPATH}"
+			else
+				NODELETEDESTDIR=1 download_uncompress "${url}" "${PKG_SRCPATH}"
+			fi
+		done
+	else
+		if [ -n "${GIT_URL}" ]
+		then
+			if [ ! -d "${PKG_SRCPATH}" ]
+			then
+				run_cmd "git clone --recursive \"${GIT_URL}\" \"${PKG_SRCPATH}\""
+				if  [ -n "${GIT_COMMIT}" ]
 				then
-					run_cmd "git clone --recursive \"${GIT_URL}\" \"${PKG_SRCPATH}\""
-					if  [ -n "${GIT_COMMIT}" ]
-					then
-						run_cmd "git -C \"${PKG_SRCPATH}\" checkout \"${GIT_COMMIT}\""
-					fi
+					run_cmd "git -C \"${PKG_SRCPATH}\" checkout \"${GIT_COMMIT}\""
 				fi
 			fi
 		fi
-		trap - ERR
-		trap - SIGINT
-	}
+	fi
+}
 
-	trap 'STATUS=${?}; \
-		trap - ERR; \
-		echo "fail. [build - ${PKG_FULLNAME}]"; \
-		echo; \
-		pause; \
-		if [ -f ${LOG_FILE} ]; \
-		then \
-			echo "Log ${LOG_FILE}:"; \
-			echo; \
-			tail -n24 ${LOG_FILE}; \
-		fi; \
-		return ${STATUS}' ERR
+function build () {(
 
 	unset \
 		AUTOCONF_PATH \
@@ -1789,7 +1697,6 @@ function build () {(
 	then
 		echo "Package ${PKG_FILE} does not exists."
 		echo
-		trap - ERR;
 		return 1
 	fi
 	
@@ -1877,7 +1784,6 @@ function build () {(
 			then
 				echo "${SPACES}Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}} already built."
 				echo
-				trap - ERR
 				return 0
 			else
 				rm -f "${STATUS_FILE}"
@@ -1889,7 +1795,6 @@ function build () {(
 		then
 			echo "${SPACES}Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}} already built."
 			echo
-			trap - ERR
 			return 0
 		fi
 	fi
@@ -2049,7 +1954,6 @@ function build () {(
 	fi
 	echo "Done."
 	echo
-	trap - ERR
 )}
 
 function is_build_functions () {

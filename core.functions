@@ -65,12 +65,6 @@ download_uncompress () {
 	## ARCHIVEDIRS=<str>: Specify what directories to extract
 	## NODELETEDESTDIR=<num>: if 1 don't delete ${DEST_DIR}
 
-	trap 'STATUS=${?}; \
-		trap - ERR; \
-		echo "download_uncompress fail."; \
-		pause; \
-		return ${STATUS};' ERR
-
 	local URL \
 		URL_HASH \
 		DEST_DIR \
@@ -165,7 +159,6 @@ download_uncompress () {
 			esac
 			;;
 	esac
-	trap ERR
 }
 
 test_version () {
@@ -330,18 +323,6 @@ log_buffer () {
 }
 
 run_cmd () {
-	trap 'STATUS=${PIPESTATUS[0]}; \
-		trap - ERR; \
-		trap - SIGINT; \
-		echo -e "\nERR caught. [run_cmd: ${STATUS}]" >&2; \
-		echo -e "Command: ${CMDLINE}\n" >&2; \
-		echo -e "Environment variables:\n" >&2; \
-		env >&2; \
-		return ${STATUS};' ERR
-	trap 'echo "SIGINT caught. [run_cmd]"; \
-		trap - ERR; \
-		trap - SIGINT; \
-		return 100;' SIGINT
 	
 	local CMDLINE STATUS RETRIES
 
@@ -390,8 +371,6 @@ run_cmd () {
 			;;
 		esac
 	done
-	trap - ERR
-	trap - SIGINT
 	return "${STATUS}"
 }
 

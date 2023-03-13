@@ -113,17 +113,6 @@ function set_gnu_buildenv () {
 }
 
 function setup_rust () {
-	trap 'local STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/toolchain_rust.log ]; \
-		then \
-			echo "Log ${GLOBAL_LOG_PATH}/toolchain_rust.log:"; \
-			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_rust.log; \
-		fi; \
-		trap - ERR; \
-		return ${STATUS}' ERR
 
 	echo -n "Setting up RUST... "
 	export CARGO_HOME=${GLOBAL_TOOLCHAIN_PATH}
@@ -168,14 +157,10 @@ function setup_rust () {
 	run_cmd "rustup -v target add \"${CARGO_TARGET}\"" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
 	echo "done."
 	echo
-	trap ERR
 }
 
 function setup_autotools () {
 	function download_autotools () {
-		trap 'STATUS=${?}; \
-			trap - ERR; \
-			return ${STATUS};' ERR
 
 		local AUTOCONF_URL AUTOMAKE_URL LIBTOOL_URL GETTEXT_URL
 
@@ -189,19 +174,14 @@ function setup_autotools () {
 			download_uncompress "${LIBTOOL_URL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}"
 			download_uncompress "${GETTEXT_URL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}"
 		} > "${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log"
-		trap ERR
 	}
 
 	function download_autotools_support () {
-		trap 'STATUS=${?}; \
-			trap - ERR; \
-			return ${STATUS};' ERR
 
 		local AUTOCONFARCHIVE_URL
 		AUTOCONFARCHIVE_URL="http://mirror.kumi.systems/gnu/autoconf-archive/autoconf-archive-${AUTOCONFARCHIVE_VER}.tar.xz"
 
 		download_uncompress "${AUTOCONFARCHIVE_URL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" >> "${GLOBAL_LOG_PATH}/toolchain_autoconf-${AUTOCONFARCHIVE_VER}.log"
-		trap ERR
 	}
 
 	function smart_autoreconf () {
@@ -234,18 +214,6 @@ function setup_autotools () {
 		return ${?}
 	}
 	export -f smart_autoreconf
-
-	trap 'local STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log ]; \
-		then \
-			echo "Log ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log:"; \
-			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log; \
-		fi;
-		trap - ERR; \
-		return ${STATUS}' ERR
 
 	OPTS="--default" OPTS_WITH_VALUE="" param2value "${@}"
 
@@ -401,14 +369,10 @@ function setup_autotools () {
 		pathadd PATH "${AUTOTOOLS_PATH}/bin"
 	fi
 	echo
-	trap ERR
 }
 
 function setup_binutils () {
 	function binutils_download () {
-		trap 'local STATUS=${?}; \
-			trap - ERR; \
-			return ${STATUS};' ERR
 
 		download_uncompress "${BINUTILSURL}" "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}"
 		if [ -f "${PATCH_PATH}/binutils/binutils_${BINUTILS_VER}.patch" ]
@@ -419,7 +383,6 @@ function setup_binutils () {
 		download_uncompress "${MPFRURL}" "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/mpfr"
 		download_uncompress "${MPCURL}" "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/mpc"
 		download_uncompress "${ISLURL}" "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/isl"
-		trap ERR
 	}
 
 	function binutils_buildenv () {
@@ -450,9 +413,6 @@ function setup_binutils () {
 	}
 	
 	function binutils_configuration () {
-		trap 'STATUS=${?}; \
-			trap - ERR; \
-			return ${STATUS}' ERR
 
 		local CONFIG_ARCH_PARAMS="--build=${BARCH} --host=${BARCH} --target=${HARCH}"
 		case ${HM} in
@@ -497,13 +457,9 @@ function setup_binutils () {
 					host_configargs='${host_configargs}' \\
 					target_configargs='${target_configargs}'"
 		popd
-		trap - ERR
 	}
 	
 	function binutils_make () {
-		trap 'STATUS=${?}; \
-			trap - ERR; \
-			return ${STATUS}' ERR
 
 		if [ ! -d "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}" ]
 		then
@@ -520,15 +476,7 @@ function setup_binutils () {
 		run_cmd "make STAGE_CC_WRAPPER=\"${CCWRAPPER}\" all"
 		run_cmd "make STAGE_CC_WRAPPER=\"${CCWRAPPER}\" install"
 		popd
-		trap ERR
 	}
-
-	trap 'local STATUS=${?}; \
-		trap - ERR; \
-		echo "fail."; \
-		echo "Remove ${TOOLCHAIN_PATH} folder before start over again."; \
-		echo; \
-		return ${STATUS}' ERR
 
 	echo -n "Setting up binutils"
 	echo -n "-${BINUTILS_VER}... "
@@ -554,14 +502,10 @@ function setup_binutils () {
 		run_cmd "rm -rf \"${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}\"" >> "${LOG_PATH}/toolchain_binutils-${BINUTILS_VER}.log"
 	fi
 
-	trap - ERR
 }
 
 function setup_gcc () {
 	function gcc_download () {
-		trap 'local STATUS=${?}; \
-			trap - ERR; \
-			return ${STATUS};' ERR
 
 		download_uncompress "${GCCURL}" "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}"
 		if [ -f "${PATCH_PATH}/gcc/gcc_${GCC_VER}.patch" ]
@@ -573,7 +517,6 @@ function setup_gcc () {
 		download_uncompress "${MPCURL}" "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpc"
 		download_uncompress "${ISLURL}" "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/isl"
 		run_cmd "sed 's@^#include <limits.h>@#include <linux/limits.h>@' -i \"${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/libsanitizer/asan/asan_linux.cpp\""
-		trap ERR
 	}
 
 	function gcc_buildenv () {
@@ -613,9 +556,6 @@ function setup_gcc () {
 	}
 	
 	function gcc_configuration () {
-		trap 'STATUS=${?}; \
-			trap - ERR; \
-			return ${STATUS}' ERR
 
 		local CONFIG_ARCH_PARAMS="--build=${BARCH} --host=${BARCH} --target=${HARCH}"
 		case ${HM} in
@@ -660,7 +600,6 @@ function setup_gcc () {
 					host_configargs='${host_configargs}' \\
 					target_configargs='${target_configargs}'"
 		popd
-		trap - ERR
 	}
 
 	function create_sccache_wrapper () {
@@ -693,9 +632,6 @@ function setup_gcc () {
 	}
 	
 	function gcc_make_host () {
-		trap 'STATUS=${?}; \
-			trap - ERR; \
-			return ${STATUS}' ERR
 
 		if [ ! -d "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}" ]
 		then
@@ -724,7 +660,6 @@ function setup_gcc () {
 			run_cmd "mkdir -pv \"$(gcc_sysroot)${TARGET_PREFIX}/lib\""
 		fi
 		popd
-		trap ERR
 	}
 
 	function setup_ldconfig () {
@@ -778,10 +713,6 @@ function setup_gcc () {
 		}
 
 		function build_gcc_library () {
-			trap 'STATUS=${?}; \
-				trap - ERR; \
-				return ${STATUS}' ERR
-
 			local OBJECT PKG_NAME
 
 			OBJECT=${1}
@@ -789,7 +720,6 @@ function setup_gcc () {
 			if [ -f "${STATUS_PATH}/${PKG_NAME}" ]
 			then
 				echo "${OBJECT} already built." | log_buffer info
-				trap - ERR
 				return 0
 			fi
 			if [ ! -d "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}" ]
@@ -859,12 +789,7 @@ function setup_gcc () {
 			fi
 			run_cmd "touch \"${STATUS_PATH}/${PKG_NAME}\""
 			popd
-			trap - ERR
 		}
-
-		trap 'STATUS=${?}; \
-			trap - ERR; \
-			return ${STATUS}' ERR
 
 		local GCC_BOOTSTRAP OBJECT_TARGET
 
@@ -891,7 +816,6 @@ function setup_gcc () {
 				build_gcc_library "${object}" >> "${LOG_PATH}/gcc-${object}_${GCC_VER}${OBJECT_TARGET}.log"
 			done
 		fi		
-		trap ERR
 	}
 
 	function setup_ldd () {
@@ -925,13 +849,6 @@ function setup_gcc () {
 			fi
 		fi
 	}
-
-	trap 'local STATUS=${?}; \
-		trap - ERR; \
-		echo "fail."; \
-		echo; \
-		pause; \
-		return ${STATUS}' ERR
 
 	OPTS="--install --main_gcc" OPTS_WITH_VALUE="--targets" param2value "${@}"
 	
@@ -1016,7 +933,6 @@ function setup_gcc () {
 
 	setup_ldd "$(gcc_sysroot)"
 
-	trap - ERR
 }
 
 function setup_toolchain_wrapper () {
@@ -1048,19 +964,12 @@ function setup_toolchain_wrapper () {
 
 function setup_llvm () {
 	function download_llvm () {
-		trap 'STATUS=${?}; \
-			trap - ERR; \
-			return ${STATUS};' ERR
 
 		local GCCURL=https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VER}/llvm-project-${LLVM_VER}.src.tar.xz
 		download_uncompress "${GCCURL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}"
-		trap ERR
 	}
 
 	function configure_llvm () {
-		trap 'STATUS=${?}; \
-			trap - ERR; \
-			return ${STATUS};' ERR
 
 		local PLATFORM_CFLAGS PARALLEL_LINK_JOB C CXX AR NM RANLIB LINKER LINKER_FLAGS LTO
 
@@ -1162,13 +1071,9 @@ function setup_llvm () {
 			-DCOMPILER_RT_INCLUDE_TESTS:BOOL=OFF \\
 			-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON"
 
-		trap ERR
 	}
 
 	function build_llvm () {
-		trap 'STATUS=${?}; \
-			trap - ERR; \
-			return ${STATUS};' ERR
 
 		local LLVM_SHLIBDIR
 		LLVM_SHLIBDIR=$(grep -E "install_symlink.*libLLVM-${LLVM_VER}.so" "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/tools/llvm-shlib/cmake_install.cmake" | head -n1 | grep -o "lib[36][24]")
@@ -1178,13 +1083,9 @@ function setup_llvm () {
 		run_cmd "ninja $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -v; fi ) -j${NPROCS} install/strip"
 		pathremove LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}"
 		popd
-		trap ERR
 	}
 
 	function configure_llvm_builtins () {
-		trap 'STATUS=${?}; \
-			trap - ERR; \
-			return ${STATUS};' ERR
 
 		local LLVM_TARGET LLVM_INSTALL_PATH
 
@@ -1257,13 +1158,9 @@ function setup_llvm () {
 			-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON \\
 			-DBUILD_SHARED_LIBS:BOOL:BOOL=OFF"
 
-		trap ERR
 	}
 
 	function build_llvm_builtins () {
-		trap 'STATUS=${?}; \
-			trap - ERR; \
-			return ${STATUS};' ERR
 
 		local LLVM_TARGET=${1}
 		# To be changed with: ${TOOLCHAIN_PATH}
@@ -1289,20 +1186,7 @@ function setup_llvm () {
 		fi
 
 		popd
-		trap ERR
 	}
-
-	trap 'local STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log ]; \
-		then \
-			echo "Log ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log:"; \
-			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log; \
-		fi; \
-		trap - ERR; \
-		return ${STATUS}' ERR
 
 	OPTS="--install" OPTS_WITH_VALUE="--targets" param2value "${@}"
 
@@ -1361,25 +1245,17 @@ function setup_llvm () {
 	fi
 	echo "done."
 
-	trap ERR
 }
 
 function setup_python () {
 	function download_pyton () {
-		trap 'STATUS=${?}; \
-			trap - ERR; \
-			return ${STATUS}' ERR
 
 		local PYTHONURL="https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PYTHON_VER}.tar.xz"
 		download_uncompress "${PYTHONURL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}"
 		run_cmd "curl -LsR -o \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py\" https://bootstrap.pypa.io/get-pip.py"
-		trap ERR
 	}
 
 	function build_python () {
-		trap 'STATUS=${?}; \
-			trap - ERR; \
-			return ${STATUS}' ERR
 
 		if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}" ]
 		then
@@ -1425,14 +1301,9 @@ function setup_python () {
 		popd
 		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}\""
 		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip\" -v install --upgrade setuptools pip jinja2 docutils"
-		trap ERR
 	}
 
 	function build_python_crossenv () {
-		trap 'STATUS=${?}; \
-			[ -d ${TOOLCHAIN_PATH}/venv-${HARCH} ] && rm -rf || true; \
-			trap - ERR; \
-			return ${STATUS}' ERR
 
 		run_cmd "${PIP_FOR_BUILD} install crossenv"
 		if [ ! -f "${PYTHON_FOR_TARGET}" ]
@@ -1464,22 +1335,9 @@ function setup_python () {
 			run_cmd "rm -rf \"${TOOLCHAIN_BLDPATH}/build_python_crossenv\""
 			set +e
 		)
-		trap ERR
 	}
 
 	"check_${TOOLCHAIN}_c"
-
-	trap 'local STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		if [ -f ${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log ];
-		then \
-			echo "Log ${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log:"; \
-			echo; \
-			tail -n24 ${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log; \
-		fi;
-		trap - ERR; \
-		return ${STATUS}' ERR
 
 	echo -n "Setting up Python"
 	if [ -d "${DISTOS_PATH}" ]
@@ -1538,18 +1396,6 @@ function setup_python () {
 			run_cmd "${SUDO_CMD}" "ln -s \"config-${PYTHONBIN_VER}m-${HARCH}\" \"${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m\""
 		fi
 	fi
-	trap ERR
-	trap 'STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		if [ -f "${LOG_PATH}/toolchain_python-crossenv.log" ];
-		then \
-			echo "Log ${LOG_PATH}/toolchain_python-crossenv.log:"; \
-			echo; \
-			tail -n24 "${LOG_PATH}/toolchain_python-crossenv.log"; \
-		fi;
-		trap - ERR; \
-		return ${STATUS}' ERR
 
 	if [ "${SKIP_PYTHONVENV:-0}" -eq 0 ]
 	then
@@ -1565,7 +1411,6 @@ function setup_python () {
 			#source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate >> ${LOG_PATH}/toolchain_python-crossenv.log 2>&1
 		fi
 	fi
-	trap ERR
 }
 
 function setup_full_toolchain () {
@@ -1650,17 +1495,6 @@ function setup_full_toolchain () {
 }
 
 function prepare_sysroot () {
-	trap 'local STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		if [ -f ${LOG_PATH}/sysroot.log ];
-		then \
-			echo "Log ${LOG_PATH}/sysroot.log:"; \
-			echo; \
-			tail -n24 ${LOG_PATH}/sysroot.log; \
-		fi;
-		trap - ERR; \
-		return ${STATUS}' ERR
 
 	echo -n "Preparing sysroot... "
 	if [ -d "${DISTOS_PATH}" ]
@@ -1700,21 +1534,9 @@ function prepare_sysroot () {
 		return 1
 	fi
 
-	trap ERR
 }
 
 function create_sysroot () {
-	trap 'local STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		if [ -f ${LOG_PATH}/sysroot.log ];
-		then \
-			echo "Log ${LOG_PATH}/sysroot.log:"; \
-			echo; \
-			tail -n24 ${LOG_PATH}/sysroot.log; \
-		fi;
-		trap - ERR; \
-		return ${STATUS}' ERR
 
 	echo -n "Creating sysroot with $(basename ${1})... "
 	if [ ! -d "${DISTOS_PATH}" ]
@@ -1735,7 +1557,6 @@ function create_sysroot () {
 		echo "already present. Run rm -rf ${DISTOS_PATH} if you want to update it."
 		echo
 	fi
-	trap ERR
 }
 
 export MAKEFLAGS="--jobs=${NPROCS}"

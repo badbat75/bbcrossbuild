@@ -1,13 +1,13 @@
 #!/bin/bash
 trap 'STATUS=${?}; \
-	echo "${ERROR_STRING:-ERR received.} [${CURRENT_FUNCTION} - ERR: ${STATUS}]" >&2; \
 	echo; \
-	set +o pipefail; \
+	echo "${ERROR_STRING:-ERR received.} [${FUNCNAME[*]} - ERR: ${STATUS}]" >&2; \
+	echo; \
+	set +E +o pipefail; \
 	trap - ERR SIGINT; \
 	exit ${STATUS}' ERR
 
-set -o pipefail
-CURRENT_FUNCTION=bbxb
+set -E -o pipefail
 
 BB_HOME=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
 #PROGRAM_NAME="$(basename "${BASH_SOURCE[0]}")"
@@ -65,18 +65,21 @@ source "${BB_HOME}/images.functions"
 source "${BB_HOME}/data.functions"
 
 trap 'STATUS=${?}; \
-	echo "${ERROR_STRING:-ERR received.} [${CURRENT_FUNCTION} - ERR: ${STATUS}]" >&2; \
-	echo; \
-	pause; \
-	set +o pipefail; \
-	unmount_tag --all --kill || true; \
-	trap - ERR SIGINT; \
+	echo >&2; \
+	echo "${ERROR_STRING:-ERR received.} [${FUNCNAME[*]} - ERR: ${STATUS}]" >&2; \
+	echo >&2; \
+	set +E +o pipefail; \
+	trap - SIGINT; \
+	unmount_tag --all || true; \
+	trap - ERR; \
 	exit ${STATUS}' ERR
-trap 'echo "SIGINT received. [${CURRENT_FUNCTION}]"; \
-	echo; \
-	set +o pipefail; \
-	unmount_tag --all --kill || true; \
-	trap - ERR SIGINT; \
+trap 'echo >&2; \
+	echo "SIGINT received. [${FUNCNAME[*]}]" >&2; \
+	echo >&2; \
+	set +E +o pipefail; \
+	trap - SIGINT; \
+	unmount_tag --all || true; \
+	trap - ERR; \
 	exit 0' SIGINT
 
 echo "Project path: ${DATA_PATH}/${PROJECT_NAME}"
@@ -99,5 +102,5 @@ then
 	unmount_tag --all
 fi
 
-set +o pipefail
+set +E +o pipefail
 trap - ERR SIGINT

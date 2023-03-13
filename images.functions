@@ -13,21 +13,6 @@ check_images_functions () {
 
 function create_image() {
 	# create_image <tag_name> [--rootfstype <fs_type>] [--size <size_in_KiB> [--layout <layout_file>]
-	trap 'STATUS=${?}; \
-		trap - ERR; \
-		echo "fail [create_image: ${STATUS}]."; \
-		echo; \
-		if [ -f ${LOG_PATH}/images_${MOUNT_NAME}.log ];
-		then \
-			echo "Log ${LOG_PATH}/images_${MOUNT_NAME}.log:"; \
-			echo; \
-			tail -n24 ${LOG_PATH}/images_${MOUNT_NAME}.log; \
-		fi; \
-		pause; \
-		echo "Unmounting ${MOUNT_DIR}" ; \
-		run_cmd -s "umount -R ${MOUNT_DIR}" >> ${LOG_PATH}/images_${MOUNT_NAME}.log; \
-		run_cmd -s "losetup -D" >> ${LOG_PATH}/images_${MOUNT_NAME}.log; \
-		return ${STATUS};' ERR
 
 	OPTS="" OPTS_WITH_VALUE="--rootfstype --size --layout" param2value "${@}"
 
@@ -55,6 +40,10 @@ function create_image() {
 		)"
 	else
 		LAYOUT="$(cat "${MOUNT_LAYOUT}")"
+	fi
+	if mountpoint -q "${MOUNT_DIR}"
+	then
+		unmount_tag "${MOUNT_NAME}"
 	fi
 	echo -n "Creating image... "
 	{
@@ -103,27 +92,16 @@ function create_image() {
 			echo "ok."
 		;;
 	esac
-	echo -n "Unmounting image... "
-	run_cmd -s "umount -R \"${MOUNT_DIR}/boot\" \"${MOUNT_DIR}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+	unmount_tag "${MOUNT_NAME}"
 	run_cmd "rmdir \"${MOUNT_DIR}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-	echo "ok."
 	echo -n "Flushing loop devices... "
 	run_cmd -s "losetup -D" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 	echo "ok."
-	trap - ERR
 }
 
 function mount_tag () {
 	# mount_tag <MountPointName> [--url <URL_of_image> --imgfile <imagename_inside_archive>] \
 	# --mountlist "<partnumber1:/> [partnumber2:mountpoint2]...[partnumbern:mountpointn] --resize <partnumber:size> "
-	trap 'STATUS=${?}; \
-		trap - ERR; \
-		echo "fail [mount_tag: ${STATUS}]."; \
-		echo; \
-		unmount_tag ${MOUNT_DIR}; \
-		sudo losetup -D; \
-		return ${STATUS};' ERR
-
 	OPTS="" OPTS_WITH_VALUE="--url --imgfile --mountlist --resize" param2value "${@}"
 
 	local MOUNT_NAME RESIZE URL IMGFILE IMAGE_PATH IMAGEFILE_PATH MOUNT_DIR PARTNO IMGSIZE PARTINFO PARTNO MPOINT ROOTREADY
@@ -238,7 +216,7 @@ function mount_tag () {
 		fi
 	} >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 	echo "Done."
-	MOUNTED_IMAGES="${MOUNTED_IMAGES} ${MOUNT_NAME}"
+	MOUNTED_IMAGES+=( "${MOUNT_NAME}" )
 
 	# Temporary configuration for mounted image
 	if [ -f "${MOUNT_DIR}/etc/resolv.conf" ]
@@ -248,49 +226,44 @@ function mount_tag () {
 		run_cmd -s "cp /etc/resolv.conf ${MOUNT_DIR}/etc/resolv.conf" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 		echo "Done."
 	fi
-	trap - ERR
 }
 
 function unmount_tag () {
-	trap 'STATUS=${?}; \
-		trap - ERR; \
-		echo "fail [unmount_tag: ${STATUS}]."; \
-		echo; \
-		return ${STATUS};' ERR
 
 	OPTS="--all --finalize --kill" OPTS_WITH_VALUE="" param2value "${@}"
 
-	local ALL KILL MOUNT_NAME MOUNT_DIR PROC STATUS ACTIVE_MOUNTS
+	local ALL KILL WHAT2UNMOUNT MOUNT_NAME MOUNT_DIR PROC STATUS ACTIVE_MOUNTS
 
-	MOUNT_NAME=${_param_1}
-	MOUNT_DIR=${PLATFORM_PATH}/${MOUNT_NAME}
 	ALL=${_param_all:-0}
 	FINALIZE=${_param_finalize:-0}
 	KILL=${_param_kill:-0}
 
 	if [ "${ALL}" -eq 1 ]
 	then
-		for image in ${MOUNTED_IMAGES}
-		do
-			unmount_tag "$(if [ "${FINALIZE}" -eq 1 ]; then echo "--finalize --kill"; fi)" "${image}"
-		done
+		WHAT2UNMOUNT=${MOUNTED_IMAGES[*]}
 	else
+		WHAT2UNMOUNT=${_param_1}
+	fi
+
+	for MOUNT_NAME in ${WHAT2UNMOUNT}
+	do
+		MOUNT_DIR=${PLATFORM_PATH}/${MOUNT_NAME}
+		echo -n "Unmounting ${MOUNT_DIR}... "
 
 		if [ "${KILL}" -eq 1 ]
 		then
 			echo -n "killing processes using ${MOUNT_DIR}... "
-			PROC="$(findmnt --raw -nRo target "${MOUNT_DIR}" | xargs lsof -t -w "${MOUNT_DIR}" | xargs)"
+			PROC="$(lsof -t -w "${MOUNT_DIR}" | xargs)"
 			while [ ! "${PROC}" == "" ]
 			do
 				echo -n "killing ${PROC}"
-				run_cmd -s "kill -9 \"${PROC}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+				run_cmd -s "kill -9 \"${PROC}\" || true" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 				sleep 1
-				PROC="$(findmnt --raw -nRo target "${MOUNT_DIR}" | xargs lsof -t -w "${MOUNT_DIR}" | xargs)"
+				PROC="$(lsof -t -w "${MOUNT_DIR}" | xargs)"
 			done
 			echo -n "... "
 		fi
 
-		echo -n "Unmounting ${MOUNT_DIR}... "
 		# Restore configuration for mounted image
 		if [ -f "${MOUNT_DIR}/etc/resolv.conf.bbxb" ]
 		then
@@ -298,63 +271,62 @@ function unmount_tag () {
 		fi
 		# Unmount everything
 		echo "Unmounting ${MOUNT_DIR}... " | log_buffer info >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-		STATUS=1
-		while [ ${STATUS} -eq 1 ]
+
+		while mountpoint -q "${MOUNT_DIR}"
 		do
-			if mountpoint -q "${MOUNT_DIR}" && run_cmd -s "umount -fR \"${MOUNT_DIR}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-			then
-				echo "done." | log_buffer info >> "${LOG_PATH}/images_${MOUNT_NAME}.log" 2>&1
-				STATUS=0
-			else
-				{
-					echo "failed, sleeping... "
-					echo "Current DIR: ${PWD}"
-					ACTIVE_MOUNTS=$(findmnt --raw -nRo target "${MOUNT_DIR}" | xargs)
-					echo "Current active mounts: ${ACTIVE_MOUNTS}"
-					echo "Current active processes: $(echo "${ACTIVE_MOUNTS}" | xargs lsof -t -w | xargs)" 
-				} | log_buffer info >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-				sleep 1
-			fi
+			run_cmd -s "umount -fR \"${MOUNT_DIR}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log" && STATUS=0 || STATUS=1
+			case ${STATUS} in
+				0) 	echo "done." | log_buffer info >> "${LOG_PATH}/images_${MOUNT_NAME}.log" ;;
+				1)
+					{
+						echo "failed, sleeping... "
+						echo "Current DIR: ${PWD}"
+						ACTIVE_MOUNTS=$(findmnt --raw -nRo target "${MOUNT_DIR}" | xargs)
+						echo "Current active mounts: ${ACTIVE_MOUNTS}"
+						echo "Current active processes: $(echo "${ACTIVE_MOUNTS}" | xargs lsof -t -w | xargs)" 
+					} | log_buffer info >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+					sleep 1
+				;;
+			esac
 		done
-		MOUNTED_IMAGES=${MOUNTED_IMAGES// *${MOUNT_NAME}/}
-		#$(echo "${MOUNTED_IMAGES}" | sed "s/ *${MOUNT_NAME}//")
-		# Delete the loopback devices
+
+		# remove MOUNT_NAME from MOUNTED_IMAGES array
+		local ARRAY_INDEX ARRAY_ELEMENT
+		ARRAY_INDEX=0
+		while [ "${ARRAY_ELEMENT}" != "${MOUNT_NAME}" ] && [ "${#MOUNTED_IMAGES[@]}" -gt 0 ] && [ "${ARRAY_INDEX}" -lt 20 ]
+		do
+			ARRAY_ELEMENT=${MOUNTED_IMAGES[${ARRAY_INDEX}]}
+			((ARRAY_INDEX++)) || true
+		done
+		if [ -n "${ARRAY_ELEMENT}" ]
+		then
+			unset 'MOUNTED_IMAGES[${ARRAY_INDEX}]'
+		fi
+
 		echo -n "Delete loopback device... "
 		run_cmd -s "losetup -D \"${LOOPDEV}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 		echo "Done."
-	fi
 
-	if [ "${FINALIZE}" -eq 1 ]
-	then
-		{
-		run_cmd "mv \"${LODEVIMAGES[${MOUNT_NAME}]}\" \"${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.img\""
-		run_cmd "cat >${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.dd <<-EOF
-			#!/bin/bash
-			sudo dd if=${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.img of=\\\${1:-/dev/mmcblk0} bs=1M status=progress oflag=direct
-		EOF
-		"
-		run_cmd "chmod +x ${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.dd" 
-		} >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-	fi
+		if [ "${FINALIZE}" -eq 1 ]
+		then
+			{
+			run_cmd "mv \"${LODEVIMAGES[${MOUNT_NAME}]}\" \"${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.img\""
+			run_cmd "cat >${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.dd <<-EOF
+				#!/bin/bash
+				sudo dd if=${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.img of=\\\${1:-/dev/mmcblk0} bs=1M status=progress oflag=direct
+			EOF
+			"
+			run_cmd "chmod +x ${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.dd" 
+			} >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+		fi
 
-	echo
-	trap - ERR
+		echo
+	done
 }
 
 function mount_from () {
 	# mount_from --url <URL> --imgfile <Image2Mount> --tag <MountPointName> --resize <partnumber:size> \
 	#	--mountlist "<partnumber1:/> [partnumber2:mountpoint2]...[partnumbern:mountpointn]"
-	trap 'STATUS=${?}; \
-		trap - ERR; \
-		echo "fail [mount_from]."; \
-		echo; \
-		if [ -f ${LOG_PATH}/images_${TAG}.log ];
-		then \
-			echo "Log ${LOG_PATH}/images_${TAG}.log:"; \
-			echo; \
-			tail -n24 ${LOG_PATH}/images_${TAG}.log; \
-		fi; \
-		return ${STATUS};' ERR
 
 	OPTS="" OPTS_WITH_VALUE="--url --imgfile --tag --mountlist --resize" param2value "${@}"
 
@@ -382,24 +354,10 @@ function mount_from () {
 
 	echo "done."
 	echo
-	trap - ERR
 }
 
 function run_on_root_dir () {
 	# run_on_root_dir <mount tag> <user> "<command>"
-	trap 'STATUS=${?}; \
-		trap - ERR; \
-		echo; \
-		echo "fail [run_on_root_dir]."; \
-		echo; \
-		if [ -f ${LOG_PATH}/images_${CHROOT_DIR}.log ]; \
-		then \
-			echo "Log ${LOG_PATH}/images_${CHROOT_DIR}.log:"; \
-			echo; \
-			tail -n24 ${LOG_PATH}/images_${CHROOT_DIR}.log; \
-		fi; \
-		pause; \
-		return ${STATUS};' ERR
 			
 	OPTS="--allocate_pty" OPTS_WITH_VALUE="" param2value "${@}"
 
@@ -433,7 +391,6 @@ function run_on_root_dir () {
 		fi
 		echo
 	} 2> >(log_buffer error "${LOG_PATH}/images_${CHROOT_DIR}.log") > >(log_buffer log "${LOG_PATH}/images_${CHROOT_DIR}.log")
-	trap - ERR
 }
 
 function set_ownership () {
@@ -464,19 +421,6 @@ function inject_into_mount_tag () {
 	#		<filename>: copy the filename into mount tag
 	#	directory: directory where to copy under mount_tag
 	#   owner: file ownership (default: "root:root")
-
-	trap 'STATUS=${?}; \
-		trap - ERR; \
-		echo; \
-		echo "fail [inject_into_mount_tag: ${STATUS}]."; \
-		echo; \
-		if [ -f ${LOG_PATH}/images_${ROOT_DIR}.log ]; \
-		then \
-			echo "Log ${LOG_PATH}/images_${ROOT_DIR}.log:"; \
-			echo; \
-			tail -n24 ${LOG_PATH}/images_${ROOT_DIR}.log; \
-		fi; \
-		return ${STATUS};' ERR
 
 	OPTS="--remove_devfiles" OPTS_WITH_VALUE="" param2value "${@}"
 
@@ -547,22 +491,9 @@ function inject_into_mount_tag () {
 	}  >> "${LOG_PATH}/images_${ROOT_DIR}.log"
 	echo "Done."
 
-	trap - ERR
 }
 
 function run_postinstall_scripts () {
-	trap 'STATUS=${?}; \
-		trap - ERR; \
-		echo; \
-		echo "fail [run_postinstall_scripts]."; \
-		echo; \
-		if [ -f ${LOG_PATH}/images_${_param_1}.log ]; \
-		then \
-			echo "Log ${LOG_PATH}/images_${_param_1}.log:"; \
-			echo; \
-			tail -n24 ${LOG_PATH}/images_${_param_1}.log; \
-		fi; \
-		return ${STATUS};' ERR
 			
 	OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
 
@@ -578,13 +509,10 @@ function run_postinstall_scripts () {
 		run_cmd -s "rm -rfv ${PLATFORM_PATH}/${_param_1}/postinst_scripts"
 		echo "Done." | log_buffer info 
 	} >> "${LOG_PATH}/images_${_param_1}.log"
-	trap - ERR
 }
 
-unset LODEVIMAGES
+unset LODEVIMAGES MOUNT_IMAGES
 declare -A LODEVIMAGES
-
-MOUNTED_IMAGES=""
 
 is_images_functions () {
 	return 0

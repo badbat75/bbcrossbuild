@@ -18,17 +18,11 @@ function root_project () {
 }
 
 function remove_devfiles () {
-	trap 'STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		trap - ERR; \
-		return ${STATUS};' ERR
 
 	echo -n "Removing development files... "
 	if [ ! -d "${BIN_PATH}" ]
 	then
 		echo "No binaries directory present. Nothing to do."
-		trap ERR
 		exit 0
 	fi
 	local TMP_PATH
@@ -73,15 +67,9 @@ function remove_devfiles () {
 		echo "done."
 		echo
 	fi
-	trap ERR || return "${ERROR_PATH_NOT_FOUND}"
 }
 
 function resume_devfiles () {
-	trap 'STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		trap - ERR; \
-		return ${STATUS};' ERR
 
 	echo -n "Resuming development files... "
 	tar xf "${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/devfiles.tar.xz" -C"${BIN_PATH}"
@@ -91,15 +79,9 @@ function resume_devfiles () {
 		echo "done."
 		echo
 	fi
-	trap ERR
 }
 
 function create_sfx_package () {
-	trap 'STATUS=${?}; \
-		echo "fail."; \
-		echo; \
-		trap - ERR; \
-		return ${STATUS};' ERR
 
 	OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
 
@@ -171,5 +153,4 @@ function create_sfx_package () {
 	run_cmd "chmod +x \"${PKG_OBJ}.sfx\""
 	run_cmd "rm \"${PKG_OBJ}.tar.xz\""
 	echo
-	trap ERR
 }
