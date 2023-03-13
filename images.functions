@@ -16,7 +16,7 @@ function create_image() {
 
 	OPTS="" OPTS_WITH_VALUE="--rootfstype --size --layout" param2value "${@}"
 
-	local MOUNT_NAME MOUNT_LAYOUT IMAGE_PATH MOUNT_DIR ROOTFS_TYPE SIZEIEC LAYOUT
+	local MOUNT_NAME MOUNT_LAYOUT IMAGE_PATH MOUNT_DIR ROOTFS_TYPE SIZEIEC LAYOUT LODEVICE
 
 	# shellcheck disable=SC2154
 	MOUNT_NAME=${_param_1}
@@ -75,6 +75,7 @@ function create_image() {
 		run_cmd -s "install -dv -m 1777 \"${MOUNT_DIR}/tmp\""
 		run_cmd -s "mount \"${LODEVICE}p1\" \"${MOUNT_DIR}/boot\"" 
 	} >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+	MOUNTED_IMAGES+=( "${MOUNT_NAME}" )
 	echo "ok."
 	echo -n "Creating /etc/fstab... "
 	run_cmd -s "bash -c 'cat > ${MOUNT_DIR}/etc/fstab <<-EOF
@@ -94,9 +95,11 @@ function create_image() {
 	esac
 	unmount_tag "${MOUNT_NAME}"
 	run_cmd "rmdir \"${MOUNT_DIR}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-	echo -n "Flushing loop devices... "
-	run_cmd -s "losetup -D" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-	echo "ok."
+
+	if [ "${#MOUNTED_IMAGES[@]}" -gt 0 ]
+	then
+		echo "Active mounts:" "${MOUNTED_IMAGES[@]}"
+	fi
 }
 
 function mount_tag () {
@@ -148,7 +151,7 @@ function mount_tag () {
 	if [ -n "${RESIZE}" ]
 	then
 		PARTNO=$(echo "${RESIZE}" | awk -F: '{print $1}')
-		IMGSIZE=$(echo "${RESIZE}" | awk -F: '{print $2}')
+		IMGSIZE=$(echo "${RESIZE}" | awk -F: '{print $2}') 
 		# Extend the image size to ${IMGSIZE}
 		echo -n "Extend image size to ${IMGSIZE}... "
 		run_cmd "truncate -s \"${IMGSIZE}\" \"${IMAGEFILE_PATH}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
@@ -172,19 +175,18 @@ function mount_tag () {
 		run_cmd -s "partprobe \"${LOOPDEV}\""
 		run_cmd -s "kpartx \"${LOOPDEV}\""
 	} >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-	echo "Done."
-
+	echo "ok."
 
 	if [ -n "${RESIZE}" ]
 	then
 		# Check the root partition
 		echo -n "Check root filesystems... "
 		run_cmd -s "fsck -fp \"${LOOPDEV}p${PARTNO}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-		echo "Done."
+		echo "ok."
 		# Resize the root partition
 		echo -n "Resize root partition... "
 		run_cmd -s "resize2fs \"${LOOPDEV}p${PARTNO}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-		echo "Done."
+		echo "ok."
 	fi
 
 	# Mount the image filesystems
@@ -215,7 +217,7 @@ function mount_tag () {
 			fi
 		fi
 	} >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-	echo "Done."
+	echo "ok."
 	MOUNTED_IMAGES+=( "${MOUNT_NAME}" )
 
 	# Temporary configuration for mounted image
@@ -226,13 +228,18 @@ function mount_tag () {
 		run_cmd -s "cp /etc/resolv.conf ${MOUNT_DIR}/etc/resolv.conf" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 		echo "Done."
 	fi
+
+	if [ "${#MOUNTED_IMAGES[@]}" -gt 0 ]
+	then
+		echo "Active mounts:" "${MOUNTED_IMAGES[@]}"
+	fi
 }
 
 function unmount_tag () {
 
 	OPTS="--all --finalize --kill" OPTS_WITH_VALUE="" param2value "${@}"
 
-	local ALL KILL WHAT2UNMOUNT MOUNT_NAME MOUNT_DIR PROC STATUS ACTIVE_MOUNTS
+	local ALL KILL WHAT2UNMOUNT MOUNT_NAME MOUNT_DIR PROC STATUS ACTIVE_MOUNTS LOOPDEV
 
 	ALL=${_param_all:-0}
 	FINALIZE=${_param_finalize:-0}
@@ -248,7 +255,6 @@ function unmount_tag () {
 	for MOUNT_NAME in ${WHAT2UNMOUNT}
 	do
 		MOUNT_DIR=${PLATFORM_PATH}/${MOUNT_NAME}
-		echo -n "Unmounting ${MOUNT_DIR}... "
 
 		if [ "${KILL}" -eq 1 ]
 		then
@@ -269,43 +275,46 @@ function unmount_tag () {
 		then
 			run_cmd -s "mv \"${MOUNT_DIR}/etc/resolv.conf.bbxb\" \"${MOUNT_DIR}/etc/resolv.conf\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 		fi
-		# Unmount everything
-		echo "Unmounting ${MOUNT_DIR}... " | log_buffer info >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 
 		while mountpoint -q "${MOUNT_DIR}"
 		do
+			echo -n "Unmounting ${MOUNT_DIR}... "
+			LOOPDEV=$(lsblk -ndo pkname "$(findmnt --raw -no source "${MOUNT_DIR}")")
 			run_cmd -s "umount -fR \"${MOUNT_DIR}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log" && STATUS=0 || STATUS=1
-			case ${STATUS} in
-				0) 	echo "done." | log_buffer info >> "${LOG_PATH}/images_${MOUNT_NAME}.log" ;;
-				1)
-					{
-						echo "failed, sleeping... "
-						echo "Current DIR: ${PWD}"
-						ACTIVE_MOUNTS=$(findmnt --raw -nRo target "${MOUNT_DIR}" | xargs)
-						echo "Current active mounts: ${ACTIVE_MOUNTS}"
-						echo "Current active processes: $(echo "${ACTIVE_MOUNTS}" | xargs lsof -t -w | xargs)" 
-					} | log_buffer info >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-					sleep 1
-				;;
-			esac
+
+			if [ "${STATUS}" -eq 0 ]
+			then
+				echo -n "deleting loopback device [${LOOPDEV}]... "
+				run_cmd -s "losetup -D \"${LOOPDEV}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+				echo "ok."
+			else
+				{
+					echo "failed, sleeping... "
+					echo "Current DIR: ${PWD}"
+					ACTIVE_MOUNTS=$(findmnt --raw -nRo target "${MOUNT_DIR}" | xargs)
+					echo "Current active mounts: ${ACTIVE_MOUNTS}"
+					echo "Current active processes: $(echo "${ACTIVE_MOUNTS}" | xargs lsof -t -w | xargs)" 
+				} | log_buffer info >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+				sleep 1
+			fi
 		done
 
 		# remove MOUNT_NAME from MOUNTED_IMAGES array
-		local ARRAY_INDEX ARRAY_ELEMENT
-		ARRAY_INDEX=0
-		while [ "${ARRAY_ELEMENT}" != "${MOUNT_NAME}" ] && [ "${#MOUNTED_IMAGES[@]}" -gt 0 ] && [ "${ARRAY_INDEX}" -lt 20 ]
-		do
-			ARRAY_ELEMENT=${MOUNTED_IMAGES[${ARRAY_INDEX}]}
-			((ARRAY_INDEX++)) || true
-		done
-		if [ -n "${ARRAY_ELEMENT}" ]
+		if [ "${#MOUNTED_IMAGES[@]}" -gt 0 ]
 		then
-			unset 'MOUNTED_IMAGES[${ARRAY_INDEX}]'
+			local ARRAY_INDEX
+			ARRAY_INDEX=0
+			while [ -n "${MOUNTED_IMAGES[${ARRAY_INDEX}]}" ] && \
+				[ "${MOUNTED_IMAGES[${ARRAY_INDEX}]}" != "${MOUNT_NAME}" ]
+			do
+				((ARRAY_INDEX++)) || true
+			done
+			if [ -n "${MOUNTED_IMAGES[${ARRAY_INDEX}]}" ]
+			then
+				# shellcheck disable=SC2184,SC2086
+				unset MOUNTED_IMAGES[${ARRAY_INDEX}]
+			fi
 		fi
-
-		echo -n "Delete loopback device... "
-		run_cmd -s "losetup -D \"${LOOPDEV}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-		echo "Done."
 
 		if [ "${FINALIZE}" -eq 1 ]
 		then
@@ -322,6 +331,10 @@ function unmount_tag () {
 
 		echo
 	done
+	if [ "${#MOUNTED_IMAGES[@]}" -gt 0 ]
+	then
+		echo "Active mounts:" "${MOUNTED_IMAGES[@]}"
+	fi
 }
 
 function mount_from () {

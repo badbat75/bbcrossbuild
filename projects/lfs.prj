@@ -228,6 +228,7 @@ function build_lfs_image () {
 	mount_tag lfs --mountlist "2:/ 1:/boot"
 
 	### Boot configuration and support scripts
+	echo
 	echo -n "Configuring boot parameters... "
 	LFS_LBROOT="$(findmnt -nu -o SOURCE ${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/lfs)"
 	LFS_PARTUUID="$(blkid -o value --match-tag PARTUUID ${LFS_LBROOT})"
