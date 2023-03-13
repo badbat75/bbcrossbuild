@@ -20,7 +20,7 @@ param2value () {
 	NUM=0
 
 	# shellcheck disable=SC2046
-	unset $( ( set -o posix ; set ) | grep ^_param_ | sed 's/=.*$//g' | xargs )
+	unset $( ( set -o posix ; set ) | ( grep ^_param_ || : ) | sed 's/=.*$//g' | xargs )
 
 	while(($#)) ; do
 		if [[ ${1} == -* ]]

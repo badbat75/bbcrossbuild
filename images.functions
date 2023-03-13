@@ -120,7 +120,6 @@ function mount_tag () {
 	IMAGE_PATH=${DISKIMAGES_PATH}/${MOUNT_NAME}
 	IMAGEFILE_PATH=${DISKIMAGES_PATH}/${MOUNT_NAME}.img
 	MOUNT_DIR=${PLATFORM_PATH}/${MOUNT_NAME}
-	LODEVIMAGES[${MOUNT_NAME}]=${IMAGEFILE_PATH}
 
 	if [ -z "${_param_mountlist}" ]
 	then
@@ -239,7 +238,7 @@ function unmount_tag () {
 
 	OPTS="--all --finalize --kill" OPTS_WITH_VALUE="" param2value "${@}"
 
-	local ALL KILL WHAT2UNMOUNT MOUNT_NAME MOUNT_DIR PROC STATUS ACTIVE_MOUNTS LOOPDEV
+	local ALL KILL WHAT2UNMOUNT MOUNT_NAME MOUNT_DIR IMAGEFILE_PATH PROC STATUS ACTIVE_MOUNTS LOOPDEV
 
 	ALL=${_param_all:-0}
 	FINALIZE=${_param_finalize:-0}
@@ -280,6 +279,7 @@ function unmount_tag () {
 		do
 			echo -n "Unmounting ${MOUNT_DIR}... "
 			LOOPDEV=$(lsblk -ndo pkname "$(findmnt --raw -no source "${MOUNT_DIR}")")
+			IMAGEFILE_PATH=$(losetup -nO back-file "/dev/${LOOPDEV}")
 			run_cmd -s "umount -fR \"${MOUNT_DIR}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log" && STATUS=0 || STATUS=1
 
 			if [ "${STATUS}" -eq 0 ]
@@ -287,6 +287,18 @@ function unmount_tag () {
 				echo -n "deleting loopback device [${LOOPDEV}]... "
 				run_cmd -s "losetup -D \"${LOOPDEV}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 				echo "ok."
+				if [ "${FINALIZE}" -eq 1 ]
+				then
+					{
+					run_cmd "mv \"${IMAGEFILE_PATH}\" \"${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.img\""
+					run_cmd "cat >${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.dd <<-EOF
+						#!/bin/bash
+						sudo dd if=${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.img of=\\\${1:-/dev/mmcblk0} bs=1M status=progress oflag=direct
+					EOF
+					"
+					run_cmd "chmod +x ${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.dd" 
+					} >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+				fi
 			else
 				{
 					echo "failed, sleeping... "
@@ -314,19 +326,6 @@ function unmount_tag () {
 				# shellcheck disable=SC2184,SC2086
 				unset MOUNTED_IMAGES[${ARRAY_INDEX}]
 			fi
-		fi
-
-		if [ "${FINALIZE}" -eq 1 ]
-		then
-			{
-			run_cmd "mv \"${LODEVIMAGES[${MOUNT_NAME}]}\" \"${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.img\""
-			run_cmd "cat >${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.dd <<-EOF
-				#!/bin/bash
-				sudo dd if=${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.img of=\\\${1:-/dev/mmcblk0} bs=1M status=progress oflag=direct
-			EOF
-			"
-			run_cmd "chmod +x ${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.dd" 
-			} >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 		fi
 
 		echo
@@ -524,8 +523,7 @@ function run_postinstall_scripts () {
 	} >> "${LOG_PATH}/images_${_param_1}.log"
 }
 
-unset LODEVIMAGES MOUNT_IMAGES
-declare -A LODEVIMAGES
+unset MOUNTED_IMAGES
 
 is_images_functions () {
 	return 0

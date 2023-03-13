@@ -1,8 +1,8 @@
 #!/bin/bash
 trap 'STATUS=${?}; \
-	echo; \
+	echo >&2; \
 	echo "${ERROR_STRING:-ERR received.} [${FUNCNAME[*]} - ERR: ${STATUS}]" >&2; \
-	echo; \
+	echo >&2; \
 	set +E +o pipefail; \
 	trap - ERR SIGINT; \
 	exit ${STATUS}' ERR
@@ -68,6 +68,7 @@ trap 'STATUS=${?}; \
 	echo >&2; \
 	echo "${ERROR_STRING:-ERR received.} [${FUNCNAME[*]} - ERR: ${STATUS}]" >&2; \
 	echo >&2; \
+	pause; \
 	set +E +o pipefail; \
 	trap - SIGINT; \
 	unmount_tag --all || true; \
