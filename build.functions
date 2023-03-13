@@ -141,7 +141,10 @@ function setbuildenv () {
 			esac
 			SYSROOT_FLAGS="--sysroot=${SYSROOT}"
 		;;
-		*) echo "${TARGET_ENV} not supported!!!"; return 1;;
+		*)
+			ERROR_STRING="${TARGET_ENV} not supported!!!"
+			( exit "${ERR_GENERIC}" )
+		;;
 	esac
 }
 
@@ -204,23 +207,22 @@ function setllvmpollyenv () {
 		for option in ${OPTIONS}
 		do
 			case ${option} in
-				polly)
-					;;
+				polly) ;;
 				vectorizer)
 					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-vectorizer=stripmine"
 					if [ "${HM}" != "arm" ]
 					then
 						LLVM_KERNELPOLLYFLAGS+=" -mllvm -polly-vectorizer=stripmine"
 					fi
-					;;
+				;;
 				parallel)
 					# polly-parallel not supported in kernel build because libgomp cannot be statically linked to kernel
 					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-parallel"
-					;;
+				;;
 				*)
-					echo "Error: ${option} not recognized"
-					return 1
-					;;
+					ERROR_STRING="Error: ${option} not recognized"
+					( exit "${ERR_GENERIC}" )
+				;;
 			esac
 		done
 	fi
@@ -1179,7 +1181,7 @@ function kernelbuild () {
 	# Break if only headers installation required
 	if [ "${PKG_TARGET}" == "headers" ]
 	then
-		return
+		return 0
 	fi
 
 	if [ -f "arch/${KERNEL_ARCH}/configs/${KERNEL_DEFCONFIG}" ]
@@ -1431,8 +1433,8 @@ function boostbuild () {
 			local BOOST_ADDRMOD=64
 			;;
 		*)
-			echo "Missing architecture mapping for ${HM}"
-			return 1
+			ERROR_STRING="Missing architecture mapping for ${HM}"
+			( exit "${ERR_GENERIC}" )
 			;;
 	esac
 	case ${HOS} in
@@ -1700,9 +1702,9 @@ function build () {(
 
 	if [ ! -f "${PKG_PATH}/${PKG_FILE}.pkg" ]
 	then
-		echo "Package ${PKG_FILE} does not exists."
-		echo
-		return 1
+		# shellcheck disable=SC2034
+		ERROR_STRING="Package ${PKG_FILE} does not exists."
+		( exit "${ERROR_FILE_NOT_FOUND}" )
 	fi
 	
 	PKG_NAME=$(basename "${PKG_FILE}")
@@ -1772,8 +1774,8 @@ function build () {(
 	then
 		if [ "${PKG_TARGET}" == "native" ]
 		then
-			echo "PKG_CHECK is empty and PKG_TARGET is native. Exiting..."
-			return 1
+			ERROR_STRING="PKG_CHECK is empty and PKG_TARGET is native. Exiting..."
+			( exit "${ERR_GENERIC}" )
 		fi
 		### Check if target package or default package has already built
 		PKG_CHKSUM="$( md5sum "${PKG_PATH}/${PKG_FILE}.pkg" )"
@@ -1805,12 +1807,19 @@ function build () {(
 	fi
 	for dep in ${PKG_DEPS}
 	do
+		if [ ! -f "${PKG_PATH}/${dep/:*/}.pkg" ]
+		then
+			# shellcheck disable=SC2034
+			ERROR_STRING="Dependency package ${dep/:*/} does not exists."
+			exit "${ERROR_FILE_NOT_FOUND}"
+		fi
 		NUMSPACES=$((NUMSPACES+1))
 		SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
 		echo -n "${SPACES}Requires "
 		#echo "Called from ${PKG_FILE}"
-		build "$( if [ "${NOSAVESTATUS}" -eq 1 ] || [ "${TEMPORARY_STATUS}" == .tmp ]; then echo "--temporary"; fi )" \
-			"$( if [ "${GCC_CHECK}" -eq 1 ]; then echo "--no_gcc_check"; fi )" \
+		# shellcheck disable=SC2046
+		build $( if [ "${NOSAVESTATUS}" -eq 1 ] || [ "${TEMPORARY_STATUS}" == .tmp ]; then echo "--temporary"; fi ) \
+			$( if [ "${GCC_CHECK}" -eq 1 ]; then echo "--no_gcc_check"; fi ) \
 			"${dep}$( if [ "${PKG_TARGET_ENV}" == native ] || [ "${PKG_TARGET_ENV}" == cross ]; then echo ":${PKG_TARGET_ENV}"; fi )"
 		NUMSPACES=$((NUMSPACES-1))
 		SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
@@ -1818,7 +1827,7 @@ function build () {(
 
 	eval "> ${LOG_FILE}"
 	
-	if [ "${GCC_CHECK}" -eq 0 ] && [ "${BUILD_PROCESS}" != "none" ] && [ "${BUILD_PROCESS}" != "downloadonly" ] && [ ${PKG_TARGET_ENV} == target ]
+	if [ "${GCC_CHECK}" -eq 0 ] && [ "${BUILD_PROCESS}" != "none" ] && [ "${BUILD_PROCESS}" != "downloadonly" ] && [ "${PKG_TARGET_ENV}" == target ]
 	then
 		"check_${PKG_TOOLCHAIN:-${TOOLCHAIN}}_c"
 	fi

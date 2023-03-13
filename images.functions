@@ -316,6 +316,7 @@ function unmount_tag () {
 		then
 			local ARRAY_INDEX
 			ARRAY_INDEX=0
+			shopt -qs lastpipe
 			while [ -n "${MOUNTED_IMAGES[${ARRAY_INDEX}]}" ] && \
 				[ "${MOUNTED_IMAGES[${ARRAY_INDEX}]}" != "${MOUNT_NAME}" ]
 			do
@@ -326,6 +327,7 @@ function unmount_tag () {
 				# shellcheck disable=SC2184,SC2086
 				unset MOUNTED_IMAGES[${ARRAY_INDEX}]
 			fi
+			shopt -qu lastpipe
 		fi
 
 		echo

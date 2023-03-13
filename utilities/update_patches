@@ -49,12 +49,17 @@ generate_patch_and_print () {
 	LINK_FILE=${PACKAGE}_${PKG_VER}.patch
 	git -C "/tmp/$(gitrepo4pkg)" branch -m "$(head4pkg)"
 	mkdir -p "${BBXB_PATH}/patches/${PACKAGE}"
-	git -C "/tmp/$(gitrepo4pkg)" diff "$(rel4pkg)..${LAST_COMMIT}" "$(gitrepo_additional_params)" > "${BBXB_PATH}/patches/${PACKAGE}/${PATCH_FILE}"
+	# shellcheck disable=SC2046
+	git -C "/tmp/$(gitrepo4pkg)" diff "$(rel4pkg)..${LAST_COMMIT}" $(gitrepo_additional_params) > "${BBXB_PATH}/patches/${PACKAGE}/${PATCH_FILE}"
 	ln -fs "${PATCH_FILE}" "${BBXB_PATH}/patches/${PACKAGE}/${LINK_FILE}"
-	echo -en "\\\t${PKG_VER})\n"
-	echo -en "\\t\\tPKG_VER=${PKG_VER}+${LAST_COMMIT}\n"
-	echo -en "\\t\\tPATCHES=${PACKAGE}/${PATCH_FILE}\n"
-	echo -en "\\t\\t;;"
+	# shellcheck disable=SC2028
+	echo -n "\\\t${PKG_VER})\n"
+	# shellcheck disable=SC2028
+	echo -n "\\t\\tPKG_VER=${PKG_VER}+${LAST_COMMIT}\n"
+	# shellcheck disable=SC2028
+	echo -n "\\t\\tPATCHES=${PACKAGE}/${PATCH_FILE}\n"
+	# shellcheck disable=SC2028
+	echo -n "\\t\\t;;"
 }
 
 BBXB_PATH=$(realpath "$(dirname ${0})/..")
