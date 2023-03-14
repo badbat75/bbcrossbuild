@@ -133,8 +133,7 @@ function mount_tag () {
 	then
 		if [ -z "${IMGFILE}" ]
 		then
-			echo "--imgefile: Image name inside archive should be specified."
-			return 1
+			trow_error "${ERROR_NOT_VALID_OPTION}" "--imgfile: Image name inside archive should be specified."
 		fi
 		if [ ! -f "${DISKIMAGES_PATH}/${MOUNT_NAME}.img" ]
 		then

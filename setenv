@@ -1,21 +1,6 @@
-#!/bin/bash
-# shellcheck disable=SC2034
 NPROCS=$(nproc --ignore=1)
-# shellcheck disable=SC2034
 LTOPROCS=$(( $(nproc) / 4 ))
 
-ulimit -n 2048
-umask 0022
-
-if [ -f "${BB_HOME}/bbxb.conf" ]
-then
-	# shellcheck source=./bbxb.conf
-	source "${BB_HOME}/bbxb.conf"
-fi
-
-# Check platform consistency
-# shellcheck source=platforms/generic-x64.conf
-source "${PLATFORM}"
 HARCH=${HM}-${HOS}-${HLIBC}
 
 DATA_PATH=${DATA_PATH:-${HOME}/.bbxb}
@@ -33,7 +18,7 @@ PLATFORM_PATH=${PROJECT_PATH}/${PLATFORM_NAME}
 DISTOS_PATH=${PLATFORM_PATH}/${DISTOS_DIR:-distos}
 SRC_PATH=${PROJECT_PATH}/${SRC_DIR:-sources}
 BLD_PATH=${PLATFORM_PATH}/${BLD_DIR:-builds}
-test -z ${BIN_DIR} && BIN_DIR="binaries"
+BIN_DIR=${BIN_DIR:-"binaries"}
 BIN_PATH=${PLATFORM_PATH}/${BIN_DIR}
 LOG_PATH=${PLATFORM_PATH}/${LOG_DIR:-logs}
 STATUS_PATH=${PLATFORM_PATH}/${STATUS_DIR:-status}
@@ -50,7 +35,7 @@ PATCH_PATH=${BB_HOME}/${PATCH_DIR:-patches}
 IMG_PATH=${BB_HOME}/${IMG_DIR:-images}
 
 MULTI_ARCH=${MULTIARCH:-1}
-if [ ${MULTI_ARCH} -eq 1 ] && [ -z "${HARCH_LIB}" ]
+if [ "${MULTI_ARCH}" -eq 1 ] && [ -z "${HARCH_LIB}" ]
 then
 	TARGET_LIBSUFFIX="/${HARCH}"
 fi

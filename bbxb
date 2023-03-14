@@ -1,7 +1,7 @@
 #!/bin/bash
 trap 'STATUS=${?}; \
 	echo >&2; \
-	echo "${ERROR_STRING:-ERR received.} [${FUNCNAME[*]} - ERR: ${STATUS}]" >&2; \
+	echo "[${FUNCNAME[*]} - ERR: ${STATUS}]" >&2; \
 	echo >&2; \
 	set +E +o pipefail; \
 	trap - ERR SIGINT; \
@@ -27,30 +27,33 @@ PLATFORM_NAME="${_param_2}"
 
 if [ -z "${PROJECT_NAME}" ]
 then
-	ERROR_STRING="No project name specified."
-	(exit "${ERROR_NOT_VALID_OPTION}")
+	trow_error "${ERROR_NOT_VALID_OPTION}" "No project name specified."
 fi
 
 if [ -z "${PLATFORM_NAME}" ]
 then
-	ERROR_STRING="No platform name specified."
-	(exit "${ERROR_NOT_VALID_OPTION}")
+	trow_error "${ERROR_NOT_VALID_OPTION}" "No platform name specified."
+fi
+
+ulimit -n 2048
+umask 0022
+
+if [ -f "${BB_HOME}/bbxb.conf" ]
+then
+	# shellcheck source=./bbxb.conf
+	source "${BB_HOME}/bbxb.conf"
 fi
 
 PROJECT=${BB_HOME}/${PRJ_PATH:-projects}/${PROJECT_NAME}.prj
-if [ ! -f "${PROJECT}" ]
-then
-	ERROR_STRING="Project ${PROJECT} does not exist."
-	(exit "${ERROR_FILE_NOT_FOUND}")
-fi
-
 PLATFORM=${BB_HOME}/${PLATFORM_DIR:-platforms}/${PLATFORM_NAME}.conf
+
 if [ ! -f "${PLATFORM}" ]
 then
-	ERROR_STRING="Platform ${PLATFORM} does not exist."
-	(exit "${ERROR_FILE_NOT_FOUND}")
+	trow_error "${ERROR_FILE_NOT_FOUND}" "Platform ${PLATFORM} does not exist."
 fi
 
+# shellcheck source=platforms/generic-x64.conf
+source "${PLATFORM}"
 # shellcheck source=setenv
 source "${BB_HOME}/setenv"
 # shellcheck source=build.functions
@@ -66,7 +69,7 @@ source "${BB_HOME}/data.functions"
 
 trap 'STATUS=${?}; \
 	echo >&2; \
-	echo "${ERROR_STRING:-ERR received.} [${FUNCNAME[*]} - ERR: ${STATUS}]" >&2; \
+	echo "[${FUNCNAME[*]} - ERR: ${STATUS}]" >&2; \
 	echo >&2; \
 	pause; \
 	set +E +o pipefail; \
@@ -75,13 +78,18 @@ trap 'STATUS=${?}; \
 	trap - ERR; \
 	exit ${STATUS}' ERR
 trap 'echo >&2; \
-	echo "SIGINT received. [${FUNCNAME[*]}]" >&2; \
+	echo "[${FUNCNAME[*]}] SIGINT received." >&2; \
 	echo >&2; \
 	set +E +o pipefail; \
 	trap - SIGINT; \
 	unmount_tag --all || true; \
 	trap - ERR; \
 	exit 0' SIGINT
+
+if [ ! -f "${PROJECT}" ]
+then
+	trow_error "${ERROR_FILE_NOT_FOUND}" "Project ${PROJECT} does not exist."
+fi
 
 echo "Project path: ${DATA_PATH}/${PROJECT_NAME}"
 echo

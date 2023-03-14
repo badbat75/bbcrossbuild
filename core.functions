@@ -36,15 +36,13 @@ param2value () {
 						then 
 							eval "_param_${PARAMETER}='${1}'"
 						else
-							echo "${OPTION} unset, no assigned value."
-							return 1
+							trow_error "${ERROR_NOT_VALID_OPTION}" "${OPTION} unset, no assigned value."
 						fi
 					else
 						eval "_param_${PARAMETER}=1"
 					fi
 			else
-				echo "Unrecognized option: ${1}"
-				return 1
+				trow_error "${ERROR_NOT_VALID_OPTION}" "Unrecognized option: ${1}"
 			fi
 		else
 				NUM=$((NUM+1))
@@ -220,8 +218,7 @@ test_version () {
 			fi
 		;;
 		*)
-			echo "No valid operator specified!"
-			return 255
+			trow_error "${ERROR_NOT_VALID_OPTION}" "No valid operator specified!"
 		;;
 	esac	
 }
@@ -238,8 +235,7 @@ pathadd () {
 
 	if [ -z "${1}" ]
 	then
-		echo "Variable not defined."
-		return 1
+		trow_error "${ERROR_NOT_VALID_OPTION}" "Variable not defined."
 	fi
 
 	if [ -z "${2}" ]
@@ -270,14 +266,13 @@ pathremove () {
 
 	if [ -z "${1}" ]
 	then
-		echo "Variable not defined."
-		return 1
+		trow_error "${ERROR_NOT_VALID_OPTION}" "Variable not defined."
 	fi
 
 	if [ -z "${2}" ]
 	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "Path not defined."
 		echo "Path not defined."
-		return 1
 	fi
 
 	eval "local i FPATH FOUND
@@ -373,6 +368,16 @@ run_cmd () {
 		esac
 	done
 	return "${STATUS}"
+}
+
+trow_error () {
+	local ERROR_CODE=${1}
+	local ERROR_MSG=${2}
+	#local ERROR_PARAM=${3}
+
+	echo >&2
+	echo "${ERROR_MSG:-ERR received.} [${FUNCNAME[*]} - ERR: ${ERROR_CODE}]" >&2
+	return "${ERROR_CODE}"
 }
 
 export -f run_cmd log_buffer

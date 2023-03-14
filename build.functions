@@ -142,8 +142,7 @@ function setbuildenv () {
 			SYSROOT_FLAGS="--sysroot=${SYSROOT}"
 		;;
 		*)
-			ERROR_STRING="${TARGET_ENV} not supported!!!"
-			( exit "${ERR_GENERIC}" )
+			trow_error "${ERROR_GENERIC}" "${TARGET_ENV} not supported!!!"
 		;;
 	esac
 }
@@ -220,8 +219,7 @@ function setllvmpollyenv () {
 					LLVM_EXTRAPOLLYFLAGS+=" -mllvm -polly-parallel"
 				;;
 				*)
-					ERROR_STRING="Error: ${option} not recognized"
-					( exit "${ERR_GENERIC}" )
+					trow_error "${ERROR_GENERIC}" "Error: ${option} not recognized"
 				;;
 			esac
 		done
@@ -1433,8 +1431,7 @@ function boostbuild () {
 			local BOOST_ADDRMOD=64
 			;;
 		*)
-			ERROR_STRING="Missing architecture mapping for ${HM}"
-			( exit "${ERR_GENERIC}" )
+			trow_error "${ERROR_GENERIC}" "Missing architecture mapping for ${HM}"
 			;;
 	esac
 	case ${HOS} in
@@ -1702,9 +1699,7 @@ function build () {(
 
 	if [ ! -f "${PKG_PATH}/${PKG_FILE}.pkg" ]
 	then
-		# shellcheck disable=SC2034
-		ERROR_STRING="Package ${PKG_FILE} does not exists."
-		( exit "${ERROR_FILE_NOT_FOUND}" )
+		trow_error "${ERROR_FILE_NOT_FOUND}" "Package ${PKG_FILE} does not exists."
 	fi
 	
 	PKG_NAME=$(basename "${PKG_FILE}")
@@ -1774,8 +1769,7 @@ function build () {(
 	then
 		if [ "${PKG_TARGET}" == "native" ]
 		then
-			ERROR_STRING="PKG_CHECK is empty and PKG_TARGET is native. Exiting..."
-			( exit "${ERR_GENERIC}" )
+			trow_error "${ERROR_GENERIC}" "PKG_CHECK is empty and PKG_TARGET is native. Exiting..."
 		fi
 		### Check if target package or default package has already built
 		PKG_CHKSUM="$( md5sum "${PKG_PATH}/${PKG_FILE}.pkg" )"

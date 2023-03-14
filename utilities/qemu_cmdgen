@@ -64,6 +64,15 @@ then
 	(exit "${ERROR_FILE_NOT_FOUND}")
 fi
 
+# shellcheck source=../platforms/generic-x64.conf
+source "${PLATFORM}"
+
+if [ -f "${BB_HOME}/bbxb.conf" ]
+then
+	# shellcheck source=../bbxb.conf
+	source "${BB_HOME}/bbxb.conf"
+fi
+
 # shellcheck source=../setenv
 source "${BB_HOME}/setenv"
 
