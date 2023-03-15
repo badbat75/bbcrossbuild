@@ -1351,6 +1351,9 @@ function setup_python () {
 
 	"check_${TOOLCHAIN}_c"
 
+	local PYTHON_DISTOS
+	PYTHON_DISTOS=0
+
 	echo -n "Setting up Python"
 	if [ -d "${DISTOS_PATH}" ]
 	then
@@ -1363,11 +1366,10 @@ function setup_python () {
 		PYTHON_VER=$(find "${PYTHON_SEARCHPATH}/usr/includ"e -maxdepth 1 -name 'python*' -exec grep '#define PY_VERSION ' {}/patchlevel.h \; | awk '{print $3}' | sed 's/\"//g' | sort -u | tail -n1)
 		if [ "${PYTHON_VER}" == "" ]
 		then
-			echo "...no way to guess its version and not specified. Exiting... "
-			echo
-			return 2
+			trow_error 2 "...no way to guess its version and not specified. Exiting... "
 		else
 			echo -n "-${PYTHON_VER} (guessed)... "
+			PYTHON_DISTOS=1
 		fi
 	else
 		echo -n "-${PYTHON_VER}... "
@@ -1410,19 +1412,20 @@ function setup_python () {
 		fi
 	fi
 
-	if [ "${SKIP_PYTHONVENV:-0}" -eq 0 ]
+	if [ ! -f "${DISTOS_PATH}/usr/bin/python${PYTHONBIN_VER}" ] && [ "${PYTHON_DISTOS}" -eq 0 ]
 	then
-		echo -n "Creating virtual cross environment... "
-		if [ ! -d "${TOOLCHAIN_PATH}/venv-${HARCH}" ]
-		then
-			build_python_crossenv > "${LOG_PATH}/toolchain_python-crossenv.log" 2>&1
-			echo "done."
-			echo
-		else
-			echo "already there."
-			echo
-			#source ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate >> ${LOG_PATH}/toolchain_python-crossenv.log 2>&1
-		fi
+		NUMSPACES=1 build lfs/python3
+	fi
+
+	echo -n "Creating virtual cross environment... "
+	if [ ! -d "${TOOLCHAIN_PATH}/venv-${HARCH}" ]
+	then
+		build_python_crossenv > "${LOG_PATH}/toolchain_python-crossenv.log" 2>&1
+		echo "done."
+		echo
+	else
+		echo "already there."
+		echo
 	fi
 }
 
@@ -1486,26 +1489,10 @@ function setup_full_toolchain () {
 
 	if [ "${WITH_PYTHON}" -eq 1 ]
 	then
-		#PYTHON_VER=${PYTHON_VER:-$(${PYTHON_FOR_BUILD} --version | awk '{print $2}')}
-		#PYTHONBIN_VER=${PYTHONBIN_VER:-$(cut -d. -f1,2 <<<"${PYTHON_VER}")}
-		#PYTHONBIN_MAJVER=${PYTHONBIN_VER:-$(cut -d. -f1 <<<"${PYTHON_VER}")}
-		#PYTHON_FOR_BUILD=${PYTHON_FOR_BUILD:-${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/python3}
-		#pathadd PYTHONPATH "${GLOBAL_TOOLCHAIN_PATH}/lib/python${PYTHONBIN_VER}/site-packages"
-		set +e
 		setup_python
-		case ${?} in
-			0) set -e ;;
-			2)
-				set -e
-				NUMSPACES=1 build lfs/python3
-				setup_python
-			;;
-			*) return ${?};;
-		esac
 	fi
 
 	build lfs/meson:native
-	set +e
 }
 
 function prepare_sysroot () {

@@ -961,7 +961,7 @@ function mesonninja () {
 			nm = '${NM}'
 			ranlib = '${RANLIB}'
 			pkgconfig = '${PKG_CONFIG}'
-			python = '$(which cross-python3)'
+			python = 'cross-python3'
 			exe_wrapper = 'qemu-${HM}-static'
 
 			[host_machine]
@@ -1819,7 +1819,7 @@ function build () {(
 		SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
 	done
 
-	eval "> ${LOG_FILE}"
+	truncate -s0 "${LOG_FILE}"
 	
 	if [ "${GCC_CHECK}" -eq 0 ] && [ "${BUILD_PROCESS}" != "none" ] && [ "${BUILD_PROCESS}" != "downloadonly" ] && [ "${PKG_TARGET_ENV}" == target ]
 	then

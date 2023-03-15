@@ -99,6 +99,11 @@ then
 	mkdir -p "${GLOBAL_LOG_PATH}"
 fi
 
+if [ ! -d "${LOG_PATH}" ]
+then
+	mkdir -p "${LOG_PATH}"
+fi
+
 if [ ! -d "${USERDATA_PATH}" ]
 then
 	mkdir -p "${USERDATA_PATH}"
