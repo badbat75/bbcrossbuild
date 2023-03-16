@@ -5,7 +5,7 @@ PATCHES="https://www.linuxfromscratch.org/patches/blfs/svn/grub-2.06-upstream_fi
 PKG_DEPS="lfs/FreeType fonts/unifont"
 BUILD_PROCESS=configmake
 STD_CONF_FLAGS=0
-CONF_ENV='env -u CFLAGS TARGET_CC="${CC}"'
+CONF_ENV='env -u CFLAGS TARGET_CC="${CC}" TARGET_OBJCOPY="${OBJCOPY}" TARGET_STRIP="${STRIP}"'
 CONF_FLAGS="--prefix=${INSTALL_PREFIX}"
 CONF_FLAGS+=" --sysconfdir=${INSTALL_SYSCONFDIR}"
 CONF_FLAGS+=" --disable-efiemu"
@@ -14,6 +14,7 @@ CONF_FLAGS+=" --target=${HM}"
 CONF_FLAGS+=" --disable-werror"
 PKG_MAKETARGETS=",install"
 PKG_OVERRIDELD=bfd
+PKG_LDFLAGS="-Wl,-rpath-link=${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 
 PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}${INSTALL_SHAREDIR}/bash-completion/completions
     mv -v ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/bash_completion.d/grub ${PKG_PKGPATH}${INSTALL_SHAREDIR}/bash-completion/completions"
