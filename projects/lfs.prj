@@ -151,7 +151,7 @@ KERNEL_LTOENABLE=thin
 		LFS_REMOVE_DEVFILES="--remove_devfiles"
 	fi
 
-echo Configuring Host Name
+echo Configuring Host Name: ${LFS_HOSTNAME}
 echo ${LFS_HOSTNAME} > ${BIN_PATH}/etc/hostname
 if ! grep "127.0.1.1" ${BIN_PATH}/etc/hosts > /dev/null
 then
@@ -191,6 +191,7 @@ then
 	EOF
 	echo
 fi
+
 if [ ${LFS_ENABLESSH} -eq 1 ]
 then
 	echo Enabling SSHd

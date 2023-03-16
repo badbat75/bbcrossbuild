@@ -71,7 +71,6 @@ trap 'STATUS=${?}; \
 	echo >&2; \
 	echo "[${FUNCNAME[*]} - ERR: ${STATUS}]" >&2; \
 	echo >&2; \
-	pause; \
 	set +E +o pipefail; \
 	trap - SIGINT; \
 	unmount_tag --all || true; \
