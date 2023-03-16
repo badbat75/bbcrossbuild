@@ -1,0 +1,157 @@
+#!/bin/bash -e
+
+describe-volumes () {
+		aws ec2 describe-volumes \
+				--query "Volumes[*].{ID:VolumeId}" \
+				--filters "Name=tag:purpose,Values=bbcrossbuild" \
+				--region "${aws_region_id}"
+}
+
+describe-instances () {
+	local QUERY_STRING=
+
+	case ${1} in
+		--not-terminated)
+			# shellcheck disable=SC2016
+			QUERY_STRING='!contains(State.Name, `terminated`)'
+			FIELD="InstanceId"
+		;;
+		--running)
+			 # shellcheck disable=SC2016
+			QUERY_STRING='contains(State.Name, `running`)'
+			FIELD="InstanceId"
+		;;
+		--dns)
+			 # shellcheck disable=SC2016
+			QUERY_STRING='contains(State.Name, `running`)'
+			FIELD="PublicDnsName"
+		;;
+	esac
+
+	# shellcheck disable=SC2046
+	aws ec2 describe-instances \
+				--query "Reservations[*].Instances[?${QUERY_STRING}].${FIELD}" \
+				--filters "Name=tag:purpose,Values=bbcrossbuild" \
+				--region "${aws_region_id}" \
+				--output text
+}
+
+create-volume () {
+		if [ -z "${ec2_ebs_vol}" ]
+		then
+			echo -n "Creating volume..."
+			ec2_ebs_vol=$( aws ec2 create-volume \
+				--availability-zone "${aws_az}" \
+				--size "${ec2_volume_size}" \
+				--volume-type gp3 \
+				--region "${aws_region_id}" \
+				--tag-specifications 'ResourceType=volume,Tags=[{Key=purpose,Value=bbcrossbuild}]' \
+				--output text | awk '{print $9}' )
+			
+			echo -e " ${ec2_ebs_vol} created."
+		fi
+}
+
+run-instance () {
+	if [ -z "${ec2_instance_id}" ]
+	then
+		echo -n "Launching ec2 instance..."
+		ec2_instance_id=$( aws ec2 run-instances \
+			--image-id "$ec2_image_id" \
+			--count 1 \
+			--instance-type "$ec2_instance_type" \
+			--key-name "$ec2_key_name" \
+			--security-group-ids "$ec2_sg" \
+			--subnet-id "$ec2_subnet" \
+			--associate-public-ip-address \
+			--region "${aws_region_id}" \
+			--tag-specifications 'ResourceType=instance,Tags=[{Key=purpose,Value=bbcrossbuild}]' \
+			--output text | head -n2 | tail -n1 | awk '{print $10}' )
+		
+		echo -n " ${ec2_instance_id} is spinning up..."
+
+		while [ -z "$(describe-instances --running)" ]
+		do
+			sleep 5
+		done
+
+		echo " running."
+
+		echo -n "Attaching ${ec2_ebs_vol} to ${ec2_instance_id}..." 
+
+		aws ec2 attach-volume \
+			--volume-id "${ec2_ebs_vol}" \
+			--instance-id "$(describe-instances --running)" \
+			--device /dev/sdf \
+			--region "${aws_region_id}" \
+			--output text > /dev/null
+
+		echo " ok."
+	else
+		echo "This instance is still running: ${ec2_instance_id}"
+	fi
+}
+
+terminate-instance () {
+	if [ -n "${ec2_instance_id}" ]
+	then
+		aws ec2 terminate-instances \
+			--instance-ids "${ec2_instance_id}" \
+			--region "${aws_region_id}" \
+			--output text > /dev/null
+	else
+		echo "Nothing to terminate!!!"
+	fi
+}
+
+delete-volume () {
+	if [ -n "${ec2_ebs_vol}" ]
+	then
+		echo "Waiting for instance to terminate..."
+		while [ -n "$(describe-instances --not-terminated)" ]
+		do
+			sleep 5
+		done
+		aws ec2 delete-volume \
+			--volume-id "${ec2_ebs_vol}" \
+			--region "${aws_region_id}" \
+			--output text > /dev/null
+	fi
+}
+
+aws_region_id=eu-west-1
+aws_az=eu-west-1a
+
+ec2_image_id=ami-08fea9e08576c443b
+ec2_instance_type=t2.micro
+ec2_key_name=Putty_Ireland
+ec2_sg=sg-09061a5a9ef45d838
+ec2_subnet=subnet-ad48f2db
+ec2_ebs_vol=vol-0217321caf0e4e1a2
+
+ec2_volume_size=100
+
+ec2_ebs_vol=$(describe-volumes)
+ec2_instance_id=$(describe-instances --not-terminated)
+
+echo
+
+case ${1} in
+	run)
+		create-volume
+		run-instance
+	;;
+	terminate)
+		terminate-instance
+	;;
+	destroy)
+		terminate-instance
+		delete-volume
+	;;
+	show|*)
+		echo "Existing volume: ${ec2_ebs_vol}"
+		echo "Existing instance: ${ec2_instance_id} / DNS: $(describe-instances --dns)"
+	;;
+esac
+
+echo
