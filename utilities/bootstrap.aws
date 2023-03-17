@@ -1,0 +1,47 @@
+#!/bin/bash
+
+# GCC build
+PACKAGES="bc parted e2fsprogs btrfs-progs bzip2-devel rsync vim-common gcc g++ binutils dwarves elfutils-libelf-devel patchelf libzstd libzstd-devel tree curl gawk flex git xmltoman docbook-utils swig doxygen texinfo python3-docutils"
+
+# CLang build
+PACKAGES+=" libedit-devel lua-devel ocaml-findlib ocaml-ctypes ocaml-ocamldoc"
+
+# Debian Packages
+#PACKAGES+=" dpkg-dev devscripts apt debhelper perl-ExtUtils-MakeMaker perl-Archive-Zip"
+
+# For Image emulation
+PACKAGES+=" qemu-*-static qemu-kvm-tools qemu-kvm qemu-system-*"
+
+# for Python3
+PACKAGES+=" openssl-devel libffi-devel libuuid-devel tcl-devel"
+
+# for moode
+PACKAGES+=" sqlite"
+
+# for wpa-supplicant
+PACKAGES+=" docbook-utils-pdf"
+
+# for libid3tag
+PACKAGES+=" gperf"
+
+# for lxml
+PACKAGES+=" libxml2-devel"
+
+# for udevil
+PACKAGES+=" intltool"
+
+# for dlc-daemon
+PACKAGES+=" pandoc"
+
+# for systemd
+PACKAGES+=" libxslt docbook-xsl docbook2X"
+
+# for btrfs-progs
+PACKAGES+=" xmlto asciidoc"
+
+if dnf 2>&1 > /dev/null
+then
+    sudo dnf -y install ${PACKAGES}
+else
+    sudo yum -y install ${PACKAGES}
+fi
