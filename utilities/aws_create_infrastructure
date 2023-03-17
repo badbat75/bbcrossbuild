@@ -161,10 +161,12 @@ terminate-instance () {
 delete-volume () {
 	if [ -n "${EC2_EBS_VOL}" ]
 	then
+		echo -n "Deleting volume..."
 		aws ec2 delete-volume \
 			--volume-id "${EC2_EBS_VOL}" \
 			--region "${aws_region_id}" \
 			--output text > /dev/null
+		echo " deleted."
 	fi
 }
 
