@@ -399,9 +399,9 @@ function settcenv () {
 			TOOLCHAIN_OBJCOPY_FOR_BUILD=$(which llvm-objcopy)
 			TOOLCHAIN_OBJDUMP_FOR_BUILD=$(which llvm-objdump)
 			TOOLCHAIN_READELF_FOR_BUILD=$(which llvm-readelf)
-			TOOLCHAIN_LINKER_FOR_BUILD=${PKG_OVERRIDELD:-${LLVM_DEFAULT_LD:-lld}}
-			TOOLCHAIN_LINKER_EXE_FOR_BUILD=$(which "ld.${TOOLCHAIN_LINKER}")
-			TOOLCHAIN_LINKERFLAGS_FOR_BUILD="-fuse-ld=${TOOLCHAIN_LINKER} -Wl,--threads=${NPROCS}"
+			TOOLCHAIN_LINKER_FOR_BUILD=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-lld}}
+			TOOLCHAIN_LINKER_EXE_FOR_BUILD=$(which "ld.${TOOLCHAIN_LINKER_FOR_BUILD}")
+			TOOLCHAIN_LINKERFLAGS_FOR_BUILD="-fuse-ld=${TOOLCHAIN_LINKER_FOR_BUILD}"
 			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 				1|fat)
 					TOOLCHAIN_COMPFLAGS+=" -flto=full"
@@ -1163,8 +1163,12 @@ function kernelbuild () {
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
 	cd "${PKG_BLDPATH}"
 
-	echo "GCC_DEFAULT_LD=bfd  create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	GCC_DEFAULT_LD=bfd create_environment_source --target "${PKG_TARGET_ENV}"
+	if [ "${GCC_DEFAULT_LD}" == gold ]
+	then
+		GCC_DEFAULT_LD=bfd
+	fi
+	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
+	create_environment_source --target "${PKG_TARGET_ENV}"
 	sed -e 's/FLAGS=.*/FLAGS=/g' -e 's/PKG_CONFIG\(.*\)=.*/PKG_CONFIG\1=/' -i environment.source
 	# shellcheck source=/dev/null
 	source environment.source
