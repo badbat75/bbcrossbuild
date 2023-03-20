@@ -1102,11 +1102,10 @@ function setup_llvm () {
 		# To be changed with: ${TOOLCHAIN_PATH}
 		LLVM_INSTALL_PATH=$(llvm-config --prefix)
 
-		if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}" ]
+		if [ ! -d "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}" ]
 		then
-			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}\""
+			run_cmd "mkdir -p \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}\""
 		fi
-		run_cmd "mkdir -p \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}\""
 		if [ -d "${DISTOS_PATH}" ]
 		then
 			if [ "$(find "${DISTOS_PATH}/usr/lib" "${DISTOS_PATH}/lib" -type f -name crti.o -mindepth 1 2>/dev/null | wc -l)" -ge 1 ]
@@ -1218,15 +1217,17 @@ function setup_llvm () {
 			trow_error "${ERROR_NOT_ENOUGH_MEMORY}" "Not enough memory to build clang, ${MEMORY_REQUIRED_G}G at least are required."
 		fi
 
-		if [ -d "${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}" ]
+		if [ ! -d "${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}" ] || \
+			[ ! -d "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}" ]
 		then
-			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}\"" >> "${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
+			echo -n "downloading... "
+			download_llvm >> "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log" 2>&1
 		fi
-
-		echo -n "downloading... "
-		download_llvm >> "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log" 2>&1
-		echo -n "configuration... "
-		configure_llvm >> "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log" 2>&1
+		if [ ! -f "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/build.ninja" ]
+		then
+			echo -n "configuration... "
+			configure_llvm >> "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log" 2>&1
+		fi
 		echo -n "building host binaries... "
 		build_llvm >> "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log" 2>&1
 	fi
