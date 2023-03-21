@@ -1083,7 +1083,7 @@ function setup_llvm () {
 
 	function build_llvm () {
 
-		local LLVM_SHLIBDIR
+		#local LLVM_SHLIBDIR
 		#LLVM_SHLIBDIR=$(grep -E "install_symlink.*libLLVM-${LLVM_VER}.so" "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/tools/llvm-shlib/cmake_install.cmake" | head -n1 | grep -o "lib[36][24]")
 		#echo "### Shared LLVM libdir: ${LLVM_SHLIBDIR}"
 		#pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}"
