@@ -14,6 +14,7 @@ CONF_FLAGS+=" --with-platform=efi"
 CONF_FLAGS+=" --target=${HM}"
 CONF_FLAGS+=" --disable-werror"
 PKG_MAKETARGETS=",install"
+PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd
 
 PKG_POSTBUILD="install -vdm755 ${PKG_PKGPATH}${INSTALL_SHAREDIR}/bash-completion/completions
