@@ -13,6 +13,7 @@ CONF_FLAGS+=" --enable-grub-mkfont"
 CONF_FLAGS+=" --target=${HM}"
 CONF_FLAGS+=" --disable-werror"
 PKG_MAKETARGETS=",install"
+PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd
 PKG_LDFLAGS="-Wl,-rpath-link=${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 
