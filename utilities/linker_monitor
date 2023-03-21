@@ -6,6 +6,7 @@ then
 	shift
 fi
 
+LC_NUMERIC="en_US.UTF-8"
 CMD2MONITOR=${1:-ld.lld}
 INTERVAL=${2:-2}
 
@@ -23,7 +24,7 @@ do
 			CMD_LIST=$(echo ${PS} | grep -o "@[^ ]*" | sed "s/^@//")
 			BINARY=$( cat ${CMD_LIST} | sed 's/"//g' | grep -o "\-o [^ ]*" | awk '{print $2}' )
 		fi
-		printf 'Binary: %s - CPU: %4.f%% - MEM: %5.1f%%\n' "${BINARY}" "${CPU}" "${USED}"
+		printf '%s: CPU %5.1f%% - MEM %5.1f%%\t' "${BINARY}" "${CPU}" "${USED}"
 		if [ "${WRITE:-0}" -eq 1 ]
 		then
 			FILE=${BINARY//\//_}.csv
@@ -34,5 +35,6 @@ do
 			echo "${CPU},${USED}" >> "${BINARY//\//_}.csv"
 		fi
 	done
+	echo
 	sleep "${INTERVAL}"
 done
