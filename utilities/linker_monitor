@@ -23,7 +23,7 @@ do
 			CMD_LIST=$(echo ${PS} | grep -o "@[^ ]*" | sed "s/^@//")
 			BINARY=$( cat ${CMD_LIST} | sed 's/"//g' | grep -o "\-o [^ ]*" | awk '{print $2}' )
 		fi
-		printf 'Binary: %s - CPU: %6.2f%% - MEM: %6.2f%%\n' "${BINARY}" "${CPU}" "${USED}"
+		printf 'Binary: %s - CPU: %4.f%% - MEM: %5.1f%%\n' "${BINARY}" "${CPU}" "${USED}"
 		if [ "${WRITE:-0}" -eq 1 ]
 		then
 			FILE=${BINARY//\//_}.csv
