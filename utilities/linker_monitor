@@ -14,6 +14,8 @@ echo
 
 while [ "${INTERVAL}" -gt 0 ]
 do
+	clear
+	printf 'Linker Monitor for %s (sampling: %i sec)\n\n' "${CMD2MONITOR}" "${INTERVAL}"
 	ps -C "${CMD2MONITOR}" -o %cpu,%mem,cmd --noheaders | while read -r PS
 	do
 		CPU=$(echo ${PS} | awk '{print $1}')
@@ -24,7 +26,7 @@ do
 			CMD_LIST=$(echo ${PS} | grep -o "@[^ ]*" | sed "s/^@//")
 			BINARY=$( cat ${CMD_LIST} | sed 's/"//g' | grep -o "\-o [^ ]*" | awk '{print $2}' )
 		fi
-		printf '%s: CPU %5.1f%% - MEM %5.1f%%\t' "${BINARY}" "${CPU}" "${USED}"
+		printf '%s: CPU %5.1f%% - MEM %5.1f%%\n' "${BINARY}" "${CPU}" "${USED}"
 		if [ "${WRITE:-0}" -eq 1 ]
 		then
 			FILE=${BINARY//\//_}.csv
@@ -35,6 +37,5 @@ do
 			echo "${CPU},${USED}" >> "${BINARY//\//_}.csv"
 		fi
 	done
-	echo
 	sleep "${INTERVAL}"
 done
