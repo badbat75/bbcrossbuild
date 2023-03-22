@@ -23,5 +23,12 @@ case ${WITH_RT:-0} in
 	yes|1)
 	# Enable preemptive/realtime kernel
 		CONF_FLAGS+=" -d PREEMPT_NONE -d PREEMPT_VOLUNTARY -e PREEMPT"
-		;;
+	;;
+esac
+
+case ${PLATFORM_NAME} in
+	generic-*)
+		CONF_FLAGS+=" -e DRM -e DRM_VIRTIO_GPU -e VIRTIO_INPUT -e HW_RANDOM_VIRTIO -m SND_VIRTIO -m VIRTIO_FS"
+		#CONF_FLAGS+=" -d DRM_NOUVEAU -d DRM_ROCKCHIP -d DRM_SUN4I -d DRM_MSM -d DRM_TEGRA"
+	;;
 esac

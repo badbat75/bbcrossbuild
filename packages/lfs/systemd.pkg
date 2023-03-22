@@ -138,7 +138,8 @@ case "${PKG_TARGET}" in
 				# End ${INSTALL_SYSCONFDIR}/pam.d/systemd-user
 			EOF
 
-			cat >> ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/systemd/system/getty@tty1.service.d <<-EOF
+			install -vdm755 ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/systemd/system/getty@tty1.service.d
+			cat >> ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/systemd/system/getty@tty1.service.d/noclear.conf <<-EOF
 				[Service]
 				TTYVTDisallocate=no			
 			EOF
