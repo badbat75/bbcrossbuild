@@ -33,6 +33,9 @@ CONF_FLAGS+=" -Dnss-mymachines=true"
 CONF_FLAGS+=" -Dnss-resolve=true"
 CONF_FLAGS+=" -Dnss-systemd=true"
 CONF_FLAGS+=" -Doomd=true"
+case ${TOOLCHAIN} in
+	llvm) PKG_MAKEENV="LD_LIBRARY_PATH=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib";;
+esac
 ###
 case "${PKG_TARGET}" in
 	bootstrap) LIBAUDIT_TARGET=bootstrap
@@ -77,6 +80,7 @@ case "${PKG_TARGET}" in
 		PKG_DEPS+=" lfs/libfido2"
 		PKG_DEPS+=" lfs/tpm2-tss"
 		PKG_DEPS+=" lfs/kexec-tools"
+		PKG_DEPS+=" lfs/rsync"
 		###
 		CONF_FLAGS+=" -Dblkid=true"
 		CONF_FLAGS+=" -Dcryptolib=openssl"

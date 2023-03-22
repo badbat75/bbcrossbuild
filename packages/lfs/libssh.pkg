@@ -6,3 +6,5 @@ PKG_AUTOCONF=1
 BUILD_PROCESS=cmakebuild
 CONF_FLAGS=
 PKG_MAKETARGETS="all,install/strip"
+### Not able to disable -Werror
+PKG_TOOLCHAIN=gnu

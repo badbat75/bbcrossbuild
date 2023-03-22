@@ -884,6 +884,7 @@ function cmakebuild () {
 		   -G "${CMAKE_GENERATOR}" \\
 		   -DCMAKE_BUILD_TYPE="Release" \\
 		   -DTOOLCHAIN_PREFIX=${HARCH}- \\
+		   -DCMAKE_SYSROOT=${SYSROOT} \\
 		   -DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \\
 		   -DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \\
 		   -DCMAKE_AR=${AR} \\

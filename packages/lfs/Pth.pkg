@@ -6,6 +6,7 @@ PKG_DEPS="lfs/libnsl"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--mandir=${INSTALL_SHAREDIR}/man --build= --host="
 PKG_MAKETARGETS="all,-j1 install-strip"
+PKG_TOOLCHAIN=gnu
 
 ### This packages does not support newer .la libraries file so they will be temporary moved somewhere else
 PKG_PREBUILD="sed -i 's#\$(LOBJS): Makefile#\$(LOBJS): pth_p.h Makefile#' Makefile.in
