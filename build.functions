@@ -474,7 +474,11 @@ function settcenv () {
 			;;
 	esac
 	case ${TOOLCHAIN_LINKER} in
+		bfd) 
+			TOOLCHAIN_LINKERFLAGS+=" -Wl,${SYSROOT_FLAGS}"
+			;;
 		gold)
+			TOOLCHAIN_LINKERFLAGS+=" -Wl,${SYSROOT_FLAGS}"
 			TOOLCHAIN_LINKERFLAGS+=" -Wl,--threads -Wl,--thread-count,${NPROCS}"
 			TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--threads -Wl,--thread-count,${NPROCS}"
 			;;
@@ -984,6 +988,10 @@ function mesonninja () {
 
 	run_cmd "mkdir -p ${PKG_BLDPATH}"
 	cd "${PKG_BLDPATH}"
+	case ${TOOLCHAIN} in
+		### CPPFLAGS --sysroot is not passed to preprocessor
+		llvm) PKG_FAULTYCFLAGS=1 ;;
+	esac
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	create_environment_source --target "${PKG_TARGET_ENV}"
 	# shellcheck source=/dev/null

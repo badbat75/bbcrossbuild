@@ -13,3 +13,4 @@ fi
 #PKG_MAKETARGETS="all,install"
 
 PKG_PREBUILD="sed -ri '/^RELEASE/s/^/#/' nspr/pr/src/misc/Makefile.in"
+PKG_FAULTYCFLAGS=1

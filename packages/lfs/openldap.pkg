@@ -44,3 +44,7 @@ if ! getent passwd ldap; then
 fi"
 	;;
 esac
+
+case ${TOOLCHAIN} in
+	llvm) PKG_CFLAGS="-Wno-int-conversion -Wno-deprecated-non-prototype" ;;
+esac

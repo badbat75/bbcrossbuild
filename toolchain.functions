@@ -404,7 +404,7 @@ function setup_binutils () {
 		fi
 
 		### Config parameters in common with GCC and Binutils
-		COMMON_CONFIG="--with-sysroot=/ --with-sysroot=$(gcc_sysroot) --enable-shared --with-system-zlib"
+		COMMON_CONFIG="--with-sysroot=$(gcc_sysroot) --enable-shared --with-system-zlib"
 		### Workaround for latest patches (--disable-werror)
 		BINUTILS_CONFIG="--enable-gold=default --enable-ld --enable-gprofng=yes --enable-lto \
 			--enable-new-dtags --disable-rpath --enable-threads=yes --enable-plugins --enable-64-bit-bfd \
@@ -560,7 +560,7 @@ function setup_gcc () {
 		fi
 
 		### Config parameters in common with GCC and Binutils
-		COMMON_CONFIG="--with-sysroot=/ --with-sysroot=$(gcc_sysroot) --enable-shared --with-system-zlib"
+		COMMON_CONFIG="--with-sysroot=$(gcc_sysroot) --enable-shared --with-system-zlib"
 		GCC_CONFIG="--enable-languages=${GCC_LANGUAGES:-c,c++} --enable-version-specific-runtime-libs  \
 			$( if [ "${MULTI_ARCH}" -eq 1 ] && [ -z "${HARCH_LIB}" ]; then echo --enable-multiarch; fi ) \
 			--enable-threads=posix --enable-tls --enable-checking=release --disable-multilib \
