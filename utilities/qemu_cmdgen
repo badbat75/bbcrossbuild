@@ -40,17 +40,6 @@ SAVECMD=${_param_savecmd}
 # shellcheck disable=SC2154
 BATCH_TYPE=${_param_batchtype:-linux}
 
-if [ "${BATCH_TYPE}" == all ]
-then
-	IS_RUN=0
-	SAVECMD=1
-	# shellcheck disable=SC2048,SC2086
-	${0} ${*} --batchtype linux
-	# shellcheck disable=SC2048,SC2086
-	${0} ${*} --batchtype win
-	program_exit
-fi
-
 if [ -z "${PROJECT_NAME}" ]
 then
 	ERROR_STRING="No project name specified."
@@ -119,6 +108,32 @@ then
 	program_exit
 fi
 
+case ${BATCH_TYPE} in
+	linux|unix)
+		QEMU_EXE_PREFIX="\${QEMU_EXE_PREFIX}"
+		SYSTEM_PREFIX="\${SYSTEM_PREFIX}"
+	;;
+	win)
+		QEMU_EXE_PREFIX=%QEMU_EXE_PREFIX%
+		QEMU_EXE=${QEMU_EXE}.exe
+		if [ -n "${WSL_DISTRO_NAME}" ]
+		then
+			SYSTEM_PREFIX=//wsl\$/${WSL_DISTRO_NAME}/
+		else
+			SYSTEM_PREFIX=%SYSTEM_PREFIX%
+		fi
+	;;
+	all)
+		IS_RUN=0
+		SAVECMD=1
+		# shellcheck disable=SC2048,SC2086
+		${0} ${*} --batchtype linux
+		# shellcheck disable=SC2048,SC2086
+		${0} ${*} --batchtype win
+		program_exit
+	;;
+esac
+
 SPECS_HW="-machine ${QEMU_MACHINE}"
 
 if [ -n "${QEMU_CPU}" ]
@@ -166,11 +181,11 @@ fi
 ### Graphics device specification
 if [ -n "${QEMU_GRAPHIC}" ]
 then
-	SPECS_GRAPHIC="-device ${QEMU_GRAPHIC} -device usb-kbd -device usb-mouse"
+	SPECS_GRAPHIC="-device ${QEMU_GRAPHIC}"
 	KERN_CONSOLE=
 else
 	SPECS_GRAPHIC="-nographic"
-	KERN_CONSOLE="console=${QEMU_CONSOLE:-ttyS0}"
+	KERN_CONSOLE="console=${QEMU_CONSOLE:-ttyS0} "
 fi
 
 ### Sound device specification
@@ -180,31 +195,13 @@ then
 fi
 
 ### Other devices specification
-IFS=,
 for DEVICE in ${QEMU_INPUT} ${QEMU_OTHERDEVICES}
 do
 	SPECS_DEVICES+=" -device ${DEVICE}"
 done
-unset IFS
-
-case ${BATCH_TYPE} in
-	linux|unix)
-		QEMU_EXE_PREFIX=\${QEMU_EXE_PREFIX}
-		SYSTEM_PREFIX=\${SYSTEM_PREFIX}
-	;;
-	win)
-		QEMU_EXE_PREFIX=%QEMU_EXE_PREFIX%
-		if [ -n "${WSL_DISTRO_NAME}" ]
-		then
-			SYSTEM_PREFIX=//wsl\$/${WSL_DISTRO_NAME}/
-		else
-			SYSTEM_PREFIX=%SYSTEM_PREFIX%
-		fi
-	;;
-esac
 
 SPECS_KERNEL="-kernel \"${SYSTEM_PREFIX}${BIN_PATH}/boot/${KERNEL_NAME:-vmlinuz-${KERNEL_VER}}\" ${QEMU_DTB:+"-dtb \"${SYSTEM_PREFIX}${BIN_PATH}/boot/${QEMU_DTB}\""}"
-KERN_APPEND="-append \"${KERN_CONSOLE} ${KERN_ROOT} rootwait cgroup_enable=memory systemd.gpt_auto=no ${QEMU_KERNCONFIG}\""
+KERN_APPEND="-append \"${KERN_CONSOLE}${KERN_ROOT} rootwait cgroup_enable=memory systemd.gpt_auto=no ${QEMU_KERNCONFIG}\""
 
 CMDLINE="\"${QEMU_EXE_PREFIX}${QEMU_EXE}\""
 CMDLINE+=" ${SPECS_HW}"
