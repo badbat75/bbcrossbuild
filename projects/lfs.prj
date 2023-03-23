@@ -56,6 +56,7 @@ KERNEL_LTOENABLE=thin
 		;;
 	esac
 	build lfs/kmod
+	build lfs/dracut
 	build firmwares/linux-firmware
 	build firmwares/wireless-regdb
 ### Core Libraries
