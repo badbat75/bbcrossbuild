@@ -19,7 +19,7 @@ PKG_MAKEENV="LD_LIBRARY_PATH=${TOOLCHAIN_PATH}/lib"
 PKG_LDFLAGS="-s"
 
 PKG_POSTBUILD="chmod -v 04755 ${PKG_PKGPATH}${INSTALL_PREFIX}/lib/polkit-1/polkit-agent-helper-1
-	cat > ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/pam.d/polkit-1 << -EOF
+	cat > ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/pam.d/polkit-1 <<-EOF
 		# Begin ${INSTALL_SYSCONFDIR}/pam.d/polkit-1
 
 		auth     include        system-auth
@@ -29,7 +29,7 @@ PKG_POSTBUILD="chmod -v 04755 ${PKG_PKGPATH}${INSTALL_PREFIX}/lib/polkit-1/polki
 
 		# End ${INSTALL_SYSCONFDIR}/pam.d/polkit-1
 	EOF
-"
+	"
 PKG_POSTINSTALL="if ! getent group polkitd; then
 	groupadd --system -fg 27 polkitd
 fi
