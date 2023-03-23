@@ -287,7 +287,7 @@ function build_lfs_image () {
 	run_on_root_dir lfs root "echo lfs:lfs | chpasswd"
 	#pause
 	unmount_tag --finalize lfs
-	utilities/qemu_cmdgen --quiet \
+	utilities/qemu_cmdgen --quiet --batchtype all \
 		--rootdev PARTUUID=${LFS_PARTUUID} --rootfs ${LFS_FSTYPE} \
 		--savecmd ${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.qemu \
 		${PROJECT_NAME} ${PLATFORM_NAME} 
