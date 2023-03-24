@@ -1292,14 +1292,16 @@ function kernelbuild () {
 
 	if [ "${PKG_KERNEL_INITRAMFS}" -eq 1 ]
 	then
-		if [ ! -d "${BIN_PATH}/postinst_scripts" ]
+		if [ ! -d "${PKG_PKGPATH}/postinst_scripts" ]
 		then
-			mkdir "${BIN_PATH}/postinst_scripts"
+			mkdir "${PKG_PKGPATH}/postinst_scripts"
 		fi
-		echo "dracut --force --kver ${KERNEL_RELEASE} -N --fstab --zstd" > "${BIN_PATH}/postinst_scripts/99_kernel"
+		echo -n "dracut --force --kver ${KERNEL_RELEASE} -N --fstab --zstd" > "${PKG_PKGPATH}/postinst_scripts/99_kernel"
 		if [ -n "${PKG_KERNEL_INITRAMFS_DRIVERS}" ]
 		then
-			echo " --add-drivers \"${PKG_KERNEL_INITRAMFS_DRIVERS}\"" >> "${BIN_PATH}/postinst_scripts/99_kernel"
+			echo " --add-drivers \"${PKG_KERNEL_INITRAMFS_DRIVERS}\"" >> "${PKG_PKGPATH}/postinst_scripts/99_kernel"
+		else
+			echo
 		fi
 	fi
 
