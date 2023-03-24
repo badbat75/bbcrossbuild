@@ -208,22 +208,6 @@ then
 	echo
 fi
 
-### Final configurations ###
-case ${PLATFORM_NAME} in
-	rpi*)
-		case ${PLATFORM_NAME} in
-			rpi*-aarch64)
-				echo "arm_64bit=1" >${BIN_PATH}/boot/config.txt
-			;;
-			*)
-				echo "arm_64bit=0" >${BIN_PATH}/boot/config.txt
-			;;
-		esac
-	;;
-	*) ;;
-esac
-############################
-
 function build_lfs_image () {
 	set -e
 	create_image lfs --rootfstype ${LFS_FSTYPE} --size ${LFS_FSSIZE}
@@ -238,6 +222,14 @@ function build_lfs_image () {
 	INITRAMFS_NAME=initramfs-${KERNEL_RELEASE}.img
 	case ${PLATFORM_NAME} in
 		rpi*)
+			case ${PLATFORM_NAME} in
+				rpi*-aarch64)
+					echo "arm_64bit=1" >${BIN_PATH}/boot/config.txt
+				;;
+				*)
+					echo "arm_64bit=0" >${BIN_PATH}/boot/config.txt
+				;;
+			esac
 			cat >>${BIN_PATH}/boot/config.txt <<-EOF
 				kernel ${KERNEL_NAME}
 				initramfs ${INITRAMFS_NAME} followkernel
