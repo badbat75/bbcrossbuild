@@ -154,3 +154,18 @@ function create_sfx_package () {
 	run_cmd "rm \"${PKG_OBJ}.tar.xz\""
 	echo
 }
+
+add_system_config_variable () {
+
+	local VARIABLE VALUE
+
+	VARIABLE=${1}
+	VALUE=${2}
+
+	if [ -f "${STATUS_PATH}/system_config" ]
+	then
+		run_cmd "sed -i '/^${VARIABLE}=/d' \"${STATUS_PATH}/system_config\""
+	fi
+	echo "${VARIABLE}=${VALUE}" >> "${STATUS_PATH}/system_config"
+
+}

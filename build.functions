@@ -1118,7 +1118,7 @@ function kernelmodbuild () {
 
 	if [ "${PKG_KERNEL_LOCALBUILD:-0}" -eq 0 ]
 	then
-		local BUILD_OPTION="-C ${PKG_KERNEL_BLDPATH} "
+		local BUILD_OPTION="-C ${PKG_KERNEL_BLDPATHSystem.map} "
 	fi
 
 	run_cmd "KCFLAGS=\"${PKG_CFLAGS}\" ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} modules"
@@ -1251,9 +1251,10 @@ function kernelbuild () {
 		run_cmd "mkdir -p \"${PKG_PKGPATH}/boot\""
 	fi
 
-	KERNELRELEASE=$(./make4kern.sh kernelrelease)
+	KERNEL_RELEASE=$(./make4kern.sh kernelrelease)
+	add_system_config_variable KERNEL_RELEASE "${KERNEL_RELEASE}"
 
-	run_cmd "cp -pv .config \"${PKG_PKGPATH}/boot/config-${KERNELRELEASE}\""
+	run_cmd "cp -pv .config \"${PKG_PKGPATH}/boot/config-${KERNEL_RELEASE}\""
 
 	# Build and install kernel
 	run_cmd "./make4kern.sh \"${KERNEL_IMAGE}\""
@@ -1276,7 +1277,7 @@ function kernelbuild () {
 
 	run_cmd "./make4kern.sh modules"
 	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=\"${KERNEL_ARCH}\"} ${HARCH:+CROSS_COMPILE=\"${HARCH}-\"} INSTALL_MOD_PATH=\"${PKG_PKGPATH}\" ${PKG_MAKEVARS} modules_install"
-	run_cmd "rm ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/build ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/source"
+	run_cmd "rm ${PKG_PKGPATH}/lib/modules/${KERNEL_RELEASE}/build ${PKG_PKGPATH}/lib/modules/${KERNEL_RELEASE}/source"
 
 	# Build and install DTBS
 	if [ "${KERNEL_DTBS:-0}" -eq 1 ] && [ "${STATUS}" -eq 0 ]
