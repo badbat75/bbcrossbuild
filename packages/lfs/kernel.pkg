@@ -35,7 +35,7 @@ case ${PLATFORM_NAME} in
 	;;
 esac
 
-PKG_POSTINSTALL="dracut --force --kver ${KERNEL_VER} -N --fstab --zstd"
+PKG_POSTINSTALL="dracut --force --kver \${KERNEL_RELEASE} -N --fstab --zstd"
 if [ -n "${DRACUT_DRIVERS}" ]
 then
 	PKG_POSTINSTALL+=" --add-drivers \"${DRACUT_DRIVERS}\""
