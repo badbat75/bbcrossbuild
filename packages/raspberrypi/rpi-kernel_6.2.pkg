@@ -1,7 +1,7 @@
 # rpi-kernel_6.2
 PKG_SUFFIX=.7
 PKG_URL="https://github.com/raspberrypi/linux/archive/2408ccca0bdf832b64d9d1f1477d7e76128736d4.tar.gz"
-PKG_DEPS="lfs/elfutils:cross"
+PKG_DEPS="lfs/elfutils:cross lfs/dracut"
 BUILD_PROCESS=kernelbuild
 PKG_MAKEVARS="INSTALL_MOD_STRIP=1"
 CONF_FLAGS="-d WERROR"
@@ -12,7 +12,7 @@ CONF_FLAGS+=" -e BPF_SYSCALL -e CGROUP_BPF"
 ### To enable BFQ scheduler
 CONF_FLAGS+=" -e IOSCHED_BFQ -e BFQ_GROUP_IOSCHED"
 ### To enable BTRFS and F2FS at boot
-CONF_FLAGS+=" -m BTRFS_FS -e BTRFS_FS_POSIX_ACL "
+CONF_FLAGS+=" -m BTRFS_FS -e BTRFS_FS_POSIX_ACL"
 CONF_FLAGS+=" -m F2FS_FS -e F2FS_FS_SECURITY -e F2FS_FS_COMPRESSION"
 
 case ${WITH_RT:-0} in
@@ -39,7 +39,7 @@ case ${KERNEL_ARCH:-none} in
 		;;
 esac
 
-PKG_POSTINSTALL="dracut --force --kver ${KERNEL_VER} -N --fstab --zstd"
+PKG_POSTINSTALL="dracut --force --kver \${KERNELRELEASE} -N --fstab --zstd"
 if [ -n "${DRACUT_DRIVERS}" ]
 then
 	PKG_POSTINSTALL+=" --add-drivers \"${DRACUT_DRIVERS}\""

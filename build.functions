@@ -1251,7 +1251,9 @@ function kernelbuild () {
 		run_cmd "mkdir -p \"${PKG_PKGPATH}/boot\""
 	fi
 
-	run_cmd "cp -pv .config \"${PKG_PKGPATH}/boot/config-$(./make4kern.sh kernelversion)\""
+	KERNELRELEASE=$(./make4kern.sh kernelrelease)
+
+	run_cmd "cp -pv .config \"${PKG_PKGPATH}/boot/config-${KERNELRELEASE}\""
 
 	# Build and install kernel
 	run_cmd "./make4kern.sh \"${KERNEL_IMAGE}\""
@@ -1274,8 +1276,6 @@ function kernelbuild () {
 
 	run_cmd "./make4kern.sh modules"
 	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=\"${KERNEL_ARCH}\"} ${HARCH:+CROSS_COMPILE=\"${HARCH}-\"} INSTALL_MOD_PATH=\"${PKG_PKGPATH}\" ${PKG_MAKEVARS} modules_install"
-	local KERNELRELEASE
-	KERNELRELEASE=$(cat include/config/kernel.release)
 	run_cmd "rm ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/build ${PKG_PKGPATH}/lib/modules/${KERNELRELEASE}/source"
 
 	# Build and install DTBS
