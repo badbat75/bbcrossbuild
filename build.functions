@@ -1290,6 +1290,19 @@ function kernelbuild () {
 		run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=\"${KERNEL_ARCH}\"} ${HARCH:+CROSS_COMPILE=\"${HARCH}-\"} INSTALL_DTBS_PATH=\"${PKG_PKGPATH}/boot\" ${PKG_MAKEVARS} dtbs_install"
 	fi
 
+	if [ "${PKG_KERNEL_INITRAMFS}" -eq 1 ]
+	then
+		if [ ! -d "${BIN_PATH}/postinst_scripts" ]
+		then
+			mkdir "${BIN_PATH}/postinst_scripts"
+		fi
+		echo "dracut --force --kver ${KERNEL_RELEASE} -N --fstab --zstd" > "${BIN_PATH}/postinst_scripts/99_kernel"
+		if [ -n "${PKG_KERNEL_INITRAMFS_DRIVERS}" ]
+		then
+			echo " --add-drivers \"${PKG_KERNEL_INITRAMFS_DRIVERS}\"" >> "${BIN_PATH}/postinst_scripts/99_kernel"
+		fi
+	fi
+
 	PKG_KERNEL_BLDPATH="${PWD}"
 	PKG_KERNEL_VERSION="$(./make4kern.sh kernelversion)"
 
@@ -1628,6 +1641,8 @@ function build () {(
 		PKG_FCFLAGS \
 		PKG_GETTEXT \
 		PKG_KERNEL_BUILD_MODULES \
+		PKG_KERNEL_INITRAMFS \
+		PKG_KERNEL_INITRAMFS_DRIVERS \
 		PKG_KERNEL_MOD \
 		PKG_KERNEL_MODPATH \
 		PKG_LDFLAGS \
