@@ -1290,7 +1290,7 @@ function kernelbuild () {
 		run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=\"${KERNEL_ARCH}\"} ${HARCH:+CROSS_COMPILE=\"${HARCH}-\"} INSTALL_DTBS_PATH=\"${PKG_PKGPATH}/boot\" ${PKG_MAKEVARS} dtbs_install"
 	fi
 
-	if [ "${PKG_KERNEL_INITRAMFS}" -eq 1 ]
+	if [ "${PKG_KERNEL_INITRAMFS:-0}" -eq 1 ]
 	then
 		if [ ! -d "${PKG_PKGPATH}/postinst_scripts" ]
 		then
