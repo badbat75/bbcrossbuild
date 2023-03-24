@@ -1118,7 +1118,7 @@ function kernelmodbuild () {
 
 	if [ "${PKG_KERNEL_LOCALBUILD:-0}" -eq 0 ]
 	then
-		local BUILD_OPTION="-C ${PKG_KERNEL_BLDPATHSystem.map} "
+		local BUILD_OPTION="-C ${PKG_KERNEL_BLDPATH} "
 	fi
 
 	run_cmd "KCFLAGS=\"${PKG_CFLAGS}\" ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} modules"
