@@ -238,7 +238,7 @@ function build_lfs_image () {
 	INITRAMFS_NAME=initramfs-${KERNEL_RELEASE}.img
 	case ${PLATFORM_NAME} in
 		rpi*)
-			cat >${BIN_PATH}/boot/config.txt <<-EOF
+			cat >>${BIN_PATH}/boot/config.txt <<-EOF
 				kernel ${KERNEL_NAME}
 				initramfs ${INITRAMFS_NAME} followkernel
 			EOF
