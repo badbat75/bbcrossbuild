@@ -221,7 +221,6 @@ case ${PLATFORM_NAME} in
 	;;
 	*) ;;
 esac
-
 ############################
 
 function build_lfs_image () {
@@ -235,10 +234,15 @@ function build_lfs_image () {
 	LFS_LBROOT="$(findmnt -nu -o SOURCE ${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/lfs)"
 	LFS_PARTUUID="$(blkid -o value --match-tag PARTUUID ${LFS_LBROOT})"
 	KERNEL_BOOTPARAMS="root=PARTUUID=${LFS_PARTUUID} rootfstype=${LFS_FSTYPE} fsck.repair=yes rootwait cgroup_enable=memory"
+	eval $(grep CONFIG_LOCALVERSION= ${BIN_PATH}/boot/config-${KERNEL_VER})
+	INITRAMFS_NAME=initramfs-${KERNEL_VER}${CONFIG_LOCALVERSION}${KERNEL_LOCALVERSION}.img
 	case ${PLATFORM_NAME} in
 		rpi*)
+			cat >${BIN_PATH}/boot/config.txt <<-EOF
+				initramfs ${INITRAMFS_NAME} followkernel
+			EOF
 			cat >${BIN_PATH}/boot/cmdline.txt <<-EOF
-				${KERNEL_BOOTPARAMS} net.ifnames=0 console=tty1 systemd.gpt_auto=no
+				${KERNEL_BOOTPARAMS} net.ifnames=0 systemd.gpt_auto=no
 			EOF
 		;;
 		generic-x64)
@@ -264,11 +268,13 @@ function build_lfs_image () {
 
 				menuentry "GNU/Linux, Linux ${KERNEL_VER}"  {
 				   linux /vmlinuz-${KERNEL_VER} ${KERNEL_BOOTPARAMS} systemd.gpt_auto=no ro
+				   initrd /${INITRAMFS_NAME}
 				}
 
 				menuentry "GNU/Linux, Linux ${KERNEL_VER} - Serial output"  {
 				   linux /vmlinuz-${KERNEL_VER} ${KERNEL_BOOTPARAMS} systemd.gpt_auto=no ro console=ttyS0
-				}
+				   initrd /${INITRAMFS_NAME}
+			}
 
 			EOF
 		;;
@@ -277,6 +283,8 @@ function build_lfs_image () {
 
 	inject_into_mount_tag lfs binaries ${LFS_REMOVE_DEVFILES}
 	run_postinstall_scripts lfs
+	run_cmd "cp -fv ${PLATFORM_PATH}/lfs/boot/${INITRAMFS_NAME} ${BIN_PATH}/boot" >>${LOG_PATH}/images_lfs.log
+
 	run_on_root_dir lfs root "systemctl enable console-getty"
 	run_on_root_dir lfs root "systemctl get-default && systemctl set-default multi-user.target"
 	run_on_root_dir lfs root "systemctl enable systemd-networkd"
@@ -295,7 +303,10 @@ function build_lfs_image () {
 	set +e
 }
 
-build_lfs_image
+case ${LFS_IMAGE} in
+	0|disabled) ;;
+	*) build_lfs_image
+esac
 
 #create_sfx_archive remove_devfiles
 #zip_project remove_devfiles
