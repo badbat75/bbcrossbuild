@@ -211,17 +211,14 @@ fi
 ### Final configurations ###
 case ${PLATFORM_NAME} in
 	rpi*)
-		if [ -f ${BIN_PATH}/boot/config.txt ] && ! grep "arm_64bit=" ${BIN_PATH}/boot/config.txt > /dev/null 2>&1
-		then
-			case ${PLATFORM_NAME} in
-				rpi*-aarch64)
-					echo "arm_64bit=1" >${BIN_PATH}/boot/config.txt
-				;;
-				*)
-					echo "arm_64bit=0" >${BIN_PATH}/boot/config.txt
-				;;
-			esac
-		fi
+		case ${PLATFORM_NAME} in
+			rpi*-aarch64)
+				echo "arm_64bit=1" >${BIN_PATH}/boot/config.txt
+			;;
+			*)
+				echo "arm_64bit=0" >${BIN_PATH}/boot/config.txt
+			;;
+		esac
 	;;
 	*) ;;
 esac
