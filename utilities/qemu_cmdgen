@@ -200,8 +200,10 @@ do
 	SPECS_DEVICES+=" -device ${DEVICE}"
 done
 
+# shellcheck disable=SC1091
+source "${STATUS_PATH}/system_config"
 SPECS_KERNEL="-kernel \"${SYSTEM_PREFIX}${BIN_PATH}/boot/${KERNEL_NAME:-vmlinuz-${KERNEL_VER}}\""
-SPECS_KERNEL+=" -initrd \"${SYSTEM_PREFIX}${BIN_PATH}/boot/${INITRAMFS_NAME:-initramfs-${KERNEL_VER}${CONFIG_LOCALVERSION}${KERNEL_LOCALVERSION}.img}\""
+SPECS_KERNEL+=" -initrd \"${SYSTEM_PREFIX}${BIN_PATH}/boot/${INITRAMFS_NAME:-initramfs-${KERNEL_RELEASE}}\""
 SPECS_KERNEL+=" ${QEMU_DTB:+"-dtb \"${SYSTEM_PREFIX}${BIN_PATH}/boot/${QEMU_DTB}\""}"
 KERN_APPEND="-append \"${KERN_CONSOLE}${KERN_ROOT} rootwait cgroup_enable=memory systemd.gpt_auto=no ${QEMU_KERNCONFIG}\""
 

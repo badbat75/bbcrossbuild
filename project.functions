@@ -166,6 +166,6 @@ add_system_config_variable () {
 	then
 		run_cmd "sed -i '/^${VARIABLE}=/d' \"${STATUS_PATH}/system_config\""
 	fi
-	echo "${VARIABLE}=${VALUE}" >> "${STATUS_PATH}/system_config"
+	run_cmd "echo \"${VARIABLE}=${VALUE}\" >> \"${STATUS_PATH}/system_config\""
 
 }

@@ -152,6 +152,10 @@ KERNEL_LTOENABLE=thin
 		LFS_REMOVE_DEVFILES="--remove_devfiles"
 	fi
 
+### Instantiate post_build variables ###
+source "${STATUS_PATH}/system_config"
+########################################
+
 echo Configuring Host Name: ${LFS_HOSTNAME}
 echo ${LFS_HOSTNAME} > ${BIN_PATH}/etc/hostname
 if ! grep "127.0.1.1" ${BIN_PATH}/etc/hosts > /dev/null
@@ -234,7 +238,6 @@ function build_lfs_image () {
 	LFS_LBROOT="$(findmnt -nu -o SOURCE ${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/lfs)"
 	LFS_PARTUUID="$(blkid -o value --match-tag PARTUUID ${LFS_LBROOT})"
 	KERNEL_BOOTPARAMS="root=PARTUUID=${LFS_PARTUUID} rootfstype=${LFS_FSTYPE} fsck.repair=yes rootwait cgroup_enable=memory"
-	eval $(cat "${STATUS_PATH}/system_config")
 	INITRAMFS_NAME=initramfs-${KERNEL_RELEASE}.img
 	case ${PLATFORM_NAME} in
 		rpi*)
