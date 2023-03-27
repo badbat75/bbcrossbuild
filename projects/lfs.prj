@@ -218,7 +218,7 @@ function build_lfs_image () {
 	echo -n "Configuring boot parameters... "
 	LFS_LBROOT="$(findmnt -nu -o SOURCE ${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/lfs)"
 	LFS_PARTUUID="$(blkid -o value --match-tag PARTUUID ${LFS_LBROOT})"
-	KERNEL_BOOTPARAMS="root=PARTUUID=${LFS_PARTUUID} rootfstype=${LFS_FSTYPE} fsck.repair=yes rootwait cgroup_enable=memory"
+	KERNEL_BOOTPARAMS="root=PARTUUID=${LFS_PARTUUID} rootfstype=${LFS_FSTYPE} fsck.repair=yes rootwait cgroup_enable=memory net.ifnames=0 systemd.gpt_auto=no"
 	INITRAMFS_NAME=initramfs-${KERNEL_RELEASE}.img
 	case ${PLATFORM_NAME} in
 		rpi*)
@@ -235,7 +235,7 @@ function build_lfs_image () {
 				initramfs ${INITRAMFS_NAME} followkernel
 			EOF
 			cat >${BIN_PATH}/boot/cmdline.txt <<-EOF
-				${KERNEL_BOOTPARAMS} net.ifnames=0 systemd.gpt_auto=no
+				${KERNEL_BOOTPARAMS}
 			EOF
 		;;
 		generic-x64)
@@ -246,7 +246,7 @@ function build_lfs_image () {
 			mkdir -p ${BIN_PATH}/boot/grub
 			cat > ${BIN_PATH}/boot/grub/grub.cfg <<-EOF
 				# Begin /boot/grub/grub.cfg
-				set default=1
+				set default=0
 				set timeout=5
 
 				insmod part_gpt
@@ -260,16 +260,16 @@ function build_lfs_image () {
 				fi
 
 				menuentry "GNU/Linux, Linux ${KERNEL_VER}"  {
-				   linux /vmlinuz-${KERNEL_VER} ${KERNEL_BOOTPARAMS} systemd.gpt_auto=no ro
+				   linux /vmlinuz-${KERNEL_VER} ${KERNEL_BOOTPARAMS} ro
 				   initrd /${INITRAMFS_NAME}
 				}
 
 				menuentry "GNU/Linux, Linux ${KERNEL_VER} - Serial output"  {
-				   linux /vmlinuz-${KERNEL_VER} ${KERNEL_BOOTPARAMS} systemd.gpt_auto=no ro console=ttyS0
+				   linux /vmlinuz-${KERNEL_VER} ${KERNEL_BOOTPARAMS} ro console=ttyS0
 				   initrd /${INITRAMFS_NAME}
-			}
-
+				}
 			EOF
+			ln -s ../boot/grub/grub.cfg /etc/grub.cfg
 		;;
 	esac
 	echo "Done."
