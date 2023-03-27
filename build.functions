@@ -1293,7 +1293,7 @@ function kernelbuild () {
 	if [ "${PKG_KERNEL_INITRAMFS:-0}" -eq 1 ]
 	then
 		run_cmd "mkdir -pv \"${PKG_PKGPATH}/postinst_scripts\""
-		run_cmd "echo -n \"dracut --force --kver ${KERNEL_RELEASE} -N --fstab --zstd\" > \"${PKG_PKGPATH}/postinst_scripts/99_kernel\""
+		run_cmd "echo -n \"dracut --force --kver ${KERNEL_RELEASE} -N -a drm --fstab --zstd\" > \"${PKG_PKGPATH}/postinst_scripts/99_kernel\""
 		if [ -n "${PKG_KERNEL_INITRAMFS_DRIVERS}" ]
 		then
 			run_cmd "echo \" --add-drivers \\\"${PKG_KERNEL_INITRAMFS_DRIVERS}\\\"\" >> \"${PKG_PKGPATH}/postinst_scripts/99_kernel\""
