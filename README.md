@@ -1,4 +1,4 @@
-# bbcrossbuild 4.0
+# bbcrossbuild 3.0
 This is a framework to automate the cross-compilation of packages through a project file.
 ## Current Limitations
 
@@ -132,65 +132,65 @@ Define what build process to use:
 `BUILD_PROCESS=downloadonly|configmake|mesonninja|simplemake|pythonbuild|kernelbuild`
 
 **PKG_AUTOCONF:**  
-[configmake]  
+*[configmake]*  
 By default "autoreconf -fi" is not run before configure process (0). 1 to enable it.  
 `AUTOCONF=0|1`
 
 **AUTOCONF_PATH:**  
-[configmake]  
+*[configmake]*  
 Specify source subdirectory where to run autoreconf:  
 `AUTOCONF_PATH={subdir1/subdir2[,subdir3[,subdir1/subdir2/subdir4]],autoscan}`
 + `autoscan:` Scan for configure.ac inside source directory
 
 **CONF_CMD:**  
-[configmake]  
+*[configmake]*  
 Override configure command. "configure" by default  
 `CONF_CMD="configure_new"`
 
 **CONF_FLAGS:**  
-[configmake,cmakebuild,mesonninja,cargobuild,kernelbuild]  
+*[configmake,cmakebuild,mesonninja,cargobuild,kernelbuild]*  
 Specify configure, cmake or meson parameters. For kernel enable, disable or build as module, following the scripts/config syntax (-e enable, -d disable, -m module)
 `CONF_FLAGS="--disable-feature or -DENABLE_FEATURE"`
 
 **CONF_PATH:**  
-[configmake,simplemake,cmake,custom]  
+*[configmake,simplemake,cmake,custom]*  
 Specify source subdirectory where to run the build  
 `CONF_PATH=subdir1/subdir2`
 
 **STD_CONF_FLAGS:**  
-[configmake]  
+*[configmake]*  
 Use standard conf flags used by bbxb (i.e. --prefix, --exec-prefix etc), default to 1, set to 0 to override it
 `STD_CONF_FLAGS=1`
 
 **PKG_TOOLCHAIN:**  
-[common]  
+*[common]*  
 Define what toolchain to use when building this package
 `PKG_TOOLCHAIN=gnu|llvm`
 
 **PKG_CFLAGS/PKG_CXXFLAGS/PKG_LDFLAGS/PKG_FCFLAGS:**  
-[common]  
+*[common]*  
 Permits to specify additional c/c++/ld compiler flags to build with:  
 `PKG_CFLAGS="-f<parameter> -W<parameter>"`
 `PKG_CXXFLAGS="-f<parameter> -W<parameter>"`
 `PKG_LDFLAGS="-l<library>"`
 
 **PKG_FAULTYCFLAGS:**  
-[common]  
+*[common]*  
 Move compiler FLAGS from xFLAGS to CC/CXX/CPP in order to override some faulty build scripts (i.e.: old versions of libtool). Disabled (0) by default.
 `PKG_FAULTYCFLAGS=0`
 
 **PKG_CONFIG_SYSROOT_DIR:**  
-[common]  
+*[common]*  
 Override PKG_CONFIG_SYSROOT_DIR variable that is by default set on DISTOS path  
 `PKG_CONFIG_SYSROOT_DIR=${BIN_PATH}`
 
 **PKG_MAKEVARS:**  
-[configmake,simplemake,cmakebuild,mesonninja,kernelbuild]
+*[configmake,simplemake,cmakebuild,mesonninja,kernelbuild]*  
 Define make parameters or variabes to pass to Makefile  
 `PKG_MAKEVARS="-j1 VARIABLE1=value VARIABLE2=value2"`
 
 **CARGO_BIN/CARGO_LIB/CARGO_BINLIST/CARGO_STRIP:**  
-[cargobuild]  
+*[cargobuild]*  
 Override installation path for binary  
 `CARGO_BIN=${INSTALL_EXECPREFIX}/sbin`
 
@@ -207,37 +207,37 @@ Specify if the binaries should be stripped out of unneeded symbols
 `CARGO_STRIP=1`
 
 **PKG_BUILDSCRIPT:**  
-[custombuild]  
+*[custombuild]*  
 Run commands in the variable to build package  
 `PKG_BUILDSCRIPT="command1; command2 && command3"`
 
 **PKG_KERNEL_INITRAMFS:**  
-[kernelbuild]  
+*[kernelbuild]*  
 Create initramfs for the kernel (default: 0)  
 `PKG_KERNEL_INITRAMFS="{0|1}`
 
 **PKG_KERNEL_INITRAMFS_DRIVERS:**  
-[kernelbuild]  
+*[kernelbuild]*  
 Specify what drivers to install during initramfs initialization without .ko  
 `PKG_KERNEL_INITRAMFS_DRIVERS="[driver1 [driver2 [drivern]]]`
 
 **PKG_OVERRIDELTO:**  
-[common]  
+*[common]*  
 Override LTOENABLE environment variable that can be specified at bbxb.conf, project or package level by default (1) if not specified anywhere  
 `PKG_OVERRIDELTO=0`
 
 **PKG_OVERRIDELD:**  
-[common]  
+*[common]*  
 Override default linker environment variable that can be specified at bbxb.conf, project or package level by default (gold) if not specified anywhere  
 `PKG_OVERRIDELLD={gold,ld,lld}`
 
 **PKG_OVERRIDESHARED:**  
-[common]  
+*[common]*  
 Override BUILD_SHARED environment variable that can be specified at bbxb.conf, project or package level by default (1) if not specified anywhere  
 `PKG_OVERRIDESHARED=1`
 
 **PKG_OVERRIDESTATIC:**  
-[common]  
+*[common]*  
 Override BUILD_STATIC environment variable that can be specified at bbxb.conf, project or package level by default (0) if not specified anywhere  
 `PKG_OVERRIDESTATIC=0`
 
