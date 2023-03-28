@@ -181,7 +181,7 @@ fi
 ### Graphics device specification
 if [ -n "${QEMU_GRAPHIC}" ]
 then
-	SPECS_GRAPHIC="-device ${QEMU_GRAPHIC}"
+	SPECS_GRAPHIC="-vga none -device ${QEMU_GRAPHIC}"
 	KERN_CONSOLE="console=${QEMU_CONSOLE:-ttyS0} console=tty1 "
 else
 	SPECS_GRAPHIC="-nographic"
