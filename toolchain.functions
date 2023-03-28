@@ -1361,13 +1361,13 @@ function setup_python () {
 			set -e
 			#shellcheck source=/dev/null
 			source "${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate"
-			run_cmd "build-python -m pip install --upgrade cython setuptools==60.10.0 wheel"
+			run_cmd "build-python -m pip install --upgrade cython setuptools wheel"
 			run_cmd "mkdir -p \"${TOOLCHAIN_BLDPATH}/build_python_crossenv\""
 			pushd "${TOOLCHAIN_BLDPATH}/build_python_crossenv"
 			TOOLCHAIN=gnu create_environment_source
 			#shellcheck source=/dev/null
 			source environment.source
-			run_cmd "cross-pip -v install --upgrade setuptools cython"
+			run_cmd "cross-pip -v install --upgrade setuptools cython Mako"
 			run_cmd "build-pip -v install --upgrade setuptools jinja2"
 			popd
 			run_cmd "rm -rf \"${TOOLCHAIN_BLDPATH}/build_python_crossenv\""
