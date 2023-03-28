@@ -2,7 +2,7 @@
 PKG_URL="https://github.com/mikebrady/alac/archive/5d6d836ee5b025a5e538cfa62c88bc5bced506ed.tar.gz"
 PATCHES="alac-headerpath-issue.patch"
 BUILD_PROCESS=configmake
-AUTOCONF=1
+PKG_AUTOCONF=1
 # CONF_FLAGS=""
 INST_CMD=install-strip
 PKG_DEPS=

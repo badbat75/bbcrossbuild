@@ -1,7 +1,7 @@
 # libcdio_2.0.0-2
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libc/libcdio/libcdio_2.0.0.orig.tar.gz"
 BUILD_PROCESS=configmake
-AUTOCONF=1
+PKG_AUTOCONF=1
 CONF_FLAGS="--disable-cddb --disable-vcd-info"
 INST_CMD=install-strip
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libc/libcdio/libcdio_2.0.0-2.debian.tar.xz"

@@ -1,6 +1,6 @@
 # trx_0.6
 PKG_URL="https://github.com/bitkeeper/trx/archive/refs/tags/0.6.tar.gz"
-PKG_DEPS="moode/alsa-lib_1.2 raspbian/ortp_1.0.2-1 moode/opus_1.3.1"
+PKG_DEPS="moode/alsa-lib raspbian/ortp_1.0.2-1 moode/opus_1.3.1"
 BUILD_PROCESS=simplemake
 # CONF_FLAGS=""
 PKG_PREBUILD="sed -i 's/(INSTALL) rx tx/(INSTALL) -s --strip-program=\\\$(STRIP) rx tx/g' Makefile
@@ -17,5 +17,5 @@ PKG_PREBUILD="sed -i 's/(INSTALL) rx tx/(INSTALL) -s --strip-program=\\\$(STRIP)
  
 EOF
 "
-PKG_POSTBUILD="mv ${PKG_PKGPATH}${BUILD_PREFIX}/bin/rx ${PKG_PKGPATH}${BUILD_PREFIX}/bin/trx-rx
-	mv ${PKG_PKGPATH}${BUILD_PREFIX}/bin/tx ${PKG_PKGPATH}${BUILD_PREFIX}/bin/trx-tx"
+PKG_POSTBUILD="mv ${PKG_PKGPATH}${INSTALL_PREFIX}/bin/rx ${PKG_PKGPATH}${INSTALL_PREFIX}/bin/trx-rx
+	mv ${PKG_PKGPATH}${INSTALL_PREFIX}/bin/tx ${PKG_PKGPATH}${INSTALL_PREFIX}/bin/trx-tx"

@@ -1,8 +1,54 @@
 #faad2_2.10.0
-GIT_URL="https://github.com/knik0/faad2"
-GIT_COMMIT="2_10_0"
+PKG_URL="https://github.com/knik0/faad2/archive/refs/tags/2_10_0.tar.gz"
 BUILD_PROCESS=configmake
-AUTOCONF=1
+PKG_AUTOCONF=1
 PKG_DEPS=""
 CONF_FLAGS=""
+PKG_PREBUILD="patch -p1 <<EOF
+From c6263669d4d94df069fdefbc6e8c74eca730604b Mon Sep 17 00:00:00 2001
+From: heitbaum <rudi@heitbaum.com>
+Date: Fri, 1 Jan 2021 21:03:41 +1100
+Subject: [PATCH] README: remove URL - no longer in use (#70)
+
+---
+ README | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/README b/README
+index 0cb43fb..f4d5da0 100644
+--- a/README
++++ b/README
+@@ -1,6 +1,5 @@
+ 
+ Freeware Advanced Audio (AAC) Decoder including SBR decoding
+-http://www.audiocoding.com/
+ 
+ FAAD2 is a HE, LC, MAIN and LTP profile, MPEG2 and MPEG-4 AAC decoder.
+ FAAD2 includes code for SBR (HE AAC) decoding.
+---
+ From a65ecabd13a6b991781d75856e1b6870ce00fc70 Mon Sep 17 00:00:00 2001
+From: David Korczynski <david@adalogics.com>
+Date: Thu, 15 Jul 2021 20:49:44 +0100
+Subject: [PATCH] Reject buffers of zero size
+
+---
+ libfaad/decoder.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libfaad/decoder.c b/libfaad/decoder.c
+index c3bbf4c..132cdd8 100644
+--- a/libfaad/decoder.c
++++ b/libfaad/decoder.c
+@@ -271,7 +271,7 @@ long NeAACDecInit(NeAACDecHandle hpDecoder,
+     NeAACDecStruct* hDecoder = (NeAACDecStruct*)hpDecoder;
+ 
+ 
+-    if ((hDecoder == NULL) || (samplerate == NULL) || (channels == NULL))
++    if ((hDecoder == NULL) || (samplerate == NULL) || (channels == NULL) || (buffer_size == 0))
+         return -1;
+ 
+     hDecoder->sf_index = get_sr_index(hDecoder->config.defSampleRate);
+---
+EOF
+"
 INST_CMD=install-strip

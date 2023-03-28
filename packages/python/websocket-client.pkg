@@ -1,2 +1,2 @@
 # bottle
-BUILD_PROCESS=pythonpip
+BUILD_PROCESS=pythonbuild

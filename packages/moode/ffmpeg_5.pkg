@@ -1,9 +1,9 @@
 # ffmpeg-5
-PKG_SUFFIX=.0
+PKG_SUFFIX=.1.1
 PKG_URL="https://ffmpeg.org/releases/ffmpeg-5${PKG_SUFFIX}.tar.xz"
 BUILD_PROCESS=configmake
 STD_CONF_FLAGS=0
-CONF_FLAGS="--prefix=${BUILD_PREFIX} --incdir=${BUILD_INCLUDEDIR} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+CONF_FLAGS="--prefix=${INSTALL_PREFIX} --incdir=${INSTALL_INCLUDEDIR} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
             --enable-cross-compile --cross-prefix=${HARCH}- --arch=${HARCH} --cpu=${HMCPU} --target-os=linux \
             --cc=\"\${CC}\" \
             --nm=\"\${NM}\" \
@@ -29,8 +29,8 @@ CONF_FLAGS="--prefix=${BUILD_PREFIX} --incdir=${BUILD_INCLUDEDIR} --libdir=${BUI
             --enable-libtwolame  \
             --enable-ladspa      \
             --enable-openssl     \
-            --docdir=${BUILD_PREFIX}/share/doc/ffmpeg-4.4"
-PKG_DEPS="moode/alsa-lib_1.2 \
+            --docdir=${INSTALL_PREFIX}/share/doc/ffmpeg-5"
+PKG_DEPS="moode/alsa-lib \
     moode/opus_1.3.1 \
     moode/libogg_1.3.5 \
     moode/libvorbis_1.3.7 \

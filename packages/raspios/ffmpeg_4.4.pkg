@@ -5,7 +5,7 @@ PKG_URL="https://ffmpeg.org/releases/ffmpeg-4.4${PKG_SUFFIX}.tar.xz"
 
 BUILD_PROCESS=configmake
 STD_CONF_FLAGS=0
-CONF_FLAGS="--prefix=${BUILD_PREFIX} --incdir=${BUILD_INCLUDEDIR} --libdir=${BUILD_LIBDIR}${BUILD_LIBSUFFIX} \
+CONF_FLAGS="--prefix=${INSTALL_PREFIX} --incdir=${INSTALL_INCLUDEDIR} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \
             --enable-cross-compile --cross-prefix=${HARCH}- --arch=${HARCH} --cpu=${HMCPU} --target-os=linux \
             --cc=\"\${CC}\" \
             --nm=\"\${NM}\" \
@@ -21,7 +21,7 @@ CONF_FLAGS="--prefix=${BUILD_PREFIX} --incdir=${BUILD_INCLUDEDIR} --libdir=${BUI
             --enable-librabbitmq \
             --enable-libssh      \
             --enable-libxml2     \
-            --docdir=${BUILD_PREFIX}/share/doc/ffmpeg-4.4"
+            --docdir=${INSTALL_PREFIX}/share/doc/ffmpeg-4.4"
 
 # Audio codecs
 CONF_FLAGS+=" --enable-avresample  \
@@ -46,7 +46,7 @@ CONF_FLAGS+=" --enable-avresample  \
 PKG_DEPS="
     moode/fdk-aac_2.0.1 \
 "
-#    moode/alsa-lib_1.2 \
+#    moode/alsa-lib \
 #    moode/opus_1.3.1 \
 #    moode/libogg_1.3.5 \
 #    moode/libvorbis_1.3.7 \

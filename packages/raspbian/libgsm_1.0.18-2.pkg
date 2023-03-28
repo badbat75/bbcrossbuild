@@ -5,7 +5,7 @@ PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libg/libgsm/libgsm_1.0.
 BUILD_PROCESS=simplemake
 #INST_CMD=install
 PKG_DEPS=
-PKG_MAKEVARS="-j1 INSTALL_ROOT=${PKG_PKGPATH}${BUILD_PREFIX} GSM_INSTALL_LIB=${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX} GSM_INSTALL_INC=${PKG_PKGPATH}${BUILD_INCLUDEDIR} MULHACK=-DUSE_FLOAT_MUL"
+PKG_MAKEVARS="-j1 INSTALL_ROOT=${PKG_PKGPATH}${INSTALL_PREFIX} GSM_INSTALL_LIB=${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} GSM_INSTALL_INC=${PKG_PKGPATH}${INSTALL_INCLUDEDIR} MULHACK=-DUSE_FLOAT_MUL"
 PKG_CFLAGS="-ansi -pedantic -fPIC"
 PKG_PREBUILD="
     sed -i 's/CC		= /CC ?= /' Makefile
@@ -15,7 +15,11 @@ PKG_PREBUILD="
     sed -i 's/CFLAGS	= /CFLAGS += /' Makefile
     sed -i 's/CFLAGS	= /CFLAGS += /' Makefile
     sed -i 's/-O2//' Makefile
-    mkdir -p ${PKG_PKGPATH}{${BUILD_PREFIX}/bin,${BUILD_LIBDIR}${BUILD_LIBSUFFIX},${BUILD_INCLUDEDIR},${BUILD_PREFIX}/man/man3}
+    mkdir -p ${PKG_PKGPATH}{${INSTALL_PREFIX}/bin,${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX},${INSTALL_INCLUDEDIR},${INSTALL_PREFIX}/man/man3}
     "
 PKG_POSTBUILD="
-    cp -Pv lib/libgsm.so* ${PKG_PKGPATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
+    cp -Pv lib/libgsm.so* ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
+
+case ${TOOLCHAIN} in
+    llvm) PKG_CFLAGS+=" -Wno-int-conversion -Wno-implicit-function-declaration" ;;
+esac

@@ -1,7 +1,7 @@
 # libexif-0.6.21-5.1
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libe/libexif/libexif_0.6.21.orig.tar.gz"
 BUILD_PROCESS=configmake
-AUTOCONF=1
+PKG_AUTOCONF=1
 # CONF_FLAGS=""
 INST_CMD=install-strip
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libe/libexif/libexif_0.6.21-5.1.debian.tar.xz"

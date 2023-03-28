@@ -1,23 +1,22 @@
 #!/bin/bash
 
 # GCC build
-PACKAGES="bc parted e2fsprogs bzip2 rsync vim-common gcc g++ binutils binutils-devel dwarves elfutils-libelf-devel libzstd libzstd-devel ccache tree curl gawk bison flex cmake ninja-build npm autoconf autoconf-archive automake gettext-devel libtool git xmltoman docbook-utils swig doxygen texinfo python3-docutils"
+PACKAGES="bc parted e2fsprogs btrfs-progs bzip2-devel rsync vim-common gcc g++ binutils dwarves elfutils-libelf-devel patchelf libzstd libzstd-devel tree curl gawk flex git xmltoman docbook-utils swig doxygen texinfo python3-docutils"
 
 # CLang build
-PACKAGES+=" binutils-devel python3-devel libedit-devel lua-devel ocaml-findlib ocaml-ctypes ocaml-ocamldoc"
+PACKAGES+=" libedit-devel lua-devel ocaml-findlib ocaml-ctypes ocaml-ocamldoc"
 
 # Debian Packages
-PACKAGES+=" dpkg-dev devscripts apt debhelper perl-ExtUtils-MakeMaker perl-Archive-Zip"
+#PACKAGES+=" dpkg-dev devscripts apt debhelper perl-ExtUtils-MakeMaker perl-Archive-Zip"
 
 # For Image emulation
 PACKAGES+=" qemu-user-static"
 
 # for meson-ninja
-PACKAGES+=" python3-pip meson ninja-build"
-#PACKAGES+=" meson ninja
+#PACKAGES+=" python3-pip"
 
-# for Python 3.7
-PACKAGES+=" openssl-devel libffi-devel"
+# for Python3
+PACKAGES+=" openssl-devel libffi-devel libuuid-devel tcl-devel tk-devl"
 
 # for moode
 PACKAGES+=" sqlite"
@@ -29,13 +28,13 @@ PACKAGES+=" docbook-utils-pdf"
 PACKAGES+=" gperf"
 
 # for zziplib
-PACKAGES+=" python2"
+#PACKAGES+=" python2"
 
 # for lxml
 PACKAGES+=" libxml2-devel"
 
 # for glib-dbus-1.0
-PACKAGES+=" dbus-glib-devel"
+# PACKAGES+=" dbus-glib-devel"
 
 # for udevil
 PACKAGES+=" intltool"
@@ -47,48 +46,46 @@ PACKAGES+=" pandoc"
 PACKAGES+=" libxslt docbook-xsl docbook2X"
 
 # for man-db
-PACKAGES+=" groff"
+# PACKAGES+=" groff"
 
 # for btrfs-progs
 PACKAGES+=" xmlto asciidoc"
 
+# for krb5
+# PACKAGES+=" libss-devel"
+
 # for gobject-introspection
-PACKAGES+=" gobject-introspection-devel"
+# PACKAGES+=" gobject-introspection-devel"
 
 # for chromium
-PACKAGES+=" libevent-devel"
+# PACKAGES+=" libevent-devel"
 
-sudo dnf -y install ${PACKAGES}
+if dnf 2>&1 > /dev/null
+then
+    sudo dnf -y install ${PACKAGES}
+else
+    sudo yum -y install ${PACKAGES}
+fi
 
 # Python environment
-sudo alternatives --install /usr/bin/python python /usr/bin/python3.10 1
-python2 <(curl -s https://bootstrap.pypa.io/pip/2.7/get-pip.py)
-
-# Libtool updates
-if [ ! -f /usr/share/libtool/build-aux/ltmain.sh.orig ]
-then
-    sudo cp -v /usr/share/libtool/build-aux/ltmain.sh /usr/share/libtool/build-aux/ltmain.sh.orig
-else
-    sudo cp -fv /usr/share/libtool/build-aux/ltmain.sh.orig /usr/share/libtool/build-aux/ltmain.sh
-fi
-sudo sed -i 's/-stdlib=\*)$/-stdlib=\*| \\\n      -specs=\*|-fsanitize=\*|-fuse-ld=\*|-Wa,\*|--target=\*|-B\*)/' /usr/share/libtool/build-aux/ltmain.sh
-sudo sed -i 's/-specs=\*)$/-specs=\*|-fsanitize=\*|-fuse-ld=\*|-Wa,\*|--target=\*|-B\*)/' /usr/share/libtool/build-aux/ltmain.sh
+#sudo alternatives --install /usr/bin/python python /usr/bin/python3.10 1
+#python2 <(curl -s https://bootstrap.pypa.io/pip/2.7/get-pip.py)
 
 # Debian Packages
-(
-    cd /tmp
-    git clone https://salsa.debian.org/reproducible-builds/strip-nondeterminism.git
-    cd strip-nondeterminism
-    perl Makefile.PL PREFIX=/usr INSTALLSITELIB="\$(INSTALLPRIVLIB)"
-    make
-    sudo make install
-    cd -
-    rm -rf strip-nondeterminism
-)
-if [ ! -f /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm.orig ]
-then
-    sudo cp -v /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm.orig
-else
-    sudo cp -fv /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm.orig /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm
-fi
-sudo sed -i "s/'0755'/0755/g" /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm
+#(
+#    cd /tmp
+#    git clone https://salsa.debian.org/reproducible-builds/strip-nondeterminism.git
+#    cd strip-nondeterminism
+#    perl Makefile.PL PREFIX=/usr INSTALLSITELIB="\$(INSTALLPRIVLIB)"
+#    make
+#    sudo make install
+#    cd -
+#    rm -rf strip-nondeterminism
+#)
+#if [ ! -f /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm.orig ]
+#then
+#    sudo cp -v /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm.orig
+#else
+#    sudo cp -fv /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm.orig /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm
+#fi
+#sudo sed -i "s/'0755'/0755/g" /usr/share/perl5/vendor_perl/Debian/Debhelper/Dh_Lib.pm

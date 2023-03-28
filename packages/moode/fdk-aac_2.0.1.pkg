@@ -1,6 +1,6 @@
 # fdk-aac_2.0.1
 PKG_URL="https://github.com/mstorsjo/fdk-aac/archive/v2.0.1.tar.gz"
 BUILD_PROCESS=configmake
-AUTOCONF=1
+PKG_AUTOCONF=1
 CONF_FLAGS=""
 INST_CMD=install-strip

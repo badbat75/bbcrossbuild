@@ -1,0 +1,41 @@
+#!/bin/bash
+
+if [ "${1}" == -w ]
+then
+	WRITE=1
+	shift
+fi
+
+LC_NUMERIC="en_US.UTF-8"
+CMD2MONITOR=${1:-ld.lld}
+INTERVAL=${2:-2}
+
+echo
+
+while [ "${INTERVAL}" -gt 0 ]
+do
+	clear
+	printf 'Linker Monitor for %s (sampling: %i sec)\n\n' "${CMD2MONITOR}" "${INTERVAL}"
+	ps -C "${CMD2MONITOR}" -o %cpu,%mem,cmd --noheaders | while read -r PS
+	do
+		CPU=$(echo ${PS} | awk '{print $1}')
+		USED=$(echo ${PS} | awk '{print $2}')
+		BINARY=$(echo ${PS} | grep -o "\-o [^ ]*" | awk '{print $2}')
+		if [ -z "${BINARY}" ]
+		then
+			CMD_LIST=$(echo ${PS} | grep -o "@[^ ]*" | sed "s/^@//")
+			BINARY=$( cat ${CMD_LIST} | sed 's/"//g' | grep -o "\-o [^ ]*" | awk '{print $2}' )
+		fi
+		printf '%s: CPU %5.1f%% - MEM %5.1f%%\n' "${BINARY}" "${CPU}" "${USED}"
+		if [ "${WRITE:-0}" -eq 1 ]
+		then
+			FILE=${BINARY//\//_}.csv
+			if [ ! -f "${FILE}" ]
+			then
+				echo "Binary: ${BINARY} - Sample ${INTERVAL}s - $(date)" > "${FILE}"
+			fi
+			echo "${CPU},${USED}" >> "${BINARY//\//_}.csv"
+		fi
+	done
+	sleep "${INTERVAL}"
+done

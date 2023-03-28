@@ -1,18 +1,18 @@
 # ortp_4.4.13-2
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/b/bctoolbox/bctoolbox_4.4.13.orig.tar.gz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/b/bctoolbox/bctoolbox_4.4.13-2.debian.tar.xz"
-PKG_DEPS="raspbian/mbedtls_2.28.0-1"
+PKG_DEPS="raspbian/mbedtls_2.28.1-1"
 BUILD_PROCESS=cmakebuild
 case ${TOOLCHAIN} in
     gnu) PKG_CFLAGS="-Wno-error=array-parameter -Wno-array-parameter -Wno-error=stringop-overflow -Wno-stringop-overflow";;
 esac
-PKG_CXXFLAGS="-L${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}"
+PKG_CXXFLAGS="-L${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 CONF_FLAGS="-DCMAKE_SKIP_RPATH=ON -DENABLE_TESTS_COMPONENT=OFF"
 CONF_FLAGS+=" -DENABLE_MBEDTLS=1
-    -DMBEDTLS_LIBRARY=${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libmbedtls.so
-    -DMBEDCRYPTO_LIBRARY=${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libmbedcrypto.so
-    -DMBEDX509_LIBRARY=${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libmbedx509.so
-    -DMBEDTLS_INCLUDE_DIRS=${BIN_PATH}${BUILD_INCLUDEDIR} "
+    -DMBEDTLS_LIBRARY=${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libmbedtls.so
+    -DMBEDCRYPTO_LIBRARY=${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libmbedcrypto.so
+    -DMBEDX509_LIBRARY=${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libmbedx509.so
+    -DMBEDTLS_INCLUDE_DIRS=${BIN_PATH}${INSTALL_INCLUDEDIR} "
 INST_CMD="install/strip"
 VAR_INSTALL_LIBDIR=CMAKE_INSTALL_LIBDIR
 VAR_INSTALL_INCDIR=CMAKE_INSTALL_INCLUDEDIR

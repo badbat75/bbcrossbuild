@@ -2,7 +2,7 @@
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/f/flac/flac_1.3.3.orig.tar.xz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/f/flac/flac_1.3.3-2.debian.tar.xz"
 BUILD_PROCESS=configmake
-AUTOCONF=1
+PKG_AUTOCONF=1
 CONF_FLAGS="--disable-rpath --disable-xmms-plugin --disable-thorough-tests --with-ogg=${DISTOS_PATH}/usr"
 #CONF_FLAGS+=" --disable-asm-optimizations --disable-sse --disable-altivec"
 INST_CMD=install-strip

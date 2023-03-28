@@ -1,0 +1,253 @@
+#!/bin/bash
+program_exit () {
+	if [ ! "${ERROR_CODE}" -eq 0 ]
+	then
+		echo "Error ${ERROR_CODE}: ${ERROR_STRING}" >&2
+		echo >&2
+	fi
+	set +e +o pipefail
+	exit "${ERROR_CODE}"
+}
+
+set -e -o pipefail
+ERROR_CODE=0
+BB_HOME=$(realpath "$(dirname "${0}")/..")
+
+if ! check_core_functions >/dev/null 2>&1
+then
+	# shellcheck source=../core.functions
+	source "${BB_HOME}/core.functions"
+fi
+
+OPTS="--run --quiet" OPTS_WITH_VALUE="--batchtype --rootdev --rootfs --rootpart --savecmd" param2value "${@}"
+
+# shellcheck disable=SC2154
+PROJECT_NAME=${_param_1}
+# shellcheck disable=SC2154
+PLATFORM_NAME=${_param_2:-generic_x64}
+# shellcheck disable=SC2154
+IS_RUN=${_param_run}
+# shellcheck disable=SC2154
+IS_QUIET=${_param_quiet}
+# shellcheck disable=SC2154
+KERN_ROOTDEV=${_param_rootdev}
+# shellcheck disable=SC2154
+KERN_ROOTFS=${_param_rootfs:-ext4}
+# shellcheck disable=SC2154
+KERN_ROOTPARTITION=${_param_rootpart:-2}
+# shellcheck disable=SC2154
+SAVECMD=${_param_savecmd}
+# shellcheck disable=SC2154
+BATCH_TYPE=${_param_batchtype:-linux}
+
+if [ -z "${PROJECT_NAME}" ]
+then
+	ERROR_STRING="No project name specified."
+	(exit "${ERROR_NOT_VALID_OPTION}")
+fi
+
+if [ -z "${PLATFORM_NAME}" ]
+then
+	ERROR_STRING="No platform name specified."
+	(exit "${ERROR_NOT_VALID_OPTION}")
+fi
+
+PROJECT=${BB_HOME}/${PRJ_PATH:-projects}/${PROJECT_NAME}.prj
+if [ ! -f "${PROJECT}" ]
+then
+	ERROR_STRING="Project ${PROJECT} does not exist."
+	(exit "${ERROR_FILE_NOT_FOUND}")
+fi
+
+PLATFORM=${BB_HOME}/${PLATFORM_DIR:-platforms}/${PLATFORM_NAME}.conf
+if [ ! -f "${PLATFORM}" ]
+then
+	ERROR_STRING="Platform ${PLATFORM} does not exist."
+	(exit "${ERROR_FILE_NOT_FOUND}")
+fi
+
+# shellcheck source=../platforms/generic-x64.conf
+source "${PLATFORM}"
+
+if [ -f "${BB_HOME}/bbxb.conf" ]
+then
+	# shellcheck source=../bbxb.conf
+	source "${BB_HOME}/bbxb.conf"
+fi
+
+# shellcheck source=../setenv
+source "${BB_HOME}/setenv"
+
+### QEMU exe specification
+case ${HM} in
+	x86) QEMU_ARCH=x86_64 ;;
+	*) QEMU_ARCH=${HM} ;;
+esac
+
+if [ -z "${QEMU_MACHINE}" ] || [ -z "${QEMU_STORAGE}" ]
+then
+	ERROR_STRING="Echo platform ${PLATFORM_NAME} does not support QEMU automation"
+	ERROR_CODE=1
+	program_exit
+fi
+
+QEMU_EXE="qemu-system-${QEMU_ARCH}"
+
+### Machine specification
+if ! QEMU_VERSION=$(${QEMU_EXE} --version 2>/dev/null | head -n1 | awk '{print $4}')
+then
+	ERROR_STRING="Error in ${QEMU_EXE}"
+	ERROR_CODE=2
+	program_exit
+fi
+
+if ! ${QEMU_EXE} -machine help | grep "^${QEMU_MACHINE}" > /dev/null
+then
+	ERROR_STRING="This QEMU version (${QEMU_VERSION}) does not support ${QEMU_MACHINE} machine"
+	ERROR_CODE=3
+	program_exit
+fi
+
+case ${BATCH_TYPE} in
+	linux|unix)
+		QEMU_EXE_PREFIX="\${QEMU_EXE_PREFIX}"
+		SYSTEM_PREFIX="\${SYSTEM_PREFIX}"
+	;;
+	win)
+		QEMU_EXE_PREFIX=%QEMU_EXE_PREFIX%
+		QEMU_EXE=${QEMU_EXE}.exe
+		if [ -n "${WSL_DISTRO_NAME}" ]
+		then
+			SYSTEM_PREFIX=//wsl\$/${WSL_DISTRO_NAME}/
+		else
+			SYSTEM_PREFIX=%SYSTEM_PREFIX%
+		fi
+	;;
+	all)
+		IS_RUN=0
+		SAVECMD=1
+		# shellcheck disable=SC2048,SC2086
+		${0} ${*} --batchtype linux
+		# shellcheck disable=SC2048,SC2086
+		${0} ${*} --batchtype win
+		program_exit
+	;;
+esac
+
+SPECS_HW="-machine ${QEMU_MACHINE}"
+
+if [ -n "${QEMU_CPU}" ]
+then
+	SPECS_HW+=" -cpu ${QEMU_CPU}"
+fi
+
+SPECS_HW+=" -smp ${QEMU_SMP:-2} -m ${QEMU_RAM:-2048}"
+
+### Disk device specification
+IMAGE_FILE="${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.img"
+
+if [ ! -f "${IMAGE_FILE}" ]
+then
+	ERROR_STRING="Image file ${IMAGE_FILE} does not exists"
+	ERROR_CODE=4
+	program_exit
+else
+	SPECS_STORAGE="-device ${QEMU_STORAGE},drive=disk0 -drive file=\"${SYSTEM_PREFIX}${IMAGE_FILE}\",if=none,format=raw,id=disk0"
+fi
+
+if [ -n "${KERN_ROOTDEV}" ]
+then
+	KERN_ROOT="root=${KERN_ROOTDEV}"
+else
+	case ${QEMU_STORAGE} in
+		ide-hd)
+			KERN_ROOT="root=/dev/hda${KERN_ROOTPARTITION}" ;;
+		scsi-hd)
+			KERN_ROOT="root=/dev/sda${KERN_ROOTPARTITION}" ;;
+		virtio-blk-pci|virtio-blk)
+			KERN_ROOT="root=/dev/vda${KERN_ROOTPARTITION}" ;;
+		sd-card)
+			KERN_ROOT="root=/dev/mmcblk0p${KERN_ROOTPARTITION}" ;;
+	esac
+fi
+KERN_ROOT+=" rootfstype=${KERN_ROOTFS}"
+
+### Network device specification
+if [ -n "${QEMU_NETWORK}" ]
+then
+	SPECS_NETWORK="-device ${QEMU_NETWORK},netdev=eth0 -netdev user,id=eth0,hostfwd=tcp::5022-:22"
+fi
+
+### Graphics device specification
+if [ -n "${QEMU_GRAPHIC}" ]
+then
+	SPECS_GRAPHIC="-device ${QEMU_GRAPHIC}"
+	KERN_CONSOLE="console=${QEMU_CONSOLE:-ttyS0} console=tty1 "
+else
+	SPECS_GRAPHIC="-nographic"
+	KERN_CONSOLE="console=${QEMU_CONSOLE:-ttyS0} "
+fi
+
+### Sound device specification
+if [ -n "${QEMU_SOUND}" ]
+then
+	SPECS_SOUND="-device ${QEMU_SOUND},audiodev=default -audiodev dsound,id=default"
+fi
+
+### Other devices specification
+for DEVICE in ${QEMU_INPUT} ${QEMU_OTHERDEVICES}
+do
+	SPECS_DEVICES+=" -device ${DEVICE}"
+done
+
+# shellcheck disable=SC1091
+source "${STATUS_PATH}/system_config"
+SPECS_KERNEL="-kernel \"${SYSTEM_PREFIX}${BIN_PATH}/boot/${KERNEL_NAME:-vmlinuz-${KERNEL_RELEASE}}\""
+SPECS_KERNEL+=" -initrd \"${SYSTEM_PREFIX}${BIN_PATH}/boot/${INITRAMFS_NAME:-initramfs-${KERNEL_RELEASE}.img}\""
+SPECS_KERNEL+=" ${QEMU_DTB:+"-dtb \"${SYSTEM_PREFIX}${BIN_PATH}/boot/${QEMU_DTB}\""}"
+KERN_APPEND="-append \"${KERN_CONSOLE}${KERN_ROOT} rootwait cgroup_enable=memory systemd.gpt_auto=no ${QEMU_KERNCONFIG}\""
+
+CMDLINE="\"${QEMU_EXE_PREFIX}${QEMU_EXE}\""
+CMDLINE+=" ${SPECS_HW}"
+CMDLINE+=" ${SPECS_STORAGE}"
+CMDLINE+=" ${SPECS_NETWORK}"
+CMDLINE+=" ${SPECS_GRAPHIC}"
+CMDLINE+=" ${SPECS_SOUND}"
+CMDLINE+="${SPECS_DEVICES}"
+CMDLINE+=" ${SPECS_KERNEL}"
+CMDLINE+=" ${KERN_APPEND}"
+
+if [ "${IS_QUIET:-0}" -eq 0 ]
+then
+	echo "${CMDLINE}"
+fi
+
+if [ -n "${SAVECMD}" ]
+then
+	case ${BATCH_TYPE} in
+		linux|unix)
+			cat <<-EOF >"${SAVECMD}"
+				#!/bin/sh
+				# File generated by $(basename "${0}")
+
+				${CMDLINE}
+			EOF
+			chmod +x "${SAVECMD}"
+		;;
+		win)
+			cat <<-EOF >"${SAVECMD}.bat"
+				@echo off
+				rem File generated by $(basename "${0}")
+
+				wt ${CMDLINE}
+			EOF
+		;;
+	esac
+fi
+
+if [ "${IS_RUN:-0}" -eq 1 ]
+then
+	eval sudo "${CMDLINE}"
+fi
+
+program_exit

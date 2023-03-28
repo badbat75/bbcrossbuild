@@ -2,12 +2,12 @@
 PKG_SUFFIX=.0
 PKG_URL="https://www.lesbonscomptes.com/upmpdcli/downloads/libupnpp-bindings-0.21${PKG_SUFFIX}.tar.gz"
 BUILD_PROCESS=configmake
-AUTOCONF=1
+PKG_AUTOCONF=1
 PYTHONBIN_VER="$(echo $(python -V) | awk '{print $2}' | cut -d'.' -f1,2)"
-CONF_FLAGS="PYTHON_VERSION=3 PYTHON_SITE_PKG=${BUILD_LIBDIR}/python${PYTHONBIN_VER}/dist-packages"
+CONF_FLAGS="PYTHON_VERSION=3 PYTHON_SITE_PKG=${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/dist-packages PYTHON_CPPFLAGS=-I${SYSROOT}${INSTALL_INCLUDEDIR}/python${PYTHONBIN_VER}"
 INST_CMD=install-strip
 PKG_DEPS="moode/libupnpp_0.21"
 PKG_PREBUILD="rm -f ltmain.sh
-    ln -fs ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libcurl.la ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/
-    ln -fs ${DISTOS_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/libcurl-gnutls.so ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/"
-PKG_POSTBUILD="rm -f ${BIN_PATH}${BUILD_LIBDIR}${BUILD_LIBSUFFIX}/{libcurl.la,/libcurl-gnutls.so}"
+    ln -fs ${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libcurl.la ${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/
+    ln -fs ${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/libcurl-gnutls.so ${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/"
+PKG_POSTBUILD="rm -f ${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/{libcurl.la,/libcurl-gnutls.so}"

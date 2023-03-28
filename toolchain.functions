@@ -1,0 +1,1611 @@
+#!/bin/bash
+
+check_core_functions
+check_build_functions
+
+function check_gnu_c () {
+	# shellcheck disable=SC2153
+	if ! "${HARCH}-gcc" -v > /dev/null 2>&1
+	then
+		echo "The GNU toolchain for cross-compile does not exist."
+		echo "To build one, add setup_gcc command to your project before start building anything else."
+		echo
+		return 1
+	fi
+}
+
+function check_llvm_c () {
+	if ! clang --target="${HARCH}" -v > /dev/null 2>&1
+	then
+		echo "The LLVM toolchain for cross-compile does not exist."
+		echo "To build one, add setup_llvm command to your project before start building anything else."
+		echo
+		return 1
+	fi
+}
+
+function set_gnu_buildenv () {
+
+	function gcc_sysroot () {
+		# Check where glibc is installed
+		if [ -f "${DISTOS_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/crtn.o" ] && \
+			[ -f "${DISTOS_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/crti.o" ] && \
+			[ -f "${DISTOS_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/crt1.o" ]
+		then
+			echo "${DISTOS_PATH}"
+		else
+			echo "${BIN_PATH}"
+		fi
+	}
+
+	function gcc_toolchain_print_searchdirs () {
+		case ${1} in
+			build)
+				local GCC_CMD=${CC_FOR_BUILD}
+				shift
+				;;
+			cross)
+				local GCC_CMD=${TOOLCHAIN_PATH}/bin/${HARCH}-gcc
+				shift
+				;;
+			*) local GCC_CMD=${HARCH}-gcc;;
+		esac
+		local RECORD_LIST=${1:-1}
+		if [ "${RECORD_LIST}" == all ]
+		then
+			local RECORD_LIST=1,2,3,4,5,6,7,8,9,10
+		fi
+		IFS=','
+		for RECORD in ${RECORD_LIST}
+		do
+			realpath -m "$("${GCC_CMD}" --print-search-dirs 2>/dev/null | grep libraries | cut -d= -f2 | cut -d: -f"${RECORD}" 2>/dev/null)"
+		done | xargs
+		unset IFS
+	}
+	
+	function gcc_toolchain_libraries_compilerflags () {
+		### Accept only build or cross as parameter, only first record is admitted
+		find "$(realpath -m "$(gcc_toolchain_print_searchdirs "${1}" 1)/..")" -mindepth 1 -maxdepth 1 -type d -printf ' -I%p/include' 2>/dev/null
+	}
+
+	function gcc_toolchain_libraries_linkerflags () {
+		### Accept only build or cross as parameter, only first record is admitted
+		find "$(realpath -m "$(gcc_toolchain_print_searchdirs "${1}" 1)/..")" -mindepth 1 -maxdepth 1 -type d -printf ' -L%p' 2>/dev/null
+	}
+
+	function gcc_toolchain_binaries_flags () {
+		### Accept only build or cross as parameter, only first record is admitted
+		find "$(realpath -m "$(gcc_toolchain_print_searchdirs "${1}" 1)/..")" -mindepth 1 -maxdepth 1 -type d -printf ' -B%p' 2>/dev/null
+	}
+
+	# Check the toolchains
+	
+	if ! gcc -v > /dev/null 2>&1
+	then
+		echo "gcc for build compile does not exist."
+		exit 1
+	fi
+	BARCH=$(gcc -dumpmachine)
+	# shellcheck disable=SC2034
+	BM=$(echo "${BARCH}" | cut -d- -f1)
+	# shellcheck disable=SC2034
+	BOS=$(echo "${BARCH}" | cut -d- -f3)
+	BLIBC=$(echo "${BARCH}" | cut -d- -f4)
+	BLIBC=${BLIBC:-gnu}
+	CC_FOR_BUILD=$(which gcc)
+	CXX_FOR_BUILD=$(which g++)
+	# shellcheck disable=SC2034
+	CPP_FOR_BUILD="$(which gcc) -E"
+	AR_FOR_BUILD=$(which gcc-ar)
+	NM_FOR_BUILD=$(which gcc-nm)
+	RANLIB_FOR_BUILD=$(which gcc-ranlib)
+	CFLAGS_FOR_BUILD="-O3 -march=native -flto=${LTOPROCS}"
+	CXXFLAGS_FOR_BUILD="-O3 -march=native -flto=${LTOPROCS}"
+	LDFLAGS_FOR_BUILD="-fuse-ld=gold -fuse-linker-plugin${OPTLINK_FLAGS:+ ${OPTLINK_FLAGS}}"
+	# shellcheck disable=SC2034
+	LIBRARY_PATH_FOR_BUILD=$(gcc_toolchain_print_searchdirs build 5)
+	# shellcheck disable=SC2034
+	INCLUDE_PATH_FOR_BUILD=$(find {/,/usr/} -mindepth 1 -maxdepth 1 -name include -type d)
+
+	GMPURL=https://gmplib.org/download/gmp/gmp-${GMP_VER}.tar.xz
+	MPFRURL=https://www.mpfr.org/mpfr-${MPFR_VER}/mpfr-${MPFR_VER}.tar.xz
+	MPCURL=https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VER}.tar.gz
+	ISLURL=https://libisl.sourceforge.io/isl-${ISL_VER}.tar.xz
+	BINUTILSURL=https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.bz2
+	GCCURL=https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz
+
+	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
+	# shellcheck disable=SC2034
+	PLATFORM_RUSTFLAGS="${HMCPU:+-C target-cpu=${HMCPU}}${HMARCH_RUST:+ -C target-feature=${HMARCH_RUST} }"
+}
+
+function setup_rust () {
+
+	echo -n "Setting up RUST... "
+	export CARGO_HOME=${GLOBAL_TOOLCHAIN_PATH}
+	export RUSTUP_HOME=${GLOBAL_TOOLCHAIN_PATH}/var/rustup
+	CARGO_TARGET=${HARCH/-/-unknown-}
+	if [ ! -x "${GLOBAL_TOOLCHAIN_PATH}/bin/cargo" ] || [ ! -x "${GLOBAL_TOOLCHAIN_PATH}/bin/rustc" ]
+	then
+		echo -n "downloading... "
+		run_cmd "curl -sSf https://sh.rustup.rs -o /tmp/rustup-init" > "${GLOBAL_LOG_PATH}/toolchain_rust.log"
+		echo -n "installing... "
+		{
+			run_cmd "chmod +x /tmp/rustup-init" 
+			run_cmd "/tmp/rustup-init -v -y --no-modify-path"
+			run_cmd "rm -f /tmp/rustup-init"
+		} >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
+	else
+		if [ "${RUST_UPDATE:-0}" -eq 1 ]
+		then
+			echo -n "already there. Check for updates... "
+			run_cmd "rustup -v update" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
+		fi
+	fi
+	if [ ! -x "${GLOBAL_TOOLCHAIN_PATH}/bin/cargo-install-update" ]
+	then
+		echo -n "installing update tools... "
+		( set -e
+			CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+			CARGO_PROFILE_RELEASE_LTO=thin
+			export CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO
+			run_cmd "cargo install cargo-update" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
+		)
+	fi
+	if [ "${RUST_UPDATE:-0}" -eq 1 ]
+	then
+		echo -n "upgrading packages... "
+		( set -e
+			CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+			CARGO_PROFILE_RELEASE_LTO=thin
+			export CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO
+			run_cmd "cargo -v install-update -a" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
+		)
+	fi
+	echo -n "adding ${CARGO_TARGET} libraries... "
+	run_cmd "rustup -v target add \"${CARGO_TARGET}\"" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
+	echo "done."
+	echo
+}
+
+function setup_autotools () {
+	function download_autotools () {
+
+		local AUTOCONF_URL AUTOMAKE_URL LIBTOOL_URL GETTEXT_URL
+
+		AUTOCONF_URL="https://ftp.gnu.org/gnu/autoconf/autoconf-${AUTOCONF_VER}.tar.gz"
+		AUTOMAKE_URL="https://ftp.gnu.org/gnu/automake/automake-${AUTOMAKE_VER}.tar.gz"
+		LIBTOOL_URL="https://ftp.gnu.org/gnu/libtool/libtool-${LIBTOOL_VER}.tar.gz"
+		GETTEXT_URL="https://ftp.gnu.org/pub/gnu/gettext/gettext-${GETTEXT_VER}.tar.gz"
+		{
+			download_uncompress "${AUTOCONF_URL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}"
+			download_uncompress "${AUTOMAKE_URL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}"
+			download_uncompress "${LIBTOOL_URL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}"
+			download_uncompress "${GETTEXT_URL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}"
+		} > "${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log"
+	}
+
+	function download_autotools_support () {
+
+		local AUTOCONFARCHIVE_URL
+		AUTOCONFARCHIVE_URL="http://mirror.kumi.systems/gnu/autoconf-archive/autoconf-archive-${AUTOCONFARCHIVE_VER}.tar.xz"
+
+		download_uncompress "${AUTOCONFARCHIVE_URL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" >> "${GLOBAL_LOG_PATH}/toolchain_autoconf-${AUTOCONFARCHIVE_VER}.log"
+	}
+
+	function smart_autoreconf () {
+		local WORK_DIR AUTOCONF_CMD ACINCLUDE AUTOMAKE_MAJVER ACINCLUDE
+		WORK_DIR=${1}
+		AUTOCONF_CMD=
+		ACINCLUDE=
+		### If PATH include a AUTOTOOLS build or PKG_AUTOCONF is a particular version
+		[ -d "${BIN_PATH}${TARGET_PREFIX}/share/aclocal" ] && local ACINCLUDE+=" --include=${BIN_PATH}${TARGET_PREFIX}/share/aclocal"
+		[ -d "${GLOBAL_TOOLCHAIN_PATH}/share/acloca"l ] && local ACINCLUDE+=" --include=${GLOBAL_TOOLCHAIN_PATH}/share/aclocal"
+		[ -d "${TOOLCHAIN_PATH}/share/aclocal" ] && local ACINCLUDE+=" --include=${TOOLCHAIN_PATH}/share/aclocal"
+		if [ -n "${AUTOTOOLS_PATH}" ] && [ -d "${AUTOTOOLS_PATH}" ]
+		then
+			AUTOMAKE_MAJVER=$(cut -d. -f 1,2 <<<"${PKG_AUTOMAKE:-${AUTOMAKE_VER}}")
+			ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/autoconf --include=${AUTOTOOLS_PATH}/share/aclocal-${AUTOMAKE_MAJVER}"
+			AUTOCONF_CMD="${AUTOTOOLS_PATH}/bin/autoreconf"
+		else
+			AUTOCONF_CMD=autoreconf
+		fi
+		pushd "${WORK_DIR}"
+		run_cmd "mkdir -pv m4"
+		run_cmd "rm -rfv autom4te.cache aclocal.m4 configure libtool ltmain.sh lt-main.sh"
+		export PATH="${AUTOTOOLS_PATH}/bin:${PATH}";
+		if [ -f po/update-potfiles ]
+		then
+			run_cmd "./po/update-potfiles"
+		fi
+		MAX_RETRIES=5 run_cmd "${AUTOCONF_CMD} -f -i ${ACINCLUDE}"
+		popd
+		return ${?}
+	}
+	export -f smart_autoreconf
+
+	OPTS="--default" OPTS_WITH_VALUE="" param2value "${@}"
+
+	local FILETOPATCH
+
+	AUTOCONF_VER=${_param_1:-${AUTOCONF_VER}}
+	AUTOMAKE_VER=${_param_2:-${AUTOMAKE_VER}}
+	LIBTOOL_VER=${_param_3:-${LIBTOOL_VER}}
+	GETTEXT_VER=${_param_4:-${GETTEXT_VER}}
+
+	AUTOTOOLS_VER=${AUTOCONF_VER}-${AUTOMAKE_VER}-${LIBTOOL_VER}-${GETTEXT_VER}
+	AUTOTOOLS_PATH=${GLOBAL_TOOLCHAIN_PATH}/autotools-${AUTOTOOLS_VER}
+	export AUTOTOOLS_PATH
+
+	echo -n "Setting up autotools... "
+	if [ ! -f "${AUTOTOOLS_PATH}/bin/autoconf" ] || [ ! -f "${AUTOTOOLS_PATH}/bin/automake" ] || [ ! -f "${AUTOTOOLS_PATH}/bin/libtoolize" ] || [ ! -f "${AUTOTOOLS_PATH}/bin/autopoint" ]
+	then
+		#### Download all auto tools
+		download_autotools
+		#### Build libtool
+		echo -n "libtool-${LIBTOOL_VER}... "
+		{
+			pushd "${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}"
+			FILETOPATCH="$(find . -name ltmain.sh)"
+			run_cmd "sed -i '/^      -64|-mips\[0-9\]/ i## BBXB change ##' \"${FILETOPATCH}\""
+			run_cmd "sed -i '/^      -64|-mips\[0-9\]/,/*)\$/d' \"${FILETOPATCH}\""
+			run_cmd "sed -i '/^## BBXB change ##/a\\       -64|-mips[0-9]|-r[0-9][0-9]*|-xarch=*|-xtarget=*|+DA*|+DD*|-q*|-m*|-t[45]*|-txscale*|-p|-pg|--coverage|-fprofile-*|-F*|@*|-tp=*|--sysroot=*|-O*|-g*|-flto*|-fwhopr*|-fuse-linker-plugin|-fstack-protector*|-stdlib=*|-specs=*|-fsanitize=*|-fuse-ld=*|-Wa,*|--target=*|-B*)' \"${FILETOPATCH}\""
+			popd 2>&1
+			if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}" ]
+			then
+				run_cmd "rm -rfv \"${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}\""
+			fi
+			run_cmd "mkdir -pv \"${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}\""
+			pushd "${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}"
+			run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \
+				CXX=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \
+				AR=\"${AR_FOR_BUILD}\" \
+				NM=\"${NM_FOR_BUILD}\" \
+				RANLIB=\"${RANLIB_FOR_BUILD}\" \
+				CFLAGS=\"${CFLAGS_FOR_BUILD}\" \
+				CXXFLAGS=\"${CXXFLAGS_FOR_BUILD}\" \
+				LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \
+					${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}/configure --prefix=\"${AUTOTOOLS_PATH}\""
+			run_cmd "make V=${MAKEVERBOSE:-0}"
+			run_cmd "make V=${MAKEVERBOSE:-0} install"
+			popd 2>&1
+			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}\""
+			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}\""
+		} >> "${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log"
+		#### Build autoconf
+		echo -n "autoconf-${AUTOCONF_VER}... "
+		{
+			pushd "${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}"
+			#run_cmd "autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
+			popd 2>&1
+			if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}" ]
+			then
+				run_cmd "rm -rfv \"${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}\""
+			fi
+			run_cmd "mkdir -pv \"${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}\""
+			pushd "${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}"
+			run_cmd "\"${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}/configure\" --prefix=\"${AUTOTOOLS_PATH}\""
+			run_cmd "make V=${MAKEVERBOSE:-0}"
+			run_cmd "make V=${MAKEVERBOSE:-0} install"
+			popd 2>&1
+			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}\""
+			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}\""
+			#### Build automake
+			echo -n "automake-${AUTOMAKE_VER}... "
+			pushd "${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}"
+			#run_cmd "AUTOCONF=${AUTOTOOLS_PATH}/bin/autoconf LIBTOOLIZE=${AUTOTOOLS_PATH}/bin/libtoolize ${AUTOTOOLS_PATH}/bin/autoreconf -fiv"
+			popd 2>&1
+			if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}" ]
+			then
+				run_cmd "rm -rfv \"${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}\""
+			fi
+			run_cmd "mkdir -pv \"${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}\""
+			pushd "${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}"
+			run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
+				CXX=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
+				AR=\"${AR_FOR_BUILD}\" \\
+				NM=\"${NM_FOR_BUILD}\" \\
+				RANLIB=\"${RANLIB_FOR_BUILD}\" \\
+				CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
+				CXXFLAGS=\"${CXXFLAGS_FOR_BUILD}\" \\
+				LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
+					\"${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}/configure\" --prefix=\"${AUTOTOOLS_PATH}\""
+			run_cmd "make V=${MAKEVERBOSE:-0}"
+			run_cmd "make V=${MAKEVERBOSE:-0} install"
+			popd 2>&1
+			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}\""
+			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}\""
+		} >> "${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log"
+		#### Build gettext
+		echo -n "gettext-${GETTEXT_VER}... "
+		{
+			pushd "${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}"
+			smart_autoreconf "${PWD}"
+			popd 2>&1
+			if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}" ]
+			then
+				run_cmd "rm -rfv \"${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}\""
+			fi
+			run_cmd "mkdir -pv \"${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}\""
+			pushd "${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}"
+			run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
+				CXX=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
+				AR=\"${AR_FOR_BUILD}\" \\
+				NM=\"${NM_FOR_BUILD}\" \\
+				RANLIB=\"${RANLIB_FOR_BUILD}\" \\
+				CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
+				CXXFLAGS=\"${CXXFLAGS_FOR_BUILD}\" \\
+				LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
+					\"${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}/configure\" --prefix=\"${AUTOTOOLS_PATH}\""
+			run_cmd "make V=${MAKEVERBOSE:-0} NM=\"${NM_FOR_BUILD}\""
+			run_cmd "make V=${MAKEVERBOSE:-0} install"
+			popd 2>&1
+			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}\""
+			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}\""
+		} >> "${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log"
+		echo -n "done. "
+	else
+		echo -n "already there. "
+	fi
+
+	echo -n "Checking support tools... "
+	if [ ! -f "${GLOBAL_TOOLCHAIN_PATH}/share/info/autoconf-archive.info" ]
+	then
+		#### Download all auto tools support tools
+		download_autotools_support
+		#### Build autoconf-archive
+		echo -n "autoconf-archive-${AUTOCONFARCHIVE_VER}... "
+		{
+			if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" ]
+			then
+				run_cmd "rm -rfv \"${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}\""
+			fi
+			run_cmd "mkdir -pv \"${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}\""
+			pushd "${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}"
+			run_cmd "\"${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}/configure\" --prefix=\"${GLOBAL_TOOLCHAIN_PATH}\""
+			run_cmd "make V=${MAKEVERBOSE:-0}"
+			run_cmd "make V=${MAKEVERBOSE:-0} install"
+			popd 2>&1
+			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}\""
+			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}\"" 
+		} >> "${GLOBAL_LOG_PATH}/toolchain_autoconf-archive-${AUTOCONFARCHIVE_VER}.log"
+		echo "done."
+	else
+		echo "already there."
+	fi
+	if [ "${_param_default:-0}" -eq 1 ]
+	then
+		pathadd PATH "${AUTOTOOLS_PATH}/bin"
+	fi
+	echo
+}
+
+function setup_binutils () {
+	function binutils_download () {
+
+		download_uncompress "${BINUTILSURL}" "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}"
+		if [ -f "${PATCH_PATH}/binutils/binutils_${BINUTILS_VER}.patch" ]
+		then
+			( cd "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}"; run_cmd "patch -p1 < \"${PATCH_PATH}/binutils/binutils_${BINUTILS_VER}.patch\"" )
+		fi
+		download_uncompress "${GMPURL}" "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/gmp"
+		download_uncompress "${MPFRURL}" "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/mpfr"
+		download_uncompress "${MPCURL}" "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/mpc"
+		download_uncompress "${ISLURL}" "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/isl"
+	}
+
+	function binutils_buildenv () {
+		if [ "${MAKEVERBOSE:-0}" -eq 0 ]
+		then
+			local SILENTCONFIG="--enable-silent-rules"
+			build_configargs="${SILENTCONFIG}"
+			host_configargs="${SILENTCONFIG}"
+			target_configargs="${SILENTCONFIG}"
+		fi
+
+		### Config parameters in common with GCC and Binutils
+		COMMON_CONFIG="--with-sysroot=$(gcc_sysroot) --enable-shared --with-system-zlib"
+		### Workaround for latest patches (--disable-werror)
+		BINUTILS_CONFIG="--enable-gold=default --enable-ld --enable-gprofng=yes --enable-lto \
+			--enable-new-dtags --disable-rpath --enable-threads=yes --enable-plugins --enable-64-bit-bfd \
+			--enable-compressed-debug-sections=all --enable-separate-code=yes --enable-plugins --disable-werror ${SILENTCONFIG}"
+
+		COMPFLAGS="${GNU_EXTRACOMPFLAGS}"
+		LINKERFLAGS="${GNU_EXTRALDFLAGS} -s"
+		LTO_COMPFLAGS=
+		LTO_LINKERFLAGS=
+		if [ "${GCC_LTOENABLE:-0}" -eq 1 ]
+		then
+			LTO_COMPFLAGS=" -flto=${LTOPROCS}"
+			LTO_LINKERFLAGS=" -fuse-linker-plugin"
+		fi
+	}
+	
+	function binutils_configuration () {
+
+		local CONFIG_ARCH_PARAMS="--build=${BARCH} --host=${BARCH} --target=${HARCH}"
+		case ${HM} in
+			x86_64) local PLATFORM_ARCHFLAGS=""
+				;;
+
+			*)	local PLATFORM_ARCHFLAGS=" ${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
+				;;
+		esac
+		# shellcheck disable=SC2153
+		local PLATFORM_ARCHFLAGS="--enable-targets=${HM}-${HOS}-${HLIBC} --with-arch-directory=${HM} ${HMARCH:+ --with-arch=${HMARCH}}${PLATFORM_ARCHFLAGS}"
+		if [ -d "${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}" ]
+		then
+			rm -rf "${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}"
+		fi
+		run_cmd "mkdir -p \"${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}\""
+		pushd "${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}"
+		binutils_buildenv
+		run_cmd "CC_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
+				CXX_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
+				AR_FOR_BUILD=\"${AR_FOR_BUILD}\" \\
+				NM_FOR_BUILD=\"${NM_FOR_BUILD}\" \\
+				RANLIB_FOR_BUILD=\"${RANLIB_FOR_BUILD}\" \\
+				CFLAGS_FOR_BUILD=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}\" \\
+				CXXFLAGS_FOR_BUILD=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}\" \\
+				LDFLAGS_FOR_BUILD=\"${LINKERFLAGS}\" \\
+				CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
+				CXX=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
+				AR=\"${AR_FOR_BUILD}\" \\
+				NM=\"${NM_FOR_BUILD}\" \\
+				RANLIB=\"${RANLIB_FOR_BUILD}\" \\
+				CFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}\" \\
+				CXXFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}\" \\
+				LDFLAGS=\"${LINKERFLAGS}${LTO_LINKERFLAGS}\" \\
+				CFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
+				CXXFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
+				LDFLAGS_FOR_TARGET=\"${LINKERFLAGS} ${OPTLINK_FLAGS}\" \\
+				\"${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/configure\" \\
+					${CONFIG_ARCH_PARAMS} ${PLATFORM_ARCHFLAGS} \\
+					${COMMON_CONFIG} ${BINUTILS_CONFIG} \\
+					--prefix=\"${TOOLCHAIN_PATH}\" \\
+					build_configargs='${build_configargs}' \\
+					host_configargs='${host_configargs}' \\
+					target_configargs='${target_configargs}'"
+		popd
+	}
+	
+	function binutils_make () {
+
+		if [ ! -d "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}" ]
+		then
+			echo "Downloading... " | log_buffer info
+			binutils_download
+		fi
+		if [ ! -f "${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}/config.status" ]
+		then
+			echo "Configuration... " | log_buffer info
+			binutils_configuration
+		fi
+		pushd "${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}"
+		echo "Making compiler." | log_buffer info
+		run_cmd "make STAGE_CC_WRAPPER=\"${CCWRAPPER}\" all"
+		run_cmd "make STAGE_CC_WRAPPER=\"${CCWRAPPER}\" install"
+		popd
+	}
+
+	echo -n "Setting up binutils"
+	echo -n "-${BINUTILS_VER}... "
+
+	local SPACES
+
+	SPACES="   "
+
+	if [ ! -f "${TOOLCHAIN_PATH}/bin/${HARCH}-ld.bfd" ]
+	then
+		echo -n "building... "
+		# shellcheck disable=SC2153
+		binutils_make "${HARCH}" >> "${LOG_PATH}/toolchain_binutils-${BINUTILS_VER}.log"
+		echo -e "done.\n"
+	else
+		echo "already there."
+	fi
+	if [ -d "${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}" ]
+	then
+		run_cmd "rm -rf \"${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}\"" >> "${LOG_PATH}/toolchain_binutils-${BINUTILS_VER}.log"
+	fi
+	if [ -d "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}" ]
+	then
+		run_cmd "rm -rf \"${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}\"" >> "${LOG_PATH}/toolchain_binutils-${BINUTILS_VER}.log"
+	fi
+
+}
+
+function relink_library () {
+	local RELATIVE_TO SOURCE DESTINATION
+	RELATIVE_TO=${1}
+	SOURCE=$(realpath -m --relative-to="${RELATIVE_TO}" "${2}")
+	DESTINATION=${RELATIVE_TO}/$(basename "${2}")
+	run_cmd "ln -fsv \"${SOURCE}\" \"${DESTINATION}\""
+}
+export -f relink_library
+
+function relink_la_libraries () {
+	echo "Adapting .la libraries to ${1}" | log_buffer info
+	export LIB_LA_SEDTRANS="s&^dependency_libs=' -L${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/./ld&dependency_libs='&; s&^libdir='${TOOLCHAIN_PATH}&libdir='${TARGET_PREFIX}&"
+	echo "Sed command: ${LIB_LA_SEDTRANS}" | log_buffer info
+	if [ -d "${1}" ]
+	then
+		run_cmd "find \"${1}\" -mindepth 1 -name \"*.la\" -type f | xargs -r -I{} bash -c \
+			\"sed -i \\\"\\\${LIB_LA_SEDTRANS}\\\" {}\""
+	fi
+}
+
+function setup_gcc () {
+	function gcc_download () {
+
+		download_uncompress "${GCCURL}" "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}"
+		if [ -f "${PATCH_PATH}/gcc/gcc_${GCC_VER}.patch" ]
+		then 
+			( cd "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}"; run_cmd "patch -t -p1 < \"${PATCH_PATH}/gcc/gcc_${GCC_VER}.patch\"" )
+		fi
+		download_uncompress "${GMPURL}" "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/gmp"
+		download_uncompress "${MPFRURL}" "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpfr"
+		download_uncompress "${MPCURL}" "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpc"
+		download_uncompress "${ISLURL}" "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/isl"
+		run_cmd "sed 's@^#include <limits.h>@#include <linux/limits.h>@' -i \"${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/libsanitizer/asan/asan_linux.cpp\""
+	}
+
+	function gcc_buildenv () {
+		if [ "${MAKEVERBOSE:-0}" -eq 0 ]
+		then
+			local SILENTCONFIG="--enable-silent-rules"
+			build_configargs="${SILENTCONFIG}"
+			host_configargs="${SILENTCONFIG}"
+			target_configargs="${SILENTCONFIG}"
+		fi
+
+		### Config parameters in common with GCC and Binutils
+		COMMON_CONFIG="--with-sysroot=$(gcc_sysroot) --enable-shared --with-system-zlib"
+		GCC_CONFIG="--enable-languages=${GCC_LANGUAGES:-c,c++} --enable-version-specific-runtime-libs  \
+			$( if [ "${MULTI_ARCH}" -eq 1 ] && [ -z "${HARCH_LIB}" ]; then echo --enable-multiarch; fi ) \
+			--enable-threads=posix --enable-tls --enable-checking=release --disable-multilib \
+			--enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object \
+			--enable-linker-build-id --with-gcc-major-version-only --enable-libstdcxx-backtrace \
+			--with-linker-hash-style=gnu --enable-plugin --enable-initfini-array \
+			--enable-gnu-indirect-function --disable-nls --disable-option-checking \
+			${SILENTCONFIG}"
+
+		if [[ "${GCC_LANGUAGES}" =~ "fortran" ]]
+		then
+			GCC_CONFIG+=" --enable-libquadmath --enable-libquadmath-support"
+		fi
+
+		COMPFLAGS="${GNU_EXTRACOMPFLAGS} -Wno-maybe-uninitialized -Wno-stringop-overflow -Wno-stack-usage -Wno-alloc-size-larger-than"
+		LINKERFLAGS="${GNU_EXTRALDFLAGS}"
+		LTO_COMPFLAGS=
+		LTO_LINKERFLAGS=
+		if [ "${GCC_LTOENABLE:-0}" -eq 1 ]
+		then
+			LTO_COMPFLAGS=" -flto=${LTOPROCS}"
+			LTO_LINKERFLAGS=" -fuse-linker-plugin"
+		fi
+	}
+	
+	function gcc_configuration () {
+
+		local CONFIG_ARCH_PARAMS="--build=${BARCH} --host=${BARCH} --target=${HARCH}"
+		case ${HM} in
+			x86_64) local PLATFORM_ARCHFLAGS=""
+				;;
+
+			*)	local PLATFORM_ARCHFLAGS=" ${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
+				;;
+		esac
+		local PLATFORM_ARCHFLAGS="--enable-targets=${HM}-${HOS}-${HLIBC} --with-arch-directory=${HM} ${HMARCH:+ --with-arch=${HMARCH}}${PLATFORM_ARCHFLAGS}"
+		if [ -d "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}" ]
+		then
+			rm -rf "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}"
+		fi
+		run_cmd "mkdir -p \"${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}\""
+		pushd "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}"
+		gcc_buildenv
+		run_cmd "CC_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
+				CXX_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
+				AR_FOR_BUILD=\"${AR_FOR_BUILD}\" \\
+				NM_FOR_BUILD=\"${NM_FOR_BUILD}\" \\
+				RANLIB_FOR_BUILD=\"${RANLIB_FOR_BUILD}\" \\
+				CFLAGS_FOR_BUILD=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}\" \\
+				CXXFLAGS_FOR_BUILD=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}\" \\
+				LDFLAGS_FOR_BUILD=\"${LINKERFLAGS}\" \\
+				CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
+				CXX=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
+				AR=\"${AR_FOR_BUILD}\" \\
+				NM=\"${NM_FOR_BUILD}\" \\
+				RANLIB=\"${RANLIB_FOR_BUILD}\" \\
+				CFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}\" \\
+				CXXFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL}${LTO_COMPFLAGS}\" \\
+				LDFLAGS=\"${LINKERFLAGS}${LTO_LINKERFLAGS}\" \\
+				CFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
+				CXXFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
+				LDFLAGS_FOR_TARGET=\"${LINKERFLAGS} ${OPTLINK_FLAGS}\" \\
+				\"${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure\" \\
+					${CONFIG_ARCH_PARAMS} ${PLATFORM_ARCHFLAGS} \\
+					${COMMON_CONFIG} ${GCC_CONFIG} \\
+					--prefix=\"${TOOLCHAIN_PATH}\" \\
+					build_configargs='${build_configargs}' \\
+					host_configargs='${host_configargs}' \\
+					target_configargs='${target_configargs}'"
+		popd
+	}
+
+	function create_sccache_wrapper () {
+		### Create sccache_wrapper to work around an issue of not supporting correctly the
+		### -B parameter. It is not able to find the local cc1 executable running xgcc
+		if [[ ${CCWRAPPER} == *sccache ]]
+		then
+			cat <<-EOF > "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper"
+				#!/bin/sh
+
+				set -e
+
+				dir=\$(dirname \$(realpath \$1))
+				cc1=\${dir}/cc1
+
+				if [ -e "\${cc1}"  ]; then
+					export PATH=\${dir}:\${PATH}
+					echo "${CCWRAPPER} \$@" >> \$dir/sccache_wrapper.log
+					eval ${CCWRAPPER} "\$@"
+				else
+					echo "\$@" >> \$dir/sccache_wrapper.log
+					eval "\$@"
+				fi
+			EOF
+			run_cmd "chmod +x \"${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper\""
+			GCC_CCWRAPPER="${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper"
+		else
+			GCC_CCWRAPPER="${CCWRAPPER}"
+		fi
+	}
+	
+	function gcc_make_host () {
+
+		if [ ! -d "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}" ]
+		then
+			echo "Downloading... " | log_buffer info
+			gcc_download
+		fi
+		if [ ! -f "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/config.status" ]
+		then
+			echo "Configuration... " | log_buffer info
+			gcc_configuration
+		fi
+		pushd "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}"
+		create_sccache_wrapper
+		echo "Making compiler." | log_buffer info
+		run_cmd "make STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" all-host"
+		run_cmd "make STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" install-strip-host"
+
+		echo "Finalize the installation of the limits.h header" | log_buffer info
+		run_cmd "${TOOLCHAIN_PATH}/libexec/gcc/${HARCH}/${GCC_MAJVER}/install-tools/mkheaders"
+		echo "Install aclocal files" | log_buffer info
+		run_cmd "mkdir -pv ${TOOLCHAIN_PATH}/share/aclocal"
+
+		if [ ! -d "$(gcc_sysroot)${TARGET_PREFIX}/lib" ] && [ "${HARCH_LIB}" == 64 ]
+		then
+			echo "Workaround for $(gcc_sysroot)${TARGET_PREFIX}/lib/../lib64" | log_buffer info
+			run_cmd "mkdir -pv \"$(gcc_sysroot)${TARGET_PREFIX}/lib\""
+		fi
+		popd
+	}
+
+	function setup_ldconfig () {
+		if [ ! -f "${DISTOS_PATH}/etc/ld.so.conf" ] && [ ! -f "${BIN_PATH}/etc/ld.so.conf" ]
+		then
+			run_cmd "mkdir -pv \"${BIN_PATH}/etc\"" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
+			run_cmd "cat > \"${BIN_PATH}/etc/ld.so.conf\"" <<-EOF >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
+				include ld.so.conf.d/*.conf
+			EOF
+		fi
+		if [ ! -f "${TOOLCHAIN_PATH}/bin/ldconfig" ] && [ -f "$(gcc_sysroot)${TARGET_PREFIX}/sbin/ldconfig" ]
+		then
+			run_cmd "cat >\"${TOOLCHAIN_PATH}/bin/ldconfig\"" <<-EOF >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
+				#!/bin/sh
+				export QEMU_LD_PREFIX=${BIN_PATH}
+				$(gcc_sysroot)${TARGET_PREFIX}/sbin/ldconfig -f /etc/ld.so.conf -C /etc/ld.so.cache -r ${BIN_PATH} \${@}
+			EOF
+			run_cmd "chmod +x \"${TOOLCHAIN_PATH}/bin/ldconfig\"" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
+		fi
+	}
+
+
+
+	function gcc_make_target_libs () {
+
+		function relink_libraries () {
+			echo "Relinking libraries with their relative paths in ${1}" | log_buffer info
+			[ ! -d "${1}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}" ] && run_cmd "mkdir -v \"${1}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}\""
+			run_cmd "find \"${1}${TARGET_PREFIX}/lib/gcc/${HARCH}\" -type f,l \
+				\\( -name \"*.so*\" -a ! -name \"*.so*.py\" -o -name \"*.a*\" -o -name \"*.la*\" -o -name \"crt*.o\" \\) | xargs -r -I{} bash -c \
+				\"relink_library \\\"${1}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}\\\" {}\""
+		}
+
+		function build_gcc_library () {
+			local OBJECT PKG_NAME
+
+			OBJECT=${1}
+			PKG_NAME="gcc-${OBJECT}_${GCC_VER}${OBJECT_TARGET}"
+			if [ -f "${STATUS_PATH}/${PKG_NAME}" ]
+			then
+				echo "${OBJECT} already built." | log_buffer info
+				return 0
+			fi
+			if [ ! -d "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}" ]
+			then
+				echo "GCC Sources disappeared (${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}). Reconfigure them." | log_buffer info
+				echo "Downloading... " | log_buffer info
+				gcc_download
+			fi
+			if [ ! -f "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/config.status" ]
+			then
+				echo "Configuration... " | log_buffer info				
+				GCC_LTOENABLE=0 gcc_configuration
+			fi
+			pushd "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}"
+			create_sccache_wrapper
+			if [ "${GCC_BOOTSTRAP}" -eq 0 ]
+			then
+				echo "Create a symlink that allows libgcc to be built with posix threads support" | log_buffer info
+				run_cmd "mkdir -pv \"${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${HARCH}/libgcc\""
+				run_cmd "ln -fs \"${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/libgcc/gthr-posix.h\" \"${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${HARCH}/libgcc/gthr-default.h\""
+			fi
+			echo "Making target ${OBJECT} libraries." | log_buffer info
+			run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" all-target-${OBJECT}"
+			echo "Installing ${OBJECT} in the toolchain dir" | log_buffer info
+			run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" install-strip-target-${OBJECT}"
+			run_cmd "rm -fv ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER}/*.la"
+			#relink_la_libraries "${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER}"
+			if [ "${OBJECT}" != "libsanitizer" ]
+			then
+				echo "Creating package for ${PKG_NAME}" | log_buffer info
+				if [ -d "${PACKAGES_PATH}/${PKG_NAME}" ]
+				then
+					run_cmd "rm -rf \"${PACKAGES_PATH}/gcc-${OBJECT}_${GCC_VER}\""
+				fi
+				run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" DESTDIR=\"${PACKAGES_PATH}/${PKG_NAME}\" prefix=${TARGET_PREFIX} install-strip-target-${OBJECT}"
+				run_cmd "rm -fv ${PACKAGES_PATH}/${PKG_NAME}${TARGET_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}/*.la"
+				#relink_la_libraries "${PACKAGES_PATH}/${PKG_NAME}${TARGET_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}"
+				if [ "${GCC_BOOTSTRAP}" -eq 0 ]
+				then
+					if [ "${GCC_IS_MAIN}" -eq 1 ]
+					then
+						echo "### Linking GCC target libraries in ${TARGET_PREFIX}${TARGET_LIBDIR}${TARGET_LIBSUFFIX} from ${BIN_PATH}${TARGET_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" | log_buffer info
+						if [ -d "${PACKAGES_PATH}/${PKG_NAME}${TARGET_PREFIX}/lib/gcc/${HARCH}" ]
+						then
+							relink_libraries "${PACKAGES_PATH}/${PKG_NAME}"
+						fi
+					else
+						run_cmd "mkdir -pv \"${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d\" \"${PACKAGES_PATH}/${PKG_NAME}/postinst_scripts\""
+						run_cmd "echo ${TARGET_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER} >${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d/gcc-${GCC_MAJVER}.conf"
+						if [ -d "${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/lib64" ]
+						then
+							run_cmd "echo ${TARGET_PREFIX}/lib/gcc/${HARCH}/lib64 >>${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d/gcc-${GCC_MAJVER}.conf"
+						fi
+						run_cmd "echo \"ldconfig -v\" >>${PACKAGES_PATH}/${PKG_NAME}/postinst_scripts/00_gcc-libs_${GCC_MAJVER}"
+					fi
+					if [ "${GCC_INSTALL_TARGETS}" -eq 1 ]
+					then
+						run_cmd "rsync -aK --devices --specials ${PACKAGES_PATH}/${PKG_NAME}/ ${BIN_PATH}"
+					fi
+				fi
+				run_cmd "create_sfx_package ${PACKAGES_PATH}/${PKG_NAME}"
+				run_cmd "rm -rf \"${PACKAGES_PATH}/${PKG_NAME}\""
+			fi
+			if [ "${GCC_BOOTSTRAP}" -eq 1 ]
+			then
+				run_cmd "rm -rf \"${HARCH}/${PKG_NAME}\""
+			fi
+			run_cmd "touch \"${STATUS_PATH}/${PKG_NAME}\""
+			popd
+		}
+
+		local GCC_BOOTSTRAP OBJECT_TARGET
+
+		echo "GCC Libraries targets: ${GCC_TARGETS}" | log_buffer info > "${LOG_PATH}/gcc-${object}_${GCC_VER}${OBJECT_TARGET}.log"
+
+		GCC_BOOTSTRAP=${GCC_BOOTSTRAP:-0}	
+		if [ "${GCC_BOOTSTRAP}" -eq 1 ]
+		then
+			OBJECT_TARGET="-bootstrap"
+		fi
+		if [ "${GCC_TARGETS}" = "all" ]
+		then
+			GCC_TARGETS="libgcc libstdc++-v3 libgomp libssp libatomic libvtv libsanitizer"
+			if [[ "${GCC_LANGUAGES}" =~ "fortran" ]]
+			then
+				GCC_TARGETS+=" libquadmath"
+			fi
+		fi
+		if [ -n "${GCC_TARGETS}" ]
+		then
+			for object in $( echo "${GCC_TARGETS}" | tr ',' ' ' )
+			do
+				echo -n "${object}... "
+				build_gcc_library "${object}" >> "${LOG_PATH}/gcc-${object}_${GCC_VER}${OBJECT_TARGET}.log"
+			done
+		fi		
+	}
+
+	function setup_ldd () {
+		local LDD_PATH RTLDLIST RTD
+		LDD_PATH=${1:-${BIN_PATH}}
+		if [ ! -f "${TOOLCHAIN_PATH}/bin/ldd" ]
+		then
+			if [ -f "${LDD_PATH}${TARGET_PREFIX}/bin/ldd" ]
+			then
+				eval "$(grep "^RTLDLIST=" "${LDD_PATH}${TARGET_PREFIX}/bin/ldd")"
+				for ldso in ${RTLDLIST}
+				do
+					if [ -f "${LDD_PATH}${ldso}" ]
+					then
+						RTD=${RTD:+${RTD} }${LDD_PATH}${ldso}
+					fi
+				done
+			fi
+			RTLDLIST=$(find "${TOOLCHAIN_PATH}/lib" -name "ld-linux*.so.*" -print0 | xargs -0)
+			RTD=${RTD:+${RTD} }${RTLDLIST}
+			if [ -n "${RTD}" ]
+			then
+				{
+					if [ ! -d "${TOOLCHAIN_PATH}/bin" ]
+					then
+						run_cmd "mkdir -pv \"${TOOLCHAIN_PATH}/bin\""
+					fi
+					run_cmd "sed 's#^RTLDLIST=.*#RTLDLIST=\"${RTD}\"#' \"${LDD_PATH}/usr/bin/ldd\" > \"${TOOLCHAIN_PATH}/bin/ldd\""
+					run_cmd "chmod +x \"${TOOLCHAIN_PATH}/bin/ldd\""
+				} > "${LOG_PATH}/toolchain_ldd.log"
+			fi
+		fi
+	}
+
+	OPTS="--install --main_gcc" OPTS_WITH_VALUE="--targets" param2value "${@}"
+	
+	echo -n "Setting up gcc"
+	echo "-${GCC_VER}"
+
+	local GCC_MAJVER GCC_TARGETS GCC_INSTALL_TARGETS GCC_IS_MAIN SPACES
+
+	GCC_MAJVER=$(cut -d. -f1 <<<"${GCC_VER}")
+
+	GCC_TARGETS=${_param_targets:-all}
+	GCC_INSTALL_TARGETS=${_param_install:-0}
+	GCC_IS_MAIN=${_param_main_gcc:-0}
+
+	SPACES="   "
+	if [ ! -f "${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" ] || [ ! -f "${TOOLCHAIN_PATH}/bin/${HARCH}-g++" ]
+	then
+		if [ "$(gcc_sysroot)" == "${BIN_PATH}" ]
+		then
+			echo -n "${SPACES}"
+			NUMSPACES=1 build --temporary --no_gcc_check lfs/glibc:headers
+		fi
+		echo -n "${SPACES}"
+		echo -n "Building ${GCC_LANGUAGES:-c,c++} compilers... "
+		gcc_make_host "${HARCH}" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
+		if [ "$(gcc_sysroot)" == "${BIN_PATH}" ]
+		then
+			echo -n "removing temporary headers..."
+			run_cmd "rm -rf \"${BIN_PATH}${TARGET_INCLUDEDIR}\"" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
+		fi
+	echo -e "done.\n"
+	fi
+	if [ "$(gcc_sysroot)" == "${BIN_PATH}" ]
+	then
+		if [ ! -f "${STATUS_PATH}/gcc-libgcc_${GCC_VER}-bootstrap" ]
+		then
+			### Bootstrapping sysroot
+			echo "${SPACES}Bootstrapping foundation libraries... "
+			### Install glibc headers and raw libraries
+			echo -n "${SPACES}"
+			NUMSPACES=1 build lfs/glibc:stage1
+			echo -n "${SPACES}Bootstrapping target libgcc... "
+			GCC_BOOTSTRAP=1 GCC_TARGETS="libgcc" gcc_make_target_libs
+			echo -e "done.\n"
+		fi
+		if [ ! -f "${STATUS_PATH}/gcc-libsanitizer_${GCC_VER}" ]
+		then
+			### Build & install glibc lib
+			echo -n "${SPACES}"
+			NUMSPACES=1 build lfs/glibc:stage2
+			### Build & install libxcrypt
+			echo -n "${SPACES}"
+			build --toolchain gnu lfs/libxcrypt:headers
+		fi
+	fi
+	setup_ldconfig
+	if [ ! -f "${STATUS_PATH}/gcc-libsanitizer_${GCC_VER}" ]
+	then
+		echo -n "${SPACES}Building target libraries... "
+		gcc_make_target_libs
+		echo -e "done.\n"
+	fi
+	if [ "$(gcc_sysroot)" == "${BIN_PATH}" ]
+	then
+		### Build & install glibc
+		echo -n "${SPACES}"
+		NUMSPACES=1 build lfs/glibc
+		### Build & install libxcrypt
+		echo -n "${SPACES}"
+		NUMSPACES=1 build --toolchain gnu lfs/libxcrypt
+	fi
+	ldconfig -v >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log" 2>&1
+	if [ -d "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}" ]
+	then
+		run_cmd "rm -rf \"${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}\"" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
+	fi
+	if [ -d "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}" ]
+	then
+		run_cmd "rm -rf \"${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}\"" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
+	fi
+	echo -e "done.\n"
+
+	setup_ldd "$(gcc_sysroot)"
+
+}
+
+function setup_toolchain_wrapper () {
+	true > "${LOG_PATH}/toolchain_wrapper.log"
+	if [ ! -d "${TOOLCHAIN_PATH}/bin" ]
+	then
+		run_cmd "mkdir \"${TOOLCHAIN_PATH}/bin\"" >> "${LOG_PATH}/toolchain_wrapper.log"
+	fi
+	for tool in cc cxx cpp fc f90 ar as nm ranlib strip objcopy objdump readelf
+	do
+	cat <<-EOF > "${TOOLCHAIN_PATH}/bin/toolchain_wrapper"
+		#!/bin/sh -e
+		(
+			source \${ENVIRONMENT_SOURCE_PATH}/environment.source
+			CMD_NAME=\$(basename \${0})
+			PREFIX=\$(echo \${CMD_NAME^^} | cut -d'_' -f3)
+			TOOL=\${PREFIX:+\${PREFIX}_FOR_}\$(echo \${CMD_NAME^^} | cut -d'_' -f2)
+			eval echo \\\${\${TOOL}} '\${@}' >> \${CMD_NAME}.log
+			eval \\\${\${TOOL}} '\${@}'
+		)
+	EOF
+	{
+		run_cmd "chmod -v +x \"${TOOLCHAIN_PATH}/bin/toolchain_wrapper\""
+		run_cmd "ln -sfv toolchain_wrapper \"${TOOLCHAIN_PATH}/bin/toolchain_build_${tool}\""
+		run_cmd "ln -sfv toolchain_wrapper \"${TOOLCHAIN_PATH}/bin/toolchain_${tool}\""
+	}  >> "${LOG_PATH}/toolchain_wrapper.log"
+	done
+}
+
+function setup_llvm () {
+	function download_llvm () {
+
+		local GCCURL=https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VER}/llvm-project-${LLVM_VER}.src.tar.xz
+		download_uncompress "${GCCURL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}"
+	}
+
+	function configure_llvm () {
+
+		local PLATFORM_CFLAGS C CXX AR NM RANLIB LINKER LINKER_FLAGS LTO
+
+		if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}" ]
+		then
+			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}\""
+		fi
+		run_cmd "mkdir -pv \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}\""
+
+		local PLATFORM_CFLAGS="-march=native"
+		case $(clang -v > /dev/null 2>&1; echo ${?}) in
+			0)
+				C="$(which clang)"
+				CXX="$(which clang++)"
+				AR="$(which llvm-ar)"
+				NM="$(which llvm-nm)"
+				RANLIB="$(which llvm-ranlib)"
+				LINKER=lld
+				LINKER_FLAGS="-fuse-ld=lld -Wl,--threads=${NPROCS}"
+				LTO=ON
+				echo "Clang for build and lto active."
+			;;
+			*)
+				C="${CC_FOR_BUILD}"
+				CXX="${CXX_FOR_BUILD}"
+				AR="${AR_FOR_BUILD}"
+				NM="${NM_FOR_BUILD}"
+				RANLIB="${RANLIB_FOR_BUILD}"
+				LINKER=gold
+				LINKER_FLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}"
+				LTO=OFF
+				echo "GNU gcc for build and lto not active."
+				run_cmd "sed -i 's/-flto\"/-flto=auto\"/g' \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/AddLLVM.cmake\""
+				run_cmd "sed -i 's/-flto\"/-flto=auto\"/g' \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/HandleLLVMOptions.cmake\""
+			;;
+		esac
+
+		unset CFLAGS CXXFLAGS CPPFLAGS PKG_CONFIG PKG_CONFIG_LIBDIR PKG_CONFIG_SYSROOT_DIR PKG_CONFIG_ALLOW_CROSS
+		export LDFLAGS="${LINKER_FLAGS}"
+		
+		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/cmake\" -S \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm\" -B \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}\" -G Ninja \\
+			-W no-dev \\
+			-DLLVM_PARALLEL_COMPILE_JOBS=${NPROCS} \\
+			-DLLVM_PARALLEL_LINK_JOBS=${PARALLEL_LINK_JOB} \\
+			\\
+			-DLLVM_CCACHE_BUILD:BOOL=ON \\
+			-DCCACHE_PROGRAM=${CCWRAPPER} \\
+			-DCMAKE_C_COMPILER=\"${C}\" \\
+			-DCMAKE_CXX_COMPILER=\"${CXX}\" \\
+			-DCMAKE_AR=\"${AR}\" \\
+			-DCMAKE_NM=\"${NM}\" \\
+			-DCMAKE_RANLIB=\"${RANLIB}\" \\
+			-DCMAKE_CROSSCOMPILING=True \\
+			-DLLVM_USE_LINKER=${LINKER} \\
+			-DCMAKE_C_FLAGS=\"${PLATFORM_CFLAGS}\" \\
+			-DCMAKE_CXX_FLAGS=\"${PLATFORM_CFLAGS}\" \\
+			-DCMAKE_ASM_FLAGS=\"${PLATFORM_CFLAGS}\" \\
+			-DCMAKE_EXE_LINKER_FLAGS=\"${LINKER_FLAGS} -Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib\" \\
+			-DCMAKE_SKIP_RPATH:BOOL=ON \\
+			\\
+			-DCMAKE_INSTALL_PREFIX=\"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}\" \\
+			-DCMAKE_BUILD_TYPE=Release \\
+			-DLLVM_TARGETS_TO_BUILD=\"all\" \\
+			-DLLVM_ENABLE_PROJECTS=\"clang;clang-tools-extra;lldb;lld;polly\" \\
+			-DLLVM_BINUTILS_INCDIR=/usr/include \\
+			\\
+			-DBUILD_SHARED_LIBS:BOOL=OFF \\
+			-DLLVM_ENABLE_LTO:BOOL=${LTO} \\
+			-DLLVM_ENABLE_LIBCXX:BOOL=OFF \\
+			-DLLVM_ENABLE_ZLIB:BOOL=ON \\
+			-DLLVM_ENABLE_FFI:BOOL=ON \\
+			-DLLVM_ENABLE_RTTI:BOOL=ON \\
+			-DLLVM_ENABLE_EH:BOOL=ON \\
+			-DLLVM_ENABLE_NEW_PASS_MANAGER:BOOL=ON \\
+			-DLLVM_ENABLE_BINDINGS:BOOL=OFF \\
+			-DLLVM_USE_PERF:BOOL=ON \\
+			-DLLVM_POLLY_LINK_INTO_TOOLS:BOOL=ON \\
+			-DLLVM_LIT_ARGS=-v \\
+			-DLLVM_INCLUDE_EXAMPLES:BOOL=ON \\
+			-DLLVM_INCLUDE_UTILS:BOOL=ON \\
+			-DLLVM_INCLUDE_TESTS:BOOL=OFF \\
+			-DLLVM_BUILD_EXTERNAL_COMPILER_RT:BOOL=OFF \\
+			-DLLVM_BUILD_EXAMPLES:BOOL=OFF \\
+			-DLLVM_BUILD_TESTS:BOOL=OFF \\
+			-DLLVM_BUILD_LLVM_DYLIB:BOOL=ON \\
+			-DLLVM_LINK_LLVM_DYLIB:BOOL=ON \\
+			-DLLVM_INSTALL_UTILS:BOOL=ON \\
+			\\
+			-DCLANG_PLUGIN_SUPPORT:BOOL=ON \\
+			-DCLANG_LINK_CLANG_DYLIB:BOOL=ON \\
+			-DENABLE_LINKER_BUILD_ID:BOOL=ON \\
+			-DCLANG_DEFAULT_RTLIB=libgcc \\
+			-DCLANG_DEFAULT_UNWINDLIB=libgcc \\
+			\\
+			-DCOMPILER_RT_INCLUDE_TESTS:BOOL=OFF \\
+			-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON"
+			#-DLLVM_LIBDIR_SUFFIX=64 \\
+	}
+
+	function build_llvm () {
+
+		#local LLVM_SHLIBDIR
+		#LLVM_SHLIBDIR=$(grep -E "install_symlink.*libLLVM-${LLVM_VER}.so" "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/tools/llvm-shlib/cmake_install.cmake" | head -n1 | grep -o "lib[36][24]")
+		#echo "### Shared LLVM libdir: ${LLVM_SHLIBDIR}"
+		#pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}"
+		run_cmd "LD_LIBRARY_PATH=${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/lib ninja $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -v; fi ) \\
+			-C \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}\" install/strip"
+		#pathremove LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}"
+	}
+
+	function configure_llvm_builtins () {
+
+		local LLVM_TARGET LLVM_INSTALL_PATH
+
+		LLVM_TARGET=${1}
+		# To be changed with: ${TOOLCHAIN_PATH}
+		LLVM_INSTALL_PATH=$(llvm-config --prefix)
+
+		if [ ! -d "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}" ]
+		then
+			run_cmd "mkdir -p \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}\""
+		fi
+		if [ -d "${DISTOS_PATH}" ]
+		then
+			if [ "$(find "${DISTOS_PATH}/usr/lib" "${DISTOS_PATH}/lib" -type f -name crti.o -mindepth 1 2>/dev/null | wc -l)" -ge 1 ]
+			then
+				local SYSROOT=${DISTOS_PATH}
+				export QEMU_LD_PREFIX="${DISTOS_PATH}"
+			fi
+		else
+			local SYSROOT=${BIN_PATH}
+			export QEMU_LD_PREFIX="${BIN_PATH}"
+			local WA_CFLAGS="--gcc-toolchain=${TOOLCHAIN_PATH}"
+			local WA_CXXFLAGS="--gcc-toolchain=${TOOLCHAIN_PATH}"
+		fi
+		local PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
+		### Can we build the RT builtins?
+		case x${HMARCH} in
+			xarmv*)
+					if [[ "${HMARCH}" < "armv7" && "${HMARCH}" != "armv6m" ]]
+					then
+						echo -n "### ${HMARCH} is not supported, RT Builtins disabled... "
+						local COMPILER_RT_BUILD_BUILTINS=OFF
+					else
+						local COMPILER_RT_BUILD_BUILTINS=ON
+					fi
+				;;
+			*) local COMPILER_RT_BUILD_BUILTINS=ON
+				;;
+		esac
+		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/cmake\" -S \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/compiler-rt\" -B \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}\" -G Ninja \\
+			\\
+			-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \\
+			-DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \\
+			-DCMAKE_C_COMPILER=${LLVM_INSTALL_PATH}/bin/clang \\
+			-DCMAKE_CXX_COMPILER=${LLVM_INSTALL_PATH}/bin/clang++ \\
+			-DCMAKE_AR=${LLVM_INSTALL_PATH}/bin/llvm-ar \\
+			-DCMAKE_NM=${LLVM_INSTALL_PATH}/bin/llvm-nm \\
+			-DCMAKE_RANLIB=${LLVM_INSTALL_PATH}/bin/llvm-ranlib \\
+			-DCMAKE_C_FLAGS=\"--target=${LLVM_TARGET} --sysroot=\"${SYSROOT}\" ${PLATFORM_CFLAGS} ${WA_CFLAGS}\" \\
+			-DCMAKE_CXX_FLAGS=\"--target=${LLVM_TARGET} --sysroot=\"${SYSROOT}\" ${PLATFORM_CFLAGS} ${WA_CXXFLAGS}\" \\
+			-DCMAKE_ASM_FLAGS=\"--target=${LLVM_TARGET} --sysroot=\"${SYSROOT}\" ${PLATFORM_CFLAGS}\" \\
+			-DCMAKE_EXE_LINKER_FLAGS=\"--target=${LLVM_TARGET} -fuse-ld=lld\" \\
+			-DCMAKE_C_COMPILER_TARGET=\"${LLVM_TARGET}\" \\
+			-DCMAKE_ASM_COMPILER_TARGET=\"${LLVM_TARGET}\" \\
+			\\
+			-DCMAKE_INSTALL_PREFIX=/lib/clang/${LLVM_VER} \\
+			-DCMAKE_BUILD_TYPE=Release \\
+			-DCMAKE_SYSROOT=\"${SYSROOT}\" \\
+			\\
+			-DLLVM_CONFIG_PATH=\"${LLVM_INSTALL_PATH}/bin/llvm-config\" \\
+			\\
+			-DCOMPILER_RT_INCLUDE_TESTS:BOOL=OFF \\
+			-DCOMPILER_RT_BUILD_BUILTINS:BOOL=${COMPILER_RT_BUILD_BUILTINS} \\
+			-DCOMPILER_RT_BUILD_LIBFUZZER:BOOL=ON \\
+			-DCOMPILER_RT_BUILD_MEMPROF:BOOL=ON \\
+			-DCOMPILER_RT_BUILD_PROFILE:BOOL=ON \\
+			-DCOMPILER_RT_BUILD_SANITIZERS:BOOL=ON \\
+			-DCOMPILER_RT_BUILD_XRAY:BOOL=ON \\
+			-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON \\
+			-DBUILD_SHARED_LIBS:BOOL:BOOL=OFF"
+
+	}
+
+	function build_llvm_builtins () {
+
+		local LLVM_TARGET=${1}
+		# To be changed with: ${TOOLCHAIN_PATH}
+
+		run_cmd "DESTDIR=${TOOLCHAIN_PATH} ninja \\
+			$( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -v; fi ) -j\"${NPROCS}\" \\
+			-C \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}\" install/strip"
+
+		### Create rt_builtins package
+		if [ -d "${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}" ]
+		then
+			run_cmd "rm -rf \"${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}\""
+		fi
+		run_cmd "DESTDIR=${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}${TARGET_PREFIX} \\
+			ninja $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -v; fi ) -j\"${NPROCS}\" \\
+			-C \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}\" install/strip"
+		create_sfx_package "${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}"
+		run_cmd "rm -rf \"${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}\""
+
+		if [ "${LLVM_BUILTINS_INSTALL}" -eq 1 ]
+		then
+			run_cmd "DESTDIR=\"${BIN_PATH}${TARGET_PREFIX}\" \\
+				ninja $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -v; fi ) -j\"${NPROCS}\" \\
+				-C \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}\" install/strip"
+		fi
+	}
+
+	OPTS="--install" OPTS_WITH_VALUE="--targets" param2value "${@}"
+
+	local LLVM_BUILTINS_INSTALL MEMORY_REQUIRED_G CURRENT_MEMORY PARALLEL_LINK_JOB
+
+	LLVM_BUILTINS_INSTALL=${_param_install:-0}
+	# Determine maximum amount of parallel link
+	# libLLVM.so linking takes 10G
+	# llvm-exegesis linking takes 8G
+	# libclang-cpp.so linking takes 7.5G
+	# libclang.so, c-index-test, clang-ast-dump, clangd, clangd-fuzzer linking takes 4G
+	# clang-tidy linking takes 3G
+	# liblldb.so, clangd-indexer, dexp linking takes 2G
+	# Remaining binaries less than 1G per process
+	MEMORY_REQUIRED_G=10
+	CURRENT_MEMORY=$(( $( awk '/MemTotal/ {print $2}' /proc/meminfo) / 10**6 ))
+	PARALLEL_LINK_JOB=$((
+			( CURRENT_MEMORY >= 10 ) +
+			( CURRENT_MEMORY >= 18 ) +
+			( CURRENT_MEMORY >= 26 ) +
+			( CURRENT_MEMORY >= 30 ) +
+			( CURRENT_MEMORY >= 34 ) +
+			( CURRENT_MEMORY >= 38 ) +
+			( CURRENT_MEMORY >= 42 ) +
+			( CURRENT_MEMORY >= 46 ) * ( CURRENT_MEMORY - 45 ) * 3
+		))
+	#PARALLEL_LINK_JOB=$(( "${CURRENT_MEMORY}" / "${MEMORY_REQUIRED_G}" ))
+
+	echo -n "Setting up clang-${LLVM_VER}... "
+	if [ ! -f "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang" ] || [ ! -f "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/ld.lld" ]
+	then
+		true > "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
+		echo "Memory allocated: ${CURRENT_MEMORY}G / Memory needed: ${MEMORY_REQUIRED_G}G" | log_buffer info >> "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
+		echo "Linker jobs allocated: ${PARALLEL_LINK_JOB}" | log_buffer info >> "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
+		if [ "${PARALLEL_LINK_JOB}" -lt 1 ]
+		then
+			trow_error "${ERROR_NOT_ENOUGH_MEMORY}" "Not enough memory to build clang, ${MEMORY_REQUIRED_G}G at least are required."
+		fi
+
+		if [ ! -d "${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}" ] || \
+			[ ! -d "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}" ]
+		then
+			echo -n "downloading... "
+			download_llvm >> "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log" 2>&1
+		fi
+		if [ ! -f "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/build.ninja" ]
+		then
+			echo -n "configuration... "
+			configure_llvm >> "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log" 2>&1
+		fi
+		echo -n "building host binaries... "
+		build_llvm >> "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log" 2>&1
+	fi
+	pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin"
+	case x${HM} in
+		xarm)
+			if [ "${HMFLOATABI}" == "hard" ]
+			then
+				local LLVM_ARCH=armhf
+			else
+				local LLVM_ARCH=arm
+			fi
+			;;
+		*)
+			local LLVM_ARCH=${HM}
+			;;
+	esac
+	if [ ! -f "${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/clang_rt.crtbegin-${LLVM_ARCH}.o" ]
+	then
+		true > "${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
+		if [ ! -d "${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}" ]
+		then
+			echo -n "downloading... "
+			download_llvm >> "${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log" 2>&1
+		fi
+		echo -n "target libraries configuration... "
+		configure_llvm_builtins "${HARCH}" >> "${LOG_PATH}/toolchain_llvm-builtins-${LLVM_VER}.log" 2>&1
+		echo -n "building target libraries... "
+		build_llvm_builtins "${HARCH}" >> "${LOG_PATH}/toolchain_llvm-builtins-${LLVM_VER}.log" 2>&1
+	fi
+	if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}" ]
+	then
+		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}\"" >> "${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
+	fi
+	if [ -d " ${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}" ]
+	then
+		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}\"" >> "${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
+	fi
+	echo "done."
+
+}
+
+function setup_python () {
+	function download_pyton () {
+
+		local PYTHONURL="https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PYTHON_VER}.tar.xz"
+		download_uncompress "${PYTHONURL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}"
+		run_cmd "curl -LsR -o \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py\" https://bootstrap.pypa.io/get-pip.py"
+	}
+
+	function build_python () {
+
+		if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}" ]
+		then
+			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}\""
+		fi
+		run_cmd "mkdir -p \"${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}\""
+		pushd "${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}"
+		case ${TOOLCHAIN} in
+			gnu)
+				local HOST_AR="${AR_FOR_BUILD}"
+				local HOST_NM="${NM_FOR_BUILD}"
+				local HOST_RANLIB="${RANLIB_FOR_BUILD}"
+				export CC="${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}"
+				export CXX="${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}"
+				export CFLAGS="-march=native"
+				export CXXFLAG="-march=native"
+				export AR="${HOST_AR}"
+				export NM="${HOST_NM}"
+				export RANLIB="${HOST_RANLIB}"
+				export LDFLAGS="-Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib ${GNU_EXTRALDFLAGS} \
+					-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS} ${OPTLINK_FLAGS}"
+				;;
+			llvm)
+				export CC="${CCWRAPPER:+${CCWRAPPER} }clang"
+				export CFLAGS="-march=native"
+				export AR="llvm-ar"
+				export NM="llvm-nm"
+				export RANLIB="llvm-ranlib"
+				export LDFLAGS="-Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib ${LLVM_EXTRALDFLAGS} \
+					-fuse-ld=lld -Wl,--threads=${NPROCS} ${LLVM_EXTRAPOLLYFLAGSLIBS} ${OPTLINK_FLAGS}"
+				;;
+		esac
+		export LDFLAGS+=" -Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/lib"
+		run_cmd "\"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configure\" \\
+			--prefix=\"${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}\" --enable-shared \\
+			--with-system-ffi --with-ensurepip=yes --disable-test-modules \\
+			--with-lto --enable-ipv6 \\
+			--with-system-ffi --with-ensurepip=yes"
+		#--with-address-sanitizer --with-undefined-behavior-sanitizer
+		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/make\""
+		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/make\" install"
+		run_cmd "${PYTHON_FOR_BUILD} \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py\""
+		popd
+		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}\""
+		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip\" -v install --upgrade setuptools pip jinja2 docutils"
+	}
+
+	function build_python_crossenv () {
+
+		run_cmd "${PIP_FOR_BUILD} install crossenv"
+		if [ ! -f "${PYTHON_FOR_TARGET}" ]
+		then
+			echo "${PYTHON_FOR_TARGET} not found!!! Run build python to build one." | log_buffer error
+			return 2
+		fi
+		run_cmd "\"${PYTHON_FOR_BUILD}\" -m crossenv \"${PYTHON_FOR_TARGET}\" \"${TOOLCHAIN_PATH}/venv-${HARCH}\""
+		run_cmd "rmdir -v \"${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include\""
+		run_cmd "ln -sfv \"${PYTHON_SEARCHPATH}${TARGET_INCLUDEDIR}/python${PYTHONBIN_VER}\" \"${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include\""
+		cat >"${TOOLCHAIN_PATH}/venv-${HARCH}/cross/bin/python3-config" <<-EOF
+			#!/bin/sh
+			${PYTHON_SEARCHPATH}${TARGET_PREFIX}/bin/python3-config \${@}
+		EOF
+		run_cmd "chmod +x \"${TOOLCHAIN_PATH}/venv-${HARCH}/cross/bin/python3-config\""
+		(
+			set -e
+			#shellcheck source=/dev/null
+			source "${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate"
+			run_cmd "build-python -m pip install --upgrade cython setuptools==60.10.0 wheel"
+			run_cmd "mkdir -p \"${TOOLCHAIN_BLDPATH}/build_python_crossenv\""
+			pushd "${TOOLCHAIN_BLDPATH}/build_python_crossenv"
+			TOOLCHAIN=gnu create_environment_source
+			#shellcheck source=/dev/null
+			source environment.source
+			run_cmd "cross-pip -v install --upgrade setuptools cython"
+			run_cmd "build-pip -v install --upgrade setuptools jinja2"
+			popd
+			run_cmd "rm -rf \"${TOOLCHAIN_BLDPATH}/build_python_crossenv\""
+			set +e
+		)
+	}
+
+	"check_${TOOLCHAIN}_c"
+
+	local PYTHON_DISTOS
+	PYTHON_DISTOS=0
+
+	echo -n "Setting up Python"
+	if [ -d "${DISTOS_PATH}" ]
+	then
+		local PYTHON_SEARCHPATH=${DISTOS_PATH}
+	else
+		local PYTHON_SEARCHPATH=${BIN_PATH}
+	fi
+	if [ "${1}" == detect ]
+	then
+		PYTHON_VER=$(find "${PYTHON_SEARCHPATH}/usr/includ"e -maxdepth 1 -name 'python*' -exec grep '#define PY_VERSION ' {}/patchlevel.h \; | awk '{print $3}' | sed 's/\"//g' | sort -u | tail -n1)
+		if [ "${PYTHON_VER}" == "" ]
+		then
+			trow_error 2 "...no way to guess its version and not specified. Exiting... "
+		else
+			echo -n "-${PYTHON_VER} (guessed)... "
+			PYTHON_DISTOS=1
+		fi
+	else
+		echo -n "-${PYTHON_VER}... "
+	fi
+
+	PYTHONBIN_VER=$( cut -d. -f1,2 <<<"${PYTHON_VER}")
+	# shellcheck disable=SC2034
+	PYTHONBIN_MAJVER=${PYTHONBIN_VER:-$(cut -d. -f1 <<<"${PYTHON_VER}")}
+	PYTHON_FOR_BUILD=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/python${PYTHONBIN_VER}
+	PIP_FOR_BUILD=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip${PYTHONBIN_VER}
+	PYTHON_FOR_TARGET=${PYTHON_SEARCHPATH}/usr/bin/python${PYTHONBIN_VER}
+	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+	pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin"
+	pathadd PYTHONPATH "${GLOBAL_TOOLCHAIN_PATH}/lib/python${PYTHONBIN_VER}/site-packages"
+
+	if [ ! -x "${PYTHON_FOR_BUILD}" ] || [ ! -x "${PIP_FOR_BUILD}" ]
+	then
+		echo -n "downloading... "
+		download_pyton | log_buffer > "${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log" 2>&1
+		echo -n "building... "
+		build_python | log_buffer >> "${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log" 2>&1
+		echo "done."
+		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}\""
+	else
+		echo "already there."
+	fi
+	if [ -d "${DISTOS_PATH}" ]
+	then
+		if [ ! "$(stat -c '%u' "${DISTOS_PATH}")" -eq "$(id -u)" ]
+		then
+			local SUDO_CMD='-s'
+		fi
+		if [ -f "${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/plat-${HARCH}/_sysconfigdata_m.py" ]
+		then
+			run_cmd "${SUDO_CMD}" "mv \"${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/plat-${HARCH}/_sysconfigdata_m.py\" \"${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/_sysconfigdata.py\""
+		fi
+		if [ -d "${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m-${HARCH}" ] && [ ! -L "${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m" ]
+		then
+			run_cmd "${SUDO_CMD}" "ln -s \"config-${PYTHONBIN_VER}m-${HARCH}\" \"${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m\""
+		fi
+	fi
+
+	if [ ! -f "${DISTOS_PATH}/usr/bin/python${PYTHONBIN_VER}" ] && [ "${PYTHON_DISTOS}" -eq 0 ]
+	then
+		NUMSPACES=1 build lfs/python3
+	fi
+
+	echo -n "Creating virtual cross environment... "
+	if [ ! -d "${TOOLCHAIN_PATH}/venv-${HARCH}" ]
+	then
+		build_python_crossenv > "${LOG_PATH}/toolchain_python-crossenv.log" 2>&1
+		echo "done."
+		echo
+	else
+		echo "already there."
+		echo
+	fi
+}
+
+function setup_full_toolchain () {
+	set -e
+	OPTS="--with-llvm --with-python --with-gnu-install --with-main-gcc --with-llvm-install" OPTS_WITH_VALUE="" param2value "${@}"
+
+	local WITH_LLVM WITH_PYTHON WITH_GNU_INSTALL WITH_MAIN_GCC WITH_LLVM_INSTALL SETUP_GCC SETUP_LLVM SETUP_GCC
+
+	WITH_LLVM=${_param_with_llvm:-0}
+	WITH_PYTHON=${_param_with_python:-0}
+	WITH_GNU_INSTALL=${_param_with_gnu_install:-0}
+	WITH_MAIN_GCC=${_param_with_main_gcc:-0}
+	WITH_LLVM_INSTALL=${_param_with_llvm_install:-0}
+	SETUP_GCC=
+	SETUP_LLVM=
+
+	if [ "${WITH_GNU_INSTALL}" -eq 1 ]
+	then
+		SETUP_GCC="--install"
+	fi
+	if [ "${WITH_MAIN_GCC}" -eq 1 ]
+	then
+		SETUP_GCC="${SETUP_GCC:+${SETUP_GCC} }--main_gcc"
+	fi
+	if [ "${WITH_LLVM_INSTALL}" -eq 1 ]
+	then
+		SETUP_LLVM="--install"
+	fi
+
+	setup_rust
+
+	build lfs/sccache:native
+	CCWRAPPER=${GLOBAL_TOOLCHAIN_PATH}/bin/sccache
+	SCCACHE_DIR=${GLOBAL_CACHE_PATH}/sccache
+	SCCACHE_CACHE_SIZE=${SCCACHE_CACHE_SIZE:-16G}
+	SCCACHE_NO_DAEMON=${SCCACHE_NO_DAEMON:-0}
+	export SCCACHE_DIR SCCACHE_CACHE_SIZE SCCACHE_NO_DAEMON
+	if [ ! -d "${SCCACHE_DIR}" ]
+	then
+		run_cmd "mkdir -pv \"${SCCACHE_DIR}\"" > "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
+	fi
+
+	build lfs/make:native
+	setup_autotools --default
+	build lfs/pkgconf:native
+	build lfs/pkgconf:cross
+	build lfs/bison:native
+	setup_binutils
+	# shellcheck disable=SC2086
+	setup_gcc ${SETUP_GCC}
+	setup_toolchain_wrapper
+	build lfs/cmake:native
+
+	if [ "${WITH_LLVM}" -eq 1 ] || [ "${TOOLCHAIN}" = llvm ]
+	then
+		setup_llvm ${SETUP_LLVM}
+	fi
+
+	build lfs/ninja:native
+
+	if [ "${WITH_PYTHON}" -eq 1 ]
+	then
+		setup_python
+	fi
+
+	build lfs/meson:native
+}
+
+function prepare_sysroot () {
+
+	echo -n "Preparing sysroot... "
+	if [ -d "${DISTOS_PATH}" ]
+	then
+		if [ ! "$(stat -c '%u' "${DISTOS_PATH}")" -eq "$(id -u)" ]
+		then
+			local SUDO_CMD='sudo'
+		fi
+
+		{
+			echo -e "DISTOS_PATH: ${DISTOS_PATH}\n"
+
+			find -L "${DISTOS_PATH}/usr/lib/${HARCH}" \( -lname "/lib/${HARCH}*" -o -lname "/etc/alternatives*" \) -print0 | xargs -0 -I{} -d'\n' -n1 -P"${NPROCS}" bash -c "
+				echo -n 'Relinking {}... '
+				set -x
+				eval ${SUDO_CMD} ln -f -s ../../..\$(readlink \"{}\") \"{}\"
+				set +x
+				echo 'done.'
+			"
+			find -L "${DISTOS_PATH}/etc/alternative"s \( -lname "/lib/${HARCH}*" -o -lname "/usr/lib/${HARCH}*" \) -print0 | xargs -0 -I{} -d'\n' -n1 -P"${NPROCS}" bash -c "
+				echo -n 'Relinking {}... '
+				set -x
+				eval ${SUDO_CMD} ln -f -s ../..\$(readlink \"{}\") \"{}\"
+				set +x
+				echo 'done.'
+			"
+		} >> "${LOG_PATH}/sysroot.log" 2>&1
+
+		if [ -f "${DISTOS_PATH}/usr/lib/${HARCH}/pkgconfig/libical.pc" ]
+		then
+			eval "${SUDO_CMD}" sed -i "s#/usr/lib/${HARCH:+${HARCH}/}libicu#${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}libicu#g" "${DISTOS_PATH}/usr/lib/${HARCH:+${HARCH}/}pkgconfig/libical.pc"
+		fi
+		echo "done."
+		echo
+	else
+		echo "fail. No image mounted."
+		return 1
+	fi
+
+}
+
+function create_sysroot () {
+
+	echo -n "Creating sysroot with $(basename "${1}")... "
+	if [ ! -d "${DISTOS_PATH}" ]
+	then
+		local ARCHIVE_DIRS="./boot ./bin ./lib ./usr/bin ./usr/include ./usr/lib ./usr/share ./usr/local/bin ./usr/local/include ./usr/local/lib ./etc ./opt"
+		mkdir -p "${DISTOS_PATH}"
+		[ ! -d "${LOG_PATH}" ] && mkdir "${LOG_PATH}"
+		if [[ "${1}" =~ ^http://|^https://|^ftp:// ]]
+		then
+			ARCHIVE_DIRS=${ARCHIVE_DIRS} STRIP_COMPONENTS=0 download_uncompress "${1}" "${DISTOS_PATH}" >> "${LOG_PATH}/sysroot.log" 2>&1
+		else
+			# shellcheck disable=SC2086
+			tar xf "${IMG_PATH}/${1}" -C"${DISTOS_PATH}" ${ARCHIVE_DIRS} >> "${LOG_PATH}/sysroot.log 2>&1"
+		fi
+		prepare_sysroot
+		echo "done."
+		echo
+	else
+		echo "already present. Run rm -rf ${DISTOS_PATH} if you want to update it."
+		echo
+	fi
+}
+
+export MAKEFLAGS="--jobs=${NPROCS}"
+export MAKEFLAGS+=" --load-average=${NPROCS}"
+#export MAKEFLAGS+=" --output-sync=line"
+
+TOOLCHAIN_SRCPATH=${SRC_PATH}/toolchain
+# shellcheck disable=SC2153
+TOOLCHAIN_BLDPATH=${BLD_PATH}/toolchain
+if [ ! -d "${TOOLCHAIN_PATH}" ]
+then
+	mkdir -p "${TOOLCHAIN_PATH}"
+fi
+GLOBAL_TOOLCHAIN_SRCPATH="${GLOBAL_SRC_PATH}"
+GLOBAL_TOOLCHAIN_BLDPATH="${GLOBAL_BLD_PATH}"
+if [ ! -d "${GLOBAL_TOOLCHAIN_PATH}" ]
+then
+	mkdir -p "${GLOBAL_TOOLCHAIN_PATH}"
+fi
+
+set_gnu_buildenv
+
+pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/bin"
+pathadd PATH "${TOOLCHAIN_PATH}/bin"

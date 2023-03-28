@@ -1,0 +1,235 @@
+#!/bin/bash -Ee
+
+describe-volumes () {
+		aws ec2 describe-volumes \
+				--query "Volumes[*].{ID:VolumeId}" \
+				--filters "Name=tag:purpose,Values=bbcrossbuild" \
+				--region "${aws_region_id}"
+}
+
+describe-instances () {
+	local QUERY_STRING=
+
+	case ${1} in
+		--not-terminated)
+			# shellcheck disable=SC2016
+			QUERY_STRING='!contains(State.Name, `terminated`)'
+			FIELD="InstanceId"
+		;;
+		--running)
+			 # shellcheck disable=SC2016
+			QUERY_STRING='contains(State.Name, `running`)'
+			FIELD="InstanceId"
+		;;
+		--dns)
+			 # shellcheck disable=SC2016
+			QUERY_STRING='contains(State.Name, `running`)'
+			FIELD="PublicDnsName"
+		;;
+	esac
+
+	# shellcheck disable=SC2046
+	aws ec2 describe-instances \
+				--query "Reservations[*].Instances[?${QUERY_STRING}].${FIELD}" \
+				--filters "Name=tag:purpose,Values=bbcrossbuild" \
+				--region "${aws_region_id}" \
+				--output text
+}
+
+create-volume () {
+		if [ -z "${EC2_EBS_VOL}" ]
+		then
+			echo -n "Creating volume..."
+			EC2_EBS_VOL=$( aws ec2 create-volume \
+				--availability-zone "${aws_az}" \
+				--size "${ec2_volume_size}" \
+				--volume-type gp3 \
+				--region "${aws_region_id}" \
+				--tag-specifications 'ResourceType=volume,Tags=[{Key=purpose,Value=bbcrossbuild}]' \
+				--output text | awk '{print $9}' )
+			
+			echo -e " ${EC2_EBS_VOL} created."
+		fi
+}
+
+create-keypair () {
+	if [ ! -f "${SSH_KEY}" ] && [ -z "${EC2_INSTANCE_ID}" ]
+	then
+		echo -n "Creating keypair ${SSH_KEY}..."
+		aws ec2 create-key-pair --key-name "${ec2_key_name}" --query 'KeyMaterial' --output text > "${SSH_KEY}"
+		chmod 400 "${SSH_KEY}"
+		echo " ok."
+	fi
+}
+
+run-instance () {
+	if [ -z "${EC2_INSTANCE_ID}" ]
+	then
+		echo -n "Launching ec2 instance..."
+		EC2_INSTANCE_ID=$( aws ec2 run-instances \
+			--image-id "$ec2_image_id" \
+			--count 1 \
+			--instance-type "$ec2_instance_type" \
+			--key-name "$ec2_key_name" \
+			--security-group-ids "$ec2_sg" \
+			--subnet-id "$ec2_subnet" \
+			--associate-public-ip-address \
+			--region "${aws_region_id}" \
+			--tag-specifications 'ResourceType=instance,Tags=[{Key=purpose,Value=bbcrossbuild}]' \
+			--output text | head -n2 | tail -n1 | awk '{print $10}' )
+		
+		echo -n " ${EC2_INSTANCE_ID} is spinning up..."
+
+		while [ -z "$(describe-instances --running)" ]
+		do
+			sleep 5
+		done
+
+		echo " running."
+
+		echo -n "Attaching ${EC2_EBS_VOL} to ${EC2_INSTANCE_ID}..." 
+
+		aws ec2 attach-volume \
+			--volume-id "${EC2_EBS_VOL}" \
+			--instance-id "$(describe-instances --running)" \
+			--device /dev/sdf \
+			--region "${aws_region_id}" \
+			--output text > /dev/null
+
+		echo " ok."
+	else
+		echo "This instance is still running: ${EC2_INSTANCE_ID}"
+	fi
+	DNS_NAME=$(describe-instances --dns)
+}
+
+prepare-instance () {
+	local SSH_CMD
+	SSH_CMD="ssh -oStrictHostKeyChecking=accept-new -i ${SSH_KEY} ec2-user@${DNS_NAME} --"
+	echo -n "Waiting for instance to be reachable..."
+	while [ "$(${SSH_CMD} echo OK 2>/dev/null || echo "KO" )" == "KO" ]
+	do
+		sleep 5
+	done
+	echo " ok, carry on..."
+	EC2_BLK=$(${SSH_CMD} lsblk -fnpr -o NAME,FSTYPE | tail -n1)
+	EC2_DEVICE=$(echo "${EC2_BLK}" | cut -d ' ' -f1)
+	EC2_FSTYPE=$(echo "${EC2_BLK}" | cut -d ' ' -f2)
+	if [ -z "${EC2_FSTYPE}" ]
+	then
+		echo -n "Creating data filesystem..."
+		${SSH_CMD} sudo mkfs -t xfs "${EC2_DEVICE}"
+		echo " ok."
+	fi
+	echo -n "Mounting data filesystem..."
+	${SSH_CMD} "mountpoint -q /mnt/bbcrossbuild || \
+		( sudo sudo mkdir -p /mnt/bbcrossbuild && \
+			sudo mount ${EC2_DEVICE} /mnt/bbcrossbuild &&\
+			sudo chown ec2-user /mnt/bbcrossbuild )"
+	echo " ok."
+	echo -n "Updating bbcrossbuild..."
+	${SSH_CMD} "[ ! -d \"\${HOME}/bbcrossbuild\" ] && \
+		( sudo dnf -y install git && \
+		git -C \"\${HOME}\" clone -b development https://github.com/badbat75/bbcrossbuild.git ) || :"
+	${SSH_CMD} "git -C \"\${HOME}/bbcrossbuild\" pull > /dev/null"
+	echo " ok."
+	echo -n "Configuring bbcrossbuild..."
+	${SSH_CMD} "[ ! -f \"\${HOME}/bbcrossbuild/bbxb.conf\" ] && \
+		( sed 's@^DATA_PATH=.*@DATA_PATH=/mnt/bbcrossbuild@' \"\${HOME}/bbcrossbuild/configurations/bbxb.conf\" > \"\${HOME}/bbcrossbuild/bbxb.conf\") || :"
+	${SSH_CMD} "\${HOME}/bbcrossbuild/utilities/bootstrap.aws"
+	echo " ok."
+}
+
+terminate-instance () {
+	if [ -n "${EC2_INSTANCE_ID}" ]
+	then
+		echo -n "Terminating instance..."
+		aws ec2 terminate-instances \
+			--instance-ids "${EC2_INSTANCE_ID}" \
+			--region "${aws_region_id}" \
+			--output text > /dev/null
+		while [ -n "$(describe-instances --not-terminated)" ]
+		do
+			sleep 5
+		done
+		echo " terminated."
+	else
+		echo "Nothing to terminate."
+	fi
+}
+
+delete-volume () {
+	if [ -n "${EC2_EBS_VOL}" ]
+	then
+		echo -n "Deleting volume..."
+		aws ec2 delete-volume \
+			--volume-id "${EC2_EBS_VOL}" \
+			--region "${aws_region_id}" \
+			--output text > /dev/null
+		echo " deleted."
+	fi
+}
+
+status () {
+		EC2_EBS_VOL=$(describe-volumes)
+		EC2_INSTANCE_ID=$(describe-instances --not-terminated)
+		DNS_NAME=$(describe-instances --dns)
+		if [ "${1}" == "--print" ]
+		then
+			if [ -n "${EC2_EBS_VOL}" ]
+			then
+				echo "Existing volume: ${EC2_EBS_VOL}"
+			else
+				echo "No volume found."
+			fi
+			if [ -n "${EC2_INSTANCE_ID}" ]
+			then
+				echo "Existing instance: ${EC2_INSTANCE_ID} / DNS: ${DNS_NAME}"
+				echo -e "\nConnect using this command:"
+				echo "ssh -i ${SSH_KEY} ec2-user@${DNS_NAME}"
+			else
+				echo "No instance found."
+			fi
+		fi
+}
+
+aws_region_id=eu-west-1
+aws_az=eu-west-1a
+
+# Amazon Linux 2023
+ec2_image_id=ami-0779c326801d5a843
+# Instance type
+ec2_instance_type=t2.micro
+ec2_key_name=bbxb
+ec2_sg=sg-09061a5a9ef45d838
+ec2_subnet=subnet-ad48f2db
+ec2_volume_size=100
+
+SSH_KEY=${HOME}/.ssh/${ec2_key_name}.pem
+
+echo
+
+case ${1} in
+	run)
+		status
+		create-keypair
+		create-volume
+		run-instance
+		prepare-instance
+		status
+	;;
+	terminate)
+		status
+		terminate-instance
+	;;
+	destroy)
+		status
+		terminate-instance
+		delete-volume
+	;;
+	show|*)
+		status --print
+	;;
+esac
+
+echo

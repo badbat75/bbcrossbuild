@@ -1,6 +1,5 @@
 # ax88179_178a
 PKG_URL="https://github.com/allocom/USBridgeSig-AX2v0/archive/refs/heads/master.tar.gz"
-#PKG_DEPS="raspberrypi/rpi-kernel_5.16"
 PKG_KERNEL_MOD=ax88179_178a
 PKG_KERNEL_MODPATH=drivers/net/usb
 BUILD_PROCESS=kernelmodbuild

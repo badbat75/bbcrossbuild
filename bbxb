@@ -1,55 +1,119 @@
 #!/bin/bash
 trap 'STATUS=${?}; \
-	set +x; \
-	echo "ERR received. [bbxb]"; \
-	echo; \
-	pause; \
-	check_images_functions; \
-	unmount_tag --all --kill || true; \
+	echo >&2; \
+	echo "[${FUNCNAME[*]} - ERR: ${STATUS}]" >&2; \
+	echo >&2; \
+	set +E +o pipefail; \
 	trap - ERR SIGINT; \
 	exit ${STATUS}' ERR
-trap 'set +x; \
-	echo "SIGINT received. [bbxb]"; \
-	trap - ERR SIGINT; \
-	echo; \
-	check_images_functions && unmount_tag --all --kill || true; \
-	exit 0' SIGINT
 
-START_PWD=${PWD}
-BB_HOME=$(dirname $(realpath ${BASH_SOURCE}))
-PROGRAM_NAME=$(basename ${BASH_SOURCE})
+set -E -o pipefail
 
-. ${BB_HOME}/core.functions
+BB_HOME=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
+#PROGRAM_NAME="$(basename "${BASH_SOURCE[0]}")"
+
+# shellcheck source=seterr
+source "${BB_HOME}/seterr"
+# shellcheck source=core.functions
+source "${BB_HOME}/core.functions"
 check_core_functions
 
 OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
-[ ${_param_v:-0} -eq 1 ] && set -x || true
 
-PRJ_NAME=${_param_1}
-PLATFORM_NAME=${_param_2}
+# shellcheck disable=SC2154
+PROJECT_NAME="${_param_1}"
+# shellcheck disable=SC2154
+PLATFORM_NAME="${_param_2}"
 
-if [ -z "${PRJ_NAME}" ]
+if [ -z "${PROJECT_NAME}" ]
 then
-	echo "No project name specified!!!"
-	exit 1
+	trow_error "${ERROR_NOT_VALID_OPTION}" "No project name specified."
 fi
 
-. setenv
-. ${BB_HOME}/build.functions
-. ${BB_HOME}/project.functions
-. ${BB_HOME}/buildenv.functions
-. ${BB_HOME}/images.functions
-. ${BB_HOME}/data.functions
-
-PRJ=${PRJ_PATH}/${PRJ_NAME}.prj
-if [ ! -f ${PRJ} ]
+if [ -z "${PLATFORM_NAME}" ]
 then
-	echo "Project ${PRJ} does not exist."
-	exit 1
+	trow_error "${ERROR_NOT_VALID_OPTION}" "No platform name specified."
 fi
 
-echo "Project path: ${DATA_PATH}/${PRJ_NAME}"
+ulimit -n 2048
+umask 0022
+
+if [ -f "${BB_HOME}/bbxb.conf" ]
+then
+	# shellcheck source=./bbxb.conf
+	source "${BB_HOME}/bbxb.conf"
+fi
+
+PROJECT=${BB_HOME}/${PRJ_PATH:-projects}/${PROJECT_NAME}.prj
+PLATFORM=${BB_HOME}/${PLATFORM_DIR:-platforms}/${PLATFORM_NAME}.conf
+
+if [ ! -f "${PLATFORM}" ]
+then
+	trow_error "${ERROR_FILE_NOT_FOUND}" "Platform ${PLATFORM} does not exist."
+fi
+
+# shellcheck source=platforms/generic-x64.conf
+source "${PLATFORM}"
+# shellcheck source=setenv
+source "${BB_HOME}/setenv"
+# shellcheck source=build.functions
+source "${BB_HOME}/build.functions"
+# shellcheck source=project.functions
+source "${BB_HOME}/project.functions"
+# shellcheck source=toolchain.functions
+source "${BB_HOME}/toolchain.functions"
+# shellcheck source=images.functions
+source "${BB_HOME}/images.functions"
+# shellcheck source=data.functions
+source "${BB_HOME}/data.functions"
+
+trap 'STATUS=${?}; \
+	echo >&2; \
+	echo "[${FUNCNAME[*]} - ERR: ${STATUS}]" >&2; \
+	echo >&2; \
+	set +E +o pipefail; \
+	trap - SIGINT; \
+	unmount_tag --all || true; \
+	trap - ERR; \
+	exit ${STATUS}' ERR
+trap 'echo >&2; \
+	echo "[${FUNCNAME[*]}] SIGINT received." >&2; \
+	echo >&2; \
+	set +E +o pipefail; \
+	trap - SIGINT; \
+	unmount_tag --all || true; \
+	trap - ERR; \
+	exit 0' SIGINT
+
+if [ ! -f "${PROJECT}" ]
+then
+	trow_error "${ERROR_FILE_NOT_FOUND}" "Project ${PROJECT} does not exist."
+fi
+
+echo "Project path: ${DATA_PATH}/${PROJECT_NAME}"
 echo
-. $PRJ
-check_images_functions && unmount_tag --all || true
+
+if [ ! -d "${GLOBAL_LOG_PATH}" ]
+then
+	mkdir -p "${GLOBAL_LOG_PATH}"
+fi
+
+if [ ! -d "${LOG_PATH}" ]
+then
+	mkdir -p "${LOG_PATH}"
+fi
+
+if [ ! -d "${USERDATA_PATH}" ]
+then
+	mkdir -p "${USERDATA_PATH}"
+fi
+
+# shellcheck source=projects/lfs.prj
+source "${PROJECT}"
+
+unmount_tag --all
+
+echo -e "Build completed!\n"
+
+set +E +o pipefail
 trap - ERR SIGINT

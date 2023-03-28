@@ -1,7 +1,7 @@
 # libcdio-paranoia_10.2+2.0.0-1
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libc/libcdio-paranoia/libcdio-paranoia_10.2%2B2.0.0.orig.tar.gz"
 BUILD_PROCESS=configmake
-AUTOCONF=1
+PKG_AUTOCONF=1
 CONF_FLAGS="--disable-cddb --disable-vcd-info"
 INST_CMD=install-strip
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libc/libcdio-paranoia/libcdio-paranoia_10.2%2B2.0.0-1.debian.tar.xz"

@@ -1,0 +1,59 @@
+# bluez-alsa_4
+PKG_SUFFIX=".0.0"
+PKG_URL="https://github.com/Arkq/bluez-alsa/archive/refs/tags/v4${PKG_SUFFIX}.tar.gz"
+BUILD_PROCESS=configmake
+PKG_AUTOCONF=1
+CONF_FLAGS="--with-alsaplugindir=\${INSTALL_LIBDIR}\${INSTALL_LIBSUFFIX}/alsa-lib --with-bash-completion --enable-a2dpconf --enable-cli --enable-rfcomm --enable-hcitop --enable-aac --enable-ldac --enable-mpg123 --enable-manpages --enable-systemd"
+CONF_FLAGS+=" --disable-payloadcheck"
+PKG_CFLAGS="-I${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/dbus-1.0/include -I${DISTOS_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/glib-2.0/include"
+INST_CMD=install-strip
+PKG_DEPS="moode/alsa-lib moode/bluez_5 raspbian/sbc-1.4 moode/fdk-aac_2.0.1 moode/libldac_2.0.2.3+af2dd23 moode/mpg123_1.29.2"
+PATCHES=
+
+PKG_POSTBUILD="install -d ${PKG_PKGPATH}/run/bluealsa
+	mkdir -p ${PKG_PKGPATH}/lib/systemd/system
+	cat > ${PKG_PKGPATH}/lib/systemd/system/bluez-alsa.service <<-EOF
+		[Unit]
+		Description=Bluealsa daemon
+		Documentation=https://github.com/Arkq/bluez-alsa/
+		After=dbus-org.bluez.service
+		Requires=dbus-org.bluez.service
+
+		[Service]
+		Type=dbus
+		BusName=org.bluealsa
+		EnvironmentFile=-/etc/default/bluez-alsa
+		ExecStart=/usr/bin/bluealsa \\\$OPTIONS
+		Restart=on-failure
+		ProtectSystem=strict
+		ProtectHome=true
+		PrivateTmp=true
+		PrivateDevices=true
+		RemoveIPC=true
+		RestrictAddressFamilies=AF_UNIX AF_BLUETOOTH
+		; Also non-privileged can user be used
+		; this example assumes a user and group called 'bluealsa' exist
+		;User=bluealsa
+		;Group=bluealsa
+		;NoNewPrivileges=true
+
+		[Install]
+		WantedBy=bluetooth.target
+	EOF
+	mkdir -p ${PKG_PKGPATH}/etc/default
+	cat > ${PKG_PKGPATH}/etc/default/bluez-alsa <<-EOF
+		# Config file for blues-alsa.service
+		# Set the bluealsa option, please see bluealsa manpage
+		OPTIONS=\"\"
+	EOF
+"
+case ${WITH_APTX} in
+	openaptx)
+		PKG_DEPS+=" moode/openaptx_1.3.1+4f5b8fd"
+		CONF_FLAGS+=" --enable-aptx --enable-aptx-hd"
+		;;
+	libopenaptx)
+		PKG_DEPS+=" moode/libopenaptx_0.2.1"
+		CONF_FLAGS+=" --enable-aptx --enable-aptx-hd --with-libopenaptx"
+		;;
+esac

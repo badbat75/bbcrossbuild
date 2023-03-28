@@ -1,0 +1,16 @@
+# camillagui_1
+PKG_SUFFIX=.0.0
+PKG_URL="https://github.com/HEnquist/camillagui/archive/refs/tags/v1${PKG_SUFFIX}.tar.gz"
+PKG_DEPS="moode/moode-pkgbuild_8"
+BUILD_PROCESS=downloadonly
+PKG_COPYSRC=1
+MOODE_CAMILLAGUI_PATH=${SRC_PATH}/moode-pkgbuild_8/packages/camillagui
+PKG_PREBUILD="patch -p1 < ${MOODE_CAMILLAGUI_PATH}/camillagui_hide_files.patch"
+PKG_POSTBUILD="
+    npm install
+    npm install browserslist@latest
+    find node_modules/*/lib -type f -name '*.js' -exec sed -i 's|md4|sha512|g' {} \\;    
+    npm run build
+    mkdir -pv ${PKG_PKGPATH}/opt/camillagui
+    cp -frv build ${PKG_PKGPATH}/opt/camillagui/"
+# CONF_FLAGS=""

@@ -1,12 +1,12 @@
 # crda_3.18-1
 PKG_URL="http://archive.raspbian.org/raspbian/pool/main/c/crda/crda_3.18.orig.tar.xz"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/c/crda/crda_3.18-1.debian.tar.xz"
-PKG_CFLAGS="-I${BIN_PATH}\${BUILD_INCLUDEDIR}/libnl3"
+PKG_CFLAGS="-I${BIN_PATH}\${INSTALL_INCLUDEDIR}/libnl3"
 PKG_LDFLAGS="libreg.so"
 BUILD_PROCESS=simplemake
-PKG_DEPS="raspbian/libnl3_3.5.0-1 firmwares/wireless-regdb"
+PKG_DEPS="raspbian/libnl3_3.7.0 firmwares/wireless-regdb"
 RUNTIME_PUBKEY_DIR=/lib/crda/pubkeys
-PKG_MAKEVARS="PREFIX=\${BUILD_PREFIX} LIBDIR=/lib/crda INCDIR=\${BUILD_INCLUDEDIR} LDLIBREG=-Wl,-rpath,/lib/crda REG_BIN=/lib/crda/regulatory.bin USE_OPENSSL=1 PUBKEY_DIR=${BIN_PATH}${RUNTIME_PUBKEY_DIR} RUNTIME_PUBKEY_DIR=${RUNTIME_PUBKEY_DIR} RUNTIME_PUBKEY_ONLY=1 all_noverify"
+PKG_MAKEVARS="PREFIX=\${INSTALL_PREFIX} LIBDIR=/lib/crda INCDIR=\${INSTALL_INCLUDEDIR} LDLIBREG=-Wl,-rpath,/lib/crda REG_BIN=/lib/crda/regulatory.bin USE_OPENSSL=1 PUBKEY_DIR=${BIN_PATH}${RUNTIME_PUBKEY_DIR} RUNTIME_PUBKEY_DIR=${RUNTIME_PUBKEY_DIR} RUNTIME_PUBKEY_ONLY=1 all_noverify"
 PKG_PREBUILD="sed -i '/^CFLAGS/ s/ -Werror\| -O2//' Makefile"
 PKG_POSTBUILD="install -D -m 755 debian/setregdomain ${PKG_PKGPATH}/lib/crda/setregdomain &&
 install -m 644 pubkeys/*.pem ${PKG_PKGPATH}${RUNTIME_PUBKEY_DIR}/ &&
