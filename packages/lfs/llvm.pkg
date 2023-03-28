@@ -1,0 +1,19 @@
+# llvm
+PKG_VER=${LLVM_VER}
+PKG_URL="https://github.com/llvm/llvm-project/releases/download/llvmorg-${PKG_VER}/llvm-${PKG_VER}.src.tar.xz"
+PKG_DEPS=lfs/binutils
+BUILD_PROCESS=cmakebuild
+CONF_FLAGS="-DLLVM_ENABLE_FFI=ON"
+CONF_FLAGS+=" -DLLVM_BUILD_LLVM_DYLIB=ON"
+CONF_FLAGS+=" -DLLVM_LINK_LLVM_DYLIB=ON"
+CONF_FLAGS+=" -DLLVM_ENABLE_RTTI=ON "
+CONF_FLAGS+=" -DLLVM_TARGETS_TO_BUILD=all"
+CONF_FLAGS+=" -DLLVM_BINUTILS_INCDIR=\"${BIN_PATH}/usr/include\""
+CONF_FLAGS+=" -DLLVM_INCLUDE_BENCHMARKS=OFF"
+CONF_FLAGS+=" -DCLANG_DEFAULT_PIE_ON_LINUX=ON"
+CONF_FLAGS+=" -DLLVM_INCLUDE_TESTS:BOOL=OFF"
+CONF_FLAGS+=" -Wno-dev"
+PKG_MAKETARGETS="install/strip"
+PKG_OVERRIDESHARED=0
+PKG_PREBUILD="download_uncompress https://github.com/llvm/llvm-project/releases/download/llvmorg-${PKG_VER}/cmake-${PKG_VER}.src.tar.xz \${PKG_SRCPATH}
+    mv cmake-${PKG_VER} cmake"

@@ -55,6 +55,7 @@ case "${PKG_TARGET}" in
 		CONF_FLAGS+=" -Dtpm2=false"
 	;;
 	*)
+		PKG_DEPS+=" lfs/systemd:bootstrap"
 		PKG_DEPS+=" lfs/libcap2 lfs/libaudit lfs/openssl lfs/Linux-PAM lfs/polkit lfs/GLib lfs/kmod lfs/util-linux"
 		### Optional packages
 		PKG_DEPS+=" lfs/gnutls"
