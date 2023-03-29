@@ -129,6 +129,15 @@ KERNEL_LTOENABLE=thin
 	build lfs/Avahi
 ### X11
 	build lfs/Mesa
+	build lfs/Xwayland
+	build lfs/encodings
+	build lfs/font-alias
+	build lfs/font-adobe-utopia-type1
+	build lfs/font-bh-ttf
+	build lfs/font-bh-type1
+	build lfs/font-ibm-type1
+	build lfs/font-misc-ethiopic
+	build lfs/font-xfree86-type1
 ### Multimedia
 	build lfs/alsa-utils
 ### Development
