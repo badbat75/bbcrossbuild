@@ -128,6 +128,10 @@ KERNEL_LTOENABLE=thin
 	build lfs/openssh
 	build lfs/Avahi
 ### X11
+	build lfs/xorg-server
+	build lfs/xf86-input-libinput
+	build lfs/xf86-input-evdev
+	build lfs/xinit
 	build lfs/Mesa
 	build lfs/Xwayland
 	build lfs/encodings
