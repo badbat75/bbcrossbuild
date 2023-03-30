@@ -26,8 +26,9 @@ case ${PKG_TARGET} in
 		#PKG_DEPS+=" lfs/libtizonia"
 		PKG_DEPS+=" lfs/Vulkan:loader lfs/Vulkan:glslang"
 		CONF_ENV="LLVM_CONFIG=\${SYSROOT}${INSTALL_EXECPREFIX}/bin/llvm-config"
-		CONF_FLAGS+=" -Dgallium-drivers=auto"
+		CONF_FLAGS+=" -Dgallium-drivers=v3d,vc4,freedreno,etnaviv,nouveau,svga,tegra,virgl,lima,panfrost,swrast,zink"
 		CONF_FLAGS+=" -Dvulkan-drivers=auto"
+		PKG_MAKEENV="sed 's,-isystem/usr/include ,,g' -i build.ninja;"
 	;;
 esac
 

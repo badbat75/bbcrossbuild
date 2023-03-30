@@ -794,8 +794,6 @@ function configmake () {
 	fi
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	create_environment_source --target "${PKG_TARGET_ENV}"
-	# shellcheck source=/dev/null
-	source environment.source
 	if [[ "${CONF_CMD}" =~ ^\./.* ]]
 	then
 		local RUNCONFIG_CMD="${CONF_CMD}"
@@ -809,10 +807,12 @@ function configmake () {
 	fi
 	cat >runconfig.sh <<-EOF
 		#!/bin/bash -x
+		source environment.source
 		${CONF_ENV} ${RUNCONFIG_CMD} ${CONF_FLAGS} ${CONF_VARS} \${@}
 	EOF
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -x
+		source environment.source
 		${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
 	EOF
 	run_cmd "chmod +x runconfig.sh runmake.sh"
@@ -834,10 +834,9 @@ function simplemake () {
 	cd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	create_environment_source --target "${PKG_TARGET_ENV}"
-	# shellcheck source=/dev/null
-	source environment.source
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -x
+		source environment.source
 		${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} PREFIX=${INSTALL_PREFIX} LIBSUFFIX=${INSTALL_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
 	EOF
 	run_cmd "chmod +x runmake.sh"
@@ -853,7 +852,6 @@ function simplemake () {
 }
 
 function cmakebuild () {
-
 	run_cmd "mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	cd "${PKG_BLDPATH}"
 	if [ "${PKG_OVERRIDESHARED:-${BUILD_LIBSHARED}}" -eq 1 ]
@@ -875,11 +873,10 @@ function cmakebuild () {
 
 	echo "CCWRAPPER=\"\" create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	CCWRAPPER="" create_environment_source --target "${PKG_TARGET_ENV}"
-	# shellcheck source=/dev/null
-	source environment.source
-
+	
 	cat >runconfig.sh <<-EOF
 		#!/bin/bash -x
+		source environment.source
 		${CONF_ENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/cmake ${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}} \\
 		   -G "${CMAKE_GENERATOR}" \\
 		   -DCMAKE_BUILD_TYPE="Release" \\
@@ -887,9 +884,9 @@ function cmakebuild () {
 		   -DCMAKE_SYSROOT=${SYSROOT} \\
 		   -DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \\
 		   -DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \\
-		   -DCMAKE_AR=${AR} \\
-		   -DCMAKE_RANLIB=${RANLIB} \\
-		   -DCMAKE_STRIP=${STRIP} \\
+		   -DCMAKE_AR=\${AR} \\
+		   -DCMAKE_RANLIB=\${RANLIB} \\
+		   -DCMAKE_STRIP=\${STRIP} \\
 		   -DCMAKE_CROSSCOMPILING:BOOL=ON \\
 		   -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" \\
 		   -DCMAKE_INSTALL_LIBDIR="${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}" \\
@@ -897,6 +894,8 @@ function cmakebuild () {
 		   -DCMAKE_INSTALL_INCLUDEDIR="${INSTALL_INCLUDEDIR}" \\
 		   -DCMAKE_INSTALL_SYSCONFDIR="${INSTALL_SYSCONFDIR}" \\
 		   -DCMAKE_INSTALL_DATADIR="${INSTALL_SHAREDIR}" \\
+		   -DCMAKE_INSTALL_PACKAGEDIR="${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/cmake" \\
+		   -DCMAKE_MODULE_PATH="${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/cmake" \\
 		   ${CONF_FLAGS}
 	EOF
 	echo -e "\nCMake generator: \"${CMAKE_GENERATOR}\"\n" | log_buffer info
@@ -904,12 +903,14 @@ function cmakebuild () {
 		"Ninja")
 			cat >runmake.sh <<-EOF
 				#!/bin/bash -x
+				source environment.source
 				${PKG_MAKEENV} DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}
 			EOF
 		;;
 		"Unix Makefiles")
 			cat >runmake.sh <<-EOF
 				#!/bin/bash -x
+				source environment.source
 				${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
 			EOF
 		;;
@@ -943,6 +944,8 @@ function mesonninja () {
 			echo
 		}
 		local C C_ARGS C_LINK_ARGS CPP CPP_ARGS CPP_LINK_ARGS FORTRAN FORTRAN_ARGS FORTRAN_LINK_ARGS
+		# shellcheck source=/dev/null
+		source environment.source
 		C=$(buildmesonargs "${CC}")
 		C_ARGS=$(buildmesonargs "${CFLAGS}")
 		C_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
@@ -996,8 +999,6 @@ function mesonninja () {
 	esac
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	create_environment_source --target "${PKG_TARGET_ENV}"
-	# shellcheck source=/dev/null
-	source environment.source
 	if [ "${STD_CONF_FLAGS:-1}" -eq 1 ]
 	then
 		CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} --includedir=${INSTALL_INCLUDEDIR} \
@@ -1031,10 +1032,12 @@ function mesonninja () {
 	esac
 	cat > runconfig.sh <<-EOF
 		#!/bin/bash -x
+		source environment.source
 		${CONF_ENV} ${RUNCONFIG_CMD} ${CONF_FLAGS} \${@}	
 	EOF
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -x
+		source environment.source
 		${PKG_MAKEENV} DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}
 	EOF
 	run_cmd "chmod +x runconfig.sh runmake.sh"
@@ -1139,6 +1142,7 @@ function kernelmodbuild () {
 function kernelbuild () {
 	function make4kern () {
 		cat <<-EOF > make4kern.sh
+			source environment.source
 			KBUILD_BUILD_TIMESTAMP='' \\
 			make \\
 				V=${MAKEVERBOSE:-0} \\
@@ -1180,8 +1184,6 @@ function kernelbuild () {
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	create_environment_source --target "${PKG_TARGET_ENV}"
 	sed -e 's/FLAGS=.*/FLAGS=/g' -e 's/PKG_CONFIG\(.*\)=.*/PKG_CONFIG\1=/' -i environment.source
-	# shellcheck source=/dev/null
-	source environment.source
 
 	make4kern
 
@@ -1532,10 +1534,9 @@ function custom () {
 	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	create_environment_source --target "${PKG_TARGET_ENV}"
-	# shellcheck source=/dev/null
-	source environment.source
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -ex
+		source environment.source
 
 	EOF
 	echo "${PKG_BUILDSCRIPT}" >>runmake.sh
@@ -1549,11 +1550,10 @@ function perlmodule () {
 	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	create_environment_source --target "${PKG_TARGET_ENV}"
-	# shellcheck source=/dev/null
-	source environment.source
 	pwd
 	cat > runconfig.sh <<-EOF
 		#!/bin/bash
+		source environment.source
 
 		perl Makefile.PL \\
 		AR='${AR}' CC='${CC}' CPPRUN='${CPP}' FULL_AR='${AR}' LD='${CC}' \\
@@ -1569,6 +1569,7 @@ function perlmodule () {
 	run_cmd "./runconfig.sh"
 	cat > runmake.sh <<-EOF
 		#!/bin/bash
+		source environment.source
 		make PERL_INC='${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/5.36/core_perl/CORE'
 	EOF
 	run_cmd "chmod +x runmake.sh"

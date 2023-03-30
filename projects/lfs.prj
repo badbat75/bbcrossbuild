@@ -10,7 +10,7 @@ LFS_ENABLESSH=${LFS_ENABLESSH:-1}
 LFS_ENABLEDEV=${LFS_ENABLEDEV:-0}
 LFS_HOSTNAME=${LFS_HOSTNAME:-lfs}
 LFS_FSTYPE=${LFS_FSTYPE:-ext4}
-LFS_FSSIZE=${LFS_FSSIZE:-4G}
+LFS_FSSIZE=${LFS_FSSIZE:-6G}
 LFS_WLANDEV=${LFS_WLANDEV:-wlan0}
 
 echo "Tool chain: ${TOOLCHAIN}"
@@ -249,7 +249,7 @@ function build_lfs_image () {
 				initramfs ${INITRAMFS_NAME} followkernel
 			EOF
 			cat >${BIN_PATH}/boot/cmdline.txt <<-EOF
-				${KERNEL_BOOTPARAMS}
+				console=serial0,115200 ${KERNEL_BOOTPARAMS}
 			EOF
 		;;
 		generic-x64)
