@@ -1070,20 +1070,23 @@ function cargobuild () {
 		2|thin)	CARGO_PROFILE_RELEASE_LTO=thin ;;
 		*) CARGO_PROFILE_RELEASE_LTO=off ;;
 	esac
-	RUSTFLAGS+="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}"
-	echo "RUSTFLAGS=${RUSTFLAGS}" | log_buffer info
-	cat >runmake.sh <<-EOF
-		#!/bin/bash -x
-		source environment.source
-		CARGO_PROFILE_RELEASE_OPT_LEVEL=${OPTLEVEL}
-		CARGO_PROFILE_RELEASE_LTO=${CARGO_PROFILE_RELEASE_LTO}
-		for param in ${TOOLCHAIN_EXTRA_C_CMD} ${SYSROOT_FLAGS} ${STRIP_FLAG} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS} ${TOOLCHAIN_LINKERFLAGS} ${PKG_LDFLAGS}
+	(
+		settcenv --target "${PKG_TARGET_ENV}"
+		for param in ${TOOLCHAIN_EXTRA_C_CMD} ${SYSROOT_FLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS} ${TOOLCHAIN_LINKERFLAGS} ${PKG_LDFLAGS}
 		do
-			RUSTFLAGS+="-C link-arg=\${param} "
+			RUSTFLAGS+="-C link-arg=${param} "
 		done
-		export CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO RUSTFLAGS
-		cargo build $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -n "--verbose"; fi ) --release ${CONF_FLAGS} --target=${CARGO_TARGET}
-	EOF
+		RUSTFLAGS+="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}"
+		echo "RUSTFLAGS=${RUSTFLAGS}" | log_buffer info
+		cat >runmake.sh <<-EOF
+			#!/bin/bash -x
+			CARGO_PROFILE_RELEASE_OPT_LEVEL=${OPTLEVEL}
+			CARGO_PROFILE_RELEASE_LTO=${CARGO_PROFILE_RELEASE_LTO}
+			RUSTFLAGS=${RUSTFLAGS}
+			export CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO RUSTFLAGS
+			cargo build $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -n "--verbose"; fi ) --release ${CONF_FLAGS} --target=${CARGO_TARGET}
+		EOF
+	)
 	run_cmd "chmod +x runmake.sh"
 	run_cmd "./runmake.sh"
 	for file in ${CARGO_BINLIST}
@@ -1175,7 +1178,7 @@ function kernelbuild () {
 		run_cmd "chmod +x make4kern.sh"
 	}
 
-	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
+	run_cmd "cp -rp \"${PKG_SRCPATH}\"/* ${PKG_BLDPATH}"
 	cd "${PKG_BLDPATH}"
 
 	if [ "${GCC_DEFAULT_LD}" == gold ]
@@ -1325,7 +1328,7 @@ function pythonbuild () {
 		run_cmd "mkdir -pv \"${PKG_BLDPATH}\""
 		PIPPKG=${PKG_NAME}${PKG_VER:+==${PKG_VER}}
 	else
-		run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\""
+		run_cmd "cp -rp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 		PIPPKG=.
 	fi
 	cd "${PKG_BLDPATH}"
@@ -1407,7 +1410,7 @@ function pythonbuild () {
 
 function boostbuild () {
 
-	run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\""
+	run_cmd "cp -rp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 	cd "${PKG_BLDPATH}"
 	if [ -d "${DISTOS_PATH}${INSTALL_INCLUDEDIR}" ]
 	then
@@ -1524,7 +1527,7 @@ function boostbuild () {
 
 function custom () {
 
-	run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\""
+	run_cmd "cp -rp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -ex
@@ -1538,7 +1541,7 @@ function custom () {
 }
 
 function perlmodule () {
-	run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\""
+	run_cmd "cp -rp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	cat > runconfig.sh <<-EOF
 		#!/bin/bash
