@@ -737,9 +737,6 @@ function downloadonly () {
 	then
 		cd "${PKG_BLDPATH}"
 		echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-		create_environment_source
-		# shellcheck source=/dev/null
-		source environment.source
 	fi
 }
 
@@ -798,8 +795,6 @@ function configmake () {
 			;;
 		esac
 	fi
-	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	create_environment_source --target "${PKG_TARGET_ENV}"
 	if [[ "${CONF_CMD}" =~ ^\./.* ]]
 	then
 		local RUNCONFIG_CMD="${CONF_CMD}"
@@ -838,8 +833,6 @@ function configmake () {
 function simplemake () {
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
 	cd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
-	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	create_environment_source --target "${PKG_TARGET_ENV}"
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -x
 		source environment.source
@@ -1003,8 +996,6 @@ function mesonninja () {
 		### CPPFLAGS --sysroot is not passed to preprocessor
 		llvm) PKG_FAULTYCFLAGS=1 ;;
 	esac
-	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	create_environment_source --target "${PKG_TARGET_ENV}"
 	if [ "${STD_CONF_FLAGS:-1}" -eq 1 ]
 	then
 		CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} --includedir=${INSTALL_INCLUDEDIR} \
@@ -1063,8 +1054,6 @@ function cargobuild () {
 
 	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
 	cd "${PKG_BLDPATH}"
-	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	create_environment_source --target "${PKG_TARGET_ENV}"
 	local CARGO_BIN CARGO_LIB CARGO_TARGET CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO RUSTFLAGS
 	CARGO_BIN=${CARGO_BIN:-${INSTALL_EXECPREFIX}/bin}
 	CARGO_LIB=${CARGO_LIB:-${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}}
@@ -1194,8 +1183,6 @@ function kernelbuild () {
 	then
 		GCC_DEFAULT_LD=bfd
 	fi
-	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	create_environment_source --target "${PKG_TARGET_ENV}"
 	sed -e 's/FLAGS=.*/FLAGS=/g' -e 's/PKG_CONFIG\(.*\)=.*/PKG_CONFIG\1=/' -i environment.source
 
 	make4kern
@@ -1397,8 +1384,6 @@ function pythonbuild () {
 	then
 		local VERBOSE="-v"
 	fi
-	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	create_environment_source --target "${PKG_TARGET_ENV}"
 	# shellcheck source=/dev/null
 	source environment.source
 	if [ "${PKG_PYTHONBUILD:-1}" -eq 1 ]
@@ -1517,9 +1502,6 @@ function boostbuild () {
 			local LTO=off
 			;;
 	esac
-	#echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	#create_environment_source
-	#source environment.source
 	run_cmd "./bootstrap.sh \\
 		--prefix=${PKG_PKGPATH}${INSTALL_PREFIX} \\
 		--exec-prefix=${PKG_PKGPATH}${INSTALL_EXECPREFIX} \\
@@ -1545,8 +1527,6 @@ function custom () {
 
 	run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\""
 	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
-	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	create_environment_source --target "${PKG_TARGET_ENV}"
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -ex
 		source environment.source
@@ -1561,9 +1541,6 @@ function custom () {
 function perlmodule () {
 	run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\""
 	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
-	echo "create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
-	create_environment_source --target "${PKG_TARGET_ENV}"
-	pwd
 	cat > runconfig.sh <<-EOF
 		#!/bin/bash
 		source environment.source
@@ -1920,6 +1897,12 @@ function build () {(
 		fi
 		run_cmd "mkdir -p \"${PKG_PKGPATH}\"" >> "${LOG_FILE}"
 	fi
+	if [ ! -d "${PKG_BLDPATH}" ]
+	then
+		run_cmd "mkdir -pv \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
+	fi
+	( cd "${PKG_BLDPATH}" && create_environment_source --target "${PKG_TARGET_ENV}" ) | log_buffer info >> ${LOG_FILE}
+	#### Pre-Build
 	if [ -n "${PKG_PREBUILD}" ]
 	then
 		if [ -d "${PKG_SRCPATH}" ]
@@ -1929,9 +1912,11 @@ function build () {(
 		echo "Running pre build script..." | log_buffer info >> "${LOG_FILE}"
 		(run_cmd "set -x
 			set +o pipefail
+			source "${PKG_BLDPATH}/environment.source"
 			${PKG_PREBUILD}
 			set +x") >> "${LOG_FILE}"
 	fi
+	#### Build
 	if [ "${PKG_COPYSRC:-0}" -eq 1 ] 
 	then
 		run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
@@ -1941,21 +1926,18 @@ function build () {(
 		echo -n "${SPACES}Building ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}} [${BUILD_PROCESS}]..."
 		${BUILD_PROCESS} >> "${LOG_FILE}" 2>&1
 	fi
+	#### Post-Build
 	if [ -n "${PKG_POSTBUILD}" ]
 	then
-		if [ ! -d "${PKG_BLDPATH}" ]
-		then
-			run_cmd "mkdir -p \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
-		fi
 		cd "${PKG_BLDPATH}"
 		echo "Running post build script..." | log_buffer info >> "${LOG_FILE}"
 		(run_cmd "set -ex
 			set +o pipefail
+			source "${PKG_BLDPATH}/environment.source"
 			${PKG_POSTBUILD}
 			set +ex") >> "${LOG_FILE}" 2>&1
 	fi
-	#run_cmd "rm -rf \"${PKG_SRCPATH}\""
-
+	#### Post-Install
 	if [ -n "${PKG_POSTINSTALL}" ]
 	then
 		run_cmd "mkdir -p ${PKG_PKGPATH}/postinst_scripts" >> "${LOG_FILE}"
