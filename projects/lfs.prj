@@ -240,11 +240,17 @@ function build_lfs_image () {
 	case ${PLATFORM_NAME} in
 		rpi*)
 			case ${PLATFORM_NAME} in
-				rpi*-aarch64)
+				rpi4-aarch64)
 					echo "arm_64bit=1" >${BIN_PATH}/boot/config.txt
+					echo "dtoverlay=vc4-kms-v3d-pi4" >>${BIN_PATH}/boot/config.txt
+				;;
+				rpi3-aarch64)
+					echo "arm_64bit=1" >${BIN_PATH}/boot/config.txt
+					echo "dtoverlay=vc4-kms-v3d" >>${BIN_PATH}/boot/config.txt
 				;;
 				*)
 					echo "arm_64bit=0" >${BIN_PATH}/boot/config.txt
+					echo "dtoverlay=vc4-kms-v3d" >>${BIN_PATH}/boot/config.txt
 				;;
 			esac
 			cat >>${BIN_PATH}/boot/config.txt <<-EOF
@@ -252,7 +258,7 @@ function build_lfs_image () {
 				initramfs ${INITRAMFS_NAME} followkernel
 			EOF
 			cat >${BIN_PATH}/boot/cmdline.txt <<-EOF
-				console=serial0,115200 ${KERNEL_BOOTPARAMS}
+				console=serial0,115200 console=tty1 ${KERNEL_BOOTPARAMS}
 			EOF
 		;;
 		generic-x64)
