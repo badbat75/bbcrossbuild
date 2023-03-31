@@ -1,5 +1,5 @@
 #wireless-regdb
-PKG_VER=2022.08.12
+PKG_VER=2023.02.13
 PKG_URL="https://mirrors.edge.kernel.org/pub/software/network/wireless-regdb/wireless-regdb-${PKG_VER}.tar.xz"
 BUILD_PROCESS=downloadonly
 PKG_PREBUILD="install -v -d -m755 ${PKG_PKGPATH}/lib/firmware
