@@ -114,8 +114,8 @@ KERNEL_LTOENABLE=thin
 	build lfs/wget2
 	build lfs/tcpdump
 ### Wireless
-	build lfs/wpa_supplicant
-	build lfs/hostapd
+	build lfs/wpa2:wpa_supplicant
+	build lfs/wpa2:hostapd
 	build lfs/iw
 	#build lfs/wireless-tools
 	build lfs/bluez
@@ -134,6 +134,7 @@ KERNEL_LTOENABLE=thin
 	build lfs/xf86-video-fbdev
 	build lfs/xinit
 	build lfs/Mesa
+	build lfs/mesa-demos
 	build lfs/Xwayland
 	build lfs/encodings
 	build lfs/font-alias
