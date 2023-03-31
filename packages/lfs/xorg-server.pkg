@@ -15,10 +15,11 @@ PKG_DEPS+=" lfs/libtirpc"
 PKG_DEPS+=" lfs/libunwind"
 PKG_DEPS+=" lfs/libgcrypt"
 PKG_DEPS+=" lfs/nettle"
-#PKG_DEPS+=" lfs/xcb-util-keysyms"
-#PKG_DEPS+=" lfs/xcb-util-image"
-#PKG_DEPS+=" lfs/xcb-util-renderutil"
-#PKG_DEPS+=" lfs/xcb-util-wm"
+PKG_DEPS+=" lfs/libvdpau-va-gl"
+PKG_DEPS+=" lfs/xcb-util-keysyms"
+PKG_DEPS+=" lfs/xcb-util-image"
+PKG_DEPS+=" lfs/xcb-util-renderutil"
+PKG_DEPS+=" lfs/xcb-util-wm"
 #PKG_DEPS+=" lfs/xmlto"
 BUILD_PROCESS=mesonninja
 CONF_FLAGS="-Dsuid_wrapper=true"
@@ -34,4 +35,5 @@ PKG_PREBUILD="sed -e \"/conf_data.set_quoted('DRI_DRIVER_PATH',/ s@dri_dep.get_p
 	"
 #PKG_MAKETARGETS="all,install-strip"
 
-PKG_POSTBUILD="install -vdm755 \${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/X11/xorg.conf.d"
+PKG_POSTBUILD="install -vdm755 \${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/{X11/xorg.conf.d,profile.d}
+	echo \"export VDPAU_DRIVER=va_gl\" >> \${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/profile.d/xorg.sh"

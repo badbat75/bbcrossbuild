@@ -131,6 +131,7 @@ KERNEL_LTOENABLE=thin
 	build lfs/xorg-server
 	build lfs/xf86-input-libinput
 	build lfs/xf86-input-evdev
+	build lfs/xf86-video-fbdev
 	build lfs/xinit
 	build lfs/Mesa
 	build lfs/Xwayland
@@ -142,6 +143,8 @@ KERNEL_LTOENABLE=thin
 	build lfs/font-ibm-type1
 	build lfs/font-misc-ethiopic
 	build lfs/font-xfree86-type1
+	build lfs/liberation-fonts-ttf
+	build lfs/liberation-narrow-fonts-ttf
 ### Multimedia
 	build lfs/alsa-utils
 ### Development
@@ -292,7 +295,7 @@ function build_lfs_image () {
 	run_postinstall_scripts lfs
 	run_cmd "cp -fv ${PLATFORM_PATH}/lfs/boot/${INITRAMFS_NAME} ${BIN_PATH}/boot" >>${LOG_PATH}/images_lfs.log
 
-	run_on_root_dir lfs root "systemctl enable console-getty"
+	#run_on_root_dir lfs root "systemctl enable console-getty"
 	run_on_root_dir lfs root "systemctl get-default && systemctl set-default multi-user.target"
 	run_on_root_dir lfs root "systemctl enable systemd-networkd"
 	run_on_root_dir lfs root "systemctl enable systemd-resolved"
