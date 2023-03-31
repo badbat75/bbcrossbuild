@@ -1052,7 +1052,7 @@ function mesonninja () {
 
 function cargobuild () {
 
-	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
+	run_cmd "cp -rp ${PKG_SRCPATH}/* ${PKG_BLDPATH}"
 	cd "${PKG_BLDPATH}"
 	local CARGO_BIN CARGO_LIB CARGO_TARGET CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO RUSTFLAGS
 	CARGO_BIN=${CARGO_BIN:-${INSTALL_EXECPREFIX}/bin}
@@ -1070,10 +1070,6 @@ function cargobuild () {
 		2|thin)	CARGO_PROFILE_RELEASE_LTO=thin ;;
 		*) CARGO_PROFILE_RELEASE_LTO=off ;;
 	esac
-	for param in ${TOOLCHAIN_EXTRA_C_CMD} ${SYSROOT_FLAGS} ${STRIP_FLAG} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS} ${TOOLCHAIN_LINKERFLAGS} ${PKG_LDFLAGS}
-	do
-		RUSTFLAGS+="-C link-arg=${param} "
-	done
 	RUSTFLAGS+="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}"
 	echo "RUSTFLAGS=${RUSTFLAGS}" | log_buffer info
 	cat >runmake.sh <<-EOF
@@ -1081,7 +1077,10 @@ function cargobuild () {
 		source environment.source
 		CARGO_PROFILE_RELEASE_OPT_LEVEL=${OPTLEVEL}
 		CARGO_PROFILE_RELEASE_LTO=${CARGO_PROFILE_RELEASE_LTO}
-		RUSTFLAGS=${RUSTFLAGS}
+		for param in ${TOOLCHAIN_EXTRA_C_CMD} ${SYSROOT_FLAGS} ${STRIP_FLAG} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS} ${TOOLCHAIN_LINKERFLAGS} ${PKG_LDFLAGS}
+		do
+			RUSTFLAGS+="-C link-arg=\${param} "
+		done
 		export CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO RUSTFLAGS
 		cargo build $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -n "--verbose"; fi ) --release ${CONF_FLAGS} --target=${CARGO_TARGET}
 	EOF
@@ -1897,9 +1896,11 @@ function build () {(
 		fi
 		run_cmd "mkdir -p \"${PKG_PKGPATH}\"" >> "${LOG_FILE}"
 	fi
-	if [ ! -d "${PKG_BLDPATH}" ]
+	if [ "${PKG_COPYSRC:-0}" -eq 1 ] 
 	then
-		run_cmd "mkdir -pv \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
+		run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
+	else
+		run_cmd "mkdir -pv \"${PKG_BLDPATH}\"" >> "${LOG_FILE}" >> "${LOG_FILE}"
 	fi
 	( cd "${PKG_BLDPATH}" && create_environment_source --target "${PKG_TARGET_ENV}" ) | log_buffer info >> ${LOG_FILE}
 	#### Pre-Build
@@ -1917,10 +1918,6 @@ function build () {(
 			set +x") >> "${LOG_FILE}"
 	fi
 	#### Build
-	if [ "${PKG_COPYSRC:-0}" -eq 1 ] 
-	then
-		run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
-	fi
 	if [ ! "${BUILD_PROCESS:-none}" == none ]
 	then
 		echo -n "${SPACES}Building ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}} [${BUILD_PROCESS}]..."
