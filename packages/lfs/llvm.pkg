@@ -38,3 +38,4 @@ PKG_MAKETARGETS="install/strip"
 PKG_OVERRIDESHARED=0
 PKG_PREBUILD="download_uncompress https://github.com/llvm/llvm-project/releases/download/llvmorg-${PKG_VER}/cmake-${PKG_VER}.src.tar.xz \${PKG_SRCPATH}/cmake-${PKG_VER}.src
 	sed '/LLVM_COMMON_CMAKE_UTILS/s@../cmake@cmake-${PKG_VER}.src@' -i CMakeLists.txt"
+PKG_TOOLCHAIN=llvm
