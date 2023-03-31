@@ -831,7 +831,7 @@ function configmake () {
 }
 
 function simplemake () {
-	run_cmd "cp -rp ${PKG_SRCPATH} ${PKG_BLDPATH}"
+	run_cmd "cp -rp \"${PKG_SRCPATH}\"/* ${PKG_BLDPATH}"
 	cd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -x
