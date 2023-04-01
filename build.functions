@@ -1181,10 +1181,6 @@ function kernelbuild () {
 	run_cmd "cp -rp \"${PKG_SRCPATH}\"/* ${PKG_BLDPATH}"
 	cd "${PKG_BLDPATH}"
 
-	if [ "${GCC_DEFAULT_LD}" == gold ]
-	then
-		GCC_DEFAULT_LD=bfd
-	fi
 	sed -e 's/FLAGS=.*/FLAGS=/g' -e 's/PKG_CONFIG\(.*\)=.*/PKG_CONFIG\1=/' -i environment.source
 
 	make4kern
