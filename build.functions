@@ -808,12 +808,12 @@ function configmake () {
 	fi
 	cat >runconfig.sh <<-EOF
 		#!/bin/bash -x
-		source environment.source
+		source "${PKG_BLDPATH}/environment.source"
 		${CONF_ENV} ${RUNCONFIG_CMD} ${CONF_FLAGS} ${CONF_VARS} \${@}
 	EOF
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -x
-		source environment.source
+		source "${PKG_BLDPATH}/environment.source"
 		${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
 	EOF
 	run_cmd "chmod +x runconfig.sh runmake.sh"
@@ -831,11 +831,11 @@ function configmake () {
 }
 
 function simplemake () {
-	run_cmd "cp -rp \"${PKG_SRCPATH}\"/* ${PKG_BLDPATH}"
+	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* ${PKG_BLDPATH}"
 	cd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -x
-		source environment.source
+		source "${PKG_BLDPATH}/environment.source"
 		${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} PREFIX=${INSTALL_PREFIX} LIBSUFFIX=${INSTALL_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
 	EOF
 	run_cmd "chmod +x runmake.sh"
@@ -875,7 +875,7 @@ function cmakebuild () {
 	
 	cat >runconfig.sh <<-EOF
 		#!/bin/bash -x
-		source environment.source
+		source "${PKG_BLDPATH}/environment.source"
 		${CONF_ENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/cmake ${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}} \\
 		   -G "${CMAKE_GENERATOR}" \\
 		   -DCMAKE_BUILD_TYPE="Release" \\
@@ -902,14 +902,14 @@ function cmakebuild () {
 		"Ninja")
 			cat >runmake.sh <<-EOF
 				#!/bin/bash -x
-				source environment.source
+				source "${PKG_BLDPATH}/environment.source"
 				${PKG_MAKEENV} DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}
 			EOF
 		;;
 		"Unix Makefiles")
 			cat >runmake.sh <<-EOF
 				#!/bin/bash -x
-				source environment.source
+				source "${PKG_BLDPATH}/environment.source"
 				${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
 			EOF
 		;;
@@ -944,7 +944,7 @@ function mesonninja () {
 		}
 		local C C_ARGS C_LINK_ARGS CPP CPP_ARGS CPP_LINK_ARGS FORTRAN FORTRAN_ARGS FORTRAN_LINK_ARGS
 		# shellcheck source=/dev/null
-		source environment.source
+		source "${PKG_BLDPATH}/environment.source"
 		C=$(buildmesonargs "${CC}")
 		C_ARGS=$(buildmesonargs "${CFLAGS}")
 		C_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
@@ -1029,12 +1029,12 @@ function mesonninja () {
 	esac
 	cat > runconfig.sh <<-EOF
 		#!/bin/bash -x
-		source environment.source
+		source "${PKG_BLDPATH}/environment.source"
 		${CONF_ENV} ${RUNCONFIG_CMD} ${CONF_FLAGS} \${@}	
 	EOF
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -x
-		source environment.source
+		source "${PKG_BLDPATH}/environment.source"
 		${PKG_MAKEENV} DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}
 	EOF
 	run_cmd "chmod +x runconfig.sh runmake.sh"
@@ -1052,7 +1052,7 @@ function mesonninja () {
 
 function cargobuild () {
 
-	run_cmd "cp -rp ${PKG_SRCPATH}/* ${PKG_BLDPATH}"
+	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 	cd "${PKG_BLDPATH}"
 	local CARGO_BIN CARGO_LIB CARGO_TARGET CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO RUSTFLAGS
 	CARGO_BIN=${CARGO_BIN:-${INSTALL_EXECPREFIX}/bin}
@@ -1110,7 +1110,7 @@ function cargobuild () {
 
 function kernelmodbuild () {
 
-	cp -rp "${PKG_SRCPATH}" "${PKG_BLDPATH}"
+	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 	cd "${PKG_BLDPATH}"
 
 	if [ ! -f "${PKG_BLDPATH}/Makefile" ]
@@ -1146,7 +1146,7 @@ function kernelmodbuild () {
 function kernelbuild () {
 	function make4kern () {
 		cat <<-EOF > make4kern.sh
-			source environment.source
+			source "${PKG_BLDPATH}/environment.source"
 			KBUILD_BUILD_TIMESTAMP='' \\
 			make \\
 				V=${MAKEVERBOSE:-0} \\
@@ -1178,7 +1178,7 @@ function kernelbuild () {
 		run_cmd "chmod +x make4kern.sh"
 	}
 
-	run_cmd "cp -rp \"${PKG_SRCPATH}\"/* ${PKG_BLDPATH}"
+	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* ${PKG_BLDPATH}"
 	cd "${PKG_BLDPATH}"
 
 	sed -e 's/FLAGS=.*/FLAGS=/g' -e 's/PKG_CONFIG\(.*\)=.*/PKG_CONFIG\1=/' -i environment.source
@@ -1383,7 +1383,7 @@ function pythonbuild () {
 		local VERBOSE="-v"
 	fi
 	# shellcheck source=/dev/null
-	source environment.source
+	source "${PKG_BLDPATH}/environment.source"
 	if [ "${PKG_PYTHONBUILD:-1}" -eq 1 ]
 	then
 		local PYTHONBUILD="--no-binary :all:"
@@ -1406,7 +1406,7 @@ function pythonbuild () {
 
 function boostbuild () {
 
-	run_cmd "cp -rp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
+	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 	cd "${PKG_BLDPATH}"
 	if [ -d "${DISTOS_PATH}${INSTALL_INCLUDEDIR}" ]
 	then
@@ -1522,12 +1522,11 @@ function boostbuild () {
 }
 
 function custom () {
-
-	run_cmd "cp -rp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
+	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -ex
-		source environment.source
+		source "${PKG_BLDPATH}/environment.source"
 
 	EOF
 	echo "${PKG_BUILDSCRIPT}" >>runmake.sh
@@ -1537,11 +1536,11 @@ function custom () {
 }
 
 function perlmodule () {
-	run_cmd "cp -rp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
+	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	cat > runconfig.sh <<-EOF
 		#!/bin/bash
-		source environment.source
+		source "${PKG_BLDPATH}/environment.source"
 
 		perl Makefile.PL \\
 		AR='${AR}' CC='${CC}' CPPRUN='${CPP}' FULL_AR='${AR}' LD='${CC}' \\
@@ -1557,7 +1556,7 @@ function perlmodule () {
 	run_cmd "./runconfig.sh"
 	cat > runmake.sh <<-EOF
 		#!/bin/bash
-		source environment.source
+		source "${PKG_BLDPATH}/environment.source"
 		make PERL_INC='${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/5.36/core_perl/CORE'
 	EOF
 	run_cmd "chmod +x runmake.sh"
