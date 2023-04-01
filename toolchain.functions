@@ -1377,8 +1377,13 @@ function setup_python () {
 
 	"check_${TOOLCHAIN}_c"
 
-	local PYTHON_DISTOS
+	local PYTHON_DISTOS ONLY_NATIVE
 	PYTHON_DISTOS=0
+	ONLY_NATIVE=0
+
+	case ${1} in
+		--native-only) ONLY_NATIVE=1 ;;
+	esac
 
 	echo -n "Setting up Python"
 	if [ -d "${DISTOS_PATH}" ]
@@ -1422,36 +1427,40 @@ function setup_python () {
 	else
 		echo "already there."
 	fi
-	if [ -d "${DISTOS_PATH}" ]
-	then
-		if [ ! "$(stat -c '%u' "${DISTOS_PATH}")" -eq "$(id -u)" ]
-		then
-			local SUDO_CMD='-s'
-		fi
-		if [ -f "${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/plat-${HARCH}/_sysconfigdata_m.py" ]
-		then
-			run_cmd "${SUDO_CMD}" "mv \"${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/plat-${HARCH}/_sysconfigdata_m.py\" \"${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/_sysconfigdata.py\""
-		fi
-		if [ -d "${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m-${HARCH}" ] && [ ! -L "${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m" ]
-		then
-			run_cmd "${SUDO_CMD}" "ln -s \"config-${PYTHONBIN_VER}m-${HARCH}\" \"${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m\""
-		fi
-	fi
 
-	if [ ! -f "${DISTOS_PATH}/usr/bin/python${PYTHONBIN_VER}" ] && [ "${PYTHON_DISTOS}" -eq 0 ]
+	if [ "${ONLY_NATIVE}" -eq 0 ]
 	then
-		NUMSPACES=1 build lfs/python3
-	fi
+		if [ -d "${DISTOS_PATH}" ]
+		then
+			if [ ! "$(stat -c '%u' "${DISTOS_PATH}")" -eq "$(id -u)" ]
+			then
+				local SUDO_CMD='-s'
+			fi
+			if [ -f "${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/plat-${HARCH}/_sysconfigdata_m.py" ]
+			then
+				run_cmd "${SUDO_CMD}" "mv \"${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/plat-${HARCH}/_sysconfigdata_m.py\" \"${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/_sysconfigdata.py\""
+			fi
+			if [ -d "${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m-${HARCH}" ] && [ ! -L "${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m" ]
+			then
+				run_cmd "${SUDO_CMD}" "ln -s \"config-${PYTHONBIN_VER}m-${HARCH}\" \"${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m\""
+			fi
+		fi
 
-	echo -n "Creating virtual cross environment... "
-	if [ ! -d "${TOOLCHAIN_PATH}/venv-${HARCH}" ]
-	then
-		build_python_crossenv > "${LOG_PATH}/toolchain_python-crossenv.log" 2>&1
-		echo "done."
-		echo
-	else
-		echo "already there."
-		echo
+		if [ ! -f "${DISTOS_PATH}/usr/bin/python${PYTHONBIN_VER}" ] && [ "${PYTHON_DISTOS}" -eq 0 ]
+		then
+			NUMSPACES=1 build lfs/python3
+		fi
+
+		echo -n "Creating virtual cross environment... "
+		if [ ! -d "${TOOLCHAIN_PATH}/venv-${HARCH}" ]
+		then
+			build_python_crossenv > "${LOG_PATH}/toolchain_python-crossenv.log" 2>&1
+			echo "done."
+			echo
+		else
+			echo "already there."
+			echo
+		fi
 	fi
 }
 
@@ -1513,12 +1522,14 @@ function setup_full_toolchain () {
 
 	build lfs/ninja:native
 
+	setup_python --native-only
+	build lfs/meson:native
+
 	if [ "${WITH_PYTHON}" -eq 1 ]
 	then
 		setup_python
 	fi
 
-	build lfs/meson:native
 }
 
 function prepare_sysroot () {
