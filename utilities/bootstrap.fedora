@@ -4,7 +4,10 @@
 PACKAGES="bc parted e2fsprogs btrfs-progs bzip2-devel rsync vim-common gcc g++ binutils dwarves elfutils-libelf-devel patchelf libzstd libzstd-devel tree curl gawk flex git xmltoman docbook-utils swig doxygen texinfo python3-docutils"
 
 # CLang build
-PACKAGES+=" libedit-devel lua-devel ocaml-findlib ocaml-ctypes ocaml-ocamldoc"
+PACKAGES+=" libedit-devel lua-devel"
+
+# X11 build
+#PACKAGES+=" fontforge perl-Font-TTF perl-Font-TTF-XMLparse"
 
 # Debian Packages
 #PACKAGES+=" dpkg-dev devscripts apt debhelper perl-ExtUtils-MakeMaker perl-Archive-Zip"

@@ -107,7 +107,7 @@ download_uncompress () {
 	if [ -z "${HASH_ROW}" ]
 	then
 		echo "\$ curl -k -vLsI -o /dev/null \"${URL}\"" | log_buffer info
-		DOWNLOAD_FILE="$( curl -k -vLsI -o /dev/null "${URL}" 2>&1 | grep -E -i '^< content-disposition:' | tr -d "\n\r" | sed -e 's/^.*filename="\?//;s/".*//' || true )"
+		DOWNLOAD_FILE="$( curl -k -vLsI -o /dev/null "${URL}" 2>&1 | grep -E -i '^< content-disposition:.*filename=' | tr -d "\n\r" | sed -e 's/^.*filename="\?//;s/".*//' || true )"
 		if [ -z "${DOWNLOAD_FILE}" ]
 		then
 			DOWNLOAD_FILE="$(basename "${URL}")"
