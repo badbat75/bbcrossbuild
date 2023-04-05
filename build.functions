@@ -1911,7 +1911,11 @@ function build () {(
 		fi
 		echo "Running pre build script..." | log_buffer info >> "${LOG_FILE}"
 		(
-			run_cmd "set -x;set +o pipefail;source \"${PKG_BLDPATH}/environment.source\";${PKG_PREBUILD};set +x"
+			run_cmd "set -x
+				set +o pipefail
+				source \"${PKG_BLDPATH}/environment.source\"
+				${PKG_PREBUILD}
+				set +x"
 		) >> "${LOG_FILE}"
 	fi
 	#### Build
@@ -1926,7 +1930,11 @@ function build () {(
 		cd "${PKG_BLDPATH}"
 		echo "Running post build script..." | log_buffer info >> "${LOG_FILE}"
 		(
-			run_cmd "set -ex;set +o pipefail;source \"${PKG_BLDPATH}/environment.source\";${PKG_POSTBUILD};set +ex"
+			run_cmd "set -ex
+				set +o pipefail
+				source \"${PKG_BLDPATH}/environment.source\"
+				${PKG_POSTBUILD}
+				set +ex"
 		) >> "${LOG_FILE}"
 	fi
 	#### Post-Install
