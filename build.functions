@@ -1054,6 +1054,7 @@ function cargobuild () {
 
 	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 	cd "${PKG_BLDPATH}"
+	# shellcheck disable=SC2034
 	local CARGO_BIN CARGO_LIB CARGO_TARGET CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO RUSTFLAGS
 	CARGO_BIN=${CARGO_BIN:-${INSTALL_EXECPREFIX}/bin}
 	CARGO_LIB=${CARGO_LIB:-${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}}
@@ -1898,7 +1899,7 @@ function build () {(
 	then
 		run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
 	else
-		run_cmd "mkdir -pv \"${PKG_BLDPATH}\"" >> "${LOG_FILE}" >> "${LOG_FILE}"
+		run_cmd "mkdir -pv \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
 	fi
 	( cd "${PKG_BLDPATH}" && create_environment_source --target "${PKG_TARGET_ENV}" ) | log_buffer info >> ${LOG_FILE}
 	#### Pre-Build
@@ -1909,11 +1910,13 @@ function build () {(
 			cd "${PKG_SRCPATH}"
 		fi
 		echo "Running pre build script..." | log_buffer info >> "${LOG_FILE}"
-		(run_cmd "set -x
-			set +o pipefail
-			source "${PKG_BLDPATH}/environment.source"
-			${PKG_PREBUILD}
-			set +x") >> "${LOG_FILE}"
+		(
+			run_cmd "set -x
+				set +o pipefail
+				source \"${PKG_BLDPATH}/environment.source\"
+				${PKG_PREBUILD}
+				set +x"
+		) >> "${LOG_FILE}"
 	fi
 	#### Build
 	if [ ! "${BUILD_PROCESS:-none}" == none ]
@@ -1926,11 +1929,13 @@ function build () {(
 	then
 		cd "${PKG_BLDPATH}"
 		echo "Running post build script..." | log_buffer info >> "${LOG_FILE}"
-		(run_cmd "set -ex
-			set +o pipefail
-			source "${PKG_BLDPATH}/environment.source"
-			${PKG_POSTBUILD}
-			set +ex") >> "${LOG_FILE}" 2>&1
+		(
+			run_cmd "set -ex
+				set +o pipefail
+				source \"${PKG_BLDPATH}/environment.source\"
+				${PKG_POSTBUILD}
+				set +ex"
+		) >> "${LOG_FILE}"
 	fi
 	#### Post-Install
 	if [ -n "${PKG_POSTINSTALL}" ]
