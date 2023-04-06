@@ -257,6 +257,7 @@ function settcenv () {
 		TOOLCHAIN_READELF_FOR_BUILD \
 		TOOLCHAIN_LINKER_FOR_BUILD \
 		TOOLCHAIN_LD_FOR_BUILD \
+		TOOLCHAIN_RUSTFLAGS \
 		TOOLCHAIN_LINKERFLAGS \
 		TOOLCHAIN_COMPFLAGS \
 		TOOLCHAIN_CFLAGS_FOR_BUILD \
@@ -266,7 +267,9 @@ function settcenv () {
 		TOOLCHAIN_LDFLAGS_FOR_BUILD \
 		TOOLCHAIN_EXTRA_C_CMD \
 		OPTCOMP_FLAGS \
-		OPTLINK_FLAGS
+		OPTLINK_FLAGS \
+		TOOLCHAIN_CARGO_PROFILE_RELEASE_LTO \
+		TOOLCHAIN_CARGO_TARGET
 
 	local TARGET_ENV
 
@@ -499,6 +502,12 @@ function settcenv () {
 		OPTLEVEL=2
 		OPTCOMP_FLAGS+="-g"
 	fi
+
+	for param in ${TOOLCHAIN_EXTRA_C_CMD} ${SYSROOT_FLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS} ${TOOLCHAIN_LINKERFLAGS} ${PKG_LDFLAGS}
+	do
+		TOOLCHAIN_RUSTFLAGS+="-C link-arg=${param} "
+	done
+	TOOLCHAIN_RUSTFLAGS+="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}"
 	
 	TOOLCHAIN_CFLAGS_FOR_BUILD="-I${GLOBAL_TOOLCHAIN_PATH}/include"
 	TOOLCHAIN_CFLAGS_FOR_BUILD+=" -I${TOOLCHAIN_PATH}/include"
@@ -512,6 +521,17 @@ function settcenv () {
 	TOOLCHAIN_LDFLAGS_FOR_BUILD+=" -Wl,-rpath-link -Wl,${TOOLCHAIN_PATH}/lib"
 	TOOLCHAIN_LDFLAGS_FOR_BUILD+=" -Wl,-rpath-link -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib"
 	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+
+	case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
+		1|fat)	TOOLCHAIN_CARGO_PROFILE_RELEASE_LTO=fat ;;
+		2|thin)	TOOLCHAIN_CARGO_PROFILE_RELEASE_LTO=thin ;;
+		*)		TOOLCHAIN_CARGO_PROFILE_RELEASE_LTO=off ;;
+	esac
+
+	case ${PKG_TARGET_ENV} in
+		native|cross)	TOOLCHAIN_CARGO_TARGET=${BM}-unknown-${BOS}-${BLIBC} ;;
+		target) 		TOOLCHAIN_CARGO_TARGET=${HM}-unknown-${HOS}-${HLIBC} ;;
+	esac
 }
 
 function create_environment_source () {
@@ -523,7 +543,11 @@ function create_environment_source () {
 	OPTS="" OPTS_WITH_VALUE="--target" param2value "${@}"
 	local TARGET_ENV=${_param_target:-target}
 	settcenv --target "${TARGET_ENV}"
-	cat <<-EOF > environment.source
+	if [ ! -d "${PKG_BLDPATH}" ]
+	then
+		run_cmd "mkdir -pv \"${PKG_BLDPATH}\""
+	fi
+	cat <<-EOF > "${PKG_BLDPATH}/environment.source"
 		#################################################################################
 		###### ${PKG_FULLNAME}
 		### Source file with all the environment specified
@@ -546,21 +570,21 @@ function create_environment_source () {
 	EOF
 	if [ -n "${TOOLCHAIN_CXX_FOR_BUILD}" ]
 	then
-		cat <<-EOF >> environment.source
+		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 			export CXX_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX_FOR_BUILD}'
 			export CXXFLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS} ${TOOLCHAIN_CXXFLAGS_FOR_BUILD}'
 		EOF
 	fi
 	if [ -n "${TOOLCHAIN_FC_FOR_BUILD}" ]
 	then
-		cat <<-EOF >> environment.source
+		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 			export FC_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_FC_FOR_BUILD}'
 			export FFLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS} ${TOOLCHAIN_FCFLAGS_FOR_BUILD}'
 			export F90_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_F90_FOR_BUILD}'
 			export F90FLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS} ${TOOLCHAIN_FCFLAGS_FOR_BUILD}'
 		EOF
 	fi
-	cat <<-EOF >> environment.source
+	cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 		export LINKER_EXE_FOR_BUILD='${TOOLCHAIN_LINKER_EXE_FOR_BUILD}'
 		export LDFLAGS_FOR_BUILD='${TOOLCHAIN_LINKERFLAGS_FOR_BUILD} ${TOOLCHAIN_LDFLAGS_FOR_BUILD}'
 		export AR_FOR_BUILD='${TOOLCHAIN_AR_FOR_BUILD}'
@@ -576,8 +600,9 @@ function create_environment_source () {
 	if [ -n "${TOOLCHAIN_CC}" ]
 	then
 		# shellcheck disable=SC2153
-		cat <<-EOF >> environment.source
+		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 		export CC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+		export CC_EXE='${TOOLCHAIN_CC}'
 		export CFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}'
 		export CPP='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CPP}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 		export CPPFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CPPFLAGS} ${PLATFORM_CFLAGS} ${PKG_CPPFLAGS}'
@@ -586,22 +611,24 @@ function create_environment_source () {
 	if [ -n "${TOOLCHAIN_CXX}" ]
 	then
 		# shellcheck disable=SC2153
-		cat <<-EOF >> environment.source
+		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 			export CXX='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+			export CXX_EXE='${TOOLCHAIN_CXX}'
 			export CXXFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}'
 		EOF
 	fi
 	if [ -n "${TOOLCHAIN_FC}" ]
 	then
 		# shellcheck disable=SC2153
-		cat <<-EOF >> environment.source
+		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 			export FC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_FC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 			export FFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
 			export F90='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_F90}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 			export F90FLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
 		EOF
 	fi
-	cat <<-EOF >> environment.source
+	cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
+		export RUSTFLAGS='${TOOLCHAIN_RUSTFLAGS}'
 		export LINKER_EXE='${TOOLCHAIN_LINKER_EXE}'
 		export LDFLAGS='${TOOLCHAIN_LINKERFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}'
 
@@ -620,7 +647,7 @@ function create_environment_source () {
 
 	case ${TARGET_ENV} in
 		cross|native)
-			cat <<-EOF >> environment.source
+			cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 				export PKG_CONFIG='$(which pkg-config 2>/dev/null || :)'
 				export PKG_CONFIG_LIBDIR=${TOOLCHAIN_PATH}/lib/pkgconfig:${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig:/usr/lib64/pkgconfig
 				export PKG_CONFIG_SYSROOT_DIR=
@@ -628,7 +655,7 @@ function create_environment_source () {
 			EOF
 		;;
 		target)
-			cat <<-EOF >> environment.source
+			cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 				export PKG_CONFIG='$(which "${HARCH}-pkg-config" 2>/dev/null || :)'
 				export PKG_CONFIG_LIBDIR='${COMMON_PKG_CONFIG_LIBDIR}'
 				export PKG_CONFIG_SYSROOT_DIR='${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}'
@@ -636,17 +663,20 @@ function create_environment_source () {
 			EOF
 			if [ -f "${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate" ] && [ "${PKG_DISABLECROSSPYTHON:-0}" -eq 0 ]
 			then
-				echo -e "\nsource ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate\n" >> environment.source
+				echo -e "\nsource ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate\n" >> "${PKG_BLDPATH}/environment.source"
 			fi
 		;;
 	esac
 
-	cat <<-EOF >> environment.source
+	cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 
 		export PYTHON_FOR_BUILD=${PYTHON_FOR_BUILD}
 		export PYTHONPATH=${PYTHONPATH}
 
 		export CARGO_HOME='${CARGO_HOME}'
+		export CARGO_PROFILE_RELEASE_OPT_LEVEL=${OPTLEVEL}
+		export CARGO_PROFILE_RELEASE_LTO=${TOOLCHAIN_CARGO_PROFILE_RELEASE_LTO}
+		export CARGO_TARGET='${TOOLCHAIN_CARGO_TARGET}'
 		export RUSTUP_HOME='${RUSTUP_HOME}'
 
 		export QEMU_LD_PREFIX='${SYSROOT}'
@@ -656,7 +686,7 @@ function create_environment_source () {
 	EOF
 	if [ "$(basename "${CCWRAPPER:-nope}")" == "sccache" ]
 	then
-		cat <<-EOF >> environment.source
+		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 			
 			# sccache parameters
 			export RUSTC_WRAPPER='${CCWRAPPER}'
@@ -665,7 +695,7 @@ function create_environment_source () {
 			export SCCACHE_NO_DAEMON='${SCCACHE_NO_DAEMON}'
 		EOF
 	fi
-	cat <<-EOF >> environment.source
+	cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 	
 		export LC_ALL=POSIX
 		export CONFIG_SITE='${SYSROOT}/usr/share/config/site'
@@ -764,7 +794,12 @@ function configmake () {
 		#### Multi process autoreconf 
 		echo -n "${AUTOCONF_PATH:-.}" | xargs --verbose -P"${AUTOCONF_THREADS:-${NPROCS}}" -d',' -I{} bash -c "PKG_AUTOMAKE=${PKG_AUTOMAKE} smart_autoreconf ${PKG_SRCPATH}/{} || exit 255"
 	fi
-	run_cmd "mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
+	if [ "${PKG_COPYSRC:-0}" -eq 1 ] 
+	then
+		run_cmd "cp -rp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
+	else
+		run_cmd "mkdir -p ${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
+	fi
 	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	if [ "${STD_CONF_FLAGS:-1}" -eq 1 ]
 	then
@@ -1055,39 +1090,14 @@ function cargobuild () {
 	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 	cd "${PKG_BLDPATH}"
 	# shellcheck disable=SC2034
-	local CARGO_BIN CARGO_LIB CARGO_TARGET CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO RUSTFLAGS
+	local CARGO_BIN CARGO_LIB CARGO_TARGET
 	CARGO_BIN=${CARGO_BIN:-${INSTALL_EXECPREFIX}/bin}
 	CARGO_LIB=${CARGO_LIB:-${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}}
-	case ${PKG_TARGET_ENV} in
-		native|cross)
-			CARGO_TARGET=${BM}-unknown-${BOS}-${BLIBC}
-		;;
-		target)
-			CARGO_TARGET=${HM}-unknown-${HOS}-${HLIBC}
-		;;
-	esac
-	case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
-		1|fat) CARGO_PROFILE_RELEASE_LTO=fat ;;
-		2|thin)	CARGO_PROFILE_RELEASE_LTO=thin ;;
-		*) CARGO_PROFILE_RELEASE_LTO=off ;;
-	esac
-	(
-		settcenv --target "${PKG_TARGET_ENV}"
-		for param in ${TOOLCHAIN_EXTRA_C_CMD} ${SYSROOT_FLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS} ${TOOLCHAIN_LINKERFLAGS} ${PKG_LDFLAGS}
-		do
-			RUSTFLAGS+="-C link-arg=${param} "
-		done
-		RUSTFLAGS+="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}"
-		echo "RUSTFLAGS=${RUSTFLAGS}" | log_buffer info
-		cat >runmake.sh <<-EOF
-			#!/bin/bash -x
-			CARGO_PROFILE_RELEASE_OPT_LEVEL=${OPTLEVEL}
-			CARGO_PROFILE_RELEASE_LTO=${CARGO_PROFILE_RELEASE_LTO}
-			RUSTFLAGS=${RUSTFLAGS}
-			export CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO RUSTFLAGS
-			cargo build $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -n "--verbose"; fi ) --release ${CONF_FLAGS} --target=${CARGO_TARGET}
-		EOF
-	)
+	cat >runmake.sh <<-EOF
+		#!/bin/bash -x
+		source environment.source
+		cargo build $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -n "--verbose"; fi ) --release ${CONF_FLAGS} --target=${TOOLCHAIN_CARGO_TARGET}
+	EOF
 	run_cmd "chmod +x runmake.sh"
 	run_cmd "./runmake.sh"
 	for file in ${CARGO_BINLIST}
@@ -1096,7 +1106,7 @@ function cargobuild () {
 		then
 			run_cmd "mkdir -p \"${PKG_PKGPATH}${CARGO_BIN}\""
 		fi
-		run_cmd "cp -p \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${CARGO_BIN}/${file}\""
+		run_cmd "cp -p \"target/${TOOLCHAIN_CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${CARGO_BIN}/${file}\""
 	done
 	for file in ${CARGO_LIBLIST}
 	do
@@ -1104,7 +1114,7 @@ function cargobuild () {
 		then
 			run_cmd "mkdir -p \"${PKG_PKGPATH}${CARGO_LIB}\""
 		fi
-		run_cmd "cp -p \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${CARGO_LIB}/${file}\""
+		run_cmd "cp -p \"target/${TOOLCHAIN_CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${CARGO_LIB}/${file}\""
 	done
 	cd "${BB_HOME}"
 }
@@ -1402,123 +1412,6 @@ function pythonbuild () {
 			fi
 		;;
 	esac
-	cd "${BB_HOME}"
-}
-
-function boostbuild () {
-
-	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
-	cd "${PKG_BLDPATH}"
-	if [ -d "${DISTOS_PATH}${INSTALL_INCLUDEDIR}" ]
-	then
-		local ICU_INCLUDEDIR=${DISTOS_PATH}${INSTALL_INCLUDEDIR}
-	else
-		local ICU_INCLUDEDIR=${BIN_PATH}${INSTALL_INCLUDEDIR}
-	fi
-	if [ -d "${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m" ]
-	then
-		COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
-	fi
-	if [ -d "${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}" ]
-	then
-		COMMON_CXXFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}"
-	fi
-	if [ "${MAKEVERBOSE}" -eq 1 ]
-	then
-		local B2_FLAGS="-d+2"
-	else
-		local B2_FLAGS="-d+1"
-	fi
-	if [ "${PKG_OVERRIDESHARED:-${BUILD_LIBSHARED}}" -eq 1 ]
-	then
-		local B2_FLAGS="${B2_FLAGS} link=shared runtime-link=shared"
-	else
-		local B2_FLAGS="${B2_FLAGS} link=static runtime-link=static"
-	fi
-	case ${HM} in
-		arm)
-			local BOOST_ARCH=arm
-			local BOOST_ABI=aapcs
-			local BOOST_ADDRMOD=32
-			;;
-		aarch64)
-			local BOOST_ARCH=arm
-			local BOOST_ABI=aapcs
-			local BOOST_ADDRMOD=64
-			;;
-		i386)
-			local BOOST_ARCH=x86
-			local BOOST_ABI=sysv
-			local BOOST_ADDRMOD=32
-			;;
-		x86_64)
-			local BOOST_ARCH=x86
-			local BOOST_ABI=sysv
-			local BOOST_ADDRMOD=64
-			;;
-		*)
-			trow_error "${ERROR_GENERIC}" "Missing architecture mapping for ${HM}"
-			;;
-	esac
-	case ${HOS} in
-		linux|android) local HMBINFMT=elf;;
-		windows) local HMBINFMT=pe;;
-		macosx|ios) local HMBINFMT=mach-o;;
-	esac
-	case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
-		llvm) 
-				local BBTC=clang
-				local CXX_EXE=${CCWRAPPER:+${CCWRAPPER} }clang++
-				local WORKAROUND="--target=${HARCH} "
-				local LINKER_FLAGS="-fuse-ld=${LLVM_DEFAULT_LD:-lld} -Wl,--threads=${NPROCS} ${LLVM_EXTRALDFLAGS}"
-			;;
-		gnu) 
-				local BBTC=gcc
-				local CXX_EXE=${CCWRAPPER:+${CCWRAPPER} }${HARCH}-g++
-				local LINKER_FLAGS="-fuse-ld=${LLVM_DEFAULT_LD:-gold} ${GNU_EXTRALDFLAGS}"
-			;;
-	esac
-	case ${OPTLEVEL} in
-		2)	local OPTIMIZATION=minimal
-			;;
-		3)	local OPTIMIZATION=speed
-			;;
-		s)	local OPTIMIZATION=space
-			;;
-		*)	local OPTIMIZATION=off
-			;;
-	esac
-	case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
-		1|fat)
-			local LTO=on
-			local LTOMODE=full
-			;;
-		2|thin)
-			local LTO=on
-			local LTOMODE=thin
-			;;
-		*)
-			local LTO=off
-			;;
-	esac
-	run_cmd "./bootstrap.sh \\
-		--prefix=${PKG_PKGPATH}${INSTALL_PREFIX} \\
-		--exec-prefix=${PKG_PKGPATH}${INSTALL_EXECPREFIX} \\
-		--libdir=${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} \\
-		--includedir=${PKG_PKGPATH}${INSTALL_INCLUDEDIR} \\
-		--with-icu=${ICU_INCLUDEDIR} \\
-		--with-python-version=${PYTHONBIN_VER} \\
-		--with-toolset=${BBTC}"
-	run_cmd "sed -i \"s|using ${BBTC} ;|using ${BBTC} : : ${CXX_EXE} ;|\" project-config.jam"
-	run_cmd "./b2 -j${NPROCS} -q \\
-		architecture=${BOOST_ARCH} address-model=${BOOST_ADDRMOD} \\
-		binary-format=${HMBINFMT} abi=${BOOST_ABI} target-os=${HOS} \\
-		variant=release optimization=${OPTIMIZATION} lto=${LTO} lto-mode=${LTOMODE} threading=multi ${B2_FLAGS} \\
-		toolset=${BBTC} \\
-		cflags=\"${WORKAROUND}${SYSROOT_FLAGS} ${PLATFORM_CFLAGS} ${PKG_CFLAGS}\" \\
-		cxxflags=\"${COMMON_CXXFLAGS} -fPIC ${PKG_CXXFLAGS}\" \\
-		linkflags=\"${WORKAROUND}${SYSROOT_FLAGS} ${LINKER_FLAGS} ${COMMON_LDFLAGS} ${PKG_LDFLAGS}\" \\
-		install"
 	cd "${BB_HOME}"
 }
 
@@ -1821,9 +1714,7 @@ function build () {(
 	do
 		if [ ! -f "${PKG_PATH}/${dep/:*/}.pkg" ]
 		then
-			# shellcheck disable=SC2034
-			ERROR_STRING="Dependency package ${dep/:*/} does not exists."
-			exit "${ERROR_FILE_NOT_FOUND}"
+			trow_error "${ERROR_FILE_NOT_FOUND}" "Dependency package ${dep/:*/} does not exists."
 		fi
 		NUMSPACES=$((NUMSPACES+1))
 		SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
@@ -1895,13 +1786,7 @@ function build () {(
 		fi
 		run_cmd "mkdir -p \"${PKG_PKGPATH}\"" >> "${LOG_FILE}"
 	fi
-	if [ "${PKG_COPYSRC:-0}" -eq 1 ] 
-	then
-		run_cmd "cp -rp \"${PKG_SRCPATH}\" \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
-	else
-		run_cmd "mkdir -pv \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
-	fi
-	( cd "${PKG_BLDPATH}" && create_environment_source --target "${PKG_TARGET_ENV}" ) | log_buffer info >> ${LOG_FILE}
+	( create_environment_source --target "${PKG_TARGET_ENV}" ) | log_buffer info >> ${LOG_FILE}
 	#### Pre-Build
 	if [ -n "${PKG_PREBUILD}" ]
 	then

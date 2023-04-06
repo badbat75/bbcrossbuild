@@ -1,0 +1,13 @@
+# OpenJPEG
+PKG_VER=2.5.0
+PKG_URL="https://github.com/uclouvain/openjpeg/archive/v${PKG_VER}/openjpeg-${PKG_VER}.tar.gz"
+PKG_DEPS=" lfs/LittleCMS"
+PKG_DEPS+=" lfs/libpng"
+PKG_DEPS+=" lfs/libtiff"
+
+BUILD_PROCESS=cmakebuild
+CONF_FLAGS="-DOPENJPEG_INSTALL_LIB_DIR:path=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
+#PKG_MAKETARGETS="all,install"
+
+### Not using SYSROOT
+PKG_POSTBUILD="sed '/set(_IMPORT_PREFIX.*$/a if(DEFINED OPENJPEG_PREFIX)\n  set (_IMPORT_PREFIX \"\${OPENJPEG_PREFIX}\")\nendif()' -i \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/openjpeg-$(echo ${PKG_VER} | cut -d. -f1,2)/OpenJPEGTargets.cmake"

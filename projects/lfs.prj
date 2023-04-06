@@ -146,6 +146,8 @@ KERNEL_LTOENABLE=thin
 	build lfs/font-xfree86-type1
 	build lfs/liberation-fonts-ttf
 	build lfs/liberation-narrow-fonts-ttf
+### Gnome
+	build lfs/Cairo
 ### Multimedia
 	build lfs/alsa-utils
 ### Development

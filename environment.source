@@ -1,0 +1,528 @@
+export CXX_FOR_BUILD='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++'
+export CXXFLAGS_FOR_BUILD='-march=native -O3 -I/mnt/bbcrossbuild/toolchain/include -I/mnt/bbcrossbuild/lfs/generic-x64/toolchain/include'
+export LINKER_EXE_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/ld.lld'
+export LDFLAGS_FOR_BUILD='-fuse-ld=lld -Wl,--thinlto-jobs=7 -L/mnt/bbcrossbuild/toolchain/lib -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib -Wl,-rpath -Wl,/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib:/mnt/bbcrossbuild/toolchain/lib -Wl,-rpath-link -Wl,/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib -Wl,-rpath-link -Wl,/mnt/bbcrossbuild/toolchain/lib'
+export AR_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ar'
+export AS_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-as'
+export NM_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-nm'
+export RANLIB_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ranlib'
+export STRIP_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-strip'
+export OBJCOPY_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objcopy'
+export OBJDUMP_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objdump'
+export READELF_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-readelf'
+
+export CC='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang --target=x86_64-linux-gnu'
+export CC_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang'
+export CFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic  -O3 '
+export CPP='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang -E --target=x86_64-linux-gnu'
+export CPPFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic '
+export CXX='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++ --target=x86_64-linux-gnu'
+export CXX_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++'
+export CXXFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic  -O3 '
+export RUSTFLAGS='-C link-arg=--target=x86_64-linux-gnu -C link-arg=--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -C link-arg=-L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12 -C link-arg=-L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/lib64 -C link-arg=--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -C link-arg=-fuse-ld=lld -C link-arg=-Wl,--thinlto-jobs=7  -C target-cpu=generic  -C linker=/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang'
+export LINKER_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/ld.lld'
+export LDFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -fuse-ld=lld   -Wl,--thinlto-jobs=7   -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12 -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/lib64  '
+
+export AR='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ar'
+export AS='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-as'
+export NM='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-nm'
+export RANLIB='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ranlib'
+export STRIP='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-strip'
+export OBJCOPY='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objcopy'
+export OBJDUMP='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objdump'
+export READELF='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-readelf'
+
+export LD_LIBRARY_PATH=''
+export PATH='/mnt/bbcrossbuild/toolchain/python-3.10.10/bin:/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin:/mnt/bbcrossbuild/toolchain/autotools-2.71-1.16.5-2.4.7-0.21.1/bin:/mnt/bbcrossbuild/lfs/generic-x64/toolchain/bin:/mnt/bbcrossbuild/toolchain/bin:/home/desimonie/.local/bin:/home/desimonie/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/Program Files/WindowsApps/Microsoft.WindowsTerminal_1.16.10261.0_x64__8wekyb3d8bbwe:/mnt/c/Program Files (x86)/Common Files/Oracle/Java/javapath:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files/Amazon/AWSCLIV2/:/mnt/c/Users/desimonie/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/desimonie/AppData/Local/Programs/Microsoft VS Code/bin'
+export PKG_CONFIG='/mnt/bbcrossbuild/lfs/generic-x64/toolchain/bin/x86_64-linux-gnu-pkg-config'
+export PKG_CONFIG_LIBDIR='/mnt/bbcrossbuild/lfs/generic-x64/binaries/lib/pkgconfig:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/lib64/pkgconfig:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/share/pkgconfig'
+export PKG_CONFIG_SYSROOT_DIR='/mnt/bbcrossbuild/lfs/generic-x64/binaries'
+export PKG_CONFIG_ALLOW_CROSS='1'
+
+source /mnt/bbcrossbuild/lfs/generic-x64/toolchain/venv-x86_64-linux-gnu/bin/activate
+
+
+export PYTHON_FOR_BUILD=/mnt/bbcrossbuild/toolchain/python-3.10.10/bin/python3.10
+export PYTHONPATH=/mnt/bbcrossbuild/toolchain/lib/python3.10/site-packages
+
+export CARGO_HOME='/mnt/bbcrossbuild/toolchain'
+export CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+export CARGO_PROFILE_RELEASE_LTO=thin
+export CARGO_TARGET='x86_64-unknown-linux-gnu'
+export RUSTUP_HOME='/mnt/bbcrossbuild/toolchain/var/rustup'
+
+export QEMU_LD_PREFIX='/mnt/bbcrossbuild/lfs/generic-x64/binaries'
+export QEMU_LD_LIBRARY_PATH='/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/lib64'
+
+export ENVIRONMENT_SOURCE_PATH='/home/desimonie/git/bbcrossbuild'
+
+# sccache parameters
+export RUSTC_WRAPPER='/mnt/bbcrossbuild/toolchain/bin/sccache'
+export SCCACHE_DIR='/mnt/bbcrossbuild/cache/sccache'
+export SCCACHE_CACHE_SIZE='16G'
+export SCCACHE_NO_DAEMON='0'
+
+export LC_ALL=POSIX
+export CONFIG_SITE='/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/share/config/site'
+export CXX_FOR_BUILD='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++'
+export CXXFLAGS_FOR_BUILD='-march=native -O3 -I/mnt/bbcrossbuild/toolchain/include -I/mnt/bbcrossbuild/lfs/generic-x64/toolchain/include'
+export LINKER_EXE_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/ld.lld'
+export LDFLAGS_FOR_BUILD='-fuse-ld=lld -Wl,--thinlto-jobs=7 -L/mnt/bbcrossbuild/toolchain/lib -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib -Wl,-rpath -Wl,/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib:/mnt/bbcrossbuild/toolchain/lib -Wl,-rpath-link -Wl,/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib -Wl,-rpath-link -Wl,/mnt/bbcrossbuild/toolchain/lib'
+export AR_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ar'
+export AS_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-as'
+export NM_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-nm'
+export RANLIB_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ranlib'
+export STRIP_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-strip'
+export OBJCOPY_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objcopy'
+export OBJDUMP_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objdump'
+export READELF_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-readelf'
+
+export CC='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang --target=x86_64-linux-gnu'
+export CC_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang'
+export CFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic  -O3 '
+export CPP='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang -E --target=x86_64-linux-gnu'
+export CPPFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic '
+export CXX='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++ --target=x86_64-linux-gnu'
+export CXX_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++'
+export CXXFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic  -O3 '
+export RUSTFLAGS='-C link-arg=--target=x86_64-linux-gnu -C link-arg=--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -C link-arg=-L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12 -C link-arg=-L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/lib64 -C link-arg=--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -C link-arg=-fuse-ld=lld -C link-arg=-Wl,--thinlto-jobs=7  -C target-cpu=generic  -C linker=/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang'
+export LINKER_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/ld.lld'
+export LDFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -fuse-ld=lld   -Wl,--thinlto-jobs=7   -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12 -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/lib64  '
+
+export AR='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ar'
+export AS='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-as'
+export NM='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-nm'
+export RANLIB='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ranlib'
+export STRIP='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-strip'
+export OBJCOPY='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objcopy'
+export OBJDUMP='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objdump'
+export READELF='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-readelf'
+
+export LD_LIBRARY_PATH=''
+export PATH='/mnt/bbcrossbuild/toolchain/python-3.10.10/bin:/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin:/mnt/bbcrossbuild/toolchain/autotools-2.71-1.16.5-2.4.7-0.21.1/bin:/mnt/bbcrossbuild/lfs/generic-x64/toolchain/bin:/mnt/bbcrossbuild/toolchain/bin:/home/desimonie/.local/bin:/home/desimonie/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/Program Files/WindowsApps/Microsoft.WindowsTerminal_1.16.10261.0_x64__8wekyb3d8bbwe:/mnt/c/Program Files (x86)/Common Files/Oracle/Java/javapath:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files/Amazon/AWSCLIV2/:/mnt/c/Users/desimonie/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/desimonie/AppData/Local/Programs/Microsoft VS Code/bin'
+export PKG_CONFIG='/mnt/bbcrossbuild/lfs/generic-x64/toolchain/bin/x86_64-linux-gnu-pkg-config'
+export PKG_CONFIG_LIBDIR='/mnt/bbcrossbuild/lfs/generic-x64/binaries/lib/pkgconfig:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/lib64/pkgconfig:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/share/pkgconfig'
+export PKG_CONFIG_SYSROOT_DIR='/mnt/bbcrossbuild/lfs/generic-x64/binaries'
+export PKG_CONFIG_ALLOW_CROSS='1'
+
+source /mnt/bbcrossbuild/lfs/generic-x64/toolchain/venv-x86_64-linux-gnu/bin/activate
+
+
+export PYTHON_FOR_BUILD=/mnt/bbcrossbuild/toolchain/python-3.10.10/bin/python3.10
+export PYTHONPATH=/mnt/bbcrossbuild/toolchain/lib/python3.10/site-packages
+
+export CARGO_HOME='/mnt/bbcrossbuild/toolchain'
+export CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+export CARGO_PROFILE_RELEASE_LTO=thin
+export CARGO_TARGET='x86_64-unknown-linux-gnu'
+export RUSTUP_HOME='/mnt/bbcrossbuild/toolchain/var/rustup'
+
+export QEMU_LD_PREFIX='/mnt/bbcrossbuild/lfs/generic-x64/binaries'
+export QEMU_LD_LIBRARY_PATH='/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/lib64'
+
+export ENVIRONMENT_SOURCE_PATH='/home/desimonie/git/bbcrossbuild'
+
+# sccache parameters
+export RUSTC_WRAPPER='/mnt/bbcrossbuild/toolchain/bin/sccache'
+export SCCACHE_DIR='/mnt/bbcrossbuild/cache/sccache'
+export SCCACHE_CACHE_SIZE='16G'
+export SCCACHE_NO_DAEMON='0'
+
+export LC_ALL=POSIX
+export CONFIG_SITE='/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/share/config/site'
+export CXX_FOR_BUILD='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++'
+export CXXFLAGS_FOR_BUILD='-march=native -O3 -I/mnt/bbcrossbuild/toolchain/include -I/mnt/bbcrossbuild/lfs/generic-x64/toolchain/include'
+export LINKER_EXE_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/ld.lld'
+export LDFLAGS_FOR_BUILD='-fuse-ld=lld -Wl,--thinlto-jobs=7 -L/mnt/bbcrossbuild/toolchain/lib -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib -Wl,-rpath -Wl,/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib:/mnt/bbcrossbuild/toolchain/lib -Wl,-rpath-link -Wl,/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib -Wl,-rpath-link -Wl,/mnt/bbcrossbuild/toolchain/lib'
+export AR_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ar'
+export AS_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-as'
+export NM_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-nm'
+export RANLIB_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ranlib'
+export STRIP_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-strip'
+export OBJCOPY_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objcopy'
+export OBJDUMP_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objdump'
+export READELF_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-readelf'
+
+export CC='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang --target=x86_64-linux-gnu'
+export CC_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang'
+export CFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic  -O3 '
+export CPP='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang -E --target=x86_64-linux-gnu'
+export CPPFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic '
+export CXX='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++ --target=x86_64-linux-gnu'
+export CXX_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++'
+export CXXFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic  -O3 '
+export RUSTFLAGS='-C link-arg=--target=x86_64-linux-gnu -C link-arg=--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -C link-arg=-L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12 -C link-arg=-L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/lib64 -C link-arg=--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -C link-arg=-fuse-ld=lld -C link-arg=-Wl,--thinlto-jobs=7  -C target-cpu=generic  -C linker=/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang'
+export LINKER_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/ld.lld'
+export LDFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -fuse-ld=lld   -Wl,--thinlto-jobs=7   -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12 -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/lib64  '
+
+export AR='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ar'
+export AS='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-as'
+export NM='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-nm'
+export RANLIB='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ranlib'
+export STRIP='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-strip'
+export OBJCOPY='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objcopy'
+export OBJDUMP='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objdump'
+export READELF='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-readelf'
+
+export LD_LIBRARY_PATH=''
+export PATH='/mnt/bbcrossbuild/toolchain/python-3.10.10/bin:/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin:/mnt/bbcrossbuild/toolchain/autotools-2.71-1.16.5-2.4.7-0.21.1/bin:/mnt/bbcrossbuild/lfs/generic-x64/toolchain/bin:/mnt/bbcrossbuild/toolchain/bin:/home/desimonie/.local/bin:/home/desimonie/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/Program Files/WindowsApps/Microsoft.WindowsTerminal_1.16.10261.0_x64__8wekyb3d8bbwe:/mnt/c/Program Files (x86)/Common Files/Oracle/Java/javapath:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files/Amazon/AWSCLIV2/:/mnt/c/Users/desimonie/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/desimonie/AppData/Local/Programs/Microsoft VS Code/bin'
+export PKG_CONFIG='/mnt/bbcrossbuild/lfs/generic-x64/toolchain/bin/x86_64-linux-gnu-pkg-config'
+export PKG_CONFIG_LIBDIR='/mnt/bbcrossbuild/lfs/generic-x64/binaries/lib/pkgconfig:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/lib64/pkgconfig:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/share/pkgconfig'
+export PKG_CONFIG_SYSROOT_DIR='/mnt/bbcrossbuild/lfs/generic-x64/binaries'
+export PKG_CONFIG_ALLOW_CROSS='1'
+
+source /mnt/bbcrossbuild/lfs/generic-x64/toolchain/venv-x86_64-linux-gnu/bin/activate
+
+
+export PYTHON_FOR_BUILD=/mnt/bbcrossbuild/toolchain/python-3.10.10/bin/python3.10
+export PYTHONPATH=/mnt/bbcrossbuild/toolchain/lib/python3.10/site-packages
+
+export CARGO_HOME='/mnt/bbcrossbuild/toolchain'
+export CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+export CARGO_PROFILE_RELEASE_LTO=thin
+export CARGO_TARGET='x86_64-unknown-linux-gnu'
+export RUSTUP_HOME='/mnt/bbcrossbuild/toolchain/var/rustup'
+
+export QEMU_LD_PREFIX='/mnt/bbcrossbuild/lfs/generic-x64/binaries'
+export QEMU_LD_LIBRARY_PATH='/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/lib64'
+
+export ENVIRONMENT_SOURCE_PATH='/home/desimonie/git/bbcrossbuild'
+
+# sccache parameters
+export RUSTC_WRAPPER='/mnt/bbcrossbuild/toolchain/bin/sccache'
+export SCCACHE_DIR='/mnt/bbcrossbuild/cache/sccache'
+export SCCACHE_CACHE_SIZE='16G'
+export SCCACHE_NO_DAEMON='0'
+
+export LC_ALL=POSIX
+export CONFIG_SITE='/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/share/config/site'
+export CXX_FOR_BUILD='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++'
+export CXXFLAGS_FOR_BUILD='-march=native -O3 -I/mnt/bbcrossbuild/toolchain/include -I/mnt/bbcrossbuild/lfs/generic-x64/toolchain/include'
+export LINKER_EXE_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/ld.lld'
+export LDFLAGS_FOR_BUILD='-fuse-ld=lld -Wl,--thinlto-jobs=7 -L/mnt/bbcrossbuild/toolchain/lib -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib -Wl,-rpath -Wl,/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib:/mnt/bbcrossbuild/toolchain/lib -Wl,-rpath-link -Wl,/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib -Wl,-rpath-link -Wl,/mnt/bbcrossbuild/toolchain/lib'
+export AR_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ar'
+export AS_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-as'
+export NM_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-nm'
+export RANLIB_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ranlib'
+export STRIP_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-strip'
+export OBJCOPY_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objcopy'
+export OBJDUMP_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objdump'
+export READELF_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-readelf'
+
+export CC='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang --target=x86_64-linux-gnu'
+export CC_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang'
+export CFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic  -O3 '
+export CPP='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang -E --target=x86_64-linux-gnu'
+export CPPFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic '
+export CXX='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++ --target=x86_64-linux-gnu'
+export CXX_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++'
+export CXXFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic  -O3 '
+export RUSTFLAGS='-C link-arg=--target=x86_64-linux-gnu -C link-arg=--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -C link-arg=-L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12 -C link-arg=-L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/lib64 -C link-arg=--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -C link-arg=-fuse-ld=lld -C link-arg=-Wl,--thinlto-jobs=7  -C target-cpu=generic  -C linker=/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang'
+export LINKER_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/ld.lld'
+export LDFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -fuse-ld=lld   -Wl,--thinlto-jobs=7   -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12 -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/lib64  '
+
+export AR='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ar'
+export AS='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-as'
+export NM='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-nm'
+export RANLIB='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ranlib'
+export STRIP='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-strip'
+export OBJCOPY='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objcopy'
+export OBJDUMP='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objdump'
+export READELF='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-readelf'
+
+export LD_LIBRARY_PATH=''
+export PATH='/mnt/bbcrossbuild/toolchain/python-3.10.10/bin:/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin:/mnt/bbcrossbuild/toolchain/autotools-2.71-1.16.5-2.4.7-0.21.1/bin:/mnt/bbcrossbuild/lfs/generic-x64/toolchain/bin:/mnt/bbcrossbuild/toolchain/bin:/home/desimonie/.local/bin:/home/desimonie/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/Program Files/WindowsApps/Microsoft.WindowsTerminal_1.16.10261.0_x64__8wekyb3d8bbwe:/mnt/c/Program Files (x86)/Common Files/Oracle/Java/javapath:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files/Amazon/AWSCLIV2/:/mnt/c/Users/desimonie/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/desimonie/AppData/Local/Programs/Microsoft VS Code/bin'
+export PKG_CONFIG='/mnt/bbcrossbuild/lfs/generic-x64/toolchain/bin/x86_64-linux-gnu-pkg-config'
+export PKG_CONFIG_LIBDIR='/mnt/bbcrossbuild/lfs/generic-x64/binaries/lib/pkgconfig:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/lib64/pkgconfig:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/share/pkgconfig'
+export PKG_CONFIG_SYSROOT_DIR='/mnt/bbcrossbuild/lfs/generic-x64/binaries'
+export PKG_CONFIG_ALLOW_CROSS='1'
+
+source /mnt/bbcrossbuild/lfs/generic-x64/toolchain/venv-x86_64-linux-gnu/bin/activate
+
+
+export PYTHON_FOR_BUILD=/mnt/bbcrossbuild/toolchain/python-3.10.10/bin/python3.10
+export PYTHONPATH=/mnt/bbcrossbuild/toolchain/lib/python3.10/site-packages
+
+export CARGO_HOME='/mnt/bbcrossbuild/toolchain'
+export CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+export CARGO_PROFILE_RELEASE_LTO=thin
+export CARGO_TARGET='x86_64-unknown-linux-gnu'
+export RUSTUP_HOME='/mnt/bbcrossbuild/toolchain/var/rustup'
+
+export QEMU_LD_PREFIX='/mnt/bbcrossbuild/lfs/generic-x64/binaries'
+export QEMU_LD_LIBRARY_PATH='/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/lib64'
+
+export ENVIRONMENT_SOURCE_PATH='/home/desimonie/git/bbcrossbuild'
+
+# sccache parameters
+export RUSTC_WRAPPER='/mnt/bbcrossbuild/toolchain/bin/sccache'
+export SCCACHE_DIR='/mnt/bbcrossbuild/cache/sccache'
+export SCCACHE_CACHE_SIZE='16G'
+export SCCACHE_NO_DAEMON='0'
+
+export LC_ALL=POSIX
+export CONFIG_SITE='/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/share/config/site'
+export CXX_FOR_BUILD='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++'
+export CXXFLAGS_FOR_BUILD='-march=native -O3 -I/mnt/bbcrossbuild/toolchain/include -I/mnt/bbcrossbuild/lfs/generic-x64/toolchain/include'
+export LINKER_EXE_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/ld.lld'
+export LDFLAGS_FOR_BUILD='-fuse-ld=lld -Wl,--thinlto-jobs=7 -L/mnt/bbcrossbuild/toolchain/lib -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib -Wl,-rpath -Wl,/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib:/mnt/bbcrossbuild/toolchain/lib -Wl,-rpath-link -Wl,/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib -Wl,-rpath-link -Wl,/mnt/bbcrossbuild/toolchain/lib'
+export AR_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ar'
+export AS_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-as'
+export NM_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-nm'
+export RANLIB_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ranlib'
+export STRIP_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-strip'
+export OBJCOPY_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objcopy'
+export OBJDUMP_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objdump'
+export READELF_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-readelf'
+
+export CC='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang --target=x86_64-linux-gnu'
+export CC_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang'
+export CFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic  -O3 '
+export CPP='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang -E --target=x86_64-linux-gnu'
+export CPPFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic '
+export CXX='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++ --target=x86_64-linux-gnu'
+export CXX_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++'
+export CXXFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic  -O3 '
+export RUSTFLAGS='-C link-arg=--target=x86_64-linux-gnu -C link-arg=--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -C link-arg=-L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12 -C link-arg=-L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/lib64 -C link-arg=--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -C link-arg=-fuse-ld=lld -C link-arg=-Wl,--thinlto-jobs=7  -C target-cpu=generic  -C linker=/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang'
+export LINKER_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/ld.lld'
+export LDFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -fuse-ld=lld   -Wl,--thinlto-jobs=7   -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12 -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/lib64  '
+
+export AR='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ar'
+export AS='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-as'
+export NM='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-nm'
+export RANLIB='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ranlib'
+export STRIP='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-strip'
+export OBJCOPY='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objcopy'
+export OBJDUMP='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objdump'
+export READELF='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-readelf'
+
+export LD_LIBRARY_PATH=''
+export PATH='/mnt/bbcrossbuild/toolchain/python-3.10.10/bin:/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin:/mnt/bbcrossbuild/toolchain/autotools-2.71-1.16.5-2.4.7-0.21.1/bin:/mnt/bbcrossbuild/lfs/generic-x64/toolchain/bin:/mnt/bbcrossbuild/toolchain/bin:/home/desimonie/.local/bin:/home/desimonie/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/Program Files/WindowsApps/Microsoft.WindowsTerminal_1.16.10261.0_x64__8wekyb3d8bbwe:/mnt/c/Program Files (x86)/Common Files/Oracle/Java/javapath:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files/Amazon/AWSCLIV2/:/mnt/c/Users/desimonie/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/desimonie/AppData/Local/Programs/Microsoft VS Code/bin'
+export PKG_CONFIG='/mnt/bbcrossbuild/lfs/generic-x64/toolchain/bin/x86_64-linux-gnu-pkg-config'
+export PKG_CONFIG_LIBDIR='/mnt/bbcrossbuild/lfs/generic-x64/binaries/lib/pkgconfig:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/lib64/pkgconfig:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/share/pkgconfig'
+export PKG_CONFIG_SYSROOT_DIR='/mnt/bbcrossbuild/lfs/generic-x64/binaries'
+export PKG_CONFIG_ALLOW_CROSS='1'
+
+source /mnt/bbcrossbuild/lfs/generic-x64/toolchain/venv-x86_64-linux-gnu/bin/activate
+
+
+export PYTHON_FOR_BUILD=/mnt/bbcrossbuild/toolchain/python-3.10.10/bin/python3.10
+export PYTHONPATH=/mnt/bbcrossbuild/toolchain/lib/python3.10/site-packages
+
+export CARGO_HOME='/mnt/bbcrossbuild/toolchain'
+export CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+export CARGO_PROFILE_RELEASE_LTO=thin
+export CARGO_TARGET='x86_64-unknown-linux-gnu'
+export RUSTUP_HOME='/mnt/bbcrossbuild/toolchain/var/rustup'
+
+export QEMU_LD_PREFIX='/mnt/bbcrossbuild/lfs/generic-x64/binaries'
+export QEMU_LD_LIBRARY_PATH='/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/lib64'
+
+export ENVIRONMENT_SOURCE_PATH='/home/desimonie/git/bbcrossbuild'
+
+# sccache parameters
+export RUSTC_WRAPPER='/mnt/bbcrossbuild/toolchain/bin/sccache'
+export SCCACHE_DIR='/mnt/bbcrossbuild/cache/sccache'
+export SCCACHE_CACHE_SIZE='16G'
+export SCCACHE_NO_DAEMON='0'
+
+export LC_ALL=POSIX
+export CONFIG_SITE='/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/share/config/site'
+export CXX_FOR_BUILD='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++'
+export CXXFLAGS_FOR_BUILD='-march=native -O3 -I/mnt/bbcrossbuild/toolchain/include -I/mnt/bbcrossbuild/lfs/generic-x64/toolchain/include'
+export LINKER_EXE_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/ld.lld'
+export LDFLAGS_FOR_BUILD='-fuse-ld=lld -Wl,--thinlto-jobs=7 -L/mnt/bbcrossbuild/toolchain/lib -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib -Wl,-rpath -Wl,/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib:/mnt/bbcrossbuild/toolchain/lib -Wl,-rpath-link -Wl,/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib -Wl,-rpath-link -Wl,/mnt/bbcrossbuild/toolchain/lib'
+export AR_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ar'
+export AS_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-as'
+export NM_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-nm'
+export RANLIB_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ranlib'
+export STRIP_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-strip'
+export OBJCOPY_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objcopy'
+export OBJDUMP_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objdump'
+export READELF_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-readelf'
+
+export CC='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang --target=x86_64-linux-gnu'
+export CC_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang'
+export CFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic  -O3 '
+export CPP='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang -E --target=x86_64-linux-gnu'
+export CPPFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic '
+export CXX='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++ --target=x86_64-linux-gnu'
+export CXX_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++'
+export CXXFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic  -O3 '
+export RUSTFLAGS='-C link-arg=--target=x86_64-linux-gnu -C link-arg=--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -C link-arg=-L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12 -C link-arg=-L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/lib64 -C link-arg=--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -C link-arg=-fuse-ld=lld -C link-arg=-Wl,--thinlto-jobs=7  -C target-cpu=generic  -C linker=/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang'
+export LINKER_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/ld.lld'
+export LDFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -fuse-ld=lld   -Wl,--thinlto-jobs=7   -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12 -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/lib64  '
+
+export AR='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ar'
+export AS='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-as'
+export NM='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-nm'
+export RANLIB='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ranlib'
+export STRIP='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-strip'
+export OBJCOPY='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objcopy'
+export OBJDUMP='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objdump'
+export READELF='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-readelf'
+
+export LD_LIBRARY_PATH=''
+export PATH='/mnt/bbcrossbuild/toolchain/python-3.10.10/bin:/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin:/mnt/bbcrossbuild/toolchain/autotools-2.71-1.16.5-2.4.7-0.21.1/bin:/mnt/bbcrossbuild/lfs/generic-x64/toolchain/bin:/mnt/bbcrossbuild/toolchain/bin:/home/desimonie/.local/bin:/home/desimonie/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/Program Files/WindowsApps/Microsoft.WindowsTerminal_1.16.10261.0_x64__8wekyb3d8bbwe:/mnt/c/Program Files (x86)/Common Files/Oracle/Java/javapath:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files/Amazon/AWSCLIV2/:/mnt/c/Users/desimonie/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/desimonie/AppData/Local/Programs/Microsoft VS Code/bin'
+export PKG_CONFIG='/mnt/bbcrossbuild/lfs/generic-x64/toolchain/bin/x86_64-linux-gnu-pkg-config'
+export PKG_CONFIG_LIBDIR='/mnt/bbcrossbuild/lfs/generic-x64/binaries/lib/pkgconfig:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/lib64/pkgconfig:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/share/pkgconfig'
+export PKG_CONFIG_SYSROOT_DIR='/mnt/bbcrossbuild/lfs/generic-x64/binaries'
+export PKG_CONFIG_ALLOW_CROSS='1'
+
+source /mnt/bbcrossbuild/lfs/generic-x64/toolchain/venv-x86_64-linux-gnu/bin/activate
+
+
+export PYTHON_FOR_BUILD=/mnt/bbcrossbuild/toolchain/python-3.10.10/bin/python3.10
+export PYTHONPATH=/mnt/bbcrossbuild/toolchain/lib/python3.10/site-packages
+
+export CARGO_HOME='/mnt/bbcrossbuild/toolchain'
+export CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+export CARGO_PROFILE_RELEASE_LTO=thin
+export CARGO_TARGET='x86_64-unknown-linux-gnu'
+export RUSTUP_HOME='/mnt/bbcrossbuild/toolchain/var/rustup'
+
+export QEMU_LD_PREFIX='/mnt/bbcrossbuild/lfs/generic-x64/binaries'
+export QEMU_LD_LIBRARY_PATH='/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/lib64'
+
+export ENVIRONMENT_SOURCE_PATH='/home/desimonie/git/bbcrossbuild'
+
+# sccache parameters
+export RUSTC_WRAPPER='/mnt/bbcrossbuild/toolchain/bin/sccache'
+export SCCACHE_DIR='/mnt/bbcrossbuild/cache/sccache'
+export SCCACHE_CACHE_SIZE='16G'
+export SCCACHE_NO_DAEMON='0'
+
+export LC_ALL=POSIX
+export CONFIG_SITE='/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/share/config/site'
+export CXX_FOR_BUILD='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++'
+export CXXFLAGS_FOR_BUILD='-march=native -O3 -I/mnt/bbcrossbuild/toolchain/include -I/mnt/bbcrossbuild/lfs/generic-x64/toolchain/include'
+export LINKER_EXE_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/ld.lld'
+export LDFLAGS_FOR_BUILD='-fuse-ld=lld -Wl,--thinlto-jobs=7 -L/mnt/bbcrossbuild/toolchain/lib -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib -Wl,-rpath -Wl,/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib:/mnt/bbcrossbuild/toolchain/lib -Wl,-rpath-link -Wl,/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib -Wl,-rpath-link -Wl,/mnt/bbcrossbuild/toolchain/lib'
+export AR_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ar'
+export AS_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-as'
+export NM_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-nm'
+export RANLIB_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ranlib'
+export STRIP_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-strip'
+export OBJCOPY_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objcopy'
+export OBJDUMP_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objdump'
+export READELF_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-readelf'
+
+export CC='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang --target=x86_64-linux-gnu'
+export CC_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang'
+export CFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic  -O3 -I$(${PKG_CONFIG} --cflags libopenjp2)'
+export CPP='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang -E --target=x86_64-linux-gnu'
+export CPPFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic '
+export CXX='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++ --target=x86_64-linux-gnu'
+export CXX_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++'
+export CXXFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic  -O3 '
+export RUSTFLAGS='-C link-arg=--target=x86_64-linux-gnu -C link-arg=--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -C link-arg=-L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12 -C link-arg=-L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/lib64 -C link-arg=--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -C link-arg=-fuse-ld=lld -C link-arg=-Wl,--thinlto-jobs=7  -C target-cpu=generic  -C linker=/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang'
+export LINKER_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/ld.lld'
+export LDFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -fuse-ld=lld   -Wl,--thinlto-jobs=7   -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12 -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/lib64  '
+
+export AR='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ar'
+export AS='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-as'
+export NM='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-nm'
+export RANLIB='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ranlib'
+export STRIP='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-strip'
+export OBJCOPY='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objcopy'
+export OBJDUMP='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objdump'
+export READELF='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-readelf'
+
+export LD_LIBRARY_PATH=''
+export PATH='/mnt/bbcrossbuild/toolchain/python-3.10.10/bin:/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin:/mnt/bbcrossbuild/toolchain/autotools-2.71-1.16.5-2.4.7-0.21.1/bin:/mnt/bbcrossbuild/lfs/generic-x64/toolchain/bin:/mnt/bbcrossbuild/toolchain/bin:/home/desimonie/.local/bin:/home/desimonie/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/Program Files/WindowsApps/Microsoft.WindowsTerminal_1.16.10261.0_x64__8wekyb3d8bbwe:/mnt/c/Program Files (x86)/Common Files/Oracle/Java/javapath:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files/Amazon/AWSCLIV2/:/mnt/c/Users/desimonie/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/desimonie/AppData/Local/Programs/Microsoft VS Code/bin'
+export PKG_CONFIG='/mnt/bbcrossbuild/lfs/generic-x64/toolchain/bin/x86_64-linux-gnu-pkg-config'
+export PKG_CONFIG_LIBDIR='/mnt/bbcrossbuild/lfs/generic-x64/binaries/lib/pkgconfig:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/lib64/pkgconfig:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/share/pkgconfig'
+export PKG_CONFIG_SYSROOT_DIR='/mnt/bbcrossbuild/lfs/generic-x64/binaries'
+export PKG_CONFIG_ALLOW_CROSS='1'
+
+source /mnt/bbcrossbuild/lfs/generic-x64/toolchain/venv-x86_64-linux-gnu/bin/activate
+
+
+export PYTHON_FOR_BUILD=/mnt/bbcrossbuild/toolchain/python-3.10.10/bin/python3.10
+export PYTHONPATH=/mnt/bbcrossbuild/toolchain/lib/python3.10/site-packages
+
+export CARGO_HOME='/mnt/bbcrossbuild/toolchain'
+export CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+export CARGO_PROFILE_RELEASE_LTO=thin
+export CARGO_TARGET='x86_64-unknown-linux-gnu'
+export RUSTUP_HOME='/mnt/bbcrossbuild/toolchain/var/rustup'
+
+export QEMU_LD_PREFIX='/mnt/bbcrossbuild/lfs/generic-x64/binaries'
+export QEMU_LD_LIBRARY_PATH='/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/lib64'
+
+export ENVIRONMENT_SOURCE_PATH='/home/desimonie/git/bbcrossbuild'
+
+# sccache parameters
+export RUSTC_WRAPPER='/mnt/bbcrossbuild/toolchain/bin/sccache'
+export SCCACHE_DIR='/mnt/bbcrossbuild/cache/sccache'
+export SCCACHE_CACHE_SIZE='16G'
+export SCCACHE_NO_DAEMON='0'
+
+export LC_ALL=POSIX
+export CONFIG_SITE='/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/share/config/site'
+export CXX_FOR_BUILD='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++'
+export CXXFLAGS_FOR_BUILD='-march=native -O3 -I/mnt/bbcrossbuild/toolchain/include -I/mnt/bbcrossbuild/lfs/generic-x64/toolchain/include'
+export LINKER_EXE_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/ld.lld'
+export LDFLAGS_FOR_BUILD='-fuse-ld=lld -Wl,--thinlto-jobs=7 -L/mnt/bbcrossbuild/toolchain/lib -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib -Wl,-rpath -Wl,/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib:/mnt/bbcrossbuild/toolchain/lib -Wl,-rpath-link -Wl,/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib -Wl,-rpath-link -Wl,/mnt/bbcrossbuild/toolchain/lib'
+export AR_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ar'
+export AS_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-as'
+export NM_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-nm'
+export RANLIB_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ranlib'
+export STRIP_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-strip'
+export OBJCOPY_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objcopy'
+export OBJDUMP_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objdump'
+export READELF_FOR_BUILD='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-readelf'
+
+export CC='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang --target=x86_64-linux-gnu'
+export CC_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang'
+export CFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic  -O3 '
+export CPP='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang -E --target=x86_64-linux-gnu'
+export CPPFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic '
+export CXX='/mnt/bbcrossbuild/toolchain/bin/sccache /mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++ --target=x86_64-linux-gnu'
+export CXX_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang++'
+export CXXFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries    -march=x86-64-v2 -mtune=generic  -O3 '
+export RUSTFLAGS='-C link-arg=--target=x86_64-linux-gnu -C link-arg=--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -C link-arg=-L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12 -C link-arg=-L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/lib64 -C link-arg=--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -C link-arg=-fuse-ld=lld -C link-arg=-Wl,--thinlto-jobs=7  -C target-cpu=generic  -C linker=/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/clang'
+export LINKER_EXE='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/ld.lld'
+export LDFLAGS='--sysroot=/mnt/bbcrossbuild/lfs/generic-x64/binaries -fuse-ld=lld   -Wl,--thinlto-jobs=7   -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12 -L/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/lib64  '
+
+export AR='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ar'
+export AS='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-as'
+export NM='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-nm'
+export RANLIB='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-ranlib'
+export STRIP='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-strip'
+export OBJCOPY='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objcopy'
+export OBJDUMP='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-objdump'
+export READELF='/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin/llvm-readelf'
+
+export LD_LIBRARY_PATH=''
+export PATH='/mnt/bbcrossbuild/toolchain/python-3.10.10/bin:/mnt/bbcrossbuild/toolchain/llvm-16.0.0/bin:/mnt/bbcrossbuild/toolchain/autotools-2.71-1.16.5-2.4.7-0.21.1/bin:/mnt/bbcrossbuild/lfs/generic-x64/toolchain/bin:/mnt/bbcrossbuild/toolchain/bin:/home/desimonie/.local/bin:/home/desimonie/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:/mnt/c/Program Files/WindowsApps/Microsoft.WindowsTerminal_1.16.10261.0_x64__8wekyb3d8bbwe:/mnt/c/Program Files (x86)/Common Files/Oracle/Java/javapath:/mnt/c/WINDOWS/system32:/mnt/c/WINDOWS:/mnt/c/WINDOWS/System32/Wbem:/mnt/c/WINDOWS/System32/WindowsPowerShell/v1.0/:/mnt/c/WINDOWS/System32/OpenSSH/:/mnt/c/Program Files/Git/cmd:/mnt/c/Program Files/dotnet/:/mnt/c/Program Files/Amazon/AWSCLIV2/:/mnt/c/Users/desimonie/AppData/Local/Microsoft/WindowsApps:/mnt/c/Users/desimonie/AppData/Local/Programs/Microsoft VS Code/bin'
+export PKG_CONFIG='/mnt/bbcrossbuild/lfs/generic-x64/toolchain/bin/x86_64-linux-gnu-pkg-config'
+export PKG_CONFIG_LIBDIR='/mnt/bbcrossbuild/lfs/generic-x64/binaries/lib/pkgconfig:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/lib64/pkgconfig:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/share/pkgconfig'
+export PKG_CONFIG_SYSROOT_DIR='/mnt/bbcrossbuild/lfs/generic-x64/binaries'
+export PKG_CONFIG_ALLOW_CROSS='1'
+
+source /mnt/bbcrossbuild/lfs/generic-x64/toolchain/venv-x86_64-linux-gnu/bin/activate
+
+
+export PYTHON_FOR_BUILD=/mnt/bbcrossbuild/toolchain/python-3.10.10/bin/python3.10
+export PYTHONPATH=/mnt/bbcrossbuild/toolchain/lib/python3.10/site-packages
+
+export CARGO_HOME='/mnt/bbcrossbuild/toolchain'
+export CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+export CARGO_PROFILE_RELEASE_LTO=thin
+export CARGO_TARGET='x86_64-unknown-linux-gnu'
+export RUSTUP_HOME='/mnt/bbcrossbuild/toolchain/var/rustup'
+
+export QEMU_LD_PREFIX='/mnt/bbcrossbuild/lfs/generic-x64/binaries'
+export QEMU_LD_LIBRARY_PATH='/mnt/bbcrossbuild/lfs/generic-x64/toolchain/lib/gcc/x86_64-linux-gnu/12:/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/lib64'
+
+export ENVIRONMENT_SOURCE_PATH='/home/desimonie/git/bbcrossbuild'
+
+# sccache parameters
+export RUSTC_WRAPPER='/mnt/bbcrossbuild/toolchain/bin/sccache'
+export SCCACHE_DIR='/mnt/bbcrossbuild/cache/sccache'
+export SCCACHE_CACHE_SIZE='16G'
+export SCCACHE_NO_DAEMON='0'
+
+export LC_ALL=POSIX
+export CONFIG_SITE='/mnt/bbcrossbuild/lfs/generic-x64/binaries/usr/share/config/site'

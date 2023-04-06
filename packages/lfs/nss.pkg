@@ -11,14 +11,21 @@ PKG_MAKEVARS+=" NSS_ENABLE_ECC=1 CHECKLOC= CC=\"\${CC}\" CXX=\"\${CXX}\" CCC=\"\
 PKG_MAKETARGETS="all"
 PKG_LDFLAGS="-s"
 
-case ${TOOLCHAIN} in
-    gnu)
-        PKG_MAKEVARS+=" NS_USE_GCC=1"
-        PKG_CFLAGS="-Wno-stringop-overflow"
-    ;;
-    llvm)
-    ;;
-esac
+##### Issues with LLVM toolchain, please re-check in future
+##### with x86_64 code.
+PKG_TOOLCHAIN=gnu
+PKG_MAKEVARS+=" NS_USE_GCC=1"
+PKG_CFLAGS="-Wno-stringop-overflow"
+## remove lines before and re-enable the code after
+#case ${TOOLCHAIN} in
+#    gnu)
+#        PKG_MAKEVARS+=" NS_USE_GCC=1"
+#        PKG_CFLAGS="-Wno-stringop-overflow"
+#    ;;
+#    llvm)
+#    ;;
+#esac
+############################################################
 
 if [ "${HARCH_BITWIDTH}" == 64 ]; then PKG_MAKEVARS+=" USE_64=1"; fi
 
