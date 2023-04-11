@@ -10,8 +10,8 @@ LINUX_HASSELINUX=0 LSOF_CC=\"\${CC}\" LSOF_AR=\"\${AR} cr\" LSOF_RANLIB=\"\${RAN
 LSOF_CFGF=\"\${CFLAGS}\" LSOF_CFGL=\"\${LDFLAGS}\" \
 ./Configure -n linux
 make all
-mkdir -pv ${PKG_PKGPATH}/usr/bin
-install -v -m0755 -s --strip-program=${HARCH}-strip lsof ${PKG_PKGPATH}/usr/bin
-mkdir -pv ${PKG_PKGPATH}/usr/share/man/man8
-install -v Lsof.8 ${PKG_PKGPATH}/usr/share/man/man8
+mkdir -pv \${PKG_PKGPATH}/usr/bin
+install -v -m0755 -s --strip-program=${HARCH}-strip lsof \${PKG_PKGPATH}/usr/bin
+mkdir -pv \${PKG_PKGPATH}/usr/share/man/man8
+install -v Lsof.8 \${PKG_PKGPATH}/usr/share/man/man8
 "

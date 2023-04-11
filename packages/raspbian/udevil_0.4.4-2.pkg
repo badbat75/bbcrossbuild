@@ -10,12 +10,12 @@ PKG_DEPS=""
 PKG_PREBUILD="sed -i 's/-o root -g root //g' src/Makefile.am; NOCONFIGURE=1 ./autogen.sh"
 PKG_POSTBUILD="install -m 0755 -d \${PKG_PKGPATH}/media
     chmod 4755 \${PKG_PKGPATH}/usr/bin/udevil
-    mkdir -p ${PKG_PKGPATH}/lib/systemd/system
+    mkdir -p \${PKG_PKGPATH}/lib/systemd/system
     mv \${PKG_PKGPATH}\${INSTALL_LIBDIR}\${INSTALL_LIBSUFFIX}/systemd/system/devmon@.service \${PKG_PKGPATH}/lib/systemd/system/
     rm -rf \${PKG_PKGPATH}\${INSTALL_LIBDIR}\${INSTALL_LIBSUFFIX}/systemd
-    install -d ${PKG_PKGPATH}\${INSTALL_PREFIX}/share/man/man1
-    cp debian/devmon.1 ${PKG_PKGPATH}\${INSTALL_PREFIX}/share/man/man1/ && gzip -f ${PKG_PKGPATH}\${INSTALL_PREFIX}/share/man/man1/devmon.1
-    cp debian/udevil.1 ${PKG_PKGPATH}\${INSTALL_PREFIX}/share/man/man1/ && gzip -f ${PKG_PKGPATH}\${INSTALL_PREFIX}/share/man/man1/udevil.1"
+    install -d \${PKG_PKGPATH}\${INSTALL_PREFIX}/share/man/man1
+    cp debian/devmon.1 \${PKG_PKGPATH}\${INSTALL_PREFIX}/share/man/man1/ && gzip -f \${PKG_PKGPATH}\${INSTALL_PREFIX}/share/man/man1/devmon.1
+    cp debian/udevil.1 \${PKG_PKGPATH}\${INSTALL_PREFIX}/share/man/man1/ && gzip -f \${PKG_PKGPATH}\${INSTALL_PREFIX}/share/man/man1/udevil.1"
 PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH}
 
 PKG_POSTINSTALL="chown root:plugdev /usr/bin/udevil"

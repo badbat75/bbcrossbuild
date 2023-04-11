@@ -53,7 +53,7 @@ diff -urp audit-3.0.8.orig/lib/libaudit.h audit-3.0.8/lib/libaudit.h
 Only in audit-3.0.8/lib: libaudit.h.orig
 	EOF
 "
-PKG_POSTBUILD="pushd ${PKG_PKGPATH}${INSTALL_PREFIX}
+PKG_POSTBUILD="pushd \${PKG_PKGPATH}${INSTALL_PREFIX}
 patch -p1 <<-EOF
 diff -urp usr.orig/include/libaudit.h.orig usr/include/libaudit.h
 --- usr.orig/include/libaudit.h.orig	2022-02-14 14:14:08.000000000 -0500

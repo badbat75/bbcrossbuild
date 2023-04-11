@@ -20,8 +20,8 @@ PKG_POSTBUILD="
 	# $MOODE_DIR      -> \${PKG_SRCPATH}
 	# $BUILD_ROOT_DIR -> \${PKG_BLDPATH}
 	# $BASE_DIR       -> \${PKG_BLDPATH}/build
-	# $PKG_ROOT_DIR   -> ${PKG_PKGPATH}
-	# $NOT_OWNED_TEMP -> ${PKG_PKGPATH}/usr/share/moode-player
+	# $PKG_ROOT_DIR   -> \${PKG_PKGPATH}
+	# $NOT_OWNED_TEMP -> \${PKG_PKGPATH}/usr/share/moode-player
 	# Char mapping
 	# $ -> \$
 	# '' -> \" (can't use double quote)
@@ -55,52 +55,52 @@ PKG_POSTBUILD="
 	mv -f moode-stations-*_\$PKGVERSION.zip ${USERDATA_PATH}
 
 	# location for files that should overwrite existing files (not owned by moode-player)
-	NOT_OWNED_TEMP=${PKG_PKGPATH}/usr/share/moode-player
-	mkdir -p ${PKG_PKGPATH}/usr/share/moode-player
+	NOT_OWNED_TEMP=\${PKG_PKGPATH}/usr/share/moode-player
+	mkdir -p \${PKG_PKGPATH}/usr/share/moode-player
 
 	# /boot
-	rsync -av --prune-empty-dirs --exclude *.sed* --exclude *.overwrite* --exclude *.ignore* \${PKG_SRCPATH}/boot/ ${PKG_PKGPATH}/boot/
-	rsync -av --prune-empty-dirs --include \"*/\" --include \"*.overwrite*\" --exclude=\"*\" \${PKG_SRCPATH}/boot/ ${PKG_PKGPATH}/usr/share/moode-player/boot/
+	rsync -av --prune-empty-dirs --exclude *.sed* --exclude *.overwrite* --exclude *.ignore* \${PKG_SRCPATH}/boot/ \${PKG_PKGPATH}/boot/
+	rsync -av --prune-empty-dirs --include \"*/\" --include \"*.overwrite*\" --exclude=\"*\" \${PKG_SRCPATH}/boot/ \${PKG_PKGPATH}/usr/share/moode-player/boot/
 
 	# /etc
-	rsync -av --prune-empty-dirs --exclude *.sed* --exclude *.overwrite* \${PKG_SRCPATH}/etc/ ${PKG_PKGPATH}/etc/
-	rsync -av --prune-empty-dirs --include \"*/\" --include \"*.overwrite*\" --exclude=\"*\" \${PKG_SRCPATH}/etc/ ${PKG_PKGPATH}/usr/share/moode-player/etc/
-	#cp \${PKG_BLDPATH}/build/moode-apt-mark.conf  ${PKG_PKGPATH}/etc/
+	rsync -av --prune-empty-dirs --exclude *.sed* --exclude *.overwrite* \${PKG_SRCPATH}/etc/ \${PKG_PKGPATH}/etc/
+	rsync -av --prune-empty-dirs --include \"*/\" --include \"*.overwrite*\" --exclude=\"*\" \${PKG_SRCPATH}/etc/ \${PKG_PKGPATH}/usr/share/moode-player/etc/
+	#cp \${PKG_BLDPATH}/build/moode-apt-mark.conf  \${PKG_PKGPATH}/etc/
 
 	# /home
-	mkdir -p ${PKG_PKGPATH}/home
-	rsync -av --exclude xinitrc.default --exclude dircolors \${PKG_SRCPATH}/home/ ${PKG_PKGPATH}/home/pi
-	cp \${PKG_SRCPATH}/home/xinitrc.default ${PKG_PKGPATH}/home/pi/.xinitrc
-	cp \${PKG_SRCPATH}/home/dircolors ${PKG_PKGPATH}/home/pi/.dircolors
+	mkdir -p \${PKG_PKGPATH}/home
+	rsync -av --exclude xinitrc.default --exclude dircolors \${PKG_SRCPATH}/home/ \${PKG_PKGPATH}/home/pi
+	cp \${PKG_SRCPATH}/home/xinitrc.default \${PKG_PKGPATH}/home/pi/.xinitrc
+	cp \${PKG_SRCPATH}/home/dircolors \${PKG_PKGPATH}/home/pi/.dircolors
 
 	# /lib
-	rsync -av --prune-empty-dirs --exclude *.sed* --exclude *.overwrite* \${PKG_SRCPATH}/lib/ ${PKG_PKGPATH}/lib/
-	rsync -av --prune-empty-dirs --include \"*/\" --include \"*.overwrite*\" --exclude=\"*\" \${PKG_SRCPATH}/lib/ ${PKG_PKGPATH}/usr/share/moode-player/lib/
+	rsync -av --prune-empty-dirs --exclude *.sed* --exclude *.overwrite* \${PKG_SRCPATH}/lib/ \${PKG_PKGPATH}/lib/
+	rsync -av --prune-empty-dirs --include \"*/\" --include \"*.overwrite*\" --exclude=\"*\" \${PKG_SRCPATH}/lib/ \${PKG_PKGPATH}/usr/share/moode-player/lib/
 
 	# /mnt (mount points)
-	mkdir -p ${PKG_PKGPATH}/mnt/{NAS,SDCARD,UPNP}
-	cp -r \"\${PKG_SRCPATH}/sdcard/Stereo Test/\" ${PKG_PKGPATH}/mnt/SDCARD
+	mkdir -p \${PKG_PKGPATH}/mnt/{NAS,SDCARD,UPNP}
+	cp -r \"\${PKG_SRCPATH}/sdcard/Stereo Test/\" \${PKG_PKGPATH}/mnt/SDCARD
 
 	# /usr
-	rsync -av --prune-empty-dirs --exclude='mpd.conf' --exclude='mpdasrc.default' --exclude='install-wifi' --exclude='html/index.html' \${PKG_SRCPATH}/usr/ ${PKG_PKGPATH}/usr
-	rsync -av --prune-empty-dirs --include \"*/\" --include \"*.overwrite*\" --exclude=\"*\" --exclude='mpd.conf' --exclude='mpdasrc.default' --exclude='install-wifi' --exclude='html/index.html' \${PKG_SRCPATH}/usr/ ${PKG_PKGPATH}/usr/share/moode-player/usr/
-	#cp \${PKG_BLDPATH}/build/moode-apt-mark ${PKG_PKGPATH}/usr/local/bin
+	rsync -av --prune-empty-dirs --exclude='mpd.conf' --exclude='mpdasrc.default' --exclude='install-wifi' --exclude='html/index.html' \${PKG_SRCPATH}/usr/ \${PKG_PKGPATH}/usr
+	rsync -av --prune-empty-dirs --include \"*/\" --include \"*.overwrite*\" --exclude=\"*\" --exclude='mpd.conf' --exclude='mpdasrc.default' --exclude='install-wifi' --exclude='html/index.html' \${PKG_SRCPATH}/usr/ \${PKG_PKGPATH}/usr/share/moode-player/usr/
+	#cp \${PKG_BLDPATH}/build/moode-apt-mark \${PKG_PKGPATH}/usr/local/bin
 
 	# /var
 	# ignore includes of radio stations logos, those will be part of the stations backup
-	rsync -av --exclude='moode-sqlite3.db' --exclude='radio-logos' \${PKG_SRCPATH}/var/ ${PKG_PKGPATH}/var
-	mkdir -p ${PKG_PKGPATH}/var/local/www/imagesw/radio-logos/thumbs
+	rsync -av --exclude='moode-sqlite3.db' --exclude='radio-logos' \${PKG_SRCPATH}/var/ \${PKG_PKGPATH}/var
+	mkdir -p \${PKG_PKGPATH}/var/local/www/imagesw/radio-logos/thumbs
 
 	# /var/lib/mpd
-	mkdir -p ${PKG_PKGPATH}/var/lib/mpd/music/RADIO
-	chmod 0777 ${PKG_PKGPATH}/var/lib/mpd/music/RADIO
+	mkdir -p \${PKG_PKGPATH}/var/lib/mpd/music/RADIO
+	chmod 0777 \${PKG_PKGPATH}/var/lib/mpd/music/RADIO
 
 	# /var/wwww
-	mkdir -p ${PKG_PKGPATH}/var/www
-	cp -r \${PKG_BLDPATH}/build/dist/var/www/* ${PKG_PKGPATH}/var/www/
+	mkdir -p \${PKG_PKGPATH}/var/www
+	cp -r \${PKG_BLDPATH}/build/dist/var/www/* \${PKG_PKGPATH}/var/www/
 
 
-	# In ${PKG_PKGPATH}/usr/share/moode-player remove the \".overwrite\" part from the files
+	# In \${PKG_PKGPATH}/usr/share/moode-player remove the \".overwrite\" part from the files
 	function rename_files() {
 		set -x
 		org_name=\$1
@@ -109,29 +109,29 @@ PKG_POSTBUILD="
 		set +x
 	}
 	export -f rename_files;
-	find ${PKG_PKGPATH}/usr/share/moode-player -name \"*.overwrite*\" -exec bash -c 'rename_files \"{}\"' \;
+	find \${PKG_PKGPATH}/usr/share/moode-player -name \"*.overwrite*\" -exec bash -c 'rename_files \"{}\"' \;
 
 	# echo \"** Reset permissions\"
-	chmod -R 0755  ${PKG_PKGPATH}/var/www
-	chmod 0755  ${PKG_PKGPATH}/var/www/command/*
-	chmod 0755  ${PKG_PKGPATH}/var/www/util/*
-	chmod -R 0755  ${PKG_PKGPATH}/var/local/www
-	chmod -R 0777  ${PKG_PKGPATH}/var/local/www/commandw/*
-	chmod -R 0766  ${PKG_PKGPATH}/var/local/www/db
-	chmod -R 0755  ${PKG_PKGPATH}/usr/local/bin
+	chmod -R 0755  \${PKG_PKGPATH}/var/www
+	chmod 0755  \${PKG_PKGPATH}/var/www/command/*
+	chmod 0755  \${PKG_PKGPATH}/var/www/util/*
+	chmod -R 0755  \${PKG_PKGPATH}/var/local/www
+	chmod -R 0777  \${PKG_PKGPATH}/var/local/www/commandw/*
+	chmod -R 0766  \${PKG_PKGPATH}/var/local/www/db
+	chmod -R 0755  \${PKG_PKGPATH}/usr/local/bin
 	# # chmod -R ug-s /var/local/www
 
-	mkdir -pv ${PKG_PKGPATH}/etc/runonce.d/
-	cat <<-EOFM > ${PKG_PKGPATH}/etc/runonce.d/alsaequal
+	mkdir -pv \${PKG_PKGPATH}/etc/runonce.d/
+	cat <<-EOFM > \${PKG_PKGPATH}/etc/runonce.d/alsaequal
 		mkdir -p /opt/alsaequal
 		amixer -D alsaequal > /dev/null
 		chown mpd:audio /opt/alsaequal/alsaequal.bin
 	EOFM
 
-	mkdir -pv ${PKG_PKGPATH}/postinst_scripts
-	cp ${SRC_PATH}/moode-pkgbuild_8/packages/moode-player/postinstall.sh ${PKG_PKGPATH}/postinst_scripts/99_moode_player
-	sed -i '/PKG_VERSION/ s/x.x.x/${MOODEVER}/' ${PKG_PKGPATH}/postinst_scripts/99_moode_player
-	sed -i 's/systemctl st/# systemctl st/g' ${PKG_PKGPATH}/postinst_scripts/99_moode_player
+	mkdir -pv \${PKG_PKGPATH}/postinst_scripts
+	cp ${SRC_PATH}/moode-pkgbuild_8/packages/moode-player/postinstall.sh \${PKG_PKGPATH}/postinst_scripts/99_moode_player
+	sed -i '/PKG_VERSION/ s/x.x.x/${MOODEVER}/' \${PKG_PKGPATH}/postinst_scripts/99_moode_player
+	sed -i 's/systemctl st/# systemctl st/g' \${PKG_PKGPATH}/postinst_scripts/99_moode_player
 "
 
 PKG_POSTINSTALL_PRIO=51

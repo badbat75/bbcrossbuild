@@ -6,7 +6,7 @@ PKG_PREBUILD='sed -i "s/^CC = cc/CC ?= cc/" unix/Makefile
     sed -i "s|^CPP = /lib/cpp|CPP ?= /lib/cpp|" unix/Makefile
     sed -i "s|^CFLAGS = -O2|CFLAGS +=|" unix/Makefile
     sed -i "s|LFLAGS1 =|LFLAGS1 += \$(LDFLAGS)|" unix/Makefile'
-INST_CMD="-f unix/Makefile generic install prefix=${PKG_PKGPATH}/usr"
+INST_CMD="-f unix/Makefile generic install prefix=\${PKG_PKGPATH}/usr"
 PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/z/zip/zip_3.0-12.debian.tar.gz"
 PKG_CFLAGS="-DLARGE_FILE_SUPPORT -DUNICODE_SUPPORT"
 PKG_LDFLAGS="-lz"

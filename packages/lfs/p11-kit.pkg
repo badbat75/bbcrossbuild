@@ -25,6 +25,6 @@ case ${PKG_TARGET} in
 	;;
 	*)
 		PKG_DEPS+=" lfs/nss"
-		PKG_POSTBUILD="ln -sfv /usr/libexec/p11-kit/trust-extract-compat ${PKG_PKGPATH}/usr/bin/update-ca-certificates"
+		PKG_POSTBUILD="ln -sfv /usr/libexec/p11-kit/trust-extract-compat \${PKG_PKGPATH}/usr/bin/update-ca-certificates"
 	;;
 esac

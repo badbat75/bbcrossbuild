@@ -6,8 +6,8 @@ BUILD_PROCESS=configmake
 CONF_FLAGS=""
 INST_CMD=install-strip
 
-PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/lib/systemd/system ${PKG_PKGPATH}/etc/default
-	cat > ${PKG_PKGPATH}/lib/systemd/system/haveged.service <<-EOF
+PKG_POSTBUILD="mkdir -pv \${PKG_PKGPATH}/lib/systemd/system \${PKG_PKGPATH}/etc/default
+	cat > \${PKG_PKGPATH}/lib/systemd/system/haveged.service <<-EOF
 		[Unit]
 		Description=Entropy Daemon based on the HAVEGE algorithm
 		Documentation=man:haveged(8) http://www.issihosts.com/haveged/
@@ -42,7 +42,7 @@ PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/lib/systemd/system ${PKG_PKGPATH}/etc/de
 		[Install]
 		WantedBy=sysinit.target
 	EOF
-	cat > ${PKG_PKGPATH}/etc/default/haveged <<-EOF	
+	cat > \${PKG_PKGPATH}/etc/default/haveged <<-EOF	
 		# Configuration file for haveged
 
 		# Options to pass to haveged:

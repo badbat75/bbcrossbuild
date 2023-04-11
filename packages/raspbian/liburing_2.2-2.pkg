@@ -13,6 +13,6 @@ CONF_FLAGS="--prefix=${INSTALL_PREFIX} \
 	  --cc=\"\${CC}\" \
       --cxx=\"\${CXX}\""
 INST_CMD=install
-PKG_POSTBUILD="\${STRIP} -s ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/liburing.so.*"
+PKG_POSTBUILD="\${STRIP} -s \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/liburing.so.*"
 
 PKG_TOOLCHAIN=gnu

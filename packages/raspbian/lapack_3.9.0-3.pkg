@@ -66,8 +66,8 @@ PKG_POSTBUILD="
 		ln -s liblapacke.so.\${SO_VERSION} liblapacke.so
 
 		for I in libblas liblapacke liblapack libtmglib; do
-			install -D -s --strip-program=\${STRIP} -m755 \${I}.so.\${SO_VERSION} ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/\${I}.so.\${SO_VERSION}
-			ln -fsv \${I}.so.\${SO_VERSION} ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/\${I}.so.\${SO}
-			ln -fsv \${I}.so.\${SO_VERSION} ${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/\${I}.so
+			install -D -s --strip-program=\${STRIP} -m755 \${I}.so.\${SO_VERSION} \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/\${I}.so.\${SO_VERSION}
+			ln -fsv \${I}.so.\${SO_VERSION} \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/\${I}.so.\${SO}
+			ln -fsv \${I}.so.\${SO_VERSION} \${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/\${I}.so
 		done
 	"

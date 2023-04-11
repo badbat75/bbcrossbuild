@@ -7,6 +7,6 @@ PKG_MAKETARGETS="all,install-strip"
 
 if [ ${LFS_SPLITUSR} -eq 1 ]
 then
-  PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}/bin
-    ln -s ../usr/bin/{false,true} ${PKG_PKGPATH}/bin"
+  PKG_POSTBUILD="mkdir -pv \${PKG_PKGPATH}/bin
+    ln -s ../usr/bin/{false,true} \${PKG_PKGPATH}/bin"
 fi

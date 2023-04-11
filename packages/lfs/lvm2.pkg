@@ -19,7 +19,7 @@ PKG_COPYSRC=1
 PKG_PREBUILD="sed 's@../../include/cmds.h@../include/cmds.h@' -i lib/commands/cmd_enum.h"
 
 PKG_POSTBUILD="sed -e '/locking_dir =/{s/#//;s/var/run/}' \
-    -i ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/lvm/lvm.conf"
+    -i \${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/lvm/lvm.conf"
 
 if [ ${TOOLCHAIN} == gnu ]
 then

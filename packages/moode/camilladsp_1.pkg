@@ -10,6 +10,6 @@ CONF_FLAGS="--no-default-features --features websocket"
 CARGO_BINLIST="camilladsp"
 CARGO_STRIP=1
 PKG_POSTBUILD="
-	mkdir -p ${PKG_PKGPATH}/usr/local/bin
-	ln -fs /usr/bin/camilladsp ${PKG_PKGPATH}/usr/local/bin/camilladsp
+	mkdir -p \${PKG_PKGPATH}/usr/local/bin
+	ln -fs /usr/bin/camilladsp \${PKG_PKGPATH}/usr/local/bin/camilladsp
 	"

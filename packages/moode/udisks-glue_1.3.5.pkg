@@ -7,8 +7,8 @@ CONF_FLAGS=""
 INST_CMD=install-strip
 PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH}
 
-PKG_POSTBUILD="mkdir -p ${PKG_PKGPATH}/etc
-cat > ${PKG_PKGPATH}/etc/udisks-glue.conf <<EOF
+PKG_POSTBUILD="mkdir -p \${PKG_PKGPATH}/etc
+cat > \${PKG_PKGPATH}/etc/udisks-glue.conf <<EOF
 filter disks {
     optical = false
     partition_table = false

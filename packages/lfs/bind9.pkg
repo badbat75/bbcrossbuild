@@ -12,8 +12,8 @@ case ${PKG_TARGET} in
 		PKG_DEPS+=" lfs/json-c lfs/libidn2"
 		PKG_DEPS+=" lfs/curl lfs/BerkeleyDB lfs/openldap:bootstrap"
 		CONF_FLAGS="--with-libsystemd"
-		PKG_POSTBUILD="mkdir -pv ${PKG_PKGPATH}${INSTALL_SHAREDIR}/man/man1
-			install -v -v doc/man/{dig.1,host.1,nslookup.1} ${PKG_PKGPATH}${INSTALL_SHAREDIR}/man/man1"
+		PKG_POSTBUILD="mkdir -pv \${PKG_PKGPATH}${INSTALL_SHAREDIR}/man/man1
+			install -v -v doc/man/{dig.1,host.1,nslookup.1} \${PKG_PKGPATH}${INSTALL_SHAREDIR}/man/man1"
 		PKG_POSTINSTALL="if ! getent group named; then
 	groupadd --system -g 20 named
 fi

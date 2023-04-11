@@ -7,21 +7,21 @@ INST_CMD=all
 PKG_DEPS="raspbian/${PKG_SRCDIR} raspbian/libnl3_3.7.0"
 PKG_MAKEVARS="PREFIX=${INSTALL_PREFIX} INCDIR=${INSTALL_INCLUDEDIR} BINDIR=${INSTALL_PREFIX}/sbin -C hostapd"
 PKG_PREBUILD="cp -v --remove-destination debian/config/hostapd/linux hostapd/.config"
-PKG_POSTBUILD="install -d ${PKG_PKGPATH}${INSTALL_PREFIX}/sbin
-install -d ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/hostapd
-install -d ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/network/if-pre-up.d
-install -d ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/network/if-post-down.d
-install -d ${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man1
-install -d ${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man8
-install --mode=644 -D debian/ifupdown/hostapd/ifupdown.sh ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/hostapd/
-install -d ${PKG_PKGPATH}/lib/systemd/system
-install --mode=644 -D debian/hostapd.service ${PKG_PKGPATH}/lib/systemd/system/
-install --mode=644 -D debian/hostapd@.service ${PKG_PKGPATH}/lib/systemd/system/
-install --mode=644 -D debian/hostapd.default ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/default/hostapd
-install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D hostapd/hostapd ${PKG_PKGPATH}${INSTALL_EXECPREFIX}/sbin/
-install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D hostapd/hostapd_cli ${PKG_PKGPATH}${INSTALL_EXECPREFIX}/sbin/
-ln -fs ${INSTALL_SYSCONFDIR}/hostapd/ifupdown.sh ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/network/if-pre-up.d/hostapd
-ln -fs ${INSTALL_SYSCONFDIR}/hostapd/ifupdown.sh ${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/network/if-post-down.d/hostapd
-install -d ${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man{5,8}
-cp hostapd/hostapd.8 ${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man8/ && gzip -f ${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man8/hostapd.8
-cp hostapd/hostapd_cli.1 ${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man5/ && gzip -f ${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man5/hostapd_cli.1"
+PKG_POSTBUILD="install -d \${PKG_PKGPATH}${INSTALL_PREFIX}/sbin
+install -d \${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/hostapd
+install -d \${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/network/if-pre-up.d
+install -d \${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/network/if-post-down.d
+install -d \${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man1
+install -d \${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man8
+install --mode=644 -D debian/ifupdown/hostapd/ifupdown.sh \${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/hostapd/
+install -d \${PKG_PKGPATH}/lib/systemd/system
+install --mode=644 -D debian/hostapd.service \${PKG_PKGPATH}/lib/systemd/system/
+install --mode=644 -D debian/hostapd@.service \${PKG_PKGPATH}/lib/systemd/system/
+install --mode=644 -D debian/hostapd.default \${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/default/hostapd
+install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D hostapd/hostapd \${PKG_PKGPATH}${INSTALL_EXECPREFIX}/sbin/
+install --mode=755 -s --strip-program=${HARCH:+${HARCH}-}strip -D hostapd/hostapd_cli \${PKG_PKGPATH}${INSTALL_EXECPREFIX}/sbin/
+ln -fs ${INSTALL_SYSCONFDIR}/hostapd/ifupdown.sh \${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/network/if-pre-up.d/hostapd
+ln -fs ${INSTALL_SYSCONFDIR}/hostapd/ifupdown.sh \${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/network/if-post-down.d/hostapd
+install -d \${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man{5,8}
+cp hostapd/hostapd.8 \${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man8/ && gzip -f \${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man8/hostapd.8
+cp hostapd/hostapd_cli.1 \${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man5/ && gzip -f \${PKG_PKGPATH}${INSTALL_PREFIX}/share/man/man5/hostapd_cli.1"

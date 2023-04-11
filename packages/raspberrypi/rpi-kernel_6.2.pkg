@@ -32,10 +32,10 @@ case ${KERNEL_ARCH:-none} in
 		PKG_POSTBUILD+="
 			for p in broadcom
 			do
-				if [ -d ${PKG_PKGPATH}/boot/\${p} ]
+				if [ -d \${PKG_PKGPATH}/boot/\${p} ]
 				then
-					mv -f ${PKG_PKGPATH}/boot/\${p}/* ${PKG_PKGPATH}/boot/
-					rmdir ${PKG_PKGPATH}/boot/\${p}
+					mv -f \${PKG_PKGPATH}/boot/\${p}/* \${PKG_PKGPATH}/boot/
+					rmdir \${PKG_PKGPATH}/boot/\${p}
 				fi
 			done"
 		;;

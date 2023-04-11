@@ -10,9 +10,9 @@ INST_CMD=install-strip
 PKG_DEPS="moode/alsa-lib moode/bluez_5 raspbian/sbc-1.4 moode/fdk-aac_2.0.1 moode/libldac_2.0.2.3+af2dd23 moode/mpg123_1.29.2"
 PATCHES=
 
-PKG_POSTBUILD="install -d ${PKG_PKGPATH}/run/bluealsa
-	mkdir -p ${PKG_PKGPATH}/lib/systemd/system
-	cat > ${PKG_PKGPATH}/lib/systemd/system/bluez-alsa.service <<-EOF
+PKG_POSTBUILD="install -d \${PKG_PKGPATH}/run/bluealsa
+	mkdir -p \${PKG_PKGPATH}/lib/systemd/system
+	cat > \${PKG_PKGPATH}/lib/systemd/system/bluez-alsa.service <<-EOF
 		[Unit]
 		Description=Bluealsa daemon
 		Documentation=https://github.com/Arkq/bluez-alsa/
@@ -40,8 +40,8 @@ PKG_POSTBUILD="install -d ${PKG_PKGPATH}/run/bluealsa
 		[Install]
 		WantedBy=bluetooth.target
 	EOF
-	mkdir -p ${PKG_PKGPATH}/etc/default
-	cat > ${PKG_PKGPATH}/etc/default/bluez-alsa <<-EOF
+	mkdir -p \${PKG_PKGPATH}/etc/default
+	cat > \${PKG_PKGPATH}/etc/default/bluez-alsa <<-EOF
 		# Config file for blues-alsa.service
 		# Set the bluealsa option, please see bluealsa manpage
 		OPTIONS=\"\"
