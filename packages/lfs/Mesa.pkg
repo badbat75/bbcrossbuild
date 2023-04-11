@@ -1,5 +1,5 @@
 # Mesa
-PKG_VER=23.0.1
+PKG_VER=23.0.2
 PKG_URL="https://mesa.freedesktop.org/archive/mesa-${PKG_VER}.tar.xz"
 PKG_DEPS="lfs/libX11 lfs/libXfixes lfs/libxshmfence lfs/libXxf86vm lfs/libxcb lfs/libXrandr"
 PKG_DPES+=" lfs/libdrm"

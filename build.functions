@@ -556,10 +556,15 @@ function create_environment_source () {
 		### Build type: ${BUILD_PROCESS}
 		### Target: ${TARGET_ENV} [${_param_target}]
 		###### Other environment variables:
-		### DISTOS_PATH=${DISTOS_PATH}
-		### BIN_PATH=${BIN_PATH}
-		### PKG_SRCDIR=${PKG_SRCDIR}
-		### PKG_BLDDIR=${PKG_BLDDIR}
+		DISTOS_PATH=${DISTOS_PATH}
+		BIN_PATH=${BIN_PATH}
+		PKG_SRCPATH=${PKG_SRCPATH}
+		PKG_BLDPATH=${PKG_BLDPATH}
+		PKG_PKGPATH=${PKG_PKGPATH}
+		###
+		PLATFORM_CFLAGS='${PLATFORM_CFLAGS}'
+		OPTCOMP_FLAGS='${OPTCOMP_FLAGS}'
+		OPTLINK_FLAGS='${OPTLINK_FLAGS}'
 		#################################################################################
 
 		export SYSROOT='${SYSROOT}'

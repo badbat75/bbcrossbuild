@@ -958,7 +958,7 @@ function setup_toolchain_wrapper () {
 	cat <<-EOF > "${TOOLCHAIN_PATH}/bin/toolchain_wrapper"
 		#!/bin/sh -e
 		(
-			source \${ENVIRONMENT_SOURCE_PATH}/environment.source
+			source \${PKG_BLDPATH}/environment.source
 			CMD_NAME=\$(basename \${0})
 			PREFIX=\$(echo \${CMD_NAME^^} | cut -d'_' -f3)
 			TOOL=\${PREFIX:+\${PREFIX}_FOR_}\$(echo \${CMD_NAME^^} | cut -d'_' -f2)
@@ -1364,7 +1364,7 @@ function setup_python () {
 			run_cmd "build-python -m pip install --upgrade cython setuptools wheel"
 			run_cmd "mkdir -p \"${TOOLCHAIN_BLDPATH}/build_python_crossenv\""
 			pushd "${TOOLCHAIN_BLDPATH}/build_python_crossenv"
-			TOOLCHAIN=gnu create_environment_source
+			TOOLCHAIN=gnu PKG_BLDPATH=${PWD} create_environment_source
 			#shellcheck source=/dev/null
 			source environment.source
 			run_cmd "cross-pip -v install --upgrade setuptools cython Mako"
