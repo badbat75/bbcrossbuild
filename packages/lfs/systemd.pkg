@@ -1,5 +1,5 @@
 # systemd
-PKG_VER=253.2
+PKG_VER=253.3
 PKG_URL="https://github.com/systemd/systemd-stable/archive/refs/tags/v${PKG_VER}.tar.gz"
 PKG_DEPS="lfs/zlib lfs/xz lfs/bzip2 lfs/zstd lfs/libxml2:bootstrap"
 BUILD_PROCESS=mesonninja
