@@ -17,6 +17,11 @@ BUILD_PROCESS=mesonninja
 PKG_MAKETARGETS=",install"
 PKG_MAKEENV="LD_LIBRARY_PATH=${TOOLCHAIN_PATH}/lib"
 PKG_LDFLAGS="-s"
+case ${TOOLCHAIN} in
+	llvm)
+		PKG_CFLAGS="-Wno-deprecated-declarations"
+	;;
+esac
 
 PKG_POSTBUILD="chmod -v 04755 \${PKG_PKGPATH}${INSTALL_PREFIX}/lib/polkit-1/polkit-agent-helper-1
 	cat > \${PKG_PKGPATH}${INSTALL_SYSCONFDIR}/pam.d/polkit-1 <<-EOF

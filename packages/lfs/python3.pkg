@@ -38,3 +38,4 @@ PKG_FAULTYCFLAGS=1
 
 PKG_PREBUILD="sed -i 's/self.srcdir = sysconfig.get_config_var('\''srcdir'\'')/self.srcdir = os.path.dirname(os.path.abspath(__file__))/' -i setup.py"
 PKG_DISABLECROSSPYTHON=1
+PKG_POSTBUILD="sed '/-fuse-ld=/d' -i \"\${PKG_PKGPATH}${INSTALL_EXECPREFIX}/lib/python$(echo "${PKG_VER}" | cut -d. -f1,2)\"/_sysconfigdata__*.py"

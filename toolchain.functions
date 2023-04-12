@@ -1060,7 +1060,7 @@ function setup_llvm () {
 			-DLLVM_USE_PERF:BOOL=ON \\
 			-DLLVM_POLLY_LINK_INTO_TOOLS:BOOL=ON \\
 			-DLLVM_LIT_ARGS=-v \\
-			-DLLVM_INCLUDE_EXAMPLES:BOOL=ON \\
+			-DLLVM_INCLUDE_EXAMPLES:BOOL=OFF \\
 			-DLLVM_INCLUDE_UTILS:BOOL=ON \\
 			-DLLVM_INCLUDE_TESTS:BOOL=OFF \\
 			-DLLVM_BUILD_EXTERNAL_COMPILER_RT:BOOL=OFF \\
@@ -1351,7 +1351,7 @@ function setup_python () {
 		fi
 		run_cmd "\"${PYTHON_FOR_BUILD}\" -m crossenv \"${PYTHON_FOR_TARGET}\" \"${TOOLCHAIN_PATH}/venv-${HARCH}\""
 		run_cmd "rmdir -v \"${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include\""
-		run_cmd "ln -sfv \"${PYTHON_SEARCHPATH}${TARGET_INCLUDEDIR}/python${PYTHONBIN_VER}\" \"${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include\""
+		run_cmd "ln -sfv \"${PYTHON_SEARCHPATH}${TARGET_INCLUDEDIR}\" \"${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include\""
 		cat >"${TOOLCHAIN_PATH}/venv-${HARCH}/cross/bin/python3-config" <<-EOF
 			#!/bin/sh
 			${PYTHON_SEARCHPATH}${TARGET_PREFIX}/bin/python3-config \${@}

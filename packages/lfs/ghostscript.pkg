@@ -29,6 +29,7 @@ rm -rfv \${PKG_PKGPATH}${INSTALL_SHAREDIR}/doc/ghostscript &&
 cp -r examples/ \${PKG_PKGPATH}${INSTALL_SHAREDIR}/ghostscript/${PKG_VER}"
 
 PKG_COPYSRC=1
+PKG_FAULTYCFLAGS=1
 
 case ${TOOLCHAIN} in
     llvm) PKG_CFLAGS="-Wno-shift-negative-value" ;;
