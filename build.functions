@@ -1096,35 +1096,40 @@ function cargobuild () {
 	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 	cd "${PKG_BLDPATH}"
 	# shellcheck disable=SC2034
-	local CARGO_BIN CARGO_LIB CARGO_TARGET
-	CARGO_BIN=${CARGO_BIN:-${INSTALL_EXECPREFIX}/bin}
-	CARGO_LIB=${CARGO_LIB:-${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}}
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -x
 		source environment.source
-		cargo build $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -n "--verbose"; fi ) --release ${CONF_FLAGS} --target=\${CARGO_TARGET}
+
+		case \${1} in
+		  install)
+		    if [ ! -d "\${PKG_PKGPATH}${INSTALL_EXECPREFIX}/bin" ]
+		    then
+		        mkdir -pv "\${PKG_PKGPATH}${INSTALL_EXECPREFIX}/bin"
+		    fi
+		    if [ ! -d "\${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}" ]
+		    then
+		        mkdir -pv "\${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
+		    fi
+			$(
+				source environment.source
+				for file in ${CARGO_BINLIST}
+				do
+					echo "    cp -pv \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${INSTALL_EXECPREFIX}/bin/${file}\""
+				done
+				for file in ${CARGO_LIBLIST}
+				do
+					echo "    cp -pv \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/${file}\""
+				done
+			)
+		  ;;
+		  *)
+		    cargo build $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -n "--verbose"; fi ) --release ${CONF_FLAGS} --target=\${CARGO_TARGET}
+		  ;;
+		esac
 	EOF
 	run_cmd "chmod +x runmake.sh"
 	run_cmd "./runmake.sh"
-	(
-		source environment.source
-		for file in ${CARGO_BINLIST}
-		do
-			if [ ! -d "${PKG_PKGPATH}${CARGO_BIN}" ]
-			then
-				run_cmd "mkdir -p \"${PKG_PKGPATH}${CARGO_BIN}\""
-			fi
-			run_cmd "cp -p \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${CARGO_BIN}/${file}\""
-		done
-		for file in ${CARGO_LIBLIST}
-		do
-			if [ ! -d "${PKG_PKGPATH}${CARGO_LIB}" ]
-			then
-				run_cmd "mkdir -p \"${PKG_PKGPATH}${CARGO_LIB}\""
-			fi
-			run_cmd "cp -p \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${CARGO_LIB}/${file}\""
-		done
-	)
+	run_cmd "./runmake.sh install"
 	cd "${BB_HOME}"
 }
 
