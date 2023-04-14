@@ -8,9 +8,11 @@ PKG_MAKETARGETS="all,install-strip"
 
 case ${PKG_TARGET} in
     bootstrap)
+        PKG_DEPS="lfs/libxcb:bootstrap"
         PKG_DEPS+=" lfs/xtrans:bootstrap"
     ;;
     *)
+        PKG_DEPS="lfs/libxcb"
         PKG_DEPS+=" lfs/xtrans lfs/fontconfig"
     ;;
 esac

@@ -4,7 +4,7 @@ PKG_URL="https://github.com/cracklib/cracklib/releases/download/v${PKG_VER}/crac
 PKG_DEPS="lfs/cracklib-words lfs/zlib"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
-CONF_ENVS="PYTHON=cross-python3"
+CONF_ENV="PYTHON=cross-python3"
 CONF_FLAGS="--with-default-dict=${INSTALL_LIBDIR}/cracklib/pw_dict"
 PKG_CPPFLAGS="-I\${SYSROOT}${INSTALL_INCLUDEDIR}/python${PYTHONBIN_VER}"
 PKG_MAKETARGETS="all,install-strip"
