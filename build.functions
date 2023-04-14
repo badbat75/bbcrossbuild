@@ -1106,22 +1106,25 @@ function cargobuild () {
 	EOF
 	run_cmd "chmod +x runmake.sh"
 	run_cmd "./runmake.sh"
-	for file in ${CARGO_BINLIST}
-	do
-		if [ ! -d "${PKG_PKGPATH}${CARGO_BIN}" ]
-		then
-			run_cmd "mkdir -p \"${PKG_PKGPATH}${CARGO_BIN}\""
-		fi
-		run_cmd "cp -p \"target/${TOOLCHAIN_CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${CARGO_BIN}/${file}\""
-	done
-	for file in ${CARGO_LIBLIST}
-	do
-		if [ ! -d "${PKG_PKGPATH}${CARGO_LIB}" ]
-		then
-			run_cmd "mkdir -p \"${PKG_PKGPATH}${CARGO_LIB}\""
-		fi
-		run_cmd "cp -p \"target/${TOOLCHAIN_CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${CARGO_LIB}/${file}\""
-	done
+	(
+		source environment.source
+		for file in ${CARGO_BINLIST}
+		do
+			if [ ! -d "${PKG_PKGPATH}${CARGO_BIN}" ]
+			then
+				run_cmd "mkdir -p \"${PKG_PKGPATH}${CARGO_BIN}\""
+			fi
+			run_cmd "cp -p \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${CARGO_BIN}/${file}\""
+		done
+		for file in ${CARGO_LIBLIST}
+		do
+			if [ ! -d "${PKG_PKGPATH}${CARGO_LIB}" ]
+			then
+				run_cmd "mkdir -p \"${PKG_PKGPATH}${CARGO_LIB}\""
+			fi
+			run_cmd "cp -p \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${CARGO_LIB}/${file}\""
+		done
+	)
 	cd "${BB_HOME}"
 }
 
