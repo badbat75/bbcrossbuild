@@ -1792,7 +1792,7 @@ function build () {(
 		fi
 		run_cmd "mkdir -p \"${PKG_PKGPATH}\"" >> "${LOG_FILE}"
 	fi
-	( create_environment_source --target "${PKG_TARGET_ENV}" ) | log_buffer info >> ${LOG_FILE}
+	( create_environment_source --target "${PKG_TARGET_ENV}" ) | log_buffer info >> "${LOG_FILE}"
 	#### Pre-Build
 	if [ -n "${PKG_PREBUILD}" ]
 	then

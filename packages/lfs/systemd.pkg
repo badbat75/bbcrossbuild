@@ -33,9 +33,6 @@ CONF_FLAGS+=" -Dnss-mymachines=true"
 CONF_FLAGS+=" -Dnss-resolve=true"
 CONF_FLAGS+=" -Dnss-systemd=true"
 CONF_FLAGS+=" -Doomd=true"
-case ${TOOLCHAIN} in
-	llvm) PKG_MAKEENV="LD_LIBRARY_PATH=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib";;
-esac
 ###
 case "${PKG_TARGET}" in
 	bootstrap) LIBAUDIT_TARGET=bootstrap

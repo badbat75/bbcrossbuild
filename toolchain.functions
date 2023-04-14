@@ -1046,7 +1046,7 @@ function setup_llvm () {
 			-DCMAKE_BUILD_TYPE=Release \\
 			-DLLVM_TARGETS_TO_BUILD=\"all\" \\
 			-DLLVM_ENABLE_PROJECTS=\"clang;clang-tools-extra;lldb;lld;polly\" \\
-			-DLLVM_BINUTILS_INCDIR=/usr/include \\
+			-DLLVM_BINUTILS_INCDIR=${GLOBAL_TOOLCHAIN_PATH}/include \\
 			\\
 			-DBUILD_SHARED_LIBS:BOOL=OFF \\
 			-DLLVM_ENABLE_LTO:BOOL=${LTO} \\
@@ -1090,6 +1090,8 @@ function setup_llvm () {
 		run_cmd "LD_LIBRARY_PATH=${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/lib ninja $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -v; fi ) \\
 			-C \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}\" install/strip"
 		#pathremove LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}"
+		run_cmd "patchelf --set-rpath \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib\" \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/LLVMgold.so\""
+		run_cmd "patchelf --set-rpath \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib\" \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/LLVMPolly.so\""
 	}
 
 	function configure_llvm_builtins () {
@@ -1224,6 +1226,7 @@ function setup_llvm () {
 	echo -n "Setting up clang-${LLVM_VER}... "
 	if [ ! -f "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang" ] || [ ! -f "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/ld.lld" ]
 	then
+		build lfs/binutils:native
 		true > "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
 		echo "Memory allocated: ${CURRENT_MEMORY}G / Memory needed: ${MEMORY_REQUIRED_G}G" | log_buffer info >> "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
 		echo "Linker jobs allocated: ${PARALLEL_LINK_JOB}" | log_buffer info >> "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"

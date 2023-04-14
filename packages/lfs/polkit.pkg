@@ -15,8 +15,8 @@ CONF_FLAGS+=" -Dtests=false"
 CONF_FLAGS+=" -Dexamples=false"
 BUILD_PROCESS=mesonninja
 PKG_MAKETARGETS=",install"
-PKG_MAKEENV="LD_LIBRARY_PATH=${TOOLCHAIN_PATH}/lib"
 PKG_LDFLAGS="-s"
+PKG_TOOLCHAIN=gnu
 case ${TOOLCHAIN} in
 	llvm)
 		PKG_CFLAGS="-Wno-deprecated-declarations"

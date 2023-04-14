@@ -17,7 +17,7 @@ esac
 BUILD_PROCESS=configmake
 STD_CONF_FLAGS=0
 CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} --with-sysroot=/ --with-build-sysroot=\${SYSROOT} \
-	--build=${BARCH} --host=${HARCH} --target=${HARCH} \
+	 \
 	--disable-werror \
 	--enable-shared --enable-static \
 	--enable-gold=default --enable-ld --enable-gprofng=yes --enable-lto \
@@ -28,18 +28,35 @@ CONF_FLAGS+=" --with-mpc-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpc-lib
 CONF_FLAGS+=" --with-mpfr-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-mpfr-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 CONF_FLAGS+=" --with-gmp-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-gmp-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 CONF_FLAGS+=" --with-isl-include=\${SYSROOT}${INSTALL_INCLUDEDIR} --with-isl-lib=\${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
-PKG_MAKETARGETS="all,install"
 PKG_MAKEVARS="STAGE_CC_WRAPPER=\"${CCWRAPPER}\""
-PKG_MAKEVARS+="AR_FOR_TARGET=\"\${AR}\""
-PKG_MAKEVARS+="NM_FOR_TARGET=\"\${NM}\""
-PKG_MAKEVARS+="RANLIB_FOR_TARGET=\"\${RANLIB}\""
+PKG_MAKEVARS+=" AR_FOR_TARGET=\"\${AR}\""
+PKG_MAKEVARS+=" NM_FOR_TARGET=\"\${NM}\""
+PKG_MAKEVARS+=" RANLIB_FOR_TARGET=\"\${RANLIB}\""
 PKG_TOOLCHAIN=gnu
-PKG_LDFLAGS="-s"
+PKG_OVERRIDELD=bfd
 
 case ${BINUTILS_VER} in
 	2.3*)
 		CONF_ENV="env -u CPP -u CPPFLAGS"
 		PKG_MAKEENV="env -u CPP -u CPPFLAGS"
+	;;
+esac
+
+case ${PKG_TARGET} in
+	native)
+		PKG_CHECK="[ \"\$( \"${INSTALL_EXECPREFIX}/bin/ld.bfd\" --version | head -n1 | awk '{print \$5}' | cut -d. -f1,2 )\" == \"${PKG_VER/\+*/}\" ]"
+		CONF_FLAGS+=" --build=${BARCH} --host=${BARCH} --target=${BARCH}"
+		PKG_MAKETARGETS="all,install-strip"
+	;;
+	cross)
+		PKG_CHECK="[ \"\$( \"${INSTALL_EXECPREFIX}/bin/${HARCH}-ld.bfd\" --version | head -n1 | awk '{print \$5}' | cut -d. -f1,2 )\" == \"${PKG_VER/\+*/}\" ]"
+		CONF_FLAGS+=" --build=${BARCH} --host=${BARCH} --target=${HARCH} --enable-targets=${HARCH}"
+		PKG_MAKETARGETS="all,install-strip"
+	;;
+	*)
+		CONF_FLAGS+=" --build=${BARCH} --host=${HARCH} --target=${HARCH} --enable-targets=${HARCH}"
+		PKG_LDFLAGS="-s"
+		PKG_MAKETARGETS="all,install"
 	;;
 esac
 

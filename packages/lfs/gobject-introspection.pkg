@@ -7,6 +7,9 @@ case ${PKG_TARGET} in
 	cross)
 		PKG_DEPS="lfs/GLib:cross"
 		CONF_FLAGS="-Dpython=python3"
+		PKG_POSTBUILD="patchelf --set-rpath \"${INSTALL_LIBDIR}\" \\
+				\"${INSTALL_EXECPREFIX}\"/bin/g-ir-{compiler,generate,inspect} \\
+				\"\$(find \"${INSTALL_LIBDIR}/gobject-introspection/giscanner\" -name \"_giscanner.cpython-*.so\")\""
 	;;
 	*)
 		PKG_DEPS="lfs/GLib:bootstrap lfs/gobject-introspection:cross lfs/pcre2"
