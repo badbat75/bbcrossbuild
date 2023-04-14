@@ -1102,7 +1102,7 @@ function cargobuild () {
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -x
 		source environment.source
-		cargo build $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -n "--verbose"; fi ) --release ${CONF_FLAGS} --target=${TOOLCHAIN_CARGO_TARGET}
+		cargo build $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -n "--verbose"; fi ) --release ${CONF_FLAGS} --target=\${CARGO_TARGET}
 	EOF
 	run_cmd "chmod +x runmake.sh"
 	run_cmd "./runmake.sh"
