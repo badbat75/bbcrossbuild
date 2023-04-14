@@ -1224,10 +1224,11 @@ function setup_llvm () {
 		))
 	#PARALLEL_LINK_JOB=$(( "${CURRENT_MEMORY}" / "${MEMORY_REQUIRED_G}" ))
 
+	### Binutils dependency
+	build lfs/binutils:native
 	echo -n "Setting up clang-${LLVM_VER}... "
 	if [ ! -f "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang" ] || [ ! -f "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/ld.lld" ]
 	then
-		build lfs/binutils:native
 		true > "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
 		echo "Memory allocated: ${CURRENT_MEMORY}G / Memory needed: ${MEMORY_REQUIRED_G}G" | log_buffer info >> "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
 		echo "Linker jobs allocated: ${PARALLEL_LINK_JOB}" | log_buffer info >> "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
