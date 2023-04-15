@@ -8,5 +8,5 @@ PKG_DEPS+=" lfs/libpng"
 PKG_DEPS+=" lfs/libtiff"
 PKG_DEPS+=" lfs/gobject-introspection"
 BUILD_PROCESS=mesonninja
-CONF_FLAGS="--wrap-mode=nofallback"
+CONF_FLAGS="--wrap-mode=nofallback -Dintrospection=enabled"
 #PKG_MAKETARGETS="all,install"
