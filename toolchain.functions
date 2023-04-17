@@ -1095,7 +1095,7 @@ function setup_llvm () {
 		run_cmd "ln -fsv ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/LLVMgold.so ${TOOLCHAIN_PATH}/lib/bfd-plugins/LLVMgold.so" >> "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
 	}
 
-	# Deprecated
+	# Deprecated LLVM RT-Builtins
 	#function configure_llvm_builtins () {
 
 	#	local LLVM_TARGET
@@ -1198,11 +1198,13 @@ function setup_llvm () {
 	#	fi
 	#}
 
-	OPTS="--install" OPTS_WITH_VALUE="--targets" param2value "${@}"
+	local MEMORY_REQUIRED_G CURRENT_MEMORY PARALLEL_LINK_JOB
 
-	local LLVM_BUILTINS_INSTALL MEMORY_REQUIRED_G CURRENT_MEMORY PARALLEL_LINK_JOB
+	OPTS="" OPTS_WITH_VALUE="--targets" param2value "${@}"
+	# Deprecated LLVM RT-Builtins
+	#OPTS="--install" OPTS_WITH_VALUE="--targets" param2value "${@}"
+	#local LLVM_BUILTINS_INSTALL=${_param_install:-0}
 
-	LLVM_BUILTINS_INSTALL=${_param_install:-0}
 	# Determine maximum amount of parallel link
 	# libLLVM.so linking takes 10G
 	# llvm-exegesis linking takes 8G
@@ -1254,7 +1256,7 @@ function setup_llvm () {
 	fi
 	pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin"
 
-	### Deprecated, if needed build rt via build llv-compiler-rt package
+	### Deprecated LLVM RT-Builtins, if needed build rt via build llv-compiler-rt package
 	#case x${HM} in
 	#	xarm)
 	#		if [ "${HMFLOATABI}" == "hard" ]
@@ -1475,15 +1477,18 @@ function setup_python () {
 
 function setup_full_toolchain () {
 	set -e
-	OPTS="--with-llvm --with-python --with-gnu-install --with-main-gcc --with-llvm-install" OPTS_WITH_VALUE="" param2value "${@}"
+	OPTS="--with-llvm --with-python --with-gnu-install --with-main-gcc" OPTS_WITH_VALUE="" param2value "${@}"
+	# Deprecated LLVM RT-Builtins
+	#OPTS="--with-llvm --with-python --with-gnu-install --with-main-gcc --with-llvm-install" OPTS_WITH_VALUE="" param2value "${@}"
 
-	local WITH_LLVM WITH_PYTHON WITH_GNU_INSTALL WITH_MAIN_GCC WITH_LLVM_INSTALL SETUP_GCC SETUP_LLVM SETUP_GCC
+	local WITH_LLVM WITH_PYTHON WITH_GNU_INSTALL WITH_MAIN_GCC SETUP_GCC SETUP_LLVM SETUP_GCC
 
 	WITH_LLVM=${_param_with_llvm:-0}
 	WITH_PYTHON=${_param_with_python:-0}
 	WITH_GNU_INSTALL=${_param_with_gnu_install:-0}
 	WITH_MAIN_GCC=${_param_with_main_gcc:-0}
-	WITH_LLVM_INSTALL=${_param_with_llvm_install:-0}
+	# Deprecated LLVM RT-Builtins
+	#local WITH_LLVM_INSTALL=${_param_with_llvm_install:-0}
 	SETUP_GCC=
 	SETUP_LLVM=
 
@@ -1495,10 +1500,11 @@ function setup_full_toolchain () {
 	then
 		SETUP_GCC="${SETUP_GCC:+${SETUP_GCC} }--main_gcc"
 	fi
-	if [ "${WITH_LLVM_INSTALL}" -eq 1 ]
-	then
-		SETUP_LLVM="--install"
-	fi
+	# Deprecated LLVM RT-Builtins
+	#if [ "${WITH_LLVM_INSTALL}" -eq 1 ]
+	#then
+	#	SETUP_LLVM="--install"
+	#fi
 
 	setup_rust
 
