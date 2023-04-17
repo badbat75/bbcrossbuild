@@ -1254,21 +1254,22 @@ function setup_llvm () {
 		build_llvm >> "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log" 2>&1
 	fi
 	pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin"
-	case x${HM} in
-		xarm)
-			if [ "${HMFLOATABI}" == "hard" ]
-			then
-				local LLVM_ARCH=armhf
-			else
-				local LLVM_ARCH=arm
-			fi
-			;;
-		*)
-			local LLVM_ARCH=${HM}
-			;;
-	esac
 
 	### Deprecated, if needed build rt via build llv-compiler-rt package
+	#case x${HM} in
+	#	xarm)
+	#		if [ "${HMFLOATABI}" == "hard" ]
+	#		then
+	#			local LLVM_ARCH=armhf
+	#		else
+	#			local LLVM_ARCH=arm
+	#		fi
+	#		;;
+	#	*)
+	#		local LLVM_ARCH=${HM}
+	#		;;
+	#esac
+	#
 	#if [ ! -f "${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/clang_rt.crtbegin-${LLVM_ARCH}.o" ]
 	#then
 	#	true > "${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
