@@ -1097,11 +1097,9 @@ function setup_llvm () {
 
 	function configure_llvm_builtins () {
 
-		local LLVM_TARGET LLVM_INSTALL_PATH
+		local LLVM_TARGET
 
 		LLVM_TARGET=${1}
-		# To be changed with: ${TOOLCHAIN_PATH}
-		LLVM_INSTALL_PATH=$(llvm-config --prefix)
 
 		if [ ! -d "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}" ]
 		then
@@ -1139,11 +1137,11 @@ function setup_llvm () {
 			\\
 			-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \\
 			-DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \\
-			-DCMAKE_C_COMPILER=${LLVM_INSTALL_PATH}/bin/clang \\
-			-DCMAKE_CXX_COMPILER=${LLVM_INSTALL_PATH}/bin/clang++ \\
-			-DCMAKE_AR=${LLVM_INSTALL_PATH}/bin/llvm-ar \\
-			-DCMAKE_NM=${LLVM_INSTALL_PATH}/bin/llvm-nm \\
-			-DCMAKE_RANLIB=${LLVM_INSTALL_PATH}/bin/llvm-ranlib \\
+			-DCMAKE_C_COMPILER=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang \\
+			-DCMAKE_CXX_COMPILER=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang++ \\
+			-DCMAKE_AR=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/llvm-ar \\
+			-DCMAKE_NM=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/llvm-nm \\
+			-DCMAKE_RANLIB=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/llvm-ranlib \\
 			-DCMAKE_C_FLAGS=\"--target=${LLVM_TARGET} --sysroot=\"${SYSROOT}\" ${PLATFORM_CFLAGS} ${WA_CFLAGS}\" \\
 			-DCMAKE_CXX_FLAGS=\"--target=${LLVM_TARGET} --sysroot=\"${SYSROOT}\" ${PLATFORM_CFLAGS} ${WA_CXXFLAGS}\" \\
 			-DCMAKE_ASM_FLAGS=\"--target=${LLVM_TARGET} --sysroot=\"${SYSROOT}\" ${PLATFORM_CFLAGS}\" \\
@@ -1155,7 +1153,7 @@ function setup_llvm () {
 			-DCMAKE_BUILD_TYPE=Release \\
 			-DCMAKE_SYSROOT=\"${SYSROOT}\" \\
 			\\
-			-DLLVM_CONFIG_PATH=\"${LLVM_INSTALL_PATH}/bin/llvm-config\" \\
+			-DLLVM_CMAKE_DIR=\"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/cmake\" \\
 			\\
 			-DCOMPILER_RT_INCLUDE_TESTS:BOOL=OFF \\
 			-DCOMPILER_RT_BUILD_BUILTINS:BOOL=${COMPILER_RT_BUILD_BUILTINS} \\
