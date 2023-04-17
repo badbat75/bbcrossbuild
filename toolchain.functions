@@ -1098,105 +1098,104 @@ function setup_llvm () {
 	# Deprecated
 	#function configure_llvm_builtins () {
 
-		local LLVM_TARGET
+	#	local LLVM_TARGET
 
-		LLVM_TARGET=${1}
+	#	LLVM_TARGET=${1}
 
-		if [ ! -d "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}" ]
-		then
-			run_cmd "mkdir -p \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}\""
-		fi
-		if [ -d "${DISTOS_PATH}" ]
-		then
-			if [ "$(find "${DISTOS_PATH}/usr/lib" "${DISTOS_PATH}/lib" -type f -name crti.o -mindepth 1 2>/dev/null | wc -l)" -ge 1 ]
-			then
-				local SYSROOT=${DISTOS_PATH}
-				export QEMU_LD_PREFIX="${DISTOS_PATH}"
-			fi
-		else
-			local SYSROOT=${BIN_PATH}
-			export QEMU_LD_PREFIX="${BIN_PATH}"
-			local WA_CFLAGS="--gcc-toolchain=${TOOLCHAIN_PATH}"
-			local WA_CXXFLAGS="--gcc-toolchain=${TOOLCHAIN_PATH}"
-		fi
-		local PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
-		### Can we build the RT builtins?
-		case x${HMARCH} in
-			xarmv*)
-					if [[ "${HMARCH}" < "armv7" && "${HMARCH}" != "armv6m" ]]
-					then
-						echo -n "### ${HMARCH} is not supported, RT Builtins disabled... "
-						local COMPILER_RT_BUILD_BUILTINS=OFF
-					else
-						local COMPILER_RT_BUILD_BUILTINS=ON
-					fi
-					local WA_LDFLAGS="-lgcc_s"
-				;;
-			*) local COMPILER_RT_BUILD_BUILTINS=ON
-				;;
-		esac
-		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/cmake\" -S \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/compiler-rt\" -B \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}\" -G Ninja \\
-			\\
-			-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \\
-			-DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \\
-			-DCMAKE_C_COMPILER=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang \\
-			-DCMAKE_CXX_COMPILER=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang++ \\
-			-DCMAKE_AR=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/llvm-ar \\
-			-DCMAKE_NM=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/llvm-nm \\
-			-DCMAKE_RANLIB=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/llvm-ranlib \\
-			-DCMAKE_C_FLAGS=\"--target=${LLVM_TARGET} --sysroot=\"${SYSROOT}\" ${PLATFORM_CFLAGS} ${WA_CFLAGS}\" \\
-			-DCMAKE_CXX_FLAGS=\"--target=${LLVM_TARGET} --sysroot=\"${SYSROOT}\" ${PLATFORM_CFLAGS} ${WA_CXXFLAGS}\" \\
-			-DCMAKE_ASM_FLAGS=\"--target=${LLVM_TARGET} --sysroot=\"${SYSROOT}\" ${PLATFORM_CFLAGS}\" \\
-			-DCMAKE_EXE_LINKER_FLAGS=\"--target=${LLVM_TARGET} -fuse-ld=lld\" \\
-			-DCMAKE_SHARED_LINKER_FLAGS=\"${WA_LDFLAGS}\" \\
-			-DCMAKE_C_COMPILER_TARGET=\"${LLVM_TARGET}\" \\
-			-DCMAKE_ASM_COMPILER_TARGET=\"${LLVM_TARGET}\" \\
-			\\
-			-DCMAKE_INSTALL_PREFIX=/lib/clang/${LLVM_VER} \\
-			-DCMAKE_BUILD_TYPE=Release \\
-			-DCMAKE_SYSROOT=\"${SYSROOT}\" \\
-			\\
-			-DLLVM_CMAKE_DIR=\"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/cmake\" \\
-			\\
-			-DCOMPILER_RT_INCLUDE_TESTS:BOOL=OFF \\
-			-DCOMPILER_RT_BUILD_BUILTINS:BOOL=${COMPILER_RT_BUILD_BUILTINS} \\
-			-DCOMPILER_RT_BUILD_LIBFUZZER:BOOL=ON \\
-			-DCOMPILER_RT_BUILD_MEMPROF:BOOL=ON \\
-			-DCOMPILER_RT_BUILD_PROFILE:BOOL=ON \\
-			-DCOMPILER_RT_BUILD_SANITIZERS:BOOL=ON \\
-			-DCOMPILER_RT_BUILD_XRAY:BOOL=ON \\
-			-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON \\
-			-DBUILD_SHARED_LIBS:BOOL:BOOL=OFF"
+	#	if [ ! -d "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}" ]
+	#	then
+	#		run_cmd "mkdir -p \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}\""
+	#	fi
+	#	if [ -d "${DISTOS_PATH}" ]
+	#	then
+	#		if [ "$(find "${DISTOS_PATH}/usr/lib" "${DISTOS_PATH}/lib" -type f -name crti.o -mindepth 1 2>/dev/null | wc -l)" -ge 1 ]
+	#		then
+	#			local SYSROOT=${DISTOS_PATH}
+	#			export QEMU_LD_PREFIX="${DISTOS_PATH}"
+	#		fi
+	#	else
+	#		local SYSROOT=${BIN_PATH}
+	#		export QEMU_LD_PREFIX="${BIN_PATH}"
+	#		local WA_CFLAGS="--gcc-toolchain=${TOOLCHAIN_PATH}"
+	#		local WA_CXXFLAGS="--gcc-toolchain=${TOOLCHAIN_PATH}"
+	#	fi
+	#	local PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
+	#	### Can we build the RT builtins?
+	#	case x${HMARCH} in
+	#		xarmv*)
+	#				if [[ "${HMARCH}" < "armv7" && "${HMARCH}" != "armv6m" ]]
+	#				then
+	#					echo -n "### ${HMARCH} is not supported, RT Builtins disabled... "
+	#					local COMPILER_RT_BUILD_BUILTINS=OFF
+	#				else
+	#					local COMPILER_RT_BUILD_BUILTINS=ON
+	#				fi
+	#				local WA_LDFLAGS="-lgcc_s"
+	#			;;
+	#		*) local COMPILER_RT_BUILD_BUILTINS=ON
+	#			;;
+	#	esac
+	#	run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/cmake\" -S \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/compiler-rt\" -B \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}\" -G Ninja \\
+	#		\\
+	#		-DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \\
+	#		-DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \\
+	#		-DCMAKE_C_COMPILER=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang \\
+	#		-DCMAKE_CXX_COMPILER=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang++ \\
+	#		-DCMAKE_AR=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/llvm-ar \\
+	#		-DCMAKE_NM=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/llvm-nm \\
+	#		-DCMAKE_RANLIB=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/llvm-ranlib \\
+	#		-DCMAKE_C_FLAGS=\"--target=${LLVM_TARGET} --sysroot=\"${SYSROOT}\" ${PLATFORM_CFLAGS} ${WA_CFLAGS}\" \\
+	#		-DCMAKE_CXX_FLAGS=\"--target=${LLVM_TARGET} --sysroot=\"${SYSROOT}\" ${PLATFORM_CFLAGS} ${WA_CXXFLAGS}\" \\
+	#		-DCMAKE_ASM_FLAGS=\"--target=${LLVM_TARGET} --sysroot=\"${SYSROOT}\" ${PLATFORM_CFLAGS}\" \\
+	#		-DCMAKE_EXE_LINKER_FLAGS=\"--target=${LLVM_TARGET} -fuse-ld=lld\" \\
+	#		-DCMAKE_SHARED_LINKER_FLAGS=\"${WA_LDFLAGS}\" \\
+	#		-DCMAKE_C_COMPILER_TARGET=\"${LLVM_TARGET}\" \\
+	#		-DCMAKE_ASM_COMPILER_TARGET=\"${LLVM_TARGET}\" \\
+	#		\\
+	#		-DCMAKE_INSTALL_PREFIX=/lib/clang/${LLVM_VER} \\
+	#		-DCMAKE_BUILD_TYPE=Release \\
+	#		-DCMAKE_SYSROOT=\"${SYSROOT}\" \\
+	#		\\
+	#		-DLLVM_CMAKE_DIR=\"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/cmake\" \\
+	#		\\
+	#		-DCOMPILER_RT_INCLUDE_TESTS:BOOL=OFF \\
+	#		-DCOMPILER_RT_BUILD_BUILTINS:BOOL=${COMPILER_RT_BUILD_BUILTINS} \\
+	#		-DCOMPILER_RT_BUILD_LIBFUZZER:BOOL=ON \\
+	#		-DCOMPILER_RT_BUILD_MEMPROF:BOOL=ON \\
+	#		-DCOMPILER_RT_BUILD_PROFILE:BOOL=ON \\
+	#		-DCOMPILER_RT_BUILD_SANITIZERS:BOOL=ON \\
+	#		-DCOMPILER_RT_BUILD_XRAY:BOOL=ON \\
+	#		-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON \\
+	#		-DBUILD_SHARED_LIBS:BOOL:BOOL=OFF"
 
 	#}
 
-	# Deprecated
 	#function build_llvm_builtins () {
 
-		local LLVM_TARGET=${1}
-		# To be changed with: ${TOOLCHAIN_PATH}
+	#	local LLVM_TARGET=${1}
+	#	# To be changed with: ${TOOLCHAIN_PATH}
 
-		run_cmd "DESTDIR=${TOOLCHAIN_PATH} ninja \\
-			$( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -v; fi ) -j\"${NPROCS}\" \\
-			-C \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}\" install/strip"
+	#	run_cmd "DESTDIR=${TOOLCHAIN_PATH} ninja \\
+	#		$( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -v; fi ) -j\"${NPROCS}\" \\
+	#		-C \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}\" install/strip"
 
-		### Create rt_builtins package
-		if [ -d "${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}" ]
-		then
-			run_cmd "rm -rf \"${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}\""
-		fi
-		run_cmd "DESTDIR=${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}${TARGET_PREFIX} \\
-			ninja $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -v; fi ) -j\"${NPROCS}\" \\
-			-C \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}\" install/strip"
-		create_sfx_package "${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}"
-		run_cmd "rm -rf \"${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}\""
+	#	### Create rt_builtins package
+	#	if [ -d "${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}" ]
+	#	then
+	#		run_cmd "rm -rf \"${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}\""
+	#	fi
+	#	run_cmd "DESTDIR=${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}${TARGET_PREFIX} \\
+	#		ninja $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -v; fi ) -j\"${NPROCS}\" \\
+	#		-C \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}\" install/strip"
+	#	create_sfx_package "${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}"
+	#	run_cmd "rm -rf \"${PACKAGES_PATH}/llvm_clang_rt_builtins_${LLVM_VER}\""
 
-		if [ "${LLVM_BUILTINS_INSTALL}" -eq 1 ]
-		then
-			run_cmd "DESTDIR=\"${BIN_PATH}${TARGET_PREFIX}\" \\
-				ninja $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -v; fi ) -j\"${NPROCS}\" \\
-				-C \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}\" install/strip"
-		fi
+	#	if [ "${LLVM_BUILTINS_INSTALL}" -eq 1 ]
+	#	then
+	#		run_cmd "DESTDIR=\"${BIN_PATH}${TARGET_PREFIX}\" \\
+	#			ninja $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -v; fi ) -j\"${NPROCS}\" \\
+	#			-C \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_TARGET}\" install/strip"
+	#	fi
 	#}
 
 	OPTS="--install" OPTS_WITH_VALUE="--targets" param2value "${@}"
