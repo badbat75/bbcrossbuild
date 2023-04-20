@@ -16,7 +16,7 @@ CONF_FLAGS+=" -DLLVM_ENABLE_RTTI:BOOL=ON "
 CONF_FLAGS+=" -DLLVM_TARGETS_TO_BUILD:STRING=\"$(
 		case "${HM}" in
 			aarch64) echo -n AArch64 ;;
-			arm) echo -n Arm ;;
+			arm) echo -n ARM ;;
 			mips) echo -n Mips ;;
 			powerpc) echo -n PowerPC ;;
 			riscv) echo -n RISCV ;;
