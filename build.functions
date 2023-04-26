@@ -122,13 +122,15 @@ function setbuildenv () {
 					#	QEMU_LD_LIBRARY_PATH+="${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}:"
 					#fi			
 					case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
-						gnu) if [ -n "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ] && [ -d "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ]
+						gnu)
+							if [ -n "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ] && [ -d "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ]
 							then
 								COMMON_LDFLAGS+=" -L${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}"
 							fi
 						;;
-						llvm) #COMMON_CFLAGS+=" $(gcc_toolchain_libraries_compilerflags)"
-							#COMMON_CXXFLAGS+=" $(gcc_toolchain_libraries_compilerflags)"
+						llvm)
+							#COMMON_CFLAGS+=" $(gcc_toolchain_libraries_compilerflags)"
+							#COMMON_CXXFLAGS+=" $(gcc_toolchain_libraries_compilerflags) $(gcc_toolchain_libraries_compilerflags)/c++ $(gcc_toolchain_libraries_compilerflags)/c++/${HARCH}"
 							COMMON_LDFLAGS+=" $(gcc_toolchain_libraries_linkerflags)"
 						;;
 					esac
@@ -1114,11 +1116,11 @@ function cargobuild () {
 				source environment.source
 				for file in ${CARGO_BINLIST}
 				do
-					echo "    cp -pv \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${INSTALL_EXECPREFIX}/bin/${file}\""
+					echo "    cp -fpv \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${INSTALL_EXECPREFIX}/bin/${file}\""
 				done
 				for file in ${CARGO_LIBLIST}
 				do
-					echo "    cp -pv \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/${file}\""
+					echo "    cp -fpv \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/${file}\""
 				done
 			)
 		  ;;

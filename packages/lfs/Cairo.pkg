@@ -28,7 +28,7 @@ case ${PKG_TARGET} in
 		#PKG_DEPS+=" lfs/Qt"
 		#PKG_DEPS+=" lfs/Qt4"
 		#PKG_DEPS+=" lfs/Valgrind"
-		PKG_DEPS+=" lfs/DirectFB"
+		#PKG_DEPS+=" lfs/DirectFB"
 		PKG_DEPS+=" lfs/jbig2dec"
 		PKG_DEPS+=" lfs/libspectre"
 		#PKG_DEPS+=" lfs/Skia"

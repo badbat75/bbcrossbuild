@@ -4,7 +4,8 @@ PKG_URL="https://boostorg.jfrog.io/artifactory/main/release/${PKG_VER}/source/bo
 PKG_DEPS="lfs/zstd lfs/xz lfs/bzip2 lfs/zlib"
 BUILD_PROCESS=custom
 
-PKG_PREBUILD="sed 's@pkg-config@\${PKG_CONFIG:-pkg-config}@g' -i bootstrap.sh"
+PKG_PREBUILD="sed 's@pkg-config@\${PKG_CONFIG:-pkg-config}@g' -i bootstrap.sh
+	sed 's@: \"--target=.*\"@: \"\"@g' -i tools/build/src/tools/clang.jam"
 
 case ${TOOLCHAIN} in
 	llvm) BBTC=clang ;;
