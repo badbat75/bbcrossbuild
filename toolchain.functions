@@ -1535,11 +1535,11 @@ function setup_full_toolchain () {
 	TOOLCHAIN=gnu build lfs/pkgconf:native
 	TOOLCHAIN=gnu build lfs/pkgconf:cross
 	TOOLCHAIN=gnu build lfs/bison:native
+	TOOLCHAIN=gnu build lfs/cmake:native
 	setup_binutils
 	# shellcheck disable=SC2086
 	setup_gcc ${SETUP_GCC}
 	setup_toolchain_wrapper
-	TOOLCHAIN=gnu build lfs/cmake:native
 
 	if [ "${WITH_LLVM}" -eq 1 ] || [ "${TOOLCHAIN}" = llvm ]
 	then
