@@ -2,6 +2,10 @@
 PKG_URL="https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz"
 PKG_DEPS="lfs/flex:native lfs/doxygen:native lfs/libgmp lfs/libmpfr lfs/libmpc lfs/libisl lfs/zlib"
 case ${GCC_VER} in
+	13.1.0)
+		PKG_VER=13.1.0
+		PATCHES=
+		;;
 	12.2.0)
 		PKG_VER=12.2.0+88792f04e5c
 		PATCHES=gcc/gcc_12.2.0+88792f04e5c.patch

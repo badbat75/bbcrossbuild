@@ -107,10 +107,6 @@ function set_gnu_buildenv () {
 	# shellcheck disable=SC2034
 	INCLUDE_PATH_FOR_BUILD=$(find {/,/usr/} -mindepth 1 -maxdepth 1 -name include -type d)
 
-	GMPURL=https://gmplib.org/download/gmp/gmp-${GMP_VER}.tar.xz
-	MPFRURL=https://www.mpfr.org/mpfr-${MPFR_VER}/mpfr-${MPFR_VER}.tar.xz
-	MPCURL=https://ftp.gnu.org/gnu/mpc/mpc-${MPC_VER}.tar.gz
-	ISLURL=https://libisl.sourceforge.io/isl-${ISL_VER}.tar.xz
 	BINUTILSURL=https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.bz2
 	GCCURL=https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz
 
@@ -388,10 +384,6 @@ function setup_binutils () {
 		then
 			( cd "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}"; run_cmd "patch -p1 < \"${PATCH_PATH}/binutils/binutils_${BINUTILS_VER}.patch\"" )
 		fi
-		download_uncompress "${GMPURL}" "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/gmp"
-		download_uncompress "${MPFRURL}" "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/mpfr"
-		download_uncompress "${MPCURL}" "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/mpc"
-		download_uncompress "${ISLURL}" "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/isl"
 	}
 
 	function binutils_buildenv () {
@@ -405,13 +397,18 @@ function setup_binutils () {
 
 		### Config parameters in common with GCC and Binutils
 		COMMON_CONFIG="--with-sysroot=$(gcc_sysroot) --enable-shared --with-system-zlib"
+		COMMON_CONFIG+=" --with-mpc-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-mpc-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
+		COMMON_CONFIG+=" --with-mpfr-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-mpfr-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
+		COMMON_CONFIG+=" --with-gmp-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-gmp-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
+		COMMON_CONFIG+=" --with-isl-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-isl-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
+
 		### Workaround for latest patches (--disable-werror)
 		BINUTILS_CONFIG="--enable-gold=default --enable-ld --enable-gprofng=yes --enable-lto \
 			--enable-new-dtags --disable-rpath --enable-threads=yes --enable-plugins --enable-64-bit-bfd \
 			--enable-compressed-debug-sections=all --enable-separate-code=yes --enable-plugins --disable-werror ${SILENTCONFIG}"
 
 		COMPFLAGS="${GNU_EXTRACOMPFLAGS}"
-		LINKERFLAGS="${GNU_EXTRALDFLAGS} -s"
+		LINKERFLAGS="-Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib ${GNU_EXTRALDFLAGS} -s"
 		LTO_COMPFLAGS=
 		LTO_LINKERFLAGS=
 		if [ "${GCC_LTOENABLE:-0}" -eq 1 ]
@@ -497,15 +494,20 @@ function setup_binutils () {
 
 	if [ ! -f "${TOOLCHAIN_PATH}/bin/${HARCH}-ld.bfd" ]
 	then
-		build lfs/bison:native
-		build lfs/flex:native
-		build lfs/doxygen:native
-		echo -n "building... "
+		echo
+		NUMSPACES=1 build lfs/bison:native
+		NUMSPACES=1 build lfs/flex:native
+		NUMSPACES=1 build lfs/doxygen:native
+		NUMSPACES=1 build lfs/libgmp:native
+		NUMSPACES=1 build lfs/libmpfr:native
+		NUMSPACES=1 build lfs/libmpc:native
+		NUMSPACES=1 build lfs/libisl:native
+		echo -n "${SPACES}Building... "
 		# shellcheck disable=SC2153
 		binutils_make "${HARCH}" >> "${LOG_PATH}/toolchain_binutils-${BINUTILS_VER}.log"
 		echo -e "done.\n"
 	else
-		echo "already there."
+		echo -e "already there.\n"
 	fi
 	if [ -d "${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}" ]
 	then
@@ -546,10 +548,6 @@ function setup_gcc () {
 		then 
 			( cd "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}"; run_cmd "patch -t -p1 < \"${PATCH_PATH}/gcc/gcc_${GCC_VER}.patch\"" )
 		fi
-		download_uncompress "${GMPURL}" "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/gmp"
-		download_uncompress "${MPFRURL}" "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpfr"
-		download_uncompress "${MPCURL}" "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/mpc"
-		download_uncompress "${ISLURL}" "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/isl"
 		run_cmd "sed 's@^#include <limits.h>@#include <linux/limits.h>@' -i \"${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/libsanitizer/asan/asan_linux.cpp\""
 	}
 
@@ -564,6 +562,10 @@ function setup_gcc () {
 
 		### Config parameters in common with GCC and Binutils
 		COMMON_CONFIG="--with-sysroot=$(gcc_sysroot) --enable-shared --with-system-zlib"
+		COMMON_CONFIG+=" --with-mpc-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-mpc-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
+		COMMON_CONFIG+=" --with-mpfr-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-mpfr-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
+		COMMON_CONFIG+=" --with-gmp-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-gmp-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
+		COMMON_CONFIG+=" --with-isl-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-isl-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
 		GCC_CONFIG="--enable-languages=${GCC_LANGUAGES:-c,c++} --enable-version-specific-runtime-libs  \
 			$( if [ "${MULTI_ARCH}" -eq 1 ] && [ -z "${HARCH_LIB}" ]; then echo --enable-multiarch; fi ) \
 			--enable-threads=posix --enable-tls --enable-checking=release --disable-multilib \
@@ -579,7 +581,7 @@ function setup_gcc () {
 		fi
 
 		COMPFLAGS="${GNU_EXTRACOMPFLAGS} -Wno-maybe-uninitialized -Wno-stringop-overflow -Wno-stack-usage -Wno-alloc-size-larger-than"
-		LINKERFLAGS="${GNU_EXTRALDFLAGS}"
+		LINKERFLAGS="-Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib ${GNU_EXTRALDFLAGS}"
 		LTO_COMPFLAGS=
 		LTO_LINKERFLAGS=
 		if [ "${GCC_LTOENABLE:-0}" -eq 1 ]
@@ -881,16 +883,19 @@ function setup_gcc () {
 	SPACES="   "
 	if [ ! -f "${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" ] || [ ! -f "${TOOLCHAIN_PATH}/bin/${HARCH}-g++" ]
 	then
+		echo
+		NUMSPACES=1 build lfs/bison:native
+		NUMSPACES=1 build lfs/flex:native
+		NUMSPACES=1 build lfs/doxygen:native
+		NUMSPACES=1 build lfs/libgmp:native
+		NUMSPACES=1 build lfs/libmpfr:native
+		NUMSPACES=1 build lfs/libmpc:native
+		NUMSPACES=1 build lfs/libisl:native
 		if [ "$(gcc_sysroot)" == "${BIN_PATH}" ]
 		then
-			echo -n "${SPACES}"
 			NUMSPACES=1 build --temporary --no_gcc_check lfs/glibc:headers
 		fi
-		build lfs/bison:native
-		build lfs/flex:native
-		build lfs/doxygen:native
-		echo -n "${SPACES}"
-		echo -n "Building ${GCC_LANGUAGES:-c,c++} compilers... "
+		echo -n "${SPACES}Building ${GCC_LANGUAGES:-c,c++} compilers... "
 		gcc_make_host "${HARCH}" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
 		if [ "$(gcc_sysroot)" == "${BIN_PATH}" ]
 		then

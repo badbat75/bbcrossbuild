@@ -23,9 +23,6 @@ sudo apt-get install -y gperf
 # for lxml
 sudo apt-get install -y libxml2-dev
 
-# for glib-dbus-1.0
-sudo apt-get install -y libdbus-glib-1-dev
-
 # for udevil
 sudo apt-get install -y intltool
 
@@ -37,9 +34,6 @@ sudo apt-get install -y libxslt1-dev
 
 # for systemd
 sudo apt-get install -y xsltproc docbook-xsl docbook2x
-
-# for man-db
-sudo apt-get install -y groff
 
 # for btrfs-progs
 sudo apt-get install -y asciidoc

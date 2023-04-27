@@ -1690,12 +1690,14 @@ function build () {(
 	STATUS_FILE_DEFAULT_TARGET=${STATUS_PATH}/${PKG_FULLNAME}
 	LOG_FILE=${LOG_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}.log
 
-	echo "Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}"
+	SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
+	echo -n "${SPACES}Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}"
 
 	if [ -z "${PKG_CHECK}" ]
 	then
 		if [ "${PKG_TARGET}" == "native" ]
 		then
+			echo
 			trow_error "${ERROR_GENERIC}" "PKG_CHECK is empty and PKG_TARGET is native. Exiting..."
 		fi
 		### Check if target package or default package has already built
@@ -1710,8 +1712,7 @@ function build () {(
 		then
 			if [ "${PKG_CHKSUM}" == "$( cat "${STATUS_CHK_FILE}" )" ]
 			then
-				echo "${SPACES}Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}} already built."
-				echo
+				echo -e " already built.\n"
 				return 0
 			else
 				rm -f "${STATUS_FILE}"
@@ -1721,11 +1722,11 @@ function build () {(
 		#echo -e "Check command: ${PKG_CHECK}"
 		if eval "${PKG_CHECK}" > /dev/null 2>&1
 		then
-			echo "${SPACES}Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}} already built."
-			echo
+			echo -e " already built.\n"
 			return 0
 		fi
 	fi
+	echo
 	for dep in ${PKG_DEPS}
 	do
 		if [ ! -f "${PKG_PATH}/${dep/:*/}.pkg" ]
@@ -1734,7 +1735,7 @@ function build () {(
 		fi
 		NUMSPACES=$((NUMSPACES+1))
 		SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
-		echo -n "${SPACES}Requires "
+		echo "${SPACES}Requires ${dep}"
 		#echo "Called from ${PKG_FILE}"
 		# shellcheck disable=SC2046
 		build $( if [ "${NOSAVESTATUS}" -eq 1 ] || [ "${TEMPORARY_STATUS}" == .tmp ]; then echo "--temporary"; fi ) \

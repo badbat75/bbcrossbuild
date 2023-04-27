@@ -6,9 +6,6 @@ PACKAGES="bc parted e2fsprogs btrfs-progs bzip2-devel rsync vim-common gcc g++ b
 # CLang build
 PACKAGES+=" libedit-devel lua-devel ocaml-findlib ocaml-ctypes ocaml-ocamldoc"
 
-# Debian Packages
-#PACKAGES+=" dpkg-dev devscripts apt debhelper perl-ExtUtils-MakeMaker perl-Archive-Zip"
-
 # For Image emulation
 PACKAGES+=" qemu-*-static qemu-kvm-tools qemu-kvm qemu-system-*"
 
@@ -39,7 +36,7 @@ PACKAGES+=" libxslt docbook-xsl docbook2X"
 # for btrfs-progs
 PACKAGES+=" asciidoc"
 
-if dnf 2>&1 > /dev/null
+if dnf > /dev/null 2>&1
 then
     sudo dnf -y install ${PACKAGES}
 else
