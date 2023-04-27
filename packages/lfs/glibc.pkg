@@ -1,5 +1,6 @@
 # glibc
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${GLIBC_VER}.tar.xz"
+PKG_DEPS="lfs/bison:native"
 case ${GLIBC_VER} in
 	2.37)
 		PKG_VER=2.37+590d0e089b
@@ -38,14 +39,14 @@ case ${PKG_TARGET} in
 			--disable-werror --disable-sanity-checks --without-cvs"
 	;;
 	headers)
-		PKG_DEPS="lfs/kernel:headers"
+		PKG_DEPS+=" lfs/kernel:headers"
 		STD_CONF_FLAGS=0
 		CONF_FLAGS="--build=${BARCH} --host=${HARCH} --target=${HARCH} --prefix=${INSTALL_PREFIX} --includedir=${INSTALL_INCLUDEDIR} \
 			--with-headers=${BIN_PATH}${INSTALL_INCLUDEDIR}"
 		CONF_ENV="unset CXX CXXFLAGS; CC=\"${CC_FOR_BUILD}\" CFLAGS=\"${CFLAGS_FOR_BUILD}\" CC=\"${CPP_FOR_BUILD}\" CPPFLAGS=\"${CPPLAGS_FOR_BUILD}\""
 	;;
 	*)
-		PKG_DEPS="lfs/kernel:headers"
+		PKG_DEPS+=" lfs/kernel:headers"
 		PKG_PREBUILD+="
 			cat <<-EOF > \${PKG_BLDPATH}/configparms
 				rootsbindir=${INSTALL_EXECPREFIX}/sbin

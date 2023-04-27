@@ -1,10 +1,11 @@
 # elfutils
 PKG_VER=0.189
 PKG_URL="https://sourceware.org/ftp/elfutils/${PKG_VER}/elfutils-${PKG_VER}.tar.bz2"
+PKG_DEPS="lfs/bison:native lfs/flex:native"
 case ${PKG_TARGET} in
     cross|native) ;;
     *)
-        PKG_DEPS="lfs/zlib lfs/gzip lfs/bzip2 lfs/zstd lfs/xz"
+        PKG_DEPS+=" lfs/zlib lfs/gzip lfs/bzip2 lfs/zstd lfs/xz"
         PKG_MAKEVARS="STRIPPROG=${HARCH}-strip"
     ;;
 esac

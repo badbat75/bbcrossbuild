@@ -1,6 +1,7 @@
 # libdaemon
 PKG_VER=0.14
 PKG_URL="https://0pointer.de/lennart/projects/libdaemon/libdaemon-${PKG_VER}.tar.gz"
+PKG_DEPS="lfs/doxygen:native"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS=""

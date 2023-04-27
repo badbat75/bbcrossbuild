@@ -1,7 +1,6 @@
 #!/bin/bash
 sudo apt-get install -y bc kpartx parted curl build-essential patchelf libzstd1 libzstd-dev \
-    gawk flex \
-    git xmltoman docbook-utils swig doxygen texinfo python3-docutils
+    gawk git xmltoman docbook-utils swig texinfo python3-docutils
 
 # For Image emulation
 sudo apt-get install -y qemu-user-static
@@ -43,4 +42,4 @@ sudo apt-get install -y xsltproc docbook-xsl docbook2x
 sudo apt-get install -y groff
 
 # for btrfs-progs
-sudo apt-get install -y xmlto asciidoc
+sudo apt-get install -y asciidoc

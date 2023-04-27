@@ -1,7 +1,7 @@
 # libXi
 PKG_VER=1.8
 PKG_URL="https://www.x.org/pub/individual/lib/libXi-${PKG_VER}.tar.bz2"
-PKG_DEPS=
+PKG_DEPS=lfs/xmlto:native
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1
 CONF_FLAGS="--disable-malloc0returnsnull"

@@ -497,6 +497,9 @@ function setup_binutils () {
 
 	if [ ! -f "${TOOLCHAIN_PATH}/bin/${HARCH}-ld.bfd" ]
 	then
+		build lfs/bison:native
+		build lfs/flex:native
+		build lfs/doxygen:native
 		echo -n "building... "
 		# shellcheck disable=SC2153
 		binutils_make "${HARCH}" >> "${LOG_PATH}/toolchain_binutils-${BINUTILS_VER}.log"
@@ -883,6 +886,9 @@ function setup_gcc () {
 			echo -n "${SPACES}"
 			NUMSPACES=1 build --temporary --no_gcc_check lfs/glibc:headers
 		fi
+		build lfs/bison:native
+		build lfs/flex:native
+		build lfs/doxygen:native
 		echo -n "${SPACES}"
 		echo -n "Building ${GCC_LANGUAGES:-c,c++} compilers... "
 		gcc_make_host "${HARCH}" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"

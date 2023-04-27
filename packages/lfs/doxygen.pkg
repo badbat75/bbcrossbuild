@@ -1,0 +1,13 @@
+# doxygen
+PKG_VER=1.9.6
+PKG_URL="https://doxygen.nl/files/doxygen-${PKG_VER}.src.tar.gz"
+PKG_DEPS="lfs/bison:native lfs/flex:native"
+BUILD_PROCESS=cmakebuild
+CONF_FLAGS="-Dbuild_doc=OFF -Wno-dev"
+PKG_MAKETARGETS="all,install/strip"
+
+case ${PKG_TARGET} in
+    native)
+        PKG_CHECK="[ x$(${GLOBAL_TOOLCHAIN_PATH}/bin/doxygen --version 2>/dev/null || :) == x${PKG_VER} ]"
+    ;;
+esac

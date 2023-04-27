@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # GCC build
-PACKAGES="bc parted e2fsprogs btrfs-progs bzip2-devel rsync vim-common gcc g++ binutils dwarves elfutils-libelf-devel patchelf libzstd libzstd-devel tree curl gawk flex git xmltoman docbook-utils swig doxygen texinfo python3-docutils"
+PACKAGES="bc parted e2fsprogs btrfs-progs bzip2-devel rsync vim-common gcc g++ binutils dwarves elfutils-libelf-devel patchelf libzstd libzstd-devel tree curl gawk git xmltoman docbook-utils swig texinfo python3-docutils"
 
 # CLang build
 PACKAGES+=" libedit-devel lua-devel ocaml-findlib ocaml-ctypes ocaml-ocamldoc"
@@ -37,7 +37,7 @@ PACKAGES+=" pandoc"
 PACKAGES+=" libxslt docbook-xsl docbook2X"
 
 # for btrfs-progs
-PACKAGES+=" xmlto asciidoc"
+PACKAGES+=" asciidoc"
 
 if dnf 2>&1 > /dev/null
 then
