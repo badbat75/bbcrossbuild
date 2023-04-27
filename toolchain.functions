@@ -911,7 +911,6 @@ function setup_gcc () {
 			### Bootstrapping sysroot
 			echo "${SPACES}Bootstrapping foundation libraries... "
 			### Install glibc headers and raw libraries
-			echo -n "${SPACES}"
 			NUMSPACES=1 build lfs/glibc:stage1
 			echo -n "${SPACES}Bootstrapping target libgcc... "
 			GCC_BOOTSTRAP=1 GCC_TARGETS="libgcc" gcc_make_target_libs
@@ -920,11 +919,9 @@ function setup_gcc () {
 		if [ ! -f "${STATUS_PATH}/gcc-libsanitizer_${GCC_VER}" ]
 		then
 			### Build & install glibc lib
-			echo -n "${SPACES}"
 			NUMSPACES=1 build lfs/glibc:stage2
 			### Build & install libxcrypt
-			echo -n "${SPACES}"
-			build --toolchain gnu lfs/libxcrypt:headers
+			NUMSPACES=1 build --toolchain gnu lfs/libxcrypt:headers
 		fi
 	fi
 	setup_ldconfig
@@ -937,10 +934,8 @@ function setup_gcc () {
 	if [ "$(gcc_sysroot)" == "${BIN_PATH}" ]
 	then
 		### Build & install glibc
-		echo -n "${SPACES}"
 		NUMSPACES=1 build lfs/glibc
 		### Build & install libxcrypt
-		echo -n "${SPACES}"
 		NUMSPACES=1 build --toolchain gnu lfs/libxcrypt
 	fi
 	ldconfig -v >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log" 2>&1
