@@ -42,9 +42,17 @@ CONF_FLAGS+=" -DLLVM_ENABLE_BINDINGS:BOOL=OFF"
 
 CONF_FLAGS+=" -Wno-dev"
 #CONF_FLAGS+=" -DCLANG_DEFAULT_PIE_ON_LINUX=ON"
-PKG_MAKETARGETS="install/strip"
 PKG_OVERRIDESHARED=0
 PKG_OVERRIDESTATIC=1
 PKG_PREBUILD="download_uncompress https://github.com/llvm/llvm-project/releases/download/llvmorg-${PKG_VER}/cmake-${PKG_VER}.src.tar.xz \${PKG_SRCPATH}/cmake-${PKG_VER}.src
 	sed '/LLVM_COMMON_CMAKE_UTILS/s@../cmake@cmake-${PKG_VER}.src@' -i CMakeLists.txt"
 #PKG_TOOLCHAIN=llvm
+
+case ${PKG_TARGET} in
+	native)
+		PKG_MAKETARGETS="llvm-tblgen,install-llvm-tblgen-stripped"
+	;;
+	*)
+		PKG_MAKETARGETS="install/strip"
+	;;
+esac

@@ -1516,14 +1516,15 @@ function setup_full_toolchain () {
 
 	build lfs/sccache:native
 	CCWRAPPER=${GLOBAL_TOOLCHAIN_PATH}/bin/sccache
-	SCCACHE_DIR=${GLOBAL_CACHE_PATH}/sccache
-	SCCACHE_CACHE_SIZE=${SCCACHE_CACHE_SIZE:-16G}
-	SCCACHE_NO_DAEMON=${SCCACHE_NO_DAEMON:-0}
-	export SCCACHE_DIR SCCACHE_CACHE_SIZE SCCACHE_NO_DAEMON
-	if [ ! -d "${SCCACHE_DIR}" ]
+
+	if [ ! -d "${GLOBAL_CACHE_PATH}/sccache" ]
 	then
-		run_cmd "mkdir -pv \"${SCCACHE_DIR}\"" > "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
+		run_cmd "mkdir -pv \"${GLOBAL_CACHE_PATH}/sccache\"" > "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
 	fi
+
+	# Starts sccache server
+	run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}\"/bin/sccache --stop-server > /dev/null || :" >> "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
+	run_cmd "SCCACHE_DIR=${GLOBAL_CACHE_PATH}/sccache SCCACHE_CACHE_SIZE=${SCCACHE_CACHE_SIZE:-16G} SCCACHE_START_SERVER=1 SCCACHE_NO_DAEMON=0 SCCACHE_LOG=${SCCACHE_LOG:-info} SCCACHE_ERROR_LOG=${GLOBAL_LOG_PATH}/toolchain_sccache.log \"${GLOBAL_TOOLCHAIN_PATH}\"/bin/sccache" >> "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
 
 	TOOLCHAIN=gnu build lfs/make:native
 	setup_autotools --default
@@ -1619,9 +1620,10 @@ function create_sysroot () {
 	fi
 }
 
-export MAKEFLAGS="--jobs=${NPROCS}"
-export MAKEFLAGS+=" --load-average=${NPROCS}"
-#export MAKEFLAGS+=" --output-sync=line"
+MAKEFLAGS="--jobs=${NPROCS}"
+MAKEFLAGS+=" --load-average=${NPROCS}"
+#MAKEFLAGS+=" --output-sync=line"
+export MAKEFLAGS
 
 TOOLCHAIN_SRCPATH=${SRC_PATH}/toolchain
 # shellcheck disable=SC2153

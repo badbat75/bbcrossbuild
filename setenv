@@ -86,4 +86,3 @@ export AUTOMAKE_VER
 ### Bootstrap libraries and headers versions
 KERNEL_VER=${KERNEL_VER:-6.3}
 GLIBC_VER=${GLIBC_VER:-2.37}
-LIBXCRYPT_VER=${LIBXCRYPT_VER:-4.4.33}
