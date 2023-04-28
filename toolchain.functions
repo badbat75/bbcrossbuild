@@ -1524,7 +1524,14 @@ function setup_full_toolchain () {
 
 	# Starts sccache server
 	run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}\"/bin/sccache --stop-server > /dev/null || :" >> "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
-	run_cmd "SCCACHE_DIR=${GLOBAL_CACHE_PATH}/sccache SCCACHE_CACHE_SIZE=${SCCACHE_CACHE_SIZE:-16G} SCCACHE_START_SERVER=1 SCCACHE_NO_DAEMON=0 SCCACHE_LOG=${SCCACHE_LOG:-info} SCCACHE_ERROR_LOG=${GLOBAL_LOG_PATH}/toolchain_sccache.log \"${GLOBAL_TOOLCHAIN_PATH}\"/bin/sccache" >> "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
+	run_cmd "SCCACHE_DIR=${GLOBAL_CACHE_PATH}/sccache \\
+		SCCACHE_CACHE_SIZE=${SCCACHE_CACHE_SIZE:-16G} \\
+		SCCACHE_START_SERVER=1 \\
+		SCCACHE_NO_DAEMON=0 \\
+		SCCACHE_IDLE_TIMEOUT=0 \\
+		SCCACHE_LOG=${SCCACHE_LOG:-info} \\
+		SCCACHE_ERROR_LOG=${GLOBAL_LOG_PATH}/toolchain_sccache.log \\
+			\"${GLOBAL_TOOLCHAIN_PATH}\"/bin/sccache" >> "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
 
 	TOOLCHAIN=gnu build lfs/make:native
 	setup_autotools --default
