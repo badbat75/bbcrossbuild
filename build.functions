@@ -910,7 +910,7 @@ function cmakebuild () {
 	local NINJA_FLAGS
 
 	NINJA_FLAGS="$(if [ "${MAKEVERBOSE}" -eq 1 ]; then echo -n '-v'; fi) -j${NPROCS}"
-	CMAKE_GENERATOR=${CMAKE_GENERATOR:-Ninja}
+	CMAKE_GENERATOR=${CMAKE_GENERATOR:-"Unix Makefiles"}
 
 	echo "CCWRAPPER=\"\" create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	CCWRAPPER="" create_environment_source --target "${PKG_TARGET_ENV}"
@@ -1033,6 +1033,8 @@ function mesonninja () {
 		run_cmd "cat cross-${PLATFORM_NAME}"
 	}
 
+	local MESON_FLAGS
+
 	run_cmd "mkdir -p ${PKG_BLDPATH}"
 	cd "${PKG_BLDPATH}"
 	case ${TOOLCHAIN} in
@@ -1041,25 +1043,25 @@ function mesonninja () {
 	esac
 	if [ "${STD_CONF_FLAGS:-1}" -eq 1 ]
 	then
-		CONF_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} --includedir=${INSTALL_INCLUDEDIR} \
+		MESON_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} --includedir=${INSTALL_INCLUDEDIR} \
 			--sysconfdir=${INSTALL_SYSCONFDIR} --localstatedir=${INSTALL_LOCALSTATEDIR} --datadir=${INSTALL_SHAREDIR} ${CONF_FLAGS}"
 		if [ "${PKG_OVERRIDESHARED:-${BUILD_LIBSHARED}}" -eq 0 ] && [ "${PKG_OVERRIDESTATIC:-${BUILD_LIBSTATIC}}" -eq 1 ]
 		then
-			CONF_FLAGS+=" --default-library=static"
+			MESON_FLAGS+=" --default-library=static"
 		fi
 		if [ "${PKG_OVERRIDESHARED:-${BUILD_LIBSHARED}}" -eq 1 ] && [ "${PKG_OVERRIDESTATIC:-${BUILD_LIBSTATIC}}" -eq 0 ]
 		then
-			CONF_FLAGS+=" --default-library=shared"
+			MESON_FLAGS+=" --default-library=shared"
 		fi
 		if [ "${PKG_OVERRIDESHARED:-${BUILD_LIBSHARED}}" -eq 1 ] && [ "${PKG_OVERRIDESTATIC:-${BUILD_LIBSTATIC}}" -eq 1 ]
 		then
-			CONF_FLAGS+=" --default-library=both"
+			MESON_FLAGS+=" --default-library=both"
 		fi
 	fi
-	local RUNCONFIG_CMD="${GLOBAL_TOOLCHAIN_PATH}/bin/meson ${PKG_SRCPATH} ${PKG_BLDPATH} --buildtype=release -Db_ndebug=true -Db_pie=true"
+	MESON_FLAGS+=" --buildtype=release -Db_ndebug=true -Db_pie=true"
 	case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 		0) ;;
-		*) RUNCONFIG_CMD+=" -Db_lto=true" ;;
+		*) MESON_FLAGS+=" -Db_lto=true" ;;
 	esac
 	local NINJA_FLAGS
 	NINJA_FLAGS="$( if [ "${MAKEVERBOSE}" -eq 1 ]; then echo -n ' -v'; fi ) -j\"${NPROCS}\""
@@ -1067,13 +1069,13 @@ function mesonninja () {
 		cross|native) ;;
 		*)
 			createmesoncross
-			RUNCONFIG_CMD+=" --cross-file cross-${PLATFORM_NAME}"
+			MESON_FLAGS+=" --cross-file cross-${PLATFORM_NAME}"
 		;;
 	esac
 	cat > runconfig.sh <<-EOF
 		#!/bin/bash -x
 		source "${PKG_BLDPATH}/environment.source"
-		${CONF_ENV} ${RUNCONFIG_CMD} ${CONF_FLAGS} \${@}	
+		${CONF_ENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/meson ${PKG_SRCPATH} ${PKG_BLDPATH} ${MESON_FLAGS} ${CONF_FLAGS} \${@}	
 	EOF
 	cat >runmake.sh <<-EOF
 		#!/bin/bash -x
