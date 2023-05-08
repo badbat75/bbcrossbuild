@@ -9,11 +9,11 @@ PACKAGES+=" libedit-devel lua-devel"
 # For Image emulation
 PACKAGES+=" qemu-user-static"
 
-# for meson-ninja
-#PACKAGES+=" python3-pip"
+# for autoconf runtime
+PACKAGES+=" perl-FindBin"
 
 # for Python3
-PACKAGES+=" openssl-devel libffi-devel libuuid-devel tcl-devel tk-devl"
+PACKAGES+=" openssl-devel libffi-devel libuuid-devel tcl-devel tk-devel"
 
 # for moode
 PACKAGES+=" sqlite"
