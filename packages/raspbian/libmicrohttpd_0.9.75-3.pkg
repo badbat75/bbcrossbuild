@@ -1,9 +1,0 @@
-# libmicrohttpd_0.9.75-3
-PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libm/libmicrohttpd/libmicrohttpd_0.9.75.orig.tar.xz"
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libm/libmicrohttpd/libmicrohttpd_0.9.75-3.debian.tar.xz"
-BUILD_PROCESS=configmake
-# CONF_FLAGS=""
-INST_CMD=install-strip
-
-# Note:
-# Dependencies: autoconf, automake, libcurl4-gnutls-dev, libgnutls28-dev, texinfo, pkg-config, socat[!hurd-i386], zzuf

@@ -1,8 +1,0 @@
-# libnl3_3.7.0
-PKG_SUFFIX=-0.2
-PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libn/libnl3/libnl3_3.7.0.orig.tar.gz"
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libn/libnl3/libnl3_3.7.0${PKG_SUFFIX}.debian.tar.xz"
-BUILD_PROCESS=configmake
-PKG_AUTOCONF=1
-CONF_FLAGS="--disable-debug --enable-cli=no"
-INST_CMD=install-strip

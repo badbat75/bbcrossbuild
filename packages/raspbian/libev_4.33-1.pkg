@@ -1,6 +1,0 @@
-# libev_4.33-1
-PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libe/libev/libev_4.33.orig.tar.gz"
-BUILD_PROCESS=configmake
-# CONF_FLAGS=""
-INST_CMD=install-strip
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libe/libev/libev_4.33-1.debian.tar.xz"

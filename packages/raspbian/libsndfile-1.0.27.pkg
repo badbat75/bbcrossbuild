@@ -1,6 +1,0 @@
-# libsndfile-1.0.27
-PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libs/libsndfile/libsndfile_1.0.27.orig.tar.gz"
-BUILD_PROCESS=configmake
-# CONF_FLAGS=""
-INST_CMD=install-strip
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libs/libsndfile/libsndfile_1.0.27-3.debian.tar.xz"

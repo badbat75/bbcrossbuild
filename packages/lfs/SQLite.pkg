@@ -1,6 +1,6 @@
 # BerkeleyDB
-PKG_VER=3.41.0
-PKG_URL="https://sqlite.org/2023/sqlite-autoconf-3410000.tar.gz"
+PKG_VER=3.41.2
+PKG_URL="https://sqlite.org/2023/sqlite-autoconf-3410200.tar.gz"
 PKG_DEPS="lfs/libedit"
 BUILD_PROCESS=configmake
 PKG_AUTOCONF=1

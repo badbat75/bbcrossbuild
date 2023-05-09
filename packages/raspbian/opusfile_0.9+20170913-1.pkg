@@ -1,9 +1,0 @@
-# opusfile_0.9+20170913-1
-PKG_URL="http://archive.raspbian.org/raspbian/pool/main/o/opusfile/opusfile_0.9%2B20170913.orig.tar.gz"
-PATCHDEB=""
-PKG_DEPS="moode/opus_1.3.1"
-BUILD_PROCESS=configmake
-# CONF_FLAGS=""
-INST_CMD=install-strip
-# Note:
-# Depends on: cdbs (>= 0.4.93~), dh-autoreconf, quilt, debhelper (>= 9), gettext, zlib1g-dev, gperf

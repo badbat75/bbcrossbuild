@@ -1,8 +1,0 @@
-# udisks_1.0.5-1
-PKG_URL="http://archive.raspbian.org/raspbian/pool/main/s/sg3-utils/sg3-utils_1.46.orig.tar.xz"
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/s/sg3-utils/sg3-utils_1.46-1.debian.tar.xz"
-
-BUILD_PROCESS=configmake
-PKG_DEPS=""
-CONF_FLAGS=""
-INST_CMD=install-strip
