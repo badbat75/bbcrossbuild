@@ -4,7 +4,7 @@
 PACKAGES="bc parted e2fsprogs btrfs-progs bzip2-devel rsync vim-common gcc g++ binutils dwarves elfutils-libelf-devel patchelf libzstd libzstd-devel tree curl gawk git xmltoman docbook-utils swig texinfo python3-docutils"
 
 # CLang build
-PACKAGES+=" libedit-devel lua-devel"
+PACKAGES+=" clang clang-devel libedit-devel lua-devel"
 
 # For Image emulation
 PACKAGES+=" qemu-user-static"

@@ -997,6 +997,8 @@ function setup_llvm () {
 		fi
 		run_cmd "mkdir -pv \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}\""
 
+		unset CFLAGS CXXFLAGS CPPFLAGS PKG_CONFIG PKG_CONFIG_LIBDIR PKG_CONFIG_SYSROOT_DIR PKG_CONFIG_ALLOW_CROSS
+
 		local PLATFORM_CFLAGS="-march=native"
 		case $(clang -v > /dev/null 2>&1; echo ${?}) in
 			0)
@@ -1020,12 +1022,11 @@ function setup_llvm () {
 				LINKER_FLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}"
 				LTO=OFF
 				echo "GNU gcc for build and lto not active."
-				run_cmd "sed -i 's/-flto\"/-flto=auto\"/g' \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/AddLLVM.cmake\""
-				run_cmd "sed -i 's/-flto\"/-flto=auto\"/g' \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/HandleLLVMOptions.cmake\""
+				run_cmd "sed -i 's/-flto\"/-flto=${LTOPROCS}\"/g' \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/AddLLVM.cmake\""
+				run_cmd "sed -i 's/-flto\"/-flto=${LTOPROCS}\"/g' \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/HandleLLVMOptions.cmake\""
 			;;
 		esac
 
-		unset CFLAGS CXXFLAGS CPPFLAGS PKG_CONFIG PKG_CONFIG_LIBDIR PKG_CONFIG_SYSROOT_DIR PKG_CONFIG_ALLOW_CROSS
 		export LDFLAGS="${LINKER_FLAGS}"
 		
 		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/cmake\" -S \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm\" -B \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}\" -G Ninja \\
@@ -1089,13 +1090,7 @@ function setup_llvm () {
 
 	function build_llvm () {
 
-		#local LLVM_SHLIBDIR
-		#LLVM_SHLIBDIR=$(grep -E "install_symlink.*libLLVM-${LLVM_VER}.so" "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/tools/llvm-shlib/cmake_install.cmake" | head -n1 | grep -o "lib[36][24]")
-		#echo "### Shared LLVM libdir: ${LLVM_SHLIBDIR}"
-		#pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}"
-		run_cmd "LD_LIBRARY_PATH=${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/lib ninja $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -v; fi ) \\
-			-C \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}\" install/strip"
-		#pathremove LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/${LLVM_SHLIBDIR}"
+		run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/ninja $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -v; fi ) -C \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}\" install/strip"
 		run_cmd "patchelf --set-rpath \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib\" \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/LLVMgold.so\""
 		run_cmd "patchelf --set-rpath \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib\" \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/LLVMPolly.so\""
 		run_cmd "ln -fsv ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/LLVMgold.so ${TOOLCHAIN_PATH}/lib/bfd-plugins/LLVMgold.so" >> "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
@@ -1547,6 +1542,7 @@ function setup_full_toolchain () {
 		setup_gcc ${SETUP_GCC}
 		setup_toolchain_wrapper
 	)
+	CCWRAPPER=${GLOBAL_TOOLCHAIN_PATH}/bin/sccache
 	if [ "${WITH_LLVM}" -eq 1 ] || [ "${TOOLCHAIN}" = llvm ]
 	then
 		# shellcheck disable=SC2086
