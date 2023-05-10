@@ -1509,36 +1509,36 @@ function setup_full_toolchain () {
 
 	setup_rust
 
-	{ 
-		TOOLCHAIN=gnu build lfs/sccache:native	
-		if [ ! -d "${GLOBAL_CACHE_PATH}/sccache" ]
-		then
-			run_cmd "mkdir -pv \"${GLOBAL_CACHE_PATH}/sccache\"" > "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
-		fi
+	### Set-up sccache
+	TOOLCHAIN=gnu build lfs/sccache:native	
+	if [ ! -d "${GLOBAL_CACHE_PATH}/sccache" ]
+	then
+		run_cmd "mkdir -pv \"${GLOBAL_CACHE_PATH}/sccache\"" > "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
+	fi
+	# Starts sccache server
+	run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}\"/bin/sccache --stop-server > /dev/null || :" >> "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
+	TOOLCHAIN=gnu run_cmd "SCCACHE_DIR=${GLOBAL_CACHE_PATH}/sccache \\
+		SCCACHE_CACHE_SIZE=${SCCACHE_CACHE_SIZE:-16G} \\
+		SCCACHE_START_SERVER=1 \\
+		SCCACHE_NO_DAEMON=0 \\
+		SCCACHE_IDLE_TIMEOUT=0 \\
+		SCCACHE_LOG=${SCCACHE_LOG:-info} \\
+		SCCACHE_ERROR_LOG=${GLOBAL_LOG_PATH}/toolchain_sccache.log \\
+			\"${GLOBAL_TOOLCHAIN_PATH}\"/bin/sccache" >> "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
+	CCWRAPPER=sccache
+	###
 
-		# Starts sccache server
-		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}\"/bin/sccache --stop-server > /dev/null || :" >> "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
-		TOOLCHAIN=gnu run_cmd "SCCACHE_DIR=${GLOBAL_CACHE_PATH}/sccache \\
-			SCCACHE_CACHE_SIZE=${SCCACHE_CACHE_SIZE:-16G} \\
-			SCCACHE_START_SERVER=1 \\
-			SCCACHE_NO_DAEMON=0 \\
-			SCCACHE_IDLE_TIMEOUT=0 \\
-			SCCACHE_LOG=${SCCACHE_LOG:-info} \\
-			SCCACHE_ERROR_LOG=${GLOBAL_LOG_PATH}/toolchain_sccache.log \\
-				\"${GLOBAL_TOOLCHAIN_PATH}\"/bin/sccache" >> "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
-
-		TOOLCHAIN=gnu build lfs/make:native
-		setup_autotools --default
-		# shellcheck disable=SC2030
-		TOOLCHAIN=gnu build lfs/pkgconf:native
-		TOOLCHAIN=gnu build lfs/pkgconf:cross
-		TOOLCHAIN=gnu build lfs/bison:native
-		TOOLCHAIN=gnu build lfs/cmake:native
-		TOOLCHAIN=gnu setup_binutils
-		# shellcheck disable=SC2086
-		setup_gcc ${SETUP_GCC}
-		setup_toolchain_wrapper
-	}
+	TOOLCHAIN=gnu build lfs/make:native
+	setup_autotools --default
+	# shellcheck disable=SC2030
+	TOOLCHAIN=gnu build lfs/pkgconf:native
+	TOOLCHAIN=gnu build lfs/pkgconf:cross
+	TOOLCHAIN=gnu build lfs/bison:native
+	TOOLCHAIN=gnu build lfs/cmake:native
+	TOOLCHAIN=gnu setup_binutils
+	# shellcheck disable=SC2086
+	setup_gcc ${SETUP_GCC}
+	setup_toolchain_wrapper
 
 	if [ "${WITH_LLVM}" -eq 1 ] || [ "${TOOLCHAIN}" = llvm ]
 	then
