@@ -14,3 +14,7 @@ case ${PKG_TARGET} in
 		PKG_DEPS="lfs/ncurses lfs/readline"
 	;;
 esac
+
+case ${TOOLCHAIN} in
+	llvm) PKG_CFLAGS="-Wno-macro-redefined" ;;
+esac
