@@ -950,7 +950,7 @@ function cmakebuild () {
 			cat >runmake.sh <<-EOF
 				#!/bin/bash -x
 				source "${PKG_BLDPATH}/environment.source"
-				${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
+				${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make VERBOSE=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
 			EOF
 		;;
 	esac
