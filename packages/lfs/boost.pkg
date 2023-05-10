@@ -1,5 +1,5 @@
 # boost
-PKG_VER=1.81.0
+PKG_VER=1.82.0
 PKG_URL="https://boostorg.jfrog.io/artifactory/main/release/${PKG_VER}/source/boost_${PKG_VER//./_}.tar.bz2"
 PKG_DEPS="lfs/zstd lfs/xz lfs/bzip2 lfs/zlib"
 BUILD_PROCESS=custom
@@ -7,9 +7,14 @@ BUILD_PROCESS=custom
 PKG_PREBUILD="sed 's@pkg-config@\${PKG_CONFIG:-pkg-config}@g' -i bootstrap.sh
 	sed 's@: \"--target=.*\"@: \"\"@g' -i tools/build/src/tools/clang.jam"
 
+PKG_LDFLAGS="-lstdc++"
+
 case ${TOOLCHAIN} in
 	llvm) BBTC=clang ;;
-	gnu) BBTC=gcc ;;
+	gnu)
+		BBTC=gcc
+		PKG_CFLAGS="-Wno-deprecated-declarations"
+	;;
 esac
 
 PKG_BUILDSCRIPT="./bootstrap.sh \\
@@ -54,13 +59,6 @@ PKG_BUILDSCRIPT="./bootstrap.sh \\
 				*)	echo -n "optimization=off" ;;
 			esac
 		) \\
-		$(
-			case ${LTOENABLE:-0} in
-				1|fat)	echo -n "lto=on lto-mode=full" ;;
-				2|thin)	echo -n "lto=on lto-mode=thin" ;;
-				*)		echo -n "lto=off" ;;
-			esac
-		) \\
 		threading=multi \\
 		toolset=${BBTC} \\
 		pch=off \\
@@ -68,4 +66,3 @@ PKG_BUILDSCRIPT="./bootstrap.sh \\
 		cxxflags=\"\${CXXFLAGS}\" \\
 		linkflags=\"\${LDFLAGS}\" \\
 		install"
-PKG_OVERRIDELTO=0

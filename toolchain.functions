@@ -1525,7 +1525,7 @@ function setup_full_toolchain () {
 		SCCACHE_LOG=${SCCACHE_LOG:-info} \\
 		SCCACHE_ERROR_LOG=${GLOBAL_LOG_PATH}/toolchain_sccache.log \\
 			\"${GLOBAL_TOOLCHAIN_PATH}\"/bin/sccache" >> "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
-	CCWRAPPER=sccache
+	CCWRAPPER=${GLOBAL_TOOLCHAIN_PATH}/bin/sccache
 	###
 
 	TOOLCHAIN=gnu build lfs/make:native
