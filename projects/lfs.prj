@@ -51,6 +51,7 @@ esac
 		rpi*)
 			build raspberrypi/rpi-kernel_$( echo ${KERNEL_VER} | cut -d'.' -f1,2 )
 			build raspberrypi/rpi-firmware_1
+			build raspberrypi/rpi-bluez-firmware
 			build raspberrypi/pi-bluetooth_0
 		;;
 		*)
