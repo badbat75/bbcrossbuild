@@ -236,6 +236,7 @@ function setup_autotools () {
 	echo -n "Setting up autotools... "
 	if [ ! -f "${AUTOTOOLS_PATH}/bin/autoconf" ] || [ ! -f "${AUTOTOOLS_PATH}/bin/automake" ] || [ ! -f "${AUTOTOOLS_PATH}/bin/libtoolize" ] || [ ! -f "${AUTOTOOLS_PATH}/bin/autopoint" ]
 	then
+		pathadd PATH "${AUTOTOOLS_PATH}/bin"
 		#### Download all auto tools
 		download_autotools
 		#### Build libtool
@@ -286,7 +287,6 @@ function setup_autotools () {
 			popd 2>&1
 			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}\""
 			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}\""
-			pathadd PATH "${AUTOTOOLS_PATH}/bin"
 			#### Build automake
 			echo -n "automake-${AUTOMAKE_VER}... "
 			pushd "${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}"
@@ -341,6 +341,7 @@ function setup_autotools () {
 			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}\""
 		} >> "${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log"
 		echo -n "done. "
+		pathremove PATH "${AUTOTOOLS_PATH}/bin"
 	else
 		echo -n "already there. "
 	fi
