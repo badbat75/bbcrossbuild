@@ -313,6 +313,7 @@ function setup_autotools () {
 			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}\""
 		} >> "${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log"
 		#### Build gettext
+		pathadd PATH "${AUTOTOOLS_PATH}/bin"
 		echo -n "gettext-${GETTEXT_VER}... "
 		{
 			pushd "${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}"
@@ -369,7 +370,7 @@ function setup_autotools () {
 	else
 		echo "already there."
 	fi
-	if [ "${_param_default:-0}" -eq 1 ]
+	if [ "${_param_default:-0}" -eq 0 ]
 	then
 		pathadd PATH "${AUTOTOOLS_PATH}/bin"
 	fi
