@@ -330,7 +330,7 @@ function setup_autotools () {
 				AR=\"${AR_FOR_BUILD}\" \\
 				NM=\"${NM_FOR_BUILD}\" \\
 				RANLIB=\"${RANLIB_FOR_BUILD}\" \\
-				CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
+				CFLAGS=\"${CFLAGS_FOR_BUILD} -Wno-incompatible-pointer-types\" \\
 				CXXFLAGS=\"${CXXFLAGS_FOR_BUILD}\" \\
 				LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
 					\"${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}/configure\" --prefix=\"${AUTOTOOLS_PATH}\""
