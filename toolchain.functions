@@ -286,6 +286,7 @@ function setup_autotools () {
 			popd 2>&1
 			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}\""
 			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}\""
+			pathadd PATH "${AUTOTOOLS_PATH}/bin"
 			#### Build automake
 			echo -n "automake-${AUTOMAKE_VER}... "
 			pushd "${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}"
@@ -313,7 +314,6 @@ function setup_autotools () {
 			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}\""
 		} >> "${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log"
 		#### Build gettext
-		pathadd PATH "${AUTOTOOLS_PATH}/bin"
 		echo -n "gettext-${GETTEXT_VER}... "
 		{
 			pushd "${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}"
