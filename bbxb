@@ -12,9 +12,9 @@ set -E -o pipefail
 BB_HOME=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
 #PROGRAM_NAME="$(basename "${BASH_SOURCE[0]}")"
 
-# shellcheck source=seterr
+# shellcheck source=/dev/null
 source "${BB_HOME}/seterr"
-# shellcheck source=core.functions
+# shellcheck source=/dev/null
 source "${BB_HOME}/core.functions"
 check_core_functions
 
@@ -40,7 +40,7 @@ umask 0022
 
 if [ -f "${BB_HOME}/bbxb.conf" ]
 then
-	# shellcheck source=./bbxb.conf
+	# shellcheck source=/dev/null
 	source "${BB_HOME}/bbxb.conf"
 fi
 
@@ -52,19 +52,19 @@ then
 	trow_error "${ERROR_FILE_NOT_FOUND}" "Platform ${PLATFORM} does not exist."
 fi
 
-# shellcheck source=platforms/generic-x64.conf
+# shellcheck source=/dev/null
 source "${PLATFORM}"
-# shellcheck source=setenv
+# shellcheck source=/dev/null
 source "${BB_HOME}/setenv"
-# shellcheck source=build.functions
+# shellcheck source=/dev/null
 source "${BB_HOME}/build.functions"
-# shellcheck source=project.functions
+# shellcheck source=/dev/null
 source "${BB_HOME}/project.functions"
-# shellcheck source=toolchain.functions
+# shellcheck source=/dev/null
 source "${BB_HOME}/toolchain.functions"
-# shellcheck source=images.functions
+# shellcheck source=/dev/null
 source "${BB_HOME}/images.functions"
-# shellcheck source=data.functions
+# shellcheck source=/dev/null
 source "${BB_HOME}/data.functions"
 
 trap 'STATUS=${?}; \
@@ -108,7 +108,7 @@ then
 	mkdir -p "${USERDATA_PATH}"
 fi
 
-# shellcheck source=projects/lfs.prj
+# shellcheck source=/dev/null
 source "${PROJECT}"
 
 unmount_tag --all

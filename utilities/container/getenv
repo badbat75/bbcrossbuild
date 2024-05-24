@@ -1,0 +1,9 @@
+#!/bin/bash
+CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
+
+# shellcheck disable=SC2034
+case ${CURRENT_BRANCH} in
+	development) CONTAINER_NAME=bbcrossbuild-devel ;;
+	master) CONTAINER_NAME=bbcrossbuild-latest ;;
+	*) CONTAINER_NAME=bbcrossbuild-${CURRENT_BRANCH} ;;
+esac

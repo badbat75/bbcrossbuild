@@ -3,4 +3,4 @@
 /images
 /projects/*.conf
 /projects/test*.prj
-/patches/mpd*
+/utilities/container/*.conf
