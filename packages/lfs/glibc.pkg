@@ -2,19 +2,32 @@
 PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${GLIBC_VER}.tar.xz"
 PKG_DEPS="lfs/bison:native"
 case ${GLIBC_VER} in
+	2.39)
+		PKG_VER=2.39+c7c3f5bf80
+		PATCHES=glibc/glibc_2.39+c7c3f5bf80.patch
+		;;
+	2.38)
+		PKG_VER=2.38+249646f12b
+		PATCHES=glibc/glibc_2.38+249646f12b.patch
+		;;
 	2.37)
-		PKG_VER=2.37+590d0e089b
-		PATCHES=glibc/glibc_2.37+590d0e089b.patch
+		PKG_VER=2.37+3956fd48d3
+		PATCHES=glibc/glibc_2.37+3956fd48d3.patch
 		;;
 	2.36)
-		PKG_VER=2.36+f3991fec80
-		PATCHES=glibc/glibc_2.36+f3991fec80.patch
+		PKG_VER=2.36+ee65bc1df6
+		PATCHES=glibc/glibc_2.36+ee65bc1df6.patch
 		;;
 	*)
 		PKG_VER=${GLIBC_VER}
 		;;
 esac
 PATCHES="${PATCHES:+${PATCHES},}http://www.linuxfromscratch.org/patches/lfs/development/glibc-${GLIBC_VER}-fhs-1.patch"
+
+if [ -z "${OPTLEVEL}" ] || [ "${OPTLEVEL}" -lt 2 ]
+then
+	PKG_CFLAGS="-O2"
+fi
 
 PKG_OVERRIDELTO=0
 BUILD_PROCESS=configmake

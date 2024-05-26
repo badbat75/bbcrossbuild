@@ -1,6 +1,6 @@
 FROM amd64/fedora:latest
 RUN dnf -y upgrade
-RUN dnf -y install bc parted e2fsprogs btrfs-progs bzip2-devel rsync vim-common gcc g++ binutils dwarves elfutils-libelf-devel patchelf libzstd libzstd-devel tree curl gawk flex git perl-Thread-Queue help2man xmltoman docbook-utils swig doxygen texinfo python3-docutils  libedit-devel lua-devel qemu-user-static openssl-devel libffi-devel libuuid-devel tcl-devel tk-devel  docbook-utils-pdf   gperf
+RUN dnf -y install bc parted e2fsprogs btrfs-progs bzip2-devel rsync vim-common gcc g++ binutils dwarves elfutils-libelf-devel patchelf libzstd libzstd-devel tree curl gawk flex patch git perl-Thread-Queue help2man xmltoman docbook-utils swig doxygen texinfo python3-docutils  libedit-devel lua-devel qemu-user-static openssl-devel libffi-devel libuuid-devel tcl-devel tk-devel docbook-utils-pdf gperf
 
 #ADD resources/runme.sh .
 
