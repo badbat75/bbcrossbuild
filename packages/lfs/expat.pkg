@@ -1,5 +1,5 @@
 # expat
-PKG_VER=2.5.0
+PKG_VER=2.6.2
 PKG_URL="https://altushost-swe.dl.sourceforge.net/project/expat/expat/${PKG_VER}/expat-${PKG_VER}.tar.xz"
 PKG_DEPS="lfs/xmlto:native"
 BUILD_PROCESS=configmake

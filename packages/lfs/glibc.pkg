@@ -32,7 +32,8 @@ fi
 PKG_OVERRIDELTO=0
 BUILD_PROCESS=configmake
 CONF_VARS="libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes"
-PKG_MAKEVARS="cross-compiling=yes"
+PKG_MAKEVARS="cross-compiling=yes -j${NPROCS}"
+PKG_MAKEENV="PARALLELMFLAGS=-j${NPROCS}"
 PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd
 PKG_PREBUILD="mkdir -pv \${PKG_BLDPATH}"
@@ -105,7 +106,7 @@ esac
 ### Make
 case ${PKG_TARGET} in
 	cross)
-		PKG_MAKETARGETS="lib,elf/subdir_lib,locale/others,elf/ldso_install,${INSTALL_LIBDIR}/glibc${GLIBC_VER}/libc.so.6,${INSTALL_LIBDIR}/glibc${GLIBC_VER}/libc.so,locale/subdir_install"
+		PKG_MAKETARGETS="lib,elf/subdir_lib,locale/others,elf/ldso_install,${INSTALL_LIBDIR}/glibc${GLIBC_VER}/libc.so.6,${INSTALL_LIBDIR}/glibc${GLIBC_VER}/libc.so,locale/subdir_install,install-others-programs"
 		PKG_POSTBUILD="patchelf --remove-rpath ${INSTALL_LIBDIR}/glibc${GLIBC_VER}/ld-linux*.so.*;"
 	;;
 	headers)
