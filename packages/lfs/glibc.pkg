@@ -31,7 +31,7 @@ fi
 
 PKG_OVERRIDELTO=0
 BUILD_PROCESS=configmake
-CONF_VARS="libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes libc_cv_slibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
+CONF_VARS="libc_cv_forced_unwind=yes libc_cv_c_cleanup=yes"
 PKG_MAKEVARS="cross-compiling=yes"
 PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd
@@ -46,10 +46,11 @@ case ${PKG_TARGET} in
 				datadir=${TARGET_SHAREDIR}
 			EOF
 			"
-		CONF_FLAGS="--libdir=${INSTALL_LIBDIR} \
+		CONF_FLAGS="--libdir=${INSTALL_LIBDIR}/glibc${GLIBC_VER} \
 			--disable-profile --disable-crypt \
 			--disable-build-nscd --disable-nscd \
 			--disable-werror --disable-sanity-checks --without-cvs"
+		CONF_VARS+=" libc_cv_slibdir=${INSTALL_LIBDIR}/glibc${GLIBC_VER}"
 	;;
 	headers)
 		PKG_DEPS+=" lfs/kernel:headers"
@@ -72,6 +73,7 @@ case ${PKG_TARGET} in
 			--enable-pt_chown --enable-tunables --enable-bind-now \
 			--disable-profile --disable-crypt \
 			--disable-werror --disable-sanity-checks --without-cvs"
+		CONF_VARS+=" libc_cv_slibdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 		if [ ${LFS_ENABLENSCD:-0} -eq 1 ]
 		then
 			CONF_FLAGS+=" --enable-build-nscd --enable-nscd"
@@ -103,8 +105,8 @@ esac
 ### Make
 case ${PKG_TARGET} in
 	cross)
-		PKG_MAKETARGETS="lib,elf/subdir_lib,locale/others,elf/ldso_install,${TOOLCHAIN_PATH}/lib/libc.so.6,${TOOLCHAIN_PATH}/lib/libc.so,locale/subdir_install"
-		PKG_POSTBUILD="patchelf --remove-rpath ${INSTALL_LIBDIR}/ld-linux*.so.*;"
+		PKG_MAKETARGETS="lib,elf/subdir_lib,locale/others,elf/ldso_install,${INSTALL_LIBDIR}/glibc${GLIBC_VER}/libc.so.6,${INSTALL_LIBDIR}/glibc${GLIBC_VER}/libc.so,locale/subdir_install"
+		PKG_POSTBUILD="patchelf --remove-rpath ${INSTALL_LIBDIR}/glibc${GLIBC_VER}/ld-linux*.so.*;"
 	;;
 	headers)
 		PKG_MAKEVARS+=" install-bootstrap-headers=yes"
