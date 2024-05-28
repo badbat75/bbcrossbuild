@@ -5,3 +5,4 @@ PKG_DEPS="lfs/xmlto:native"
 BUILD_PROCESS=configmake
 CONF_FLAGS="--docdir=${INSTALL_SHAREDIR}/doc/expat-${PKG_VER}"
 PKG_MAKETARGETS="all,install-strip"
+PKG_CFLAGS="-Wno-pedantic"

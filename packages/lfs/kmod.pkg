@@ -1,5 +1,5 @@
 # kmod
-PKG_VER=30
+PKG_VER=32
 PKG_URL="https://www.kernel.org/pub/linux/utils/kernel/kmod/kmod-${PKG_VER}.tar.xz"
 PKG_DEPS="lfs/openssl lfs/zlib lfs/zstd lfs/xz"
 BUILD_PROCESS=configmake

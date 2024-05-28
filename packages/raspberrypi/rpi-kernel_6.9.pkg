@@ -1,6 +1,6 @@
-# rpi-kernel_6.3
+# rpi-kernel_6.9
 PKG_SUFFIX=.1
-PKG_URL="https://github.com/raspberrypi/linux/archive/9ea5c8b206e25fc7871484200a7b4eb646e11be9.tar.gz"
+PKG_URL="https://github.com/raspberrypi/linux/archive/6466903a6a8f74447c0cbc12ad914b53978a885f.tar.gz"
 PKG_DEPS="lfs/bison:native lfs/flex:native lfs/elfutils:cross lfs/dracut"
 BUILD_PROCESS=kernelbuild
 PKG_MAKEVARS="INSTALL_MOD_STRIP=1"

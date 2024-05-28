@@ -1,6 +1,6 @@
 # rpi-bluez-firmware
-PKG_VER=20230105
-PKG_URL="https://github.com/RPi-Distro/bluez-firmware/archive/9556b08ace2a1735127894642cc8ea6529c04c90.tar.gz"
+PKG_VER=1.2-9+rpt3
+PKG_URL="https://github.com/RPi-Distro/bluez-firmware/archive/78d6a07730e2d20c035899521ab67726dc028e1c.tar.gz"
 BUILD_PROCESS=configmake
 STD_CONF_FLAGS=0
 CONF_FLAGS="--libdir=/lib"

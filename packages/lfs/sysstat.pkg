@@ -1,6 +1,6 @@
 # sysstat
-PKG_VER=12.6.2
-PKG_URL="http://sebastien.godard.pagesperso-orange.fr/sysstat-${PKG_VER}.tar.xz"
+PKG_VER=12.7.5
+PKG_URL="https://github.com/sysstat/sysstat/archive/refs/tags/v${PKG_VER}.tar.gz"
 PKG_AUTOCONF=1
 PKG_COPYSRC=1
 BUILD_PROCESS=configmake
