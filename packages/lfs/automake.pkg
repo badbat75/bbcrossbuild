@@ -1,6 +1,6 @@
 # automake
-PKG_VER=1.16i
-PKG_URL="https://github.com/autotools-mirror/automake/archive/refs/tags/v${PKG_VER}.tar.gz"
+PKG_VER=1.16.5
+PKG_URL="https://ftp.gnu.org/gnu/automake/automake-${PKG_VER}.tar.xz"
 BUILD_PROCESS=configmake
 PKG_PREBUILD="./bootstrap"
 CONF_FLAGS="--docdir=/usr/share/doc/automake-${PKG_VER}"

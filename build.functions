@@ -522,7 +522,7 @@ function settcenv () {
 	TOOLCHAIN_LDFLAGS_FOR_BUILD+=" -Wl,-rpath -Wl,${TOOLCHAIN_PATH}/lib:${GLOBAL_TOOLCHAIN_PATH}/lib"
 	TOOLCHAIN_LDFLAGS_FOR_BUILD+=" -Wl,-rpath-link -Wl,${TOOLCHAIN_PATH}/lib"
 	TOOLCHAIN_LDFLAGS_FOR_BUILD+=" -Wl,-rpath-link -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib"
-	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+	OPTCOMP_FLAGS+=" -O${OPTLEVEL:-2}"
 
 	case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 		1|fat)	TOOLCHAIN_CARGO_PROFILE_RELEASE_LTO=fat ;;
@@ -681,7 +681,7 @@ function create_environment_source () {
 		export PYTHONPATH=${PYTHONPATH}
 
 		export CARGO_HOME='${CARGO_HOME}'
-		${OPTLEVEL:+export CARGO_PROFILE_RELEASE_OPT_LEVEL=${OPTLEVEL}}
+		export CARGO_PROFILE_RELEASE_OPT_LEVEL=${OPTLEVEL:-2}
 		export CARGO_PROFILE_RELEASE_LTO=${TOOLCHAIN_CARGO_PROFILE_RELEASE_LTO}
 		export CARGO_TARGET='${TOOLCHAIN_CARGO_TARGET}'
 		export RUSTUP_HOME='${RUSTUP_HOME}'
@@ -761,6 +761,7 @@ function preparesources () {
 	if [ -f "${PKG_SRCPATH}/${CONF_CMD}" ] && [ ! -x "${PKG_SRCPATH}/${CONF_CMD}" ]
 	then
 		run_cmd "chmod +x ${PKG_SRCPATH}/${CONF_CMD}" >> "${LOG_FILE}"
+		#"
 	fi
 	echo -n "${SPACES}"
 	cd "${BB_HOME}"
@@ -846,12 +847,12 @@ function configmake () {
 		fi
 	fi
 	cat >runconfig.sh <<-EOF
-		#!/bin/bash -x
+		#!/bin/bash
 		source "${PKG_BLDPATH}/environment.source"
 		${CONF_ENV} ${RUNCONFIG_CMD} ${CONF_FLAGS} ${CONF_VARS} \${@}
 	EOF
 	cat >runmake.sh <<-EOF
-		#!/bin/bash -x
+		#!/bin/bash
 		source "${PKG_BLDPATH}/environment.source"
 		${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
 	EOF
@@ -1230,7 +1231,7 @@ function kernelbuild () {
 	fi
 	# Config kernel build
 
-	case ${KERNEL_OPTLEVEL:-null} in
+	case ${KERNEL_OPTLEVEL:-2} in
 		s|S)	run_cmd "scripts/config -e CC_OPTIMIZE_FOR_SIZE -d CC_OPTIMIZE_FOR_PERFORMANCE" ;;
 		2)		run_cmd "scripts/config -d CC_OPTIMIZE_FOR_SIZE -e CC_OPTIMIZE_FOR_PERFORMANCE" ;;
 		3)		# Patch kernel to build with -O3 flag
@@ -1304,7 +1305,14 @@ function kernelbuild () {
 
 	run_cmd "./make4kern.sh modules"
 	run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=\"${KERNEL_ARCH}\"} ${HARCH:+CROSS_COMPILE=\"${HARCH}-\"} INSTALL_MOD_PATH=\"${PKG_PKGPATH}\" ${PKG_MAKEVARS} modules_install"
-	run_cmd "rm ${PKG_PKGPATH}/lib/modules/${KERNEL_RELEASE}/build ${PKG_PKGPATH}/lib/modules/${KERNEL_RELEASE}/source"
+	if [ -d "${PKG_PKGPATH}/lib/modules/${KERNEL_RELEASE}/build" ]
+	then
+		run_cmd "rm ${PKG_PKGPATH}/lib/modules/${KERNEL_RELEASE}/build"
+	fi
+	if [ -d "${PKG_PKGPATH}/lib/modules/${KERNEL_RELEASE}/source" ]
+	then
+		run_cmd "${PKG_PKGPATH}/lib/modules/${KERNEL_RELEASE}/source"
+	fi
 
 	# Build and install DTBS
 	if [ "${KERNEL_DTBS:-0}" -eq 1 ] && [ "${STATUS}" -eq 0 ]

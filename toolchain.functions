@@ -853,7 +853,8 @@ function setup_gcc () {
 					fi
 				done
 			fi
-			RTLDLIST=$(find "${TOOLCHAIN_PATH}/lib" -name "ld-linux*.so.*" -print0 | xargs -0)
+			LIB64="$( [ -d /usr/lib64 ] && echo "/usr/lib64" || echo "/usr/lib" )"
+			RTLDLIST=$(find "${LIB64}" -name "ld-linux-*.so.*" -print0 | xargs -0)
 			RTD=${RTD:+${RTD} }${RTLDLIST}
 			if [ -n "${RTD}" ]
 			then
@@ -1426,7 +1427,7 @@ function setup_python () {
 	PYTHON_FOR_BUILD=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/python${PYTHONBIN_VER}
 	PIP_FOR_BUILD=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip${PYTHONBIN_VER}
 	PYTHON_FOR_TARGET=${PYTHON_SEARCHPATH}/usr/bin/python${PYTHONBIN_VER}
-	OPTCOMP_FLAGS+="${OPTLEVEL:+ -O${OPTLEVEL}}"
+	OPTCOMP_FLAGS+="${OPTLEVEL:-2}"
 	pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin"
 	pathadd PYTHONPATH "${GLOBAL_TOOLCHAIN_PATH}/lib/python${PYTHONBIN_VER}/site-packages"
 

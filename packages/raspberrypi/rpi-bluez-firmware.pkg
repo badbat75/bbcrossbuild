@@ -4,5 +4,3 @@ PKG_URL="https://github.com/RPi-Distro/bluez-firmware/archive/78d6a07730e2d20c03
 BUILD_PROCESS=configmake
 STD_CONF_FLAGS=0
 CONF_FLAGS="--libdir=/lib"
-PKG_POSTBUILD="install -vdm755 \${PKG_PKGPATH}/lib/firmware/brcm
-	install -vm644 \${PKG_SRCPATH}/broadcom/*.hcd \${PKG_PKGPATH}/lib/firmware/brcm"

@@ -1,8 +1,8 @@
 # perl5
-PKG_VER=5.36.0
+PKG_VER=5.36.3
 PKG_PERL_LIBVER=$(echo ${PKG_VER} | cut -d. -f1,2)
 # perl-cross_1.4+f842531
-PKG_PERLCROSS_VER=refs/tags/1.4
+PKG_PERLCROSS_VER=refs/tags/1.5.2
 PKG_URL="https://www.cpan.org/src/5.0/perl-${PKG_VER}.tar.xz"
 PKG_DEPS="lfs/gdbm lfs/expat"
 BUILD_PROCESS=custom
@@ -18,7 +18,7 @@ PKG_BUILDSCRIPT="
 		--with-cc=${TOOLCHAIN_PATH}/bin/toolchain_cc \\
 		--with-cpp=${TOOLCHAIN_PATH}/bin/toolchain_cpp \\
 		--with-ranlib=${TOOLCHAIN_PATH}/bin/toolchain_ranlib \\
-		-Dccflags=\"\${PLATFORM_CFLAGS}\"\ \\
+		-Dccflags=\"\${PLATFORM_CFLAGS} -Wno-attributes\"\ \\
 		-Doptimize=\"\${OPTCOMP_FLAGS}\" \\
 		-Dldflags=\"\${OPTLINK_FLAGS}\" \\
 		-Dpager='${INSTALL_PREFIX}/bin/less -isR' \\

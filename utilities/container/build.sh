@@ -6,3 +6,4 @@ echo "Container build path: ${CONTAINERBUILD_PATH}"
 source "${CONTAINERBUILD_PATH}"/getenv
 
 docker build -t "${CONTAINER_NAME}" "${CONTAINERBUILD_PATH}/../.."
+docker system prune -f

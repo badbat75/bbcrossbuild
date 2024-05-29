@@ -20,7 +20,7 @@ case ${PKG_TARGET} in
 		PKG_MAKETARGETS="install-strip"
 	;;
 	*)
-		PKG_DEPS+=" lfs/BerkeleyDB lfs/libaudit"
+		PKG_DEPS+=" lfs/systemd:bootstrap lfs/BerkeleyDB lfs/libaudit"
 		PKG_DEPS+=" lfs/libpwquality"
 		PKG_MAKETARGETS="all,install-strip"
 		PKG_POSTBUILD="install -vdm755 \${PKG_PKGPATH}/etc/pam.d
