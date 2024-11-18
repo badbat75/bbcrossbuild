@@ -20,22 +20,34 @@ permissions:
   id-token: write
 
 jobs:
+  determine-environment:
+    runs-on: ubuntu-latest
+    outputs:
+      env_name: ${{ steps.set-env.outputs.env_name }}
+    steps:
+      - name: Set environment name
+        id: set-env
+        run: |
+          if [[ $GITHUB_REF == "refs/heads/development" ]]; then
+            echo "env_name=Development" >> $GITHUB_OUTPUT
+          else
+            echo "env_name=Production" >> $GITHUB_OUTPUT
+          fi
+          echo "Branch: $GITHUB_REF"
+          echo "Environment: ${{ steps.set-env.outputs.env_name }}"
+
   build:
+    needs: determine-environment
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    environment: ${{ startsWith(github.ref, 'refs/heads/development') && 'Development' || 'Production' }}
+    environment: ${{ needs.determine-environment.outputs.env_name }}
     
     steps:
-    - name: Echo current branch and environment
-      run: |
-        echo "Current branch: ${{ github.ref }}"
-        echo "Selected environment: ${{ startsWith(github.ref, 'refs/heads/development') && 'Development' || 'Production' }}"
-
     - name: Checkout repository
       uses: actions/checkout@v3
 
     - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v2
+      uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ vars.AWS_ROLE_ARN }}
         aws-region: ${{ vars.AWS_REGION }}
