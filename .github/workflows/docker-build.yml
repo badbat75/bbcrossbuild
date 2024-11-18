@@ -17,23 +17,22 @@ on:
 
 permissions:
   contents: read
-  id-token: write # Required for OIDC
+  id-token: write
 
 jobs:
   build:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    environment: Development
+    environment: ${{ github.ref == 'refs/heads/development' && 'Development' || 'Production' }}
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
 
     - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
+      uses: aws-actions/configure-aws-credentials@v2
       with:
-        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-        role-session-name: GithubActionsOIDC
+        role-to-assume: ${{ vars.AWS_ROLE_ARN }}
         aws-region: ${{ vars.AWS_REGION }}
 
     - name: Login to Amazon ECR
