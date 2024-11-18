@@ -23,9 +23,14 @@ jobs:
   build:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/development' && 'Development' || 'Production' }}
+    environment: ${{ startsWith(github.ref, 'refs/heads/development') && 'Development' || 'Production' }}
     
     steps:
+    - name: Echo current branch and environment
+      run: |
+        echo "Current branch: ${{ github.ref }}"
+        echo "Selected environment: ${{ startsWith(github.ref, 'refs/heads/development') && 'Development' || 'Production' }}"
+
     - name: Checkout repository
       uses: actions/checkout@v3
 
