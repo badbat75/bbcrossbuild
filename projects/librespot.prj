@@ -1,5 +1,5 @@
 ## Set Clang as default compiler set
-TOOLCHAIN=clang
+TOOLCHAIN=gnu
 
 ## Enable LTO both for kernel and applications
 LTOENABLE=thin
