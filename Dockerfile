@@ -1,6 +1,7 @@
 FROM amd64/fedora:latest
 RUN dnf -y upgrade
-RUN dnf -y install bc parted e2fsprogs btrfs-progs bzip2-devel rsync vim-common gcc g++ binutils binutils-gold dwarves elfutils-libelf-devel patchelf libzstd libzstd-devel tree curl wget gawk flex patch git qemu-user-static gperf
+RUN dnf -y install bc parted e2fsprogs btrfs-progs bzip2-devel rsync vim-common gcc g++ binutils binutils-gold dwarves elfutils-libelf-devel patchelf libzstd libzstd-devel
+RUN dnf -y install file tree curl wget gawk flex patch git qemu-user-static gperf
 RUN dnf -y install help2man xmltoman docbook-utils docbook-utils-pdf docbook2X swig doxygen texinfo gtk-doc asciidoc rubygem-asciidoctor
 RUN dnf -y install perl-Thread-Queue perl-FindBin
 RUN dnf -y install python3-passlib python3-docutils
