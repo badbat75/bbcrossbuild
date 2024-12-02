@@ -2,13 +2,10 @@ name: Docker Build and Push
 
 on:
   push:
-    branches: 
-      - master
-      - development
+    branches:
+      - '*'
     paths:
-      - 'Dockerfile'
-      - '.github/workflows/**'
-      - 'src/**'
+      - '**'
   pull_request:
     branches: 
       - master
