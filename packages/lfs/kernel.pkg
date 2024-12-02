@@ -3,7 +3,7 @@ PKG_VER=${KERNEL_VER}
 PKG_URL="https://cdn.kernel.org/pub/linux/kernel/v$( echo ${PKG_VER} | cut -d'.' -f1 ).x/linux-${PKG_VER}.tar.xz"
 PKG_DEPS="lfs/bison:native lfs/flex:native"
 case ${PKG_TARGET} in
-	headers) ;;
+	headers) PKG_TOOLCHAIN=gnu ;;
 	*) PKG_DEPS+=" lfs/elfutils:cross lfs/dracut" ;;
 esac
 BUILD_PROCESS=kernelbuild

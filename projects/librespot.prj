@@ -10,5 +10,5 @@ BUILD_LIBSTATIC=0
 
 build lfs/create-base-fs_1.0
 
-setup_full_toolchain
+setup_full_toolchain --with-llvm
 build lfs/librespot
