@@ -20,4 +20,4 @@ ENV TARGET_PLATFORM=${TARGET_PLATFORM}
 WORKDIR /mnt/bbcrossbuild
 ADD . .
 
-CMD ./bbxb "${PROJECT_NAME}" "${TARGET_PLATFORM}" || read -n 1 -s -r -p "Press any key to continue..." && echo
+CMD utilities/container/scripts/qemu-binfmt-conf.sh --qemu-path /usr/bin --qemu-suffix -static && ./bbxb "${PROJECT_NAME}" "${TARGET_PLATFORM}" || read -n 1 -s -r -p "Press any key to continue..." && echo
