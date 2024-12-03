@@ -1,5 +1,5 @@
 ## Set Clang as default compiler set
-TOOLCHAIN=gnu
+TOOLCHAIN=clang
 
 ## Enable LTO both for kernel and applications
 LTOENABLE=thin
@@ -7,6 +7,8 @@ LTOENABLE=thin
 ## Enable shared libraries (default) but disable static ones
 BUILD_LIBSHARED=1
 BUILD_LIBSTATIC=0
+
+OPTLEVEL=3
 
 build lfs/create-base-fs_1.0
 
