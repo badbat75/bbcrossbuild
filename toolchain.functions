@@ -1545,6 +1545,7 @@ function setup_full_toolchain () {
 
 	if [ "${WITH_LLVM}" -eq 1 ] || [ "${TOOLCHAIN}" = llvm ]
 	then
+		TOOLCHAIN=gnu build lfs/ninja:native
 		# shellcheck disable=SC2086
 		setup_llvm ${SETUP_LLVM}
 	fi
