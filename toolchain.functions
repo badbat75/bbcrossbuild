@@ -720,8 +720,6 @@ function setup_gcc () {
 		fi
 	}
 
-
-
 	function gcc_make_target_libs () {
 
 		function relink_libraries () {
@@ -1441,7 +1439,7 @@ function setup_python () {
 		echo -n "building... "
 		build_python | log_buffer >> "${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log" 2>&1
 		echo "done."
-		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}\""
+		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}\"" 2>&1
 	else
 		echo "already there."
 	fi
@@ -1545,15 +1543,14 @@ function setup_full_toolchain () {
 	# shellcheck disable=SC2086
 	setup_gcc ${SETUP_GCC}
 	setup_toolchain_wrapper
+	# Needed by LLVM
+	build lfs/ninja:native
 
 	if [ "${WITH_LLVM}" -eq 1 ] || [ "${TOOLCHAIN}" = llvm ]
 	then
-		TOOLCHAIN=gnu build lfs/ninja:native
 		# shellcheck disable=SC2086
 		setup_llvm ${SETUP_LLVM}
 	fi
-
-	build lfs/ninja:native
 
 	setup_python --native-only
 	build lfs/meson:native
