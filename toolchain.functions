@@ -410,8 +410,7 @@ function setup_binutils () {
 			--enable-compressed-debug-sections=all --enable-separate-code=yes --enable-plugins --disable-werror ${SILENTCONFIG}"
 
 		COMPFLAGS="${GNU_EXTRACOMPFLAGS}"
-		#LINKERFLAGS="-Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib ${GNU_EXTRALDFLAGS} -s"
-		LINKERFLAGS="${GNU_EXTRALDFLAGS} -s"
+		LINKERFLAGS="-Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib -Wl,-rpath -Wl,${TOOLCHAIN_PATH}/${BARCH}/${HARCH}/lib ${GNU_EXTRALDFLAGS} -s"
 		LTO_COMPFLAGS=
 		LTO_LINKERFLAGS=
 		if [ "${GCC_LTOENABLE:-0}" -eq 1 ]
