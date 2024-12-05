@@ -148,7 +148,7 @@ function setup_rust () {
 			run_cmd "cargo install cargo-update bindgen-cli" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
 		)
 	fi
-	if [ ! -x "${GLOBAL_TOOLCHAIN_PATH}/bin/bindgen-cli" ]
+	if [ ! -x "${GLOBAL_TOOLCHAIN_PATH}/bin/bindgen" ]
 	then
 		echo -n "installing bindgen-cli... "
 		( set -e
