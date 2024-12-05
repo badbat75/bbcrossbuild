@@ -55,7 +55,9 @@ case ${PKG_TARGET} in
 		#PKG_CHECK="[ \"\$( \"${INSTALL_EXECPREFIX}/bin/ld.bfd\" --version | head -n1 | awk '{print \$5}' | cut -d. -f1,2 )\" == \"${PKG_VER/\+*/}\" ]"
 		CONF_FLAGS+=" --build=${BARCH} --host=${BARCH} --target=${BARCH}"
 		#PKG_MAKETARGETS="all,install-strip-bfd,install-strip"
-		PKG_MAKETARGETS="install-headers"
+		PKG_MAKETARGETS="configure-host"
+		PKG_POSTBUILD="cd bfd; make install-bfdincludeHEADERS"
+		PKG_CHECK="[ -f ${INSTALL_EXECPREFIX}/${INSTALL_INCLUDEDIR}/plugin-api.h ]"
 	;;
 	cross)
 		PKG_CHECK="[ \"\$( \"${INSTALL_EXECPREFIX}/bin/${HARCH}-ld.bfd\" --version | head -n1 | awk '{print \$5}' | cut -d. -f1,2 )\" == \"${PKG_VER/\+*/}\" ]"
