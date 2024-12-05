@@ -145,7 +145,7 @@ function setup_rust () {
 			CARGO_PROFILE_RELEASE_OPT_LEVEL=3
 			CARGO_PROFILE_RELEASE_LTO=thin
 			export CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO
-			run_cmd "cargo install cargo-update" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
+			run_cmd "cargo install cargo-update bindgen-cli" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
 		)
 	fi
 	if [ "${RUST_UPDATE:-0}" -eq 1 ]
@@ -160,6 +160,7 @@ function setup_rust () {
 	fi
 	echo -n "adding ${CARGO_TARGET} libraries... "
 	run_cmd "rustup -v target add \"${CARGO_TARGET}\"" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
+	
 	echo "done."
 	echo
 }
