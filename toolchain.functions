@@ -140,12 +140,22 @@ function setup_rust () {
 	fi
 	if [ ! -x "${GLOBAL_TOOLCHAIN_PATH}/bin/cargo-install-update" ]
 	then
-		echo -n "installing update tools... "
+		echo -n "installing cargo-update... "
 		( set -e
 			CARGO_PROFILE_RELEASE_OPT_LEVEL=3
 			CARGO_PROFILE_RELEASE_LTO=thin
 			export CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO
 			run_cmd "cargo install cargo-update bindgen-cli" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
+		)
+	fi
+	if [ ! -x "${GLOBAL_TOOLCHAIN_PATH}/bin/bindgen-cli" ]
+	then
+		echo -n "installing bindgen-cli... "
+		( set -e
+			CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+			CARGO_PROFILE_RELEASE_LTO=thin
+			export CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO
+			run_cmd "cargo install bindgen-cli" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
 		)
 	fi
 	if [ "${RUST_UPDATE:-0}" -eq 1 ]
@@ -1550,6 +1560,7 @@ function setup_full_toolchain () {
 	then
 		# shellcheck disable=SC2086
 		setup_llvm ${SETUP_LLVM}
+		export LIBCLANG_PATH="${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib"
 	fi
 
 	setup_python --native-only
