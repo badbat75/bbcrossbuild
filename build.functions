@@ -549,12 +549,16 @@ function create_environment_source () {
 	then
 		run_cmd "mkdir -pv \"${PKG_BLDPATH}\""
 	fi
+	case ${PKG_DISABLECCWRAPPER:-0} in
+		0) local ENV_CCWRAPPER=${CCWRAPPER} ;;
+		1) local ENV_CCWRAPPER= ;;
+	esac
 	cat <<-EOF > "${PKG_BLDPATH}/environment.source"
 		#################################################################################
 		###### ${PKG_FULLNAME}
 		### Source file with all the environment specified
 		### Tool chain: ${PKG_TOOLCHAIN:-${TOOLCHAIN}}
-		### C Wrapper: ${CCWRAPPER}
+		### C Wrapper: ${ENV_CCWRAPPER}
 		### Build type: ${BUILD_PROCESS}
 		### Target: ${TARGET_ENV} [${_param_target}]
 		###### Other environment variables:
@@ -570,24 +574,24 @@ function create_environment_source () {
 		#################################################################################
 
 		export SYSROOT='${SYSROOT}'
-		export CC_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC_FOR_BUILD}'
+		export CC_FOR_BUILD='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_CC_FOR_BUILD}'
 		export CFLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS} ${TOOLCHAIN_CFLAGS_FOR_BUILD}'
-		export CPP_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CPP_FOR_BUILD}'
+		export CPP_FOR_BUILD='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_CPP_FOR_BUILD}'
 		export CPPFLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS} ${TOOLCHAIN_CPPFLAGS_FOR_BUILD}'
 	EOF
 	if [ -n "${TOOLCHAIN_CXX_FOR_BUILD}" ]
 	then
 		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
-			export CXX_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX_FOR_BUILD}'
+			export CXX_FOR_BUILD='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_CXX_FOR_BUILD}'
 			export CXXFLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS} ${TOOLCHAIN_CXXFLAGS_FOR_BUILD}'
 		EOF
 	fi
 	if [ -n "${TOOLCHAIN_FC_FOR_BUILD}" ]
 	then
 		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
-			export FC_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_FC_FOR_BUILD}'
+			export FC_FOR_BUILD='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_FC_FOR_BUILD}'
 			export FFLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS} ${TOOLCHAIN_FCFLAGS_FOR_BUILD}'
-			export F90_FOR_BUILD='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_F90_FOR_BUILD}'
+			export F90_FOR_BUILD='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_F90_FOR_BUILD}'
 			export F90FLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS} ${TOOLCHAIN_FCFLAGS_FOR_BUILD}'
 		EOF
 	fi
@@ -608,10 +612,10 @@ function create_environment_source () {
 	then
 		# shellcheck disable=SC2153
 		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
-		export CC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+		export CC='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_CC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 		export CC_EXE='${TOOLCHAIN_CC}'
 		export CFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}'
-		export CPP='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CPP}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+		export CPP='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_CPP}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 		export CPPFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CPPFLAGS} ${PLATFORM_CFLAGS} ${PKG_CPPFLAGS}'
 	EOF
 	fi
@@ -619,7 +623,7 @@ function create_environment_source () {
 	then
 		# shellcheck disable=SC2153
 		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
-			export CXX='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_CXX}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+			export CXX='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_CXX}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 			export CXX_EXE='${TOOLCHAIN_CXX}'
 			export CXXFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CXXFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CXXFLAGS}'
 		EOF
@@ -628,9 +632,9 @@ function create_environment_source () {
 	then
 		# shellcheck disable=SC2153
 		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
-			export FC='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_FC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+			export FC='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_FC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 			export FFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
-			export F90='${CCWRAPPER:+${CCWRAPPER} }${TOOLCHAIN_F90}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
+			export F90='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_F90}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 			export F90FLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
 		EOF
 	fi
@@ -691,12 +695,12 @@ function create_environment_source () {
 
 		export ENVIRONMENT_SOURCE_PATH='${PWD}'
 	EOF
-	if [ "$(basename "${CCWRAPPER:-nope}")" == "sccache" ]
+	if [ "$(basename "${ENV_CCWRAPPER:-nope}")" == "sccache" ]
 	then
 		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 			
 			# sccache parameters
-			export RUSTC_WRAPPER='${CCWRAPPER}'
+			export RUSTC_WRAPPER='${ENV_CCWRAPPER}'
 		EOF
 	fi
 	cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
@@ -1542,6 +1546,7 @@ function build () {(
 		PKG_CXXFLAGS \
 		PKG_DEPS \
 		PKG_DISABLECROSSPYTHON \
+		PKG_DISABLECCWRAPPER \
 		PKG_FAULTYCFLAGS \
 		PKG_FCFLAGS \
 		PKG_GETTEXT \

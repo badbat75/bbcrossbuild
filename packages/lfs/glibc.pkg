@@ -36,6 +36,9 @@ PKG_MAKEVARS="cross-compiling=yes -j${NPROCS}"
 PKG_MAKEENV="PARALLELMFLAGS=-j${NPROCS}"
 PKG_TOOLCHAIN=gnu
 PKG_OVERRIDELD=bfd
+### Got issues with sccache because overwrite /dev/null during glibc build. Issues with gcc -o /dev/null.
+PKG_DISABLECCWRAPPER=1
+###
 PKG_PREBUILD="mkdir -pv \${PKG_BLDPATH}"
 ### Configuration
 case ${PKG_TARGET} in
