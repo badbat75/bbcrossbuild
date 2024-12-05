@@ -1117,6 +1117,7 @@ function cargobuild () {
 		        mkdir -pv "\${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}"
 		    fi
 			$(
+				# shellcheck source=/dev/null
 				source environment.source
 				for file in ${CARGO_BINLIST}
 				do
@@ -1685,7 +1686,7 @@ function build () {(
 		;;
 	esac
 
-	# shellcheck source=packages/lfs/systemd.pkg
+	# shellcheck source=/dev/null
 	source "${PKG_PATH}/${PKG_FILE}.pkg"
 
 	PKG_TOOLCHAIN=${_param_toolchain:-${PKG_TOOLCHAIN}}
