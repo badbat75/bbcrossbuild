@@ -947,6 +947,8 @@ function setup_gcc () {
 		### Build & install glibc
 		NUMSPACES=1 build lfs/glibc
 		### Build & install libxcrypt
+		# libxcrypt compat no more needed
+		# NUMSPACES=1 build --toolchain gnu lfs/libxcrypt:compat
 		NUMSPACES=1 build --toolchain gnu lfs/libxcrypt
 	fi
 	ldconfig -v >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log" 2>&1
@@ -1553,7 +1555,7 @@ function setup_full_toolchain () {
 	setup_gcc ${SETUP_GCC}
 	setup_toolchain_wrapper
 	# Needed by LLVM
-	build lfs/ninja:native
+	build --toolchain gnu lfs/ninja:native
 
 	if [ "${WITH_LLVM}" -eq 1 ] || [ "${TOOLCHAIN}" = llvm ]
 	then
