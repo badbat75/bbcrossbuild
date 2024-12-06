@@ -155,6 +155,21 @@ function setup_rust () {
 			CARGO_PROFILE_RELEASE_OPT_LEVEL=3
 			CARGO_PROFILE_RELEASE_LTO=thin
 			export CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO
+			if [ -d "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib" ]
+			then
+				export CFLAGS+=" -Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib"
+				export CXXFLAGS+=" -Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib"
+				{
+					echo "CC:"
+					echo "${CC}"
+					echo "CXX:"
+					echo "${CXX}"
+					echo "CFLAGS:"
+					echo "${CFLAGS}"
+					echo "CXXFLAGS:"
+					echo "${CXXFLAGS}"
+				 } >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
+			fi
 			run_cmd "cargo install bindgen-cli" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
 		)
 	fi
