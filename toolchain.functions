@@ -1103,11 +1103,11 @@ function setup_llvm () {
 
 	function build_llvm () {
 		### Set LD_LBRARY_PATH to find llvm-${VER}.so in ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/lib
-		pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/lib"
+		# pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/lib"
 		run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/ninja $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -v; fi ) -C \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}\" install/strip"
-		pathremove LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/lib"
-		run_cmd "patchelf --set-rpath \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib\" \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/LLVMgold.so\""
-		run_cmd "patchelf --set-rpath \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib\" \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/LLVMPolly.so\""
+		# pathremove LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/lib"
+		# run_cmd "patchelf --set-rpath \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib\" \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/LLVMgold.so\""
+		# run_cmd "patchelf --set-rpath \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib\" \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/LLVMPolly.so\""
 		run_cmd "ln -fsv ${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/LLVMgold.so ${TOOLCHAIN_PATH}/lib/bfd-plugins/LLVMgold.so" >> "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
 	}
 
