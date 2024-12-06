@@ -34,3 +34,4 @@ PKG_POSTBUILD="mkdir -pv \${PKG_PKGPATH}/{dev,proc,sys,run,etc,var}
 "
 
 PKG_POSTINSTALL="chgrp -v utmp /var/log/lastlog"
+PKG_TOOLCHAIN=gnu

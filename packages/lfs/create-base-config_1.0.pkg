@@ -128,3 +128,5 @@ PKG_POSTBUILD="install -d -m755 \${PKG_PKGPATH}/etc
 		# End /etc/inputrc
 	EOF
 	"
+
+PKG_TOOLCHAIN=gnu
