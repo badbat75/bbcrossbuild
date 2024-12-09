@@ -908,7 +908,7 @@ function setup_gcc () {
 		NUMSPACES=1 build lfs/libmpfr:native
 		NUMSPACES=1 build lfs/libmpc:native
 		NUMSPACES=1 build lfs/libisl:native
-		gcc_make_host --without-glibc >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
+		#gcc_make_host --without-glibc >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
 		if [ "$(gcc_sysroot)" == "${BIN_PATH}" ]
 		then
 			NUMSPACES=1 build --temporary --no_gcc_check lfs/glibc:headers
