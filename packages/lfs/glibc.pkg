@@ -66,6 +66,7 @@ case ${PKG_TARGET} in
 		STD_CONF_FLAGS=0
 		CONF_FLAGS="--build=${BARCH} --host=${HARCH} --target=${HARCH} --prefix=${INSTALL_PREFIX} --includedir=${INSTALL_INCLUDEDIR} \
 			--with-headers=${BIN_PATH}${INSTALL_INCLUDEDIR}"
+		CONF_VARS+=" libc_cv_compiler_ok=yes"
 		CONF_ENV="unset CXX CXXFLAGS; CC=\"${CC_FOR_BUILD}\" CFLAGS=\"${CFLAGS_FOR_BUILD}\" CC=\"${CPP_FOR_BUILD}\" CPPFLAGS=\"${CPPLAGS_FOR_BUILD}\""
 	;;
 	*)
