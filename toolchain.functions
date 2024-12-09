@@ -1450,7 +1450,7 @@ function setup_python () {
 		echo -n "building... "
 		build_python | log_buffer >> "${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log" 2>&1
 		echo "done."
-		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}\"" 2>&1
+		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}\""
 	else
 		echo "already there."
 	fi

@@ -10,6 +10,8 @@ BUILD_LIBSTATIC=0
 
 OPTLEVEL=3
 
+GLIBC_VER=2.31
+
 build lfs/create-base-fs_1.0
 
 setup_full_toolchain --with-llvm --with-gnu-install --with-main-gcc
