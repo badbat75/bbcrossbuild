@@ -1,6 +1,6 @@
 # bash
-PKG_VER=5.2p26
-PKG_URL="https://git.savannah.gnu.org/cgit/bash.git/snapshot/bash-f3b6bd19457e260b65d11f2712ec3da56cef463f.tar.gz"
+PKG_VER=5.2p37
+PKG_URL="https://git.savannah.gnu.org/cgit/bash.git/snapshot/bash-c5c97b371044a44b701b6efa35984a3e1956344e.tar.gz"
 PKG_DEPS="lfs/bison:native lfs/flex:native lfs/ncurses lfs/readline"
 
 BUILD_PROCESS=configmake

@@ -18,4 +18,6 @@ OPTLEVEL=3
 build lfs/create-base-fs_1.0
 
 setup_full_toolchain --with-llvm --with-gnu-install --with-main-gcc
+build lfs/bash
+build lfs/curl
 build lfs/librespot

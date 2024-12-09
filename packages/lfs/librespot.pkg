@@ -2,9 +2,9 @@
 PKG_VER=0.6.0
 PKG_URL="https://github.com/librespot-org/librespot/archive/refs/tags/v${PKG_VER}.tar.gz"
 BUILD_PROCESS=cargobuild
-CONF_FLAGS="--features alsa-backend"
+CONF_FLAGS=""
 #PKG_RUSTFLAGS=
-PKG_DEPS="lfs/alsa-lib lfs/portaudio"
+PKG_DEPS=""
 CARGO_BINLIST="librespot"
 case "${TOOLCHAIN}" in
     llvm) PKG_CFLAGS="-Wno-error=unused-command-line-argument" ;;

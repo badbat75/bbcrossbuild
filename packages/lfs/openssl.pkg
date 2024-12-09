@@ -1,5 +1,5 @@
 # openssl
-PKG_VER=3.3.0
+PKG_VER=3.4.0
 PKG_URL="https://www.openssl.org/source/openssl-${PKG_VER}.tar.gz"
 CONF_COPYRSC=1
 CONF_CMD="Configure"
