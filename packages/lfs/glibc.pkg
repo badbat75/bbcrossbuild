@@ -3,20 +3,24 @@ PKG_URL="https://ftp.gnu.org/gnu/libc/glibc-${GLIBC_VER}.tar.xz"
 PKG_DEPS="lfs/bison:native"
 case ${GLIBC_VER} in
 	2.39)
-		PKG_VER=2.39+c7c3f5bf80
-		PATCHES=glibc/glibc_2.39+c7c3f5bf80.patch
+		PKG_VER=2.39+aa8768999e
+		PATCHES=glibc/glibc_2.39+aa8768999e.patch
 		;;
 	2.38)
-		PKG_VER=2.38+249646f12b
-		PATCHES=glibc/glibc_2.38+249646f12b.patch
+		PKG_VER=2.38+37ded328c4
+		PATCHES=glibc/glibc_2.38+37ded328c4.patch
 		;;
 	2.37)
-		PKG_VER=2.37+3956fd48d3
-		PATCHES=glibc/glibc_2.37+3956fd48d3.patch
+		PKG_VER=2.37+b2ab6ce0f5
+		PATCHES=glibc/glibc_2.37+b2ab6ce0f5.patch
 		;;
 	2.36)
-		PKG_VER=2.36+ee65bc1df6
-		PATCHES=glibc/glibc_2.36+ee65bc1df6.patch
+		PKG_VER=2.36+314419978f
+		PATCHES=glibc/glibc_2.36+314419978f.patch
+		;;
+	2.31)
+		PKG_VER=2.31+7b27c450c3
+		PATCHES=glibc/glibc_2.31+7b27c450c3.patch
 		;;
 	*)
 		PKG_VER=${GLIBC_VER}

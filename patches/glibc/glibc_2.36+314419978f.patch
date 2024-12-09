@@ -83,10 +83,10 @@ index d1e139d03c..09c0cf8357 100644
  else	   					# -s
  verbose	:=
 diff --git a/NEWS b/NEWS
-index f61e521fc8..0f0ebce3f0 100644
+index f61e521fc8..30a3eaaf47 100644
 --- a/NEWS
 +++ b/NEWS
-@@ -5,6 +5,94 @@ See the end for copying conditions.
+@@ -5,6 +5,108 @@ See the end for copying conditions.
  Please send GNU C library bug reports via <https://sourceware.org/bugzilla/>
  using `glibc' in the "product" field.
  
@@ -98,6 +98,11 @@ index f61e521fc8..0f0ebce3f0 100644
 +  getent with --no-addrconfig may contain addresses of families not
 +  configured on the current host i.e. as-if you had not passed
 +  AI_ADDRCONFIG to getaddrinfo calls.
++
++Deprecated and removed features, and other changes affecting compatibility:
++
++* __rseq_size now denotes the size of the active rseq area (20 bytes
++  initially), not the size of struct rseq (32 bytes initially).
 +
 +Security related changes:
 +
@@ -132,6 +137,7 @@ index f61e521fc8..0f0ebce3f0 100644
 +  [20975] Deferred cancellation triggers in __check_pf and looses lock leading to deadlock
 +  [24816] Fix tst-nss-files-hosts-long on single-stack hosts
 +  [27576] gmon: improve mcount overflow handling
++  [27821] ungetc: Fix backup buffer leak on program exit
 +  [28846] CMSG_NXTHDR may trigger -Wstrict-overflow warning
 +  [29039] Corrupt DTV after reuse of a TLS module ID following dlclose with unused TLS
 +  [29444] gmon: Fix allocated buffer overflow (bug 29444)
@@ -164,6 +170,7 @@ index f61e521fc8..0f0ebce3f0 100644
 +  [29776] elf/tst-tlsopt-powerpc fails when compiled with -mcpu=power10
 +  [29951] time: Set daylight to 1 for matching DST/offset change
 +  [30053] time: strftime %s returns -1 after 2038 on 32 bits systems
++  [30081] resolv: Do not wait for non-existing second DNS response after error
 +  [30101] gmon: fix memory corruption issues
 +  [30151] gshadow: Matching sgetsgent, sgetsgent_r ERANGE handling
 +  [30163] posix: Fix system blocks SIGCHLD erroneously
@@ -177,6 +184,13 @@ index f61e521fc8..0f0ebce3f0 100644
 +  [30843] potential use-after-free in getcanonname (CVE-2023-4806)
 +  [31184] FAIL: elf/tst-tlsgap
 +  [31185] Incorrect thread point access in _dl_tlsdesc_undefweak and _dl_tlsdesc_dynamic
++  [31476] resolv: Track single-request fallback via _res._flags
++  [31890] resolv: Allow short error responses to match any DNS query
++  [31965] rseq extension mechanism does not work as intended
++  [31968] mremap implementation in C does not handle arguments correctly
++  [32052] Name space violation in fortify wrappers
++  [32137] libio: Attempt wide backup free only for non-legacy code
++  [32231] elf: Change ldconfig auxcache magic number
 +
  Version 2.36
  
@@ -476,6 +490,19 @@ index fd77d0c7c8..cea9c1b29d 100644
 +$(objpfx)tst-dlmopen-twice.out: \
 +  $(objpfx)tst-dlmopen-twice-mod1.so \
 +  $(objpfx)tst-dlmopen-twice-mod2.so
+diff --git a/elf/cache.c b/elf/cache.c
+index 3d7d3a67bf..528a8ba694 100644
+--- a/elf/cache.c
++++ b/elf/cache.c
+@@ -845,7 +845,7 @@ struct aux_cache_entry
+   struct aux_cache_entry *next;
+ };
+ 
+-#define AUX_CACHEMAGIC		"glibc-ld.so.auxcache-1.0"
++#define AUX_CACHEMAGIC		"glibc-ld.so.auxcache-2.0"
+ 
+ struct aux_cache_file_entry
+ {
 diff --git a/elf/dl-cache.c b/elf/dl-cache.c
 index 8bbf110d02..b97c17b3a9 100644
 --- a/elf/dl-cache.c
@@ -1026,10 +1053,20 @@ index 5f7f18ef27..4bf9052db1 100644
 +output(glibc.rtld.dynamic_sort=1): {+a[a2>a1>a>];+b[b1>b>];-b[<b<b1];+c[c>];%c(a1());}<a<a2<c<a1
 +output(glibc.rtld.dynamic_sort=2): {+a[a2>a1>a>];+b[b1>b>];-b[<b<b1];+c[c>];%c(a1());}<a2<a<c<a1
 diff --git a/elf/elf.h b/elf/elf.h
-index 02a1b3f52f..014393f3cc 100644
+index 02a1b3f52f..f34d4ef7f4 100644
 --- a/elf/elf.h
 +++ b/elf/elf.h
-@@ -4085,8 +4085,11 @@ enum
+@@ -1215,6 +1215,9 @@ typedef struct
+ #define AT_HWCAP2	26		/* More machine-dependent hints about
+ 					   processor capabilities.  */
+ 
++#define AT_RSEQ_FEATURE_SIZE	27	/* rseq supported feature size.  */
++#define AT_RSEQ_ALIGN	28		/* rseq allocation alignment.  */
++
+ #define AT_EXECFN	31		/* Filename of executable.  */
+ 
+ /* Pointer to the global system page used for system calls and other
+@@ -4085,8 +4088,11 @@ enum
  #define R_NDS32_TLS_DESC	119
  
  /* LoongArch ELF Flags */
@@ -1511,6 +1548,29 @@ index 0000000000..ec937bf4ec
 +esac
 +
 +exit $errors
+diff --git a/elf/tst-stackguard1.c b/elf/tst-stackguard1.c
+index 050784319a..98625632dc 100644
+--- a/elf/tst-stackguard1.c
++++ b/elf/tst-stackguard1.c
+@@ -26,6 +26,8 @@
+ #include <tls.h>
+ #include <unistd.h>
+ 
++#include <support/xstdlib.h>
++
+ static const char *command;
+ static bool child;
+ static uintptr_t stack_chk_guard_copy;
+@@ -108,7 +110,8 @@ do_test (void)
+ 	  dup2 (fds[1], 2);
+ 	  close (fds[1]);
+ 
+-	  system (command);
++	  xsystem (command);
++
+ 	  exit (0);
+ 	}
+ 
 diff --git a/gmon/Makefile b/gmon/Makefile
 index 552b7d7751..fbe2b0ba5c 100644
 --- a/gmon/Makefile
@@ -2664,6 +2724,160 @@ index be92f33fd1..5e41dc19df 100644
        }
      }
  
+diff --git a/libio/bits/stdio2.h b/libio/bits/stdio2.h
+index b1e200e716..0fa261257c 100644
+--- a/libio/bits/stdio2.h
++++ b/libio/bits/stdio2.h
+@@ -208,12 +208,12 @@ extern char *__REDIRECT (__fgets_chk_warn,
+ __fortify_function __wur __fortified_attr_access (__write_only__, 1, 2) char *
+ fgets (char *__restrict __s, int __n, FILE *__restrict __stream)
+ {
+-  size_t sz = __glibc_objsize (__s);
+-  if (__glibc_safe_or_unknown_len (__n, sizeof (char), sz))
++  size_t __sz = __glibc_objsize (__s);
++  if (__glibc_safe_or_unknown_len (__n, sizeof (char), __sz))
+     return __fgets_alias (__s, __n, __stream);
+-  if (__glibc_unsafe_len (__n, sizeof (char), sz))
+-    return __fgets_chk_warn (__s, sz, __n, __stream);
+-  return __fgets_chk (__s, sz, __n, __stream);
++  if (__glibc_unsafe_len (__n, sizeof (char), __sz))
++    return __fgets_chk_warn (__s, __sz, __n, __stream);
++  return __fgets_chk (__s, __sz, __n, __stream);
+ }
+ 
+ extern size_t __REDIRECT (__fread_alias,
+@@ -232,12 +232,12 @@ __fortify_function __wur size_t
+ fread (void *__restrict __ptr, size_t __size, size_t __n,
+        FILE *__restrict __stream)
+ {
+-  size_t sz = __glibc_objsize0 (__ptr);
+-  if (__glibc_safe_or_unknown_len (__n, __size, sz))
++  size_t __sz = __glibc_objsize0 (__ptr);
++  if (__glibc_safe_or_unknown_len (__n, __size, __sz))
+     return __fread_alias (__ptr, __size, __n, __stream);
+-  if (__glibc_unsafe_len (__n, __size, sz))
+-    return __fread_chk_warn (__ptr, sz, __size, __n, __stream);
+-  return __fread_chk (__ptr, sz, __size, __n, __stream);
++  if (__glibc_unsafe_len (__n, __size, __sz))
++    return __fread_chk_warn (__ptr, __sz, __size, __n, __stream);
++  return __fread_chk (__ptr, __sz, __size, __n, __stream);
+ }
+ 
+ #ifdef __USE_GNU
+@@ -254,12 +254,12 @@ extern char *__REDIRECT (__fgets_unlocked_chk_warn,
+ __fortify_function __wur __fortified_attr_access (__write_only__, 1, 2) char *
+ fgets_unlocked (char *__restrict __s, int __n, FILE *__restrict __stream)
+ {
+-  size_t sz = __glibc_objsize (__s);
+-  if (__glibc_safe_or_unknown_len (__n, sizeof (char), sz))
++  size_t __sz = __glibc_objsize (__s);
++  if (__glibc_safe_or_unknown_len (__n, sizeof (char), __sz))
+     return __fgets_unlocked_alias (__s, __n, __stream);
+-  if (__glibc_unsafe_len (__n, sizeof (char), sz))
+-    return __fgets_unlocked_chk_warn (__s, sz, __n, __stream);
+-  return __fgets_unlocked_chk (__s, sz, __n, __stream);
++  if (__glibc_unsafe_len (__n, sizeof (char), __sz))
++    return __fgets_unlocked_chk_warn (__s, __sz, __n, __stream);
++  return __fgets_unlocked_chk (__s, __sz, __n, __stream);
+ }
+ #endif
+ 
+@@ -281,8 +281,8 @@ __fortify_function __wur size_t
+ fread_unlocked (void *__restrict __ptr, size_t __size, size_t __n,
+ 		FILE *__restrict __stream)
+ {
+-  size_t sz = __glibc_objsize0 (__ptr);
+-  if (__glibc_safe_or_unknown_len (__n, __size, sz))
++  size_t __sz = __glibc_objsize0 (__ptr);
++  if (__glibc_safe_or_unknown_len (__n, __size, __sz))
+     {
+ # ifdef __USE_EXTERN_INLINES
+       if (__builtin_constant_p (__size)
+@@ -307,9 +307,9 @@ fread_unlocked (void *__restrict __ptr, size_t __size, size_t __n,
+ # endif
+       return __fread_unlocked_alias (__ptr, __size, __n, __stream);
+     }
+-  if (__glibc_unsafe_len (__n, __size, sz))
+-    return __fread_unlocked_chk_warn (__ptr, sz, __size, __n, __stream);
+-  return __fread_unlocked_chk (__ptr, sz, __size, __n, __stream);
++  if (__glibc_unsafe_len (__n, __size, __sz))
++    return __fread_unlocked_chk_warn (__ptr, __sz, __size, __n, __stream);
++  return __fread_unlocked_chk (__ptr, __sz, __size, __n, __stream);
+ 
+ }
+ #endif
+diff --git a/libio/bug-mmap-fflush.c b/libio/bug-mmap-fflush.c
+index d8aa58985a..3f99222eef 100644
+--- a/libio/bug-mmap-fflush.c
++++ b/libio/bug-mmap-fflush.c
+@@ -4,6 +4,7 @@
+ #include <stdlib.h>
+ #include <string.h>
+ 
++#include <support/xstdlib.h>
+ 
+ static char *fname;
+ 
+@@ -35,14 +36,16 @@ do_test (void)
+   char buffer[1024];
+ 
+   snprintf (buffer, sizeof (buffer), "echo 'From foo@bar.com' > %s", fname);
+-  system (buffer);
++  xsystem (buffer);
++
+   f = fopen (fname, "r");
+   fseek (f, 0, SEEK_END);
+   o = ftello (f);
+   fseek (f, 0, SEEK_SET);
+   fflush (f);
+   snprintf (buffer, sizeof (buffer), "echo 'From bar@baz.edu' >> %s", fname);
+-  system (buffer);
++  xsystem (buffer);
++
+   fseek (f, o, SEEK_SET);
+   if (fgets (buffer, 1024, f) == NULL)
+     exit (1);
+diff --git a/libio/genops.c b/libio/genops.c
+index 1b629eb695..1be964ef77 100644
+--- a/libio/genops.c
++++ b/libio/genops.c
+@@ -635,7 +635,7 @@ _IO_sputbackc (FILE *fp, int c)
+ {
+   int result;
+ 
+-  if (fp->_IO_read_ptr > fp->_IO_read_base
++  if (fp->_IO_read_ptr > fp->_IO_read_base && !_IO_in_backup (fp)
+       && (unsigned char)fp->_IO_read_ptr[-1] == (unsigned char)c)
+     {
+       fp->_IO_read_ptr--;
+@@ -796,6 +796,12 @@ _IO_unbuffer_all (void)
+ 	legacy = 1;
+ #endif
+ 
++      /* Free up the backup area if it was ever allocated.  */
++      if (_IO_have_backup (fp))
++	_IO_free_backup_area (fp);
++      if (!legacy && fp->_mode > 0 && _IO_have_wbackup (fp))
++	_IO_free_wbackup_area (fp);
++
+       if (! (fp->_flags & _IO_UNBUFFERED)
+ 	  /* Iff stream is un-orientated, it wasn't used. */
+ 	  && (legacy || fp->_mode != 0))
+diff --git a/libio/libioP.h b/libio/libioP.h
+index ba4fdbd200..bef3324ffb 100644
+--- a/libio/libioP.h
++++ b/libio/libioP.h
+@@ -529,8 +529,8 @@ extern void _IO_old_init (FILE *fp, int flags) __THROW;
+        ((__fp)->_wide_data->_IO_write_base \
+ 	= (__fp)->_wide_data->_IO_write_ptr = __p, \
+ 	(__fp)->_wide_data->_IO_write_end = (__ep))
+-#define _IO_have_backup(fp) ((fp)->_IO_save_base != NULL)
+-#define _IO_have_wbackup(fp) ((fp)->_wide_data->_IO_save_base != NULL)
++#define _IO_have_backup(fp) ((fp)->_IO_backup_base != NULL)
++#define _IO_have_wbackup(fp) ((fp)->_wide_data->_IO_backup_base != NULL)
+ #define _IO_in_backup(fp) ((fp)->_flags & _IO_IN_BACKUP)
+ #define _IO_have_markers(fp) ((fp)->_markers != NULL)
+ #define _IO_blen(fp) ((fp)->_IO_buf_end - (fp)->_IO_buf_base)
 diff --git a/locale/weight.h b/locale/weight.h
 index 8be2d220f8..4a4d5aa6b2 100644
 --- a/locale/weight.h
@@ -2682,6 +2896,97 @@ index 8be2d220f8..4a4d5aa6b2 100644
 +  DIAG_POP_NEEDS_COMMENT;
    const unsigned char *cp;
    const unsigned char *usrc;
+ 
+diff --git a/localedata/tst-ctype.c b/localedata/tst-ctype.c
+index d77a684b41..ae7426eadb 100644
+--- a/localedata/tst-ctype.c
++++ b/localedata/tst-ctype.c
+@@ -21,6 +21,8 @@
+ #include <stdio.h>
+ #include <string.h>
+ 
++#include <support/check.h>
++
+ 
+ static const char lower[] = "abcdefghijklmnopqrstuvwxyz";
+ static const char upper[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+@@ -53,19 +55,11 @@ static struct classes
+ #define nclasses (sizeof (classes) / sizeof (classes[0]))
+ 
+ 
+-#define FAIL(str, args...) \
+-  {									      \
+-    printf ("      " str "\n", ##args);					      \
+-    ++errors;								      \
+-  }
+-
+-
+ static int
+ do_test (void)
+ {
+   const char *cp;
+   const char *cp2;
+-  int errors = 0;
+   char *inpline = NULL;
+   size_t inplinelen = 0;
+   char *resline = NULL;
+@@ -394,11 +388,8 @@ punct = %04x  alnum = %04x\n",
+ 	    {
+ 	      if (((__ctype_b[(unsigned int) *inp] & classes[n].mask) != 0)
+ 		  != (*resp != '0'))
+-		{
+-		  printf ("    is%s('%c' = '\\x%02x') %s true\n", inpline,
+-			  *inp, *inp, *resp == '1' ? "not" : "is");
+-		  ++errors;
+-		}
++		FAIL ("    is%s('%c' = '\\x%02x') %s true\n", inpline,
++		      *inp, *inp, *resp == '1' ? "not" : "is");
+ 	      ++inp;
+ 	      ++resp;
+ 	    }
+@@ -408,11 +399,8 @@ punct = %04x  alnum = %04x\n",
+ 	  while (*inp != '\0')
+ 	    {
+ 	      if (tolower (*inp) != *resp)
+-		{
+-		  printf ("    tolower('%c' = '\\x%02x') != '%c'\n",
+-			  *inp, *inp, *resp);
+-		  ++errors;
+-		}
++		FAIL ("    tolower('%c' = '\\x%02x') != '%c'\n",
++		      *inp, *inp, *resp);
+ 	      ++inp;
+ 	      ++resp;
+ 	    }
+@@ -422,11 +410,8 @@ punct = %04x  alnum = %04x\n",
+ 	  while (*inp != '\0')
+ 	    {
+ 	      if (toupper (*inp) != *resp)
+-		{
+-		  printf ("    toupper('%c' = '\\x%02x') != '%c'\n",
+-			  *inp, *inp, *resp);
+-		  ++errors;
+-		}
++		FAIL ("    toupper('%c' = '\\x%02x') != '%c'\n",
++		      *inp, *inp, *resp);
+ 	      ++inp;
+ 	      ++resp;
+ 	    }
+@@ -436,14 +421,7 @@ punct = %04x  alnum = %04x\n",
+     }
+ 
+ 
+-  if (errors != 0)
+-    {
+-      printf ("  %d error%s for `%s' locale\n\n\n", errors,
+-	      errors == 1 ? "" : "s", setlocale (LC_ALL, NULL));
+-      return 1;
+-    }
+-
+-  printf ("  No errors for `%s' locale\n\n\n", setlocale (LC_ALL, NULL));
++  printf ("Completed testing for `%s' locale\n\n\n", setlocale (LC_ALL, NULL));
+   return 0;
+ }
  
 diff --git a/login/Makefile b/login/Makefile
 index 62440499bc..0b6b962c06 100644
@@ -2758,6 +3063,123 @@ index 0a684a720d..a1ee7928d3 100644
  
                if (n >= 1)
                  narenas_limit = NARENAS_FROM_NCORES (n);
+diff --git a/manual/llio.texi b/manual/llio.texi
+index e55b02d8bd..17dabd159e 100644
+--- a/manual/llio.texi
++++ b/manual/llio.texi
+@@ -1339,6 +1339,10 @@ will fail and set @code{errno} to @code{EAGAIN} if the operation would block.
+ 
+ @item RWF_APPEND
+ Per-IO synchronization as if the file was opened with @code{O_APPEND} flag.
++
++@item RWF_NOAPPEND
++This flag allows an offset to be honored, even if the file was opened with
++@code{O_APPEND} flag.
+ @end vtable
+ 
+ When the source file is compiled with @code{_FILE_OFFSET_BITS == 64} the
+@@ -1777,7 +1781,7 @@ There is no existing mapping in at least part of the given region.
+ 
+ @end deftypefun
+ 
+-@deftypefun {void *} mremap (void *@var{address}, size_t @var{length}, size_t @var{new_length}, int @var{flag})
++@deftypefun {void *} mremap (void *@var{address}, size_t @var{length}, size_t @var{new_length}, int @var{flag}, ... /* void *@var{new_address} */)
+ @standards{GNU, sys/mman.h}
+ @safety{@prelim{}@mtsafe{}@assafe{}@acsafe{}}
+ 
+@@ -1786,12 +1790,40 @@ area. @var{address} and @var{length} must cover a region entirely mapped
+ in the same @code{mmap} statement.  A new mapping with the same
+ characteristics will be returned with the length @var{new_length}.
+ 
+-One option is possible, @code{MREMAP_MAYMOVE}.  If it is given in
+-@var{flags}, the system may remove the existing mapping and create a new
+-one of the desired length in another location.
++Possible flags are
++
++@table @code
++
++@item MREMAP_MAYMOVE
++If it is given in @var{flags}, the system may remove the existing mapping
++and create a new one of the desired length in another location.
++
++@item MREMAP_FIXED
++If it is given in @var{flags}, @code{mremap} accepts a fifth argument,
++@code{void *new_address}, which specifies a page-aligned address to
++which the mapping must be moved.  Any previous mapping at the address
++range specified by @var{new_address} and @var{new_size} is unmapped.
++
++@code{MREMAP_FIXED} must be used together with @code{MREMAP_MAYMOVE}.
++
++@item MREMAP_DONTUNMAP
++If it is given in @var{flags}, @code{mremap} accepts a fifth argument,
++@code{void *new_address}, which specifies a page-aligned address.  Any
++previous mapping at the address range specified by @var{new_address} and
++@var{new_size} is unmapped.  If @var{new_address} is @code{NULL}, the
++kernel chooses the page-aligned address at which to create the mapping.
++Otherwise, the kernel takes it as a hint about where to place the mapping.
++The mapping at the address range specified by @var{old_address} and
++@var{old_size} isn't unmapped.
++
++@code{MREMAP_DONTUNMAP} must be used together with @code{MREMAP_MAYMOVE}.
++@var{old_size} must be the same as @var{new_size}.  This flag bit is
++Linux-specific.
++
++@end table
+ 
+-The address of the resulting mapping is returned, or @math{-1}.  Possible
+-error codes include:
++The address of the resulting mapping is returned, or @code{MAP_FAILED}.
++Possible error codes include:
+ 
+ @table @code
+ 
+@@ -1800,7 +1832,7 @@ There is no existing mapping in at least part of the original region, or
+ the region covers two or more distinct mappings.
+ 
+ @item EINVAL
+-The address given is misaligned or inappropriate.
++Any arguments are inappropriate, including unknown @var{flags} values.
+ 
+ @item EAGAIN
+ The region has pages locked, and if extended it would exceed the
+diff --git a/manual/stdio.texi b/manual/stdio.texi
+index 753c50920d..9f94dd1e78 100644
+--- a/manual/stdio.texi
++++ b/manual/stdio.texi
+@@ -1474,11 +1474,9 @@ program; usually @code{ungetc} is used only to unread a character that
+ was just read from the same stream.  @Theglibc{} supports this
+ even on files opened in binary mode, but other systems might not.
+ 
+-@Theglibc{} only supports one character of pushback---in other
+-words, it does not work to call @code{ungetc} twice without doing input
+-in between.  Other systems might let you push back multiple characters;
+-then reading from the stream retrieves the characters in the reverse
+-order that they were pushed.
++@Theglibc{} supports pushing back multiple characters; subsequently
++reading from the stream retrieves the characters in the reverse order
++that they were pushed.
+ 
+ Pushing back characters doesn't alter the file; only the internal
+ buffering for the stream is affected.  If a file positioning function
+diff --git a/manual/threads.texi b/manual/threads.texi
+index 48fd562923..fcf9e2bba5 100644
+--- a/manual/threads.texi
++++ b/manual/threads.texi
+@@ -1020,8 +1020,12 @@ This variable is either zero (if restartable sequence registration
+ failed or has been disabled) or the size of the restartable sequence
+ registration.  This can be different from the size of @code{struct rseq}
+ if the kernel has extended the size of the registration.  If
+-registration is successful, @code{__rseq_size} is at least 32 (the
+-initial size of @code{struct rseq}).
++registration is successful, @code{__rseq_size} is at least 20 (the
++initially active size of @code{struct rseq}).
++
++Previous versions of @theglibc{} set this to 32 even if the kernel only
++supported the initial area of 20 bytes because the value included unused
++padding at the end of the restartable sequence area.
+ @end deftypevar
+ 
+ @deftypevar {unsigned int} __rseq_flags
 diff --git a/manual/tunables.texi b/manual/tunables.texi
 index 83cdcdac6d..ab5145ce0c 100644
 --- a/manual/tunables.texi
@@ -2771,10 +3193,64 @@ index 83cdcdac6d..ab5145ce0c 100644
  @code{thunderx2t99p1}, @code{ares}, @code{emag}, @code{kunpeng},
  @code{a64fx}.
  
+diff --git a/math/test-tgmath2.c b/math/test-tgmath2.c
+index d758231a89..95897948fb 100644
+--- a/math/test-tgmath2.c
++++ b/math/test-tgmath2.c
+@@ -24,6 +24,8 @@
+ #include <string.h>
+ #include <tgmath.h>
+ 
++#include <support/check.h>
++
+ //#define DEBUG
+ 
+ typedef complex float cfloat;
+@@ -87,13 +89,6 @@ enum
+ int count;
+ int counts[Tlast][C_last];
+ 
+-#define FAIL(str) \
+-  do								\
+-    {								\
+-      printf ("%s failure on line %d\n", (str), __LINE__);	\
+-      result = 1;						\
+-    }								\
+-  while (0)
+ #define TEST_TYPE_ONLY(expr, rettype) \
+   do								\
+     {								\
+@@ -133,8 +128,6 @@ int counts[Tlast][C_last];
+ int
+ test_cos (const int Vint4, const long long int Vllong4)
+ {
+-  int result = 0;
+-
+   TEST (cos (vfloat1), float, cos);
+   TEST (cos (vdouble1), double, cos);
+   TEST (cos (vldouble1), ldouble, cos);
+@@ -152,7 +145,7 @@ test_cos (const int Vint4, const long long int Vllong4)
+   TEST (cos (Vcdouble1), cdouble, cos);
+   TEST (cos (Vcldouble1), cldouble, cos);
+ 
+-  return result;
++  return 0;
+ }
+ 
+ int
 diff --git a/misc/Makefile b/misc/Makefile
-index ba8232a0e9..66e9ded8f9 100644
+index ba8232a0e9..e77cdd8c1b 100644
 --- a/misc/Makefile
 +++ b/misc/Makefile
+@@ -90,7 +90,7 @@ tests := tst-dirname tst-tsearch tst-fdset tst-mntent tst-hsearch \
+ 	 tst-preadvwritev2 tst-preadvwritev64v2 tst-warn-wide \
+ 	 tst-ldbl-warn tst-ldbl-error tst-dbl-efgcvt tst-ldbl-efgcvt \
+ 	 tst-mntent-autofs tst-syscalls tst-mntent-escape tst-select \
+-	 tst-ioctl
++	 tst-ioctl tst-mremap1 tst-mremap2
+ 
+ tests-time64 := \
+   tst-select-time64 \
 @@ -115,7 +115,10 @@ tests-special += $(objpfx)tst-error1-mem.out \
    $(objpfx)tst-allocate_once-mem.out
  endif
@@ -3053,6 +3529,135 @@ index 554089bfc4..9336036666 100644
          }
      }
  
+diff --git a/misc/tst-mremap1.c b/misc/tst-mremap1.c
+new file mode 100644
+index 0000000000..0469991a6c
+--- /dev/null
++++ b/misc/tst-mremap1.c
+@@ -0,0 +1,46 @@
++/* Test mremap with MREMAP_MAYMOVE.
++   Copyright (C) 2024 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, see
++   <https://www.gnu.org/licenses/>.  */
++
++#include <errno.h>
++#include <sys/mman.h>
++#include <support/xstdlib.h>
++#include <support/xunistd.h>
++#include <support/check.h>
++#include <support/test-driver.h>
++
++static int
++do_test (void)
++{
++  size_t old_size = getpagesize ();
++  char *old_addr = xmmap (NULL, old_size, PROT_READ | PROT_WRITE,
++			  MAP_PRIVATE | MAP_ANONYMOUS, -1);
++  old_addr[0] = 1;
++  old_addr[old_size - 1] = 2;
++
++  /* Test MREMAP_MAYMOVE.  */
++  size_t new_size = old_size + old_size;
++  char *new_addr = mremap (old_addr, old_size, new_size, MREMAP_MAYMOVE);
++  TEST_VERIFY_EXIT (new_addr != MAP_FAILED);
++  new_addr[0] = 1;
++  new_addr[new_size - 1] = 2;
++  xmunmap (new_addr, new_size);
++
++  return 0;
++}
++
++#include <support/test-driver.c>
+diff --git a/misc/tst-mremap2.c b/misc/tst-mremap2.c
+new file mode 100644
+index 0000000000..45be7f0369
+--- /dev/null
++++ b/misc/tst-mremap2.c
+@@ -0,0 +1,54 @@
++/* Test mremap with MREMAP_FIXED.
++   Copyright (C) 2024 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, see
++   <https://www.gnu.org/licenses/>.  */
++
++#include <errno.h>
++#include <sys/mman.h>
++#include <support/xstdlib.h>
++#include <support/xunistd.h>
++#include <support/test-driver.h>
++#include <mremap-failure.h>
++
++static int
++do_test (void)
++{
++  size_t old_size = getpagesize ();
++  size_t new_size = old_size + old_size;
++  char *old_addr = xmmap (NULL, old_size, PROT_READ | PROT_WRITE,
++			  MAP_PRIVATE | MAP_ANONYMOUS, -1);
++  old_addr[0] = 1;
++  old_addr[old_size - 1] = 2;
++
++  char *fixed_addr = xmmap (NULL, new_size, PROT_READ | PROT_WRITE,
++			    MAP_PRIVATE | MAP_ANONYMOUS, -1);
++  fixed_addr[0] = 1;
++  fixed_addr[new_size - 1] = 2;
++
++  /* Test MREMAP_FIXED.  */
++  char *new_addr = mremap (old_addr, old_size, new_size,
++			   MREMAP_FIXED | MREMAP_MAYMOVE,
++			   fixed_addr);
++  if (new_addr == MAP_FAILED)
++    return mremap_failure_exit (errno);
++  new_addr[0] = 1;
++  new_addr[new_size - 1] = 2;
++  xmunmap (new_addr, new_size);
++
++  return 0;
++}
++
++#include <support/test-driver.c>
+diff --git a/misc/tst-preadvwritev2-common.c b/misc/tst-preadvwritev2-common.c
+index 40b527bdcb..ed3dc04eeb 100644
+--- a/misc/tst-preadvwritev2-common.c
++++ b/misc/tst-preadvwritev2-common.c
+@@ -34,8 +34,11 @@
+ #ifndef RWF_APPEND
+ # define RWF_APPEND 0
+ #endif
++#ifndef RWF_NOAPPEND
++# define RWF_NOAPPEND 0
++#endif
+ #define RWF_SUPPORTED	(RWF_HIPRI | RWF_DSYNC | RWF_SYNC | RWF_NOWAIT \
+-			 | RWF_APPEND)
++			 | RWF_APPEND | RWF_NOAPPEND)
+ 
+ /* Generic uio_lim.h does not define IOV_MAX.  */
+ #ifndef IOV_MAX
 diff --git a/misc/tst-syslog-long-progname.c b/misc/tst-syslog-long-progname.c
 new file mode 100644
 index 0000000000..88f37a8a00
@@ -3425,7 +4030,7 @@ index 90187e30b1..5b9dd50151 100644
    if ((flags & NO_CACHE) == 0)
      *dir = nis_server_cache_search (name, search_parent, &server_used,
 diff --git a/nptl/descr.h b/nptl/descr.h
-index 5cacb286f3..ff634dac33 100644
+index 5cacb286f3..bbb26607ef 100644
 --- a/nptl/descr.h
 +++ b/nptl/descr.h
 @@ -34,7 +34,6 @@
@@ -3436,7 +4041,7 @@ index 5cacb286f3..ff634dac33 100644
  #include <internal-sigset.h>
  
  #ifndef TCB_ALIGNMENT
-@@ -402,14 +401,25 @@ struct pthread
+@@ -402,14 +401,27 @@ struct pthread
    /* Used on strsignal.  */
    struct tls_internal_t tls_state;
  
@@ -3456,6 +4061,8 @@ index 5cacb286f3..ff634dac33 100644
 +    {
 +      uint32_t cpu_id_start;
 +      uint32_t cpu_id;
++      uint64_t rseq_cs;
++      uint32_t flags;
 +    };
 +    char pad[32];		/* Original rseq area size.  */
 +  } rseq_area __attribute__ ((aligned (32)));
@@ -3469,6 +4076,43 @@ index 5cacb286f3..ff634dac33 100644
  } __attribute ((aligned (TCB_ALIGNMENT)));
  
  static inline bool
+diff --git a/nptl/tst-cancel7.c b/nptl/tst-cancel7.c
+index 903457db76..1c80457553 100644
+--- a/nptl/tst-cancel7.c
++++ b/nptl/tst-cancel7.c
+@@ -43,7 +43,8 @@ tf (void *arg)
+ {
+   char *cmd = xasprintf ("%s --direct --sem %s --pidfile %s",
+ 			 command, semfilename, pidfilename);
+-  system (cmd);
++  if (system (cmd))
++    FAIL_EXIT1("system call unexpectedly returned");
+   /* This call should never return.  */
+   return NULL;
+ }
+diff --git a/nptl/tst-stackguard1.c b/nptl/tst-stackguard1.c
+index 3460c01819..bc8900ce22 100644
+--- a/nptl/tst-stackguard1.c
++++ b/nptl/tst-stackguard1.c
+@@ -27,6 +27,8 @@
+ #include <tls.h>
+ #include <unistd.h>
+ 
++#include <support/xstdlib.h>
++
+ static const char *command;
+ static bool child;
+ static uintptr_t stack_chk_guard_copy;
+@@ -138,7 +140,8 @@ do_test (void)
+ 	  dup2 (fds[1], 2);
+ 	  close (fds[1]);
+ 
+-	  system (command);
++	  xsystem (command);
++
+ 	  exit (0);
+ 	}
+ 
 diff --git a/nscd/aicache.c b/nscd/aicache.c
 index 51e793199f..e0baed170b 100644
 --- a/nscd/aicache.c
@@ -4162,6 +4806,27 @@ index 0000000000..4439c83c9f
 +  *result = buffer;
 +  return NSS_STATUS_SUCCESS;
 +}
+diff --git a/nss/tst-nss-db-endpwent.c b/nss/tst-nss-db-endpwent.c
+index da4ab643e7..c2417b2505 100644
+--- a/nss/tst-nss-db-endpwent.c
++++ b/nss/tst-nss-db-endpwent.c
+@@ -23,6 +23,7 @@
+ 
+ #include <support/support.h>
+ #include <support/check.h>
++#include <support/xstdlib.h>
+ 
+ /* It is entirely allowed to start with a getpwent call without
+    resetting the state of the service via a call to setpwent.
+@@ -55,7 +56,7 @@ do_test (void)
+ 
+   cmd = xasprintf ("%s/makedb -o /var/db/passwd.db /var/db/passwd.in",
+ 		   support_bindir_prefix);
+-  system (cmd);
++  xsystem (cmd);
+   free (cmd);
+ 
+   try_it ();
 diff --git a/nss/tst-nss-files-hosts-long.c b/nss/tst-nss-files-hosts-long.c
 index 3942cf5fca..a7697e3143 100644
 --- a/nss/tst-nss-files-hosts-long.c
@@ -4310,8 +4975,77 @@ index fdc5bdd65b..bc32bb132a 100644
    };
  
  static struct hostent host_table_2[] = {
+diff --git a/posix/tst-truncate-common.c b/posix/tst-truncate-common.c
+index c8093c5473..39061ce6c5 100644
+--- a/posix/tst-truncate-common.c
++++ b/posix/tst-truncate-common.c
+@@ -21,6 +21,8 @@
+ #include <sys/stat.h>
+ #include <unistd.h>
+ 
++#include <support/check.h>
++
+ static void do_prepare (void);
+ #define PREPARE(argc, argv)     do_prepare ()
+ static int do_test (void);
+@@ -42,9 +44,6 @@ do_prepare (void)
+     }
+ }
+ 
+-#define FAIL(str) \
+-  do { printf ("error: %s (line %d)\n", str, __LINE__); return 1; } while (0)
+-
+ static int
+ do_test_with_offset (off_t offset)
+ {
+@@ -54,35 +53,35 @@ do_test_with_offset (off_t offset)
+   memset (buf, 0xcf, sizeof (buf));
+ 
+   if (pwrite (temp_fd, buf, sizeof (buf), offset) != sizeof (buf))
+-    FAIL ("write failed");
++    FAIL_RET ("write failed");
+   if (fstat (temp_fd, &st) < 0 || st.st_size != (offset + sizeof (buf)))
+-    FAIL ("initial size wrong");
++    FAIL_RET ("initial size wrong");
+ 
+   if (ftruncate (temp_fd, offset + 800) < 0)
+-    FAIL ("size reduction with ftruncate failed");
++    FAIL_RET ("size reduction with ftruncate failed");
+   if (fstat (temp_fd, &st) < 0 || st.st_size != (offset + 800))
+-    FAIL ("size after reduction with ftruncate is incorrect");
++    FAIL_RET ("size after reduction with ftruncate is incorrect");
+ 
+   /* The following test covers more than POSIX.  POSIX does not require
+      that ftruncate() can increase the file size.  But we are testing
+      Unix systems.  */
+   if (ftruncate (temp_fd, offset + 1200) < 0)
+-    FAIL ("size increate with ftruncate failed");
++    FAIL_RET ("size increate with ftruncate failed");
+   if (fstat (temp_fd, &st) < 0 || st.st_size != (offset + 1200))
+-    FAIL ("size after increase is incorrect");
++    FAIL_RET ("size after increase is incorrect");
+ 
+   if (truncate (temp_filename, offset + 800) < 0)
+-    FAIL ("size reduction with truncate failed");
++    FAIL_RET ("size reduction with truncate failed");
+   if (fstat (temp_fd, &st) < 0 || st.st_size != (offset + 800))
+-    FAIL ("size after reduction with truncate incorrect");
++    FAIL_RET ("size after reduction with truncate incorrect");
+ 
+   /* The following test covers more than POSIX.  POSIX does not require
+      that truncate() can increase the file size.  But we are testing
+      Unix systems.  */
+   if (truncate (temp_filename, (offset + 1200)) < 0)
+-    FAIL ("size increase with truncate failed");
++    FAIL_RET ("size increase with truncate failed");
+   if (fstat (temp_fd, &st) < 0 || st.st_size != (offset + 1200))
+-    FAIL ("size increase with truncate is incorrect");
++    FAIL_RET ("size increase with truncate is incorrect");
+ 
+   return 0;
+ }
 diff --git a/resolv/Makefile b/resolv/Makefile
-index 5b15321f9b..28cedf49ee 100644
+index 5b15321f9b..e5165fb34b 100644
 --- a/resolv/Makefile
 +++ b/resolv/Makefile
 @@ -40,12 +40,16 @@ routines := \
@@ -4331,7 +5065,7 @@ index 5b15321f9b..28cedf49ee 100644
    ns_samename \
    nsap_addr \
    nss_dns_functions \
-@@ -89,11 +93,15 @@ tests += \
+@@ -89,14 +93,20 @@ tests += \
    tst-ns_name_pton \
    tst-res_hconf_reorder \
    tst-res_hnok \
@@ -4347,7 +5081,12 @@ index 5b15321f9b..28cedf49ee 100644
    tst-resolv-nondecimal \
    tst-resolv-res_init-multi \
    tst-resolv-search \
-@@ -104,6 +112,18 @@ tests += \
++  tst-resolv-semi-failure \
++  tst-resolv-short-response \
+   tst-resolv-trailing \
+ 
+ # This test calls __res_context_send directly, which is not exported
+@@ -104,6 +114,18 @@ tests += \
  tests-internal += tst-resolv-txnid-collision
  tests-static += tst-resolv-txnid-collision
  
@@ -4366,7 +5105,7 @@ index 5b15321f9b..28cedf49ee 100644
  # These tests need libdl.
  ifeq (yes,$(build-shared))
  tests += \
-@@ -258,8 +278,10 @@ $(objpfx)tst-resolv-ai_idn.out: $(gen-locales)
+@@ -258,8 +280,10 @@ $(objpfx)tst-resolv-ai_idn.out: $(gen-locales)
  $(objpfx)tst-resolv-ai_idn-latin1.out: $(gen-locales)
  $(objpfx)tst-resolv-ai_idn-nolibidn2.out: \
    $(gen-locales) $(objpfx)tst-no-libidn2.so
@@ -4377,7 +5116,7 @@ index 5b15321f9b..28cedf49ee 100644
  $(objpfx)tst-resolv-edns: $(objpfx)libresolv.so $(shared-thread-library)
  $(objpfx)tst-resolv-network: $(objpfx)libresolv.so $(shared-thread-library)
  $(objpfx)tst-resolv-res_init: $(objpfx)libresolv.so
-@@ -267,7 +289,10 @@ $(objpfx)tst-resolv-res_init-multi: $(objpfx)libresolv.so \
+@@ -267,11 +291,18 @@ $(objpfx)tst-resolv-res_init-multi: $(objpfx)libresolv.so \
    $(shared-thread-library)
  $(objpfx)tst-resolv-res_init-thread: $(objpfx)libresolv.so \
    $(shared-thread-library)
@@ -4388,6 +5127,14 @@ index 5b15321f9b..28cedf49ee 100644
  $(objpfx)tst-resolv-nondecimal: $(objpfx)libresolv.so $(shared-thread-library)
  $(objpfx)tst-resolv-qtypes: $(objpfx)libresolv.so $(shared-thread-library)
  $(objpfx)tst-resolv-rotate: $(objpfx)libresolv.so $(shared-thread-library)
+ $(objpfx)tst-resolv-search: $(objpfx)libresolv.so $(shared-thread-library)
++$(objpfx)tst-resolv-semi-failure: $(objpfx)libresolv.so \
++  $(shared-thread-library)
++$(objpfx)tst-resolv-short-response: $(objpfx)libresolv.so \
++  $(shared-thread-library)
+ $(objpfx)tst-resolv-trailing: $(objpfx)libresolv.so $(shared-thread-library)
+ $(objpfx)tst-resolv-threads: $(objpfx)libresolv.so $(shared-thread-library)
+ $(objpfx)tst-resolv-txnid-collision: $(objpfx)libresolv.a \
 diff --git a/resolv/README b/resolv/README
 index 514e9bb617..2146bc3b27 100644
 --- a/resolv/README
@@ -6331,6 +7078,111 @@ index 07a412d8ff..213edceaf3 100644
  }
  versioned_symbol (libc, ___res_hnok, res_hnok, GLIBC_2_34);
  versioned_symbol (libc, ___res_hnok, __libc_res_hnok, GLIBC_PRIVATE);
+diff --git a/resolv/res_send.c b/resolv/res_send.c
+index 6a08e729a4..1bcc98ed21 100644
+--- a/resolv/res_send.c
++++ b/resolv/res_send.c
+@@ -947,9 +947,11 @@ send_dg(res_state statp,
+ 		seconds /= statp->nscount;
+ 	if (seconds <= 0)
+ 		seconds = 1;
+-	bool single_request_reopen = (statp->options & RES_SNGLKUPREOP) != 0;
+-	bool single_request = (((statp->options & RES_SNGLKUP) != 0)
+-			       | single_request_reopen);
++	bool single_request_reopen = ((statp->options & RES_SNGLKUPREOP)
++				      || (statp->_flags & RES_F_SNGLKUPREOP));
++	bool single_request = ((statp->options & RES_SNGLKUP)
++			       || (statp->_flags & RES_F_SNGLKUP)
++			       || single_request_reopen);
+ 	int save_gotsomewhere = *gotsomewhere;
+ 
+ 	int retval;
+@@ -1006,14 +1008,14 @@ send_dg(res_state statp,
+ 		       have received the first answer.  */
+ 		    if (!single_request)
+ 		      {
+-			statp->options |= RES_SNGLKUP;
++			statp->_flags |= RES_F_SNGLKUP;
+ 			single_request = true;
+ 			*gotsomewhere = save_gotsomewhere;
+ 			goto retry;
+ 		      }
+ 		    else if (!single_request_reopen)
+ 		      {
+-			statp->options |= RES_SNGLKUPREOP;
++			statp->_flags |= RES_F_SNGLKUPREOP;
+ 			single_request_reopen = true;
+ 			*gotsomewhere = save_gotsomewhere;
+ 			__res_iclose (statp, false);
+@@ -1197,19 +1199,30 @@ send_dg(res_state statp,
+ 		}
+ 
+ 		/* Check for the correct header layout and a matching
+-		   question.  */
++		   question.  Some recursive resolvers send REFUSED
++		   without copying back the question section
++		   (producing a response that is only HFIXEDSZ bytes
++		   long).  Skip query matching in this case.  */
++		bool thisansp_error = (anhp->rcode == SERVFAIL ||
++				       anhp->rcode == NOTIMP ||
++				       anhp->rcode == REFUSED);
++		bool skip_query_match = (*thisresplenp == HFIXEDSZ
++					 && ntohs (anhp->qdcount) == 0
++					 && thisansp_error);
+ 		int matching_query = 0; /* Default to no matching query.  */
+ 		if (!recvresp1
+ 		    && anhp->id == hp->id
+-		    && __libc_res_queriesmatch (buf, buf + buflen,
+-						*thisansp,
+-						*thisansp + *thisanssizp))
++		    && (skip_query_match
++			|| __libc_res_queriesmatch (buf, buf + buflen,
++						    *thisansp,
++						    *thisansp + *thisanssizp)))
+ 		  matching_query = 1;
+ 		if (!recvresp2
+ 		    && anhp->id == hp2->id
+-		    && __libc_res_queriesmatch (buf2, buf2 + buflen2,
+-						*thisansp,
+-						*thisansp + *thisanssizp))
++		    && (skip_query_match
++			|| __libc_res_queriesmatch (buf2, buf2 + buflen2,
++						    *thisansp,
++						    *thisansp + *thisanssizp)))
+ 		  matching_query = 2;
+ 		if (matching_query == 0)
+ 		  /* Spurious UDP packet.  Drop it and continue
+@@ -1219,15 +1232,13 @@ send_dg(res_state statp,
+ 		    goto wait;
+ 		  }
+ 
+-		if (anhp->rcode == SERVFAIL ||
+-		    anhp->rcode == NOTIMP ||
+-		    anhp->rcode == REFUSED) {
++		if (thisansp_error) {
+ 		next_ns:
+ 			if (recvresp1 || (buf2 != NULL && recvresp2)) {
+ 			  *resplen2 = 0;
+ 			  return resplen;
+ 			}
+-			if (buf2 != NULL)
++			if (buf2 != NULL && !single_request)
+ 			  {
+ 			    /* No data from the first reply.  */
+ 			    resplen = 0;
+diff --git a/resolv/resolv-internal.h b/resolv/resolv-internal.h
+index bb12f474d2..170a4b9101 100644
+--- a/resolv/resolv-internal.h
++++ b/resolv/resolv-internal.h
+@@ -26,6 +26,8 @@
+ #define RES_F_VC        0x00000001 /* Socket is TCP.  */
+ #define RES_F_CONN      0x00000002 /* Socket is connected.  */
+ #define RES_F_EDNS0ERR  0x00000004 /* EDNS0 caused errors.  */
++#define RES_F_SNGLKUP	0x00200000 /* Private version of RES_SNGLKUP.  */
++#define RES_F_SNGLKUPREOP 0x00400000 /* Private version of RES_SNGLKUPREOP.  */
+ 
+ /* The structure HEADER is normally aligned on a word boundary.  In
+    some code, we need to access this structure when it may be aligned
 diff --git a/resolv/tst-ns_name_length_uncompressed.c b/resolv/tst-ns_name_length_uncompressed.c
 new file mode 100644
 index 0000000000..c4a2904db7
@@ -7950,6 +8802,290 @@ index 0000000000..9f5aebd99f
 +}
 +
 +#include <support/test-driver.c>
+diff --git a/resolv/tst-resolv-semi-failure.c b/resolv/tst-resolv-semi-failure.c
+new file mode 100644
+index 0000000000..aa9798b5a7
+--- /dev/null
++++ b/resolv/tst-resolv-semi-failure.c
+@@ -0,0 +1,133 @@
++/* Test parallel failure/success responses (bug 30081).
++   Copyright (C) 2024 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, see
++   <https://www.gnu.org/licenses/>.  */
++
++#include <resolv.h>
++#include <support/check.h>
++#include <support/resolv_test.h>
++#include <support/check_nss.h>
++
++/* The rcode in the initial response.  */
++static volatile int rcode;
++
++/* Whether to fail the initial A query (!fail_aaaa) or the initial
++   AAAA query (fail_aaaa).  */
++static volatile bool fail_aaaa;
++
++static void
++response (const struct resolv_response_context *ctx,
++          struct resolv_response_builder *b,
++          const char *qname, uint16_t qclass, uint16_t qtype)
++{
++  /* Handle the failing query.  */
++  if ((fail_aaaa && qtype == T_AAAA) && ctx->server_index == 0)
++    {
++      struct resolv_response_flags flags = {.rcode = rcode};
++      resolv_response_init (b, flags);
++      return;
++    }
++
++  /* Otherwise produce a response.  */
++  resolv_response_init (b, (struct resolv_response_flags) {});
++  resolv_response_add_question (b, qname, qclass, qtype);
++  resolv_response_section (b, ns_s_an);
++  resolv_response_open_record (b, qname, qclass, qtype, 0);
++  switch (qtype)
++    {
++    case T_A:
++      {
++        char ipv4[4] = {192, 0, 2, 17};
++        resolv_response_add_data (b, &ipv4, sizeof (ipv4));
++      }
++      break;
++    case T_AAAA:
++      {
++        char ipv6[16]
++          = {0x20, 0x01, 0xd, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
++        resolv_response_add_data (b, &ipv6, sizeof (ipv6));
++      }
++      break;
++    default:
++      FAIL_EXIT1 ("unexpected TYPE%d query", qtype);
++    }
++  resolv_response_close_record (b);
++}
++
++static void
++check_one (void)
++{
++
++  /* The buggy 1-second query timeout results in 30 seconds of delay,
++     which triggers are test timeout failure.  */
++  for (int i = 0;  i < 30; ++i)
++    {
++      static const struct addrinfo hints =
++        {
++          .ai_family = AF_UNSPEC,
++          .ai_socktype = SOCK_STREAM,
++        };
++      struct addrinfo *ai;
++      int ret = getaddrinfo ("www.example", "80", &hints, &ai);
++      const char *expected;
++      if (ret == 0 && ai->ai_next != NULL)
++        expected = ("address: STREAM/TCP 192.0.2.17 80\n"
++                    "address: STREAM/TCP 2001:db8::1 80\n");
++      else
++        /* Only one response because the AAAA lookup failure is
++           treated as an ignoreable error.  */
++        expected = "address: STREAM/TCP 192.0.2.17 80\n";
++      check_addrinfo ("www.example", ai, ret, expected);
++      if (ret == 0)
++        freeaddrinfo (ai);
++    }
++}
++
++static int
++do_test (void)
++{
++  for (int do_single_lookup = 0; do_single_lookup < 2; ++do_single_lookup)
++    {
++      struct resolv_test *aux = resolv_test_start
++        ((struct resolv_redirect_config)
++         {
++           .response_callback = response,
++         });
++
++      if (do_single_lookup)
++        _res.options |= RES_SNGLKUP;
++
++      for (int do_fail_aaaa = 0; do_fail_aaaa < 2; ++do_fail_aaaa)
++        {
++          fail_aaaa = do_fail_aaaa;
++
++          rcode = 2; /* SERVFAIL.  */
++          check_one ();
++
++          rcode = 4; /* NOTIMP.  */
++          check_one ();
++
++          rcode = 5; /* REFUSED.  */
++          check_one ();
++        }
++
++      resolv_test_end (aux);
++    }
++
++  return 0;
++}
++
++#include <support/test-driver.c>
+diff --git a/resolv/tst-resolv-short-response.c b/resolv/tst-resolv-short-response.c
+new file mode 100644
+index 0000000000..9b06b0c176
+--- /dev/null
++++ b/resolv/tst-resolv-short-response.c
+@@ -0,0 +1,126 @@
++/* Test for spurious timeouts with short 12-byte responses (bug 31890).
++   Copyright (C) 2024 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, see
++   <https://www.gnu.org/licenses/>.  */
++
++#include <resolv.h>
++#include <support/check.h>
++#include <support/resolv_test.h>
++#include <support/check_nss.h>
++
++/* The rcode in the initial response.  */
++static volatile int rcode;
++
++static void
++response (const struct resolv_response_context *ctx,
++          struct resolv_response_builder *b,
++          const char *qname, uint16_t qclass, uint16_t qtype)
++{
++  switch (ctx->server_index)
++    {
++    case 0:
++      /* First server times out.  */
++      {
++        struct resolv_response_flags flags = {.rcode = rcode};
++        resolv_response_init (b, flags);
++      }
++      break;
++    case 1:
++      /* Second server sends reply.  */
++      resolv_response_init (b, (struct resolv_response_flags) {});
++      resolv_response_add_question (b, qname, qclass, qtype);
++      resolv_response_section (b, ns_s_an);
++      resolv_response_open_record (b, qname, qclass, qtype, 0);
++      switch (qtype)
++        {
++        case T_A:
++          {
++            char ipv4[4] = {192, 0, 2, 17};
++            resolv_response_add_data (b, &ipv4, sizeof (ipv4));
++          }
++          break;
++        case T_AAAA:
++          {
++            char ipv6[16]
++              = {0x20, 0x01, 0xd, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
++            resolv_response_add_data (b, &ipv6, sizeof (ipv6));
++          }
++          break;
++        default:
++          FAIL_EXIT1 ("unexpected TYPE%d query", qtype);
++        }
++      resolv_response_close_record (b);
++      break;
++    default:
++      FAIL_EXIT1 ("unexpected query to server %d", ctx->server_index);
++    }
++}
++
++static void
++check_one (void)
++{
++
++  /* The buggy 1-second query timeout results in 30 seconds of delay,
++     which triggers a test timeout failure.  */
++  for (int i = 0;  i < 10; ++i)
++    {
++      check_hostent ("www.example", gethostbyname ("www.example"),
++                     "name: www.example\n"
++                     "address: 192.0.2.17\n");
++      check_hostent ("www.example", gethostbyname2 ("www.example", AF_INET6),
++                     "name: www.example\n"
++                     "address: 2001:db8::1\n");
++      static const struct addrinfo hints =
++        {
++          .ai_family = AF_UNSPEC,
++          .ai_socktype = SOCK_STREAM,
++        };
++      struct addrinfo *ai;
++      int ret = getaddrinfo ("www.example", "80", &hints, &ai);
++      check_addrinfo ("www.example", ai, ret,
++                      "address: STREAM/TCP 192.0.2.17 80\n"
++                      "address: STREAM/TCP 2001:db8::1 80\n");
++      if (ret == 0)
++        freeaddrinfo (ai);
++    }
++}
++
++static int
++do_test (void)
++{
++  struct resolv_test *aux = resolv_test_start
++    ((struct resolv_redirect_config)
++     {
++       .response_callback = response,
++     });
++
++  _res.options |= RES_SNGLKUP;
++
++  rcode = 2; /* SERVFAIL.  */
++  check_one ();
++
++  rcode = 4; /* NOTIMP.  */
++  check_one ();
++
++  rcode = 5; /* REFUSED.  */
++  check_one ();
++
++  resolv_test_end (aux);
++
++  return 0;
++}
++
++#include <support/test-driver.c>
+diff --git a/rt/aio_misc.c b/rt/aio_misc.c
+index b4304d0a6f..5f9e52bcba 100644
+--- a/rt/aio_misc.c
++++ b/rt/aio_misc.c
+@@ -698,7 +698,7 @@ libc_freeres_fn (free_res)
+ {
+   size_t row;
+ 
+-  for (row = 0; row < pool_max_size; ++row)
++  for (row = 0; row < pool_size; ++row)
+     free (pool[row]);
+ 
+   free (pool);
 diff --git a/scripts/dso-ordering-test.py b/scripts/dso-ordering-test.py
 index 2dd6bfda18..b87cf2f809 100644
 --- a/scripts/dso-ordering-test.py
@@ -8020,6 +9156,45 @@ index 156eec6c85..2bde78387f 100644
    # tests
  
  tests-internal := \
+diff --git a/socket/bits/socket2.h b/socket/bits/socket2.h
+index 0aface5639..0b1cb015ce 100644
+--- a/socket/bits/socket2.h
++++ b/socket/bits/socket2.h
+@@ -33,12 +33,12 @@ extern ssize_t __REDIRECT (__recv_chk_warn,
+ __fortify_function ssize_t
+ recv (int __fd, void *__buf, size_t __n, int __flags)
+ {
+-  size_t sz = __glibc_objsize0 (__buf);
+-  if (__glibc_safe_or_unknown_len (__n, sizeof (char), sz))
++  size_t __sz = __glibc_objsize0 (__buf);
++  if (__glibc_safe_or_unknown_len (__n, sizeof (char), __sz))
+     return __recv_alias (__fd, __buf, __n, __flags);
+-  if (__glibc_unsafe_len (__n, sizeof (char), sz))
+-    return __recv_chk_warn (__fd, __buf, __n, sz, __flags);
+-  return __recv_chk (__fd, __buf, __n, sz, __flags);
++  if (__glibc_unsafe_len (__n, sizeof (char), __sz))
++    return __recv_chk_warn (__fd, __buf, __n, __sz, __flags);
++  return __recv_chk (__fd, __buf, __n, __sz, __flags);
+ }
+ 
+ extern ssize_t __recvfrom_chk (int __fd, void *__restrict __buf, size_t __n,
+@@ -61,11 +61,11 @@ __fortify_function ssize_t
+ recvfrom (int __fd, void *__restrict __buf, size_t __n, int __flags,
+ 	  __SOCKADDR_ARG __addr, socklen_t *__restrict __addr_len)
+ {
+-  size_t sz = __glibc_objsize0 (__buf);
+-  if (__glibc_safe_or_unknown_len (__n, sizeof (char), sz))
++  size_t __sz = __glibc_objsize0 (__buf);
++  if (__glibc_safe_or_unknown_len (__n, sizeof (char), __sz))
+     return __recvfrom_alias (__fd, __buf, __n, __flags, __addr, __addr_len);
+-  if (__glibc_unsafe_len (__n, sizeof (char), sz))
+-    return __recvfrom_chk_warn (__fd, __buf, __n, sz, __flags, __addr,
++  if (__glibc_unsafe_len (__n, sizeof (char), __sz))
++    return __recvfrom_chk_warn (__fd, __buf, __n, __sz, __flags, __addr,
+ 				__addr_len);
+-  return __recvfrom_chk (__fd, __buf, __n, sz, __flags, __addr, __addr_len);
++  return __recvfrom_chk (__fd, __buf, __n, __sz, __flags, __addr, __addr_len);
+ }
 diff --git a/socket/tst-cmsghdr-skeleton.c b/socket/tst-cmsghdr-skeleton.c
 new file mode 100644
 index 0000000000..4c6898569b
@@ -8180,6 +9355,343 @@ index 0000000000..68c96d3c9d
 +}
 +
 +#include <support/test-driver.c>
+diff --git a/stdio-common/Makefile b/stdio-common/Makefile
+index b1e9144de0..743e2611fa 100644
+--- a/stdio-common/Makefile
++++ b/stdio-common/Makefile
+@@ -190,6 +190,7 @@ tests := \
+   tst-put-error \
+   tst-renameat2 \
+   tst-rndseek \
++  tst-scanf-bz27650 \
+   tst-scanf-round \
+   tst-setvbuf1 \
+   tst-sprintf \
+@@ -201,6 +202,7 @@ tests := \
+   tst-swscanf \
+   tst-tmpnam \
+   tst-ungetc \
++  tst-ungetc-leak \
+   tst-unlockedio \
+   tst-vfprintf-mbs-prec \
+   tst-vfprintf-user-type \
+@@ -233,6 +235,7 @@ tests-special += \
+   $(objpfx)tst-printfsz-islongdouble.out \
+   $(objpfx)tst-setvbuf1-cmp.out \
+   $(objpfx)tst-unbputc.out \
++  $(objpfx)tst-ungetc-leak-mem.out \
+   $(objpfx)tst-vfprintf-width-prec-mem.out \
+   # tests-special
+ 
+@@ -246,6 +249,9 @@ generated += \
+   tst-printf-fp-free.mtrace \
+   tst-printf-fp-leak-mem.out \
+   tst-printf-fp-leak.mtrace \
++  tst-scanf-bz27650.mtrace \
++  tst-ungetc-leak-mem.out \
++  tst-ungetc-leak.mtrace \
+   tst-vfprintf-width-prec-mem.out \
+   tst-vfprintf-width-prec.mtrace \
+   # generated
+@@ -316,6 +322,12 @@ tst-printf-fp-free-ENV = \
+ tst-printf-fp-leak-ENV = \
+   MALLOC_TRACE=$(objpfx)tst-printf-fp-leak.mtrace \
+   LD_PRELOAD=$(common-objpfx)/malloc/libc_malloc_debug.so
++tst-scanf-bz27650-ENV = \
++  MALLOC_TRACE=$(objpfx)tst-scanf-bz27650.mtrace \
++  LD_PRELOAD=$(common-objpfx)malloc/libc_malloc_debug.so
++tst-ungetc-leak-ENV = \
++  MALLOC_TRACE=$(objpfx)tst-ungetc-leak.mtrace \
++  LD_PRELOAD=$(common-objpfx)malloc/libc_malloc_debug.so
+ 
+ $(objpfx)tst-unbputc.out: tst-unbputc.sh $(objpfx)tst-unbputc
+ 	$(SHELL) $< $(common-objpfx) '$(test-program-prefix)'; \
+diff --git a/stdio-common/tst-scanf-bz27650.c b/stdio-common/tst-scanf-bz27650.c
+new file mode 100644
+index 0000000000..3a742bc865
+--- /dev/null
++++ b/stdio-common/tst-scanf-bz27650.c
+@@ -0,0 +1,108 @@
++/* Test for BZ #27650, formatted input matching beyond INT_MAX.
++   Copyright (C) 2024 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, see
++   <https://www.gnu.org/licenses/>.  */
++
++#include <error.h>
++#include <errno.h>
++#include <limits.h>
++#include <mcheck.h>
++#include <stddef.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++
++#include <sys/types.h>
++
++#include <support/check.h>
++#include <support/test-driver.h>
++
++/* Produce a stream of more than INT_MAX characters via buffer BUF of
++   size SIZE according to bookkeeping in COOKIE and then return EOF.  */
++
++static ssize_t
++io_read (void *cookie, char *buf, size_t size)
++{
++  unsigned int *written = cookie;
++  unsigned int w = *written;
++
++  if (w > INT_MAX)
++    return 0;
++
++  memset (buf, 'a', size);
++  *written = w + size;
++  return size;
++}
++
++/* Consume a stream of more than INT_MAX characters from an artificial
++   input stream of which none is the new line character.  The call to
++   fscanf is supposed to complete upon the EOF condition of input,
++   however in the presence of BZ #27650 it will terminate prematurely
++   with characters still outstanding in input.  Diagnose the condition
++   and return status accordingly.  */
++
++int
++do_test (void)
++{
++  static cookie_io_functions_t io_funcs = { .read = io_read };
++  unsigned int written = 0;
++  FILE *in;
++  int v;
++
++  mtrace ();
++
++  in = fopencookie (&written, "r", io_funcs);
++  if (in == NULL)
++    {
++      FAIL ("fopencookie: %m");
++      goto out;
++    }
++
++  v = fscanf (in, "%*[^\n]");
++  if (ferror (in))
++    {
++      FAIL ("fscanf: input failure, at %u: %m", written);
++      goto out_close;
++    }
++  else if (v == EOF)
++    {
++      FAIL ("fscanf: unexpected end of file, at %u", written);
++      goto out_close;
++    }
++
++  if (!feof (in))
++    {
++      v = fgetc (in);
++      if (ferror (in))
++	FAIL ("fgetc: input failure: %m");
++      else if (v == EOF)
++	FAIL ("fgetc: unexpected end of file after missing end of file");
++      else if (v == '\n')
++	FAIL ("unexpected new line character received");
++      else
++	FAIL ("character received after end of file expected: \\x%02x", v);
++    }
++
++out_close:
++  if (fclose (in) != 0)
++    FAIL ("fclose: %m");
++
++out:
++  return EXIT_SUCCESS;
++}
++
++#define TIMEOUT (DEFAULT_TIMEOUT * 8)
++#include <support/test-driver.c>
+diff --git a/stdio-common/tst-ungetc-leak.c b/stdio-common/tst-ungetc-leak.c
+new file mode 100644
+index 0000000000..6c5152b43f
+--- /dev/null
++++ b/stdio-common/tst-ungetc-leak.c
+@@ -0,0 +1,32 @@
++/* Test for memory leak with ungetc when stream is unused.
++   Copyright The GNU Toolchain Authors.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, see
++   <https://www.gnu.org/licenses/>.  */
++
++#include <stdio.h>
++#include <mcheck.h>
++#include <support/check.h>
++#include <support/support.h>
++
++static int
++do_test (void)
++{
++  mtrace ();
++  TEST_COMPARE (ungetc('y', stdin), 'y');
++  return 0;
++}
++
++#include <support/test-driver.c>
+diff --git a/stdio-common/tst-ungetc.c b/stdio-common/tst-ungetc.c
+index 1344b2b591..388b202493 100644
+--- a/stdio-common/tst-ungetc.c
++++ b/stdio-common/tst-ungetc.c
+@@ -1,70 +1,74 @@
+-/* Test for ungetc bugs.  */
++/* Test for ungetc bugs.
++   Copyright (C) 1996-2024 Free Software Foundation, Inc.
++   Copyright The GNU Toolchain Authors.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, see
++   <https://www.gnu.org/licenses/>.  */
+ 
+ #include <stdio.h>
+ #include <stdlib.h>
+-#include <unistd.h>
+-
+-#undef assert
+-#define assert(x) \
+-  if (!(x)) \
+-    { \
+-      fputs ("test failed: " #x "\n", stderr); \
+-      retval = 1; \
+-      goto the_end; \
+-    }
++#include <support/check.h>
++#include <support/support.h>
++#include <support/temp_file.h>
++#include <support/xstdio.h>
++#include <support/xunistd.h>
+ 
+-int
+-main (int argc, char *argv[])
++static int
++do_test (void)
+ {
+-  char name[] = "/tmp/tst-ungetc.XXXXXX";
++  char *name = NULL;
+   FILE *fp = NULL;
+-  int retval = 0;
+   int c;
+   char buffer[64];
+ 
+-  int fd = mkstemp (name);
++  int fd = create_temp_file ("tst-ungetc.", &name);
+   if (fd == -1)
+-    {
+-      printf ("mkstemp failed: %m\n");
+-      return 1;
+-    }
+-  close (fd);
+-  fp = fopen (name, "w");
+-  assert (fp != NULL)
+-  fputs ("bla", fp);
+-  fclose (fp);
+-  fp = NULL;
++    FAIL_EXIT1 ("cannot create temporary file: %m");
++  xclose (fd);
+ 
+-  fp = fopen (name, "r");
+-  assert (fp != NULL);
+-  assert (ungetc ('z', fp) == 'z');
+-  assert (getc (fp) == 'z');
+-  assert (getc (fp) == 'b');
+-  assert (getc (fp) == 'l');
+-  assert (ungetc ('m', fp) == 'm');
+-  assert (getc (fp) == 'm');
+-  assert ((c = getc (fp)) == 'a');
+-  assert (getc (fp) == EOF);
+-  assert (ungetc (c, fp) == c);
+-  assert (feof (fp) == 0);
+-  assert (getc (fp) == c);
+-  assert (getc (fp) == EOF);
+-  fclose (fp);
+-  fp = NULL;
++  fp = xfopen (name, "w");
++  fputs ("bla", fp);
++  xfclose (fp);
+ 
+-  fp = fopen (name, "r");
+-  assert (fp != NULL);
+-  assert (getc (fp) == 'b');
+-  assert (getc (fp) == 'l');
+-  assert (ungetc ('b', fp) == 'b');
+-  assert (fread (buffer, 1, 64, fp) == 2);
+-  assert (buffer[0] == 'b');
+-  assert (buffer[1] == 'a');
++  fp = xfopen (name, "r");
++  TEST_VERIFY_EXIT (ungetc ('z', fp) == 'z');
++  TEST_VERIFY_EXIT (getc (fp) == 'z');
++  TEST_VERIFY_EXIT (getc (fp) == 'b');
++  TEST_VERIFY_EXIT (getc (fp) == 'l');
++  TEST_VERIFY_EXIT (ungetc ('m', fp) == 'm');
++  TEST_VERIFY_EXIT (ungetc ('n', fp) == 'n');
++  TEST_VERIFY_EXIT (getc (fp) == 'n');
++  TEST_VERIFY_EXIT (getc (fp) == 'm');
++  TEST_VERIFY_EXIT ((c = getc (fp)) == 'a');
++  TEST_VERIFY_EXIT (getc (fp) == EOF);
++  TEST_VERIFY_EXIT (ungetc (c, fp) == c);
++  TEST_VERIFY_EXIT (feof (fp) == 0);
++  TEST_VERIFY_EXIT (getc (fp) == c);
++  TEST_VERIFY_EXIT (getc (fp) == EOF);
++  xfclose (fp);
+ 
+-the_end:
+-  if (fp != NULL)
+-    fclose (fp);
+-  unlink (name);
++  fp = xfopen (name, "r");
++  TEST_VERIFY_EXIT (getc (fp) == 'b');
++  TEST_VERIFY_EXIT (getc (fp) == 'l');
++  TEST_VERIFY_EXIT (ungetc ('b', fp) == 'b');
++  TEST_VERIFY_EXIT (fread (buffer, 1, 64, fp) == 2);
++  TEST_VERIFY_EXIT (buffer[0] == 'b');
++  TEST_VERIFY_EXIT (buffer[1] == 'a');
++  xfclose (fp);
+ 
+-  return retval;
++  return 0;
+ }
++
++#include <support/test-driver.c>
 diff --git a/stdlib/Makefile b/stdlib/Makefile
 index f7b25c1981..3d49c4941a 100644
 --- a/stdlib/Makefile
@@ -8205,6 +9717,32 @@ index e417ef624d..960a38f295 100644
    int fd;
  
    if (n == 0)
+diff --git a/stdlib/bits/stdlib.h b/stdlib/bits/stdlib.h
+index de1c3b20f0..19f8bd5b52 100644
+--- a/stdlib/bits/stdlib.h
++++ b/stdlib/bits/stdlib.h
+@@ -36,16 +36,16 @@ extern char *__REDIRECT_NTH (__realpath_chk_warn,
+ __fortify_function __wur char *
+ __NTH (realpath (const char *__restrict __name, char *__restrict __resolved))
+ {
+-  size_t sz = __glibc_objsize (__resolved);
++  size_t __sz = __glibc_objsize (__resolved);
+ 
+-  if (sz == (size_t) -1)
++  if (__sz == (size_t) -1)
+     return __realpath_alias (__name, __resolved);
+ 
+ #if defined _LIBC_LIMITS_H_ && defined PATH_MAX
+-  if (__glibc_unsafe_len (PATH_MAX, sizeof (char), sz))
+-    return __realpath_chk_warn (__name, __resolved, sz);
++  if (__glibc_unsafe_len (PATH_MAX, sizeof (char), __sz))
++    return __realpath_chk_warn (__name, __resolved, __sz);
+ #endif
+-  return __realpath_chk (__name, __resolved, sz);
++  return __realpath_chk (__name, __resolved, __sz);
+ }
+ 
+ 
 diff --git a/stdlib/exit.c b/stdlib/exit.c
 index bc46109f3e..dc12e212bc 100644
 --- a/stdlib/exit.c
@@ -8503,7 +10041,7 @@ index bf7f0b81c4..c1d1c43e50 100644
    if (netname[i - 1] == '.')
      netname[i - 1] = '\0';
 diff --git a/support/Makefile b/support/Makefile
-index 9b50eac117..75b96c35f5 100644
+index 9b50eac117..7c572fbe4a 100644
 --- a/support/Makefile
 +++ b/support/Makefile
 @@ -32,6 +32,8 @@ libsupport-routines = \
@@ -8515,7 +10053,15 @@ index 9b50eac117..75b96c35f5 100644
    ignore_stderr \
    next_to_fault \
    oom_error \
-@@ -237,6 +239,24 @@ CFLAGS-support_paths.c = \
+@@ -205,6 +207,7 @@ libsupport-routines = \
+   xstrndup \
+   xsymlink \
+   xsysconf \
++  xsystem \
+   xunlink \
+   xuselocale \
+   xwaitpid \
+@@ -237,6 +240,24 @@ CFLAGS-support_paths.c = \
  CFLAGS-timespec.c += -fexcess-precision=standard
  CFLAGS-timespec-time64.c += -fexcess-precision=standard
  
@@ -8540,6 +10086,22 @@ index 9b50eac117..75b96c35f5 100644
  ifeq (,$(CXX))
  LINKS_DSO_PROGRAM = links-dso-program-c
  else
+diff --git a/support/check.h b/support/check.h
+index fa080cf480..43f4208a0a 100644
+--- a/support/check.h
++++ b/support/check.h
+@@ -24,6 +24,11 @@
+ 
+ __BEGIN_DECLS
+ 
++/* Record a test failure, print the failure message to standard output
++   and pass the result of 1 through.  */
++#define FAIL(...) \
++  support_print_failure_impl (__FILE__, __LINE__, __VA_ARGS__)
++
+ /* Record a test failure, print the failure message to standard output
+    and return 1.  */
+ #define FAIL_RET(...) \
 diff --git a/support/dtotimespec-time64.c b/support/dtotimespec-time64.c
 new file mode 100644
 index 0000000000..b3d5e351e3
@@ -8773,6 +10335,86 @@ index 4d2ac2737d..1bba3a6837 100644
  #endif
  
  /* Check that the timespec on the left represents a time before the
+diff --git a/support/xstdlib.h b/support/xstdlib.h
+new file mode 100644
+index 0000000000..db5a5b9d4f
+--- /dev/null
++++ b/support/xstdlib.h
+@@ -0,0 +1,31 @@
++/* Error-checking wrappers for stdlib functions.
++   Copyright (C) 2023 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, see
++   <https://www.gnu.org/licenses/>.  */
++
++#ifndef SUPPORT_XSTDLIB_H
++#define SUPPORT_XSTDLIB_H
++
++#include <stdlib.h>
++#include <sys/cdefs.h>
++
++__BEGIN_DECLS
++
++void xsystem (const char *cmd);
++
++__END_DECLS
++
++#endif /* SUPPORT_XSTDLIB_H */
+diff --git a/support/xsystem.c b/support/xsystem.c
+new file mode 100644
+index 0000000000..1f558953bc
+--- /dev/null
++++ b/support/xsystem.c
+@@ -0,0 +1,37 @@
++/* Error-checking replacement for "system".
++   Copyright (C) 2023 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, see
++   <https://www.gnu.org/licenses/>.  */
++
++#include <support/support.h>
++#include <support/check.h>
++
++#include <support/xstdlib.h>
++
++void
++xsystem (const char *cmd)
++{
++  int ret = system (cmd);
++
++  if (ret == 0 && cmd == NULL)
++    FAIL_EXIT1 ("Unable to spawn a shell for NULL command");
++
++  if (ret == 127)
++    FAIL_EXIT1 ("Child terminated with status 127");
++
++  if (ret < 0)
++    FAIL_EXIT1 ("system (\"%s\")", cmd);
++}
 diff --git a/sysdeps/aarch64/configure b/sysdeps/aarch64/configure
 old mode 100644
 new mode 100755
@@ -11817,6 +13459,37 @@ index 0000000000..4713b30a8a
 +#define __LIBC_LOCK_ALIGNMENT
 +
 +#endif
+diff --git a/sysdeps/generic/mremap-failure.h b/sysdeps/generic/mremap-failure.h
+new file mode 100644
+index 0000000000..bc0d476368
+--- /dev/null
++++ b/sysdeps/generic/mremap-failure.h
+@@ -0,0 +1,25 @@
++/* mremap failure handling.  Generic version.
++   Copyright (C) 2024 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, see
++   <https://www.gnu.org/licenses/>.  */
++
++/* Return exit value on mremap failure with errno ERR.  */
++
++static int
++mremap_failure_exit (int err)
++{
++  return EXIT_FAILURE;
++}
 diff --git a/sysdeps/generic/utmp-size.h b/sysdeps/generic/utmp-size.h
 new file mode 100644
 index 0000000000..89dbe878b0
@@ -12204,6 +13877,43 @@ index 0000000000..8f21ebe1b6
 @@ -0,0 +1,2 @@
 +#define UTMP_SIZE 384
 +#define LASTLOG_SIZE 292
+diff --git a/sysdeps/nptl/dl-tls_init_tp.c b/sysdeps/nptl/dl-tls_init_tp.c
+index 53fba774a5..662bc0158d 100644
+--- a/sysdeps/nptl/dl-tls_init_tp.c
++++ b/sysdeps/nptl/dl-tls_init_tp.c
+@@ -45,8 +45,6 @@ rtld_mutex_dummy (pthread_mutex_t *lock)
+ #endif
+ 
+ const unsigned int __rseq_flags;
+-const unsigned int __rseq_size attribute_relro;
+-const ptrdiff_t __rseq_offset attribute_relro;
+ 
+ void
+ __tls_pre_init_tp (void)
+@@ -106,12 +104,7 @@ __tls_init_tp (void)
+     do_rseq = TUNABLE_GET (rseq, int, NULL);
+ #endif
+     if (rseq_register_current_thread (pd, do_rseq))
+-      {
+-        /* We need a writable view of the variables.  They are in
+-           .data.relro and are not yet write-protected.  */
+-        extern unsigned int size __asm__ ("__rseq_size");
+-        size = sizeof (pd->rseq_area);
+-      }
++      _rseq_size = RSEQ_AREA_SIZE_INITIAL_USED;
+ 
+ #ifdef RSEQ_SIG
+     /* This should be a compile-time constant, but the current
+@@ -119,8 +112,7 @@ __tls_init_tp (void)
+        all targets support __thread_pointer, so set __rseq_offset only
+        if thre rseq registration may have happened because RSEQ_SIG is
+        defined.  */
+-    extern ptrdiff_t offset __asm__ ("__rseq_offset");
+-    offset = (char *) &pd->rseq_area - (char *) __thread_pointer ();
++    _rseq_offset = (char *) &pd->rseq_area - (char *) __thread_pointer ();
+ #endif
+   }
+ 
 diff --git a/sysdeps/nptl/libc-lock.h b/sysdeps/nptl/libc-lock.h
 index 5af476c48b..63b3f3d75c 100644
 --- a/sysdeps/nptl/libc-lock.h
@@ -12483,6 +14193,119 @@ index 0000000000..8f21ebe1b6
 @@ -0,0 +1,2 @@
 +#define UTMP_SIZE 384
 +#define LASTLOG_SIZE 292
+diff --git a/sysdeps/pthread/tst-setuid3.c b/sysdeps/pthread/tst-setuid3.c
+index 7dd360e325..4a77791253 100644
+--- a/sysdeps/pthread/tst-setuid3.c
++++ b/sysdeps/pthread/tst-setuid3.c
+@@ -15,24 +15,19 @@
+    License along with the GNU C Library; if not, see
+    <https://www.gnu.org/licenses/>.  */
+ 
+-#include <stdio.h>
+ #include <errno.h>
+ #include <pthread.h>
+ #include <stdbool.h>
+ #include <unistd.h>
+ 
++#include <support/check.h>
++
+ /* The test must run under a non-privileged user ID.  */
+ static const uid_t test_uid = 1;
+ 
+ static pthread_barrier_t barrier1;
+ static pthread_barrier_t barrier2;
+ 
+-#define FAIL(fmt, ...) \
+-  do { printf ("FAIL: " fmt "\n", __VA_ARGS__); _exit (1); } while (0)
+-
+-#define FAIL_ERR(fmt, ...) \
+-  do { printf ("FAIL: " fmt ": %m\n", __VA_ARGS__); _exit (1); } while (0)
+-
+ /* True if x is not a successful return code from pthread_barrier_wait.  */
+ static inline bool
+ is_invalid_barrier_ret (int x)
+@@ -45,10 +40,10 @@ thread_func (void *ctx __attribute__ ((unused)))
+ {
+   int ret = pthread_barrier_wait (&barrier1);
+   if (is_invalid_barrier_ret (ret))
+-    FAIL ("pthread_barrier_wait (barrier1) (on thread): %d", ret);
++    FAIL_EXIT1 ("pthread_barrier_wait (barrier1) (on thread): %d", ret);
+   ret = pthread_barrier_wait (&barrier2);
+   if (is_invalid_barrier_ret (ret))
+-    FAIL ("pthread_barrier_wait (barrier2) (on thread): %d", ret);
++    FAIL_EXIT1 ("pthread_barrier_wait (barrier2) (on thread): %d", ret);
+   return NULL;
+ }
+ 
+@@ -59,13 +54,13 @@ setuid_failure (int phase)
+   switch (ret)
+     {
+     case 0:
+-      FAIL ("setuid succeeded unexpectedly in phase %d", phase);
++      FAIL_EXIT1 ("setuid succeeded unexpectedly in phase %d", phase);
+     case -1:
+       if (errno != EPERM)
+-	FAIL_ERR ("setuid phase %d", phase);
++	FAIL_EXIT1 ("setuid phase %d: %m", phase);
+       break;
+     default:
+-      FAIL ("invalid setuid return value in phase %d: %d", phase, ret);
++      FAIL_EXIT1 ("invalid setuid return value in phase %d: %d", phase, ret);
+     }
+ }
+ 
+@@ -74,42 +69,42 @@ do_test (void)
+ {
+   if (getuid () == 0)
+     if (setuid (test_uid) != 0)
+-      FAIL_ERR ("setuid (%u)", (unsigned) test_uid);
++      FAIL_EXIT1 ("setuid (%u): %m", (unsigned) test_uid);
+   if (setuid (getuid ()))
+-    FAIL_ERR ("setuid (%s)", "getuid ()");
++    FAIL_EXIT1 ("setuid (%s): %m", "getuid ()");
+   setuid_failure (1);
+ 
+   int ret = pthread_barrier_init (&barrier1, NULL, 2);
+   if (ret != 0)
+-    FAIL ("pthread_barrier_init (barrier1): %d", ret);
++    FAIL_EXIT1 ("pthread_barrier_init (barrier1): %d", ret);
+   ret = pthread_barrier_init (&barrier2, NULL, 2);
+   if (ret != 0)
+-    FAIL ("pthread_barrier_init (barrier2): %d", ret);
++    FAIL_EXIT1 ("pthread_barrier_init (barrier2): %d", ret);
+ 
+   pthread_t thread;
+   ret = pthread_create (&thread, NULL, thread_func, NULL);
+   if (ret != 0)
+-    FAIL ("pthread_create: %d", ret);
++    FAIL_EXIT1 ("pthread_create: %d", ret);
+ 
+   /* Ensure that the thread is running properly.  */
+   ret = pthread_barrier_wait (&barrier1);
+   if (is_invalid_barrier_ret (ret))
+-    FAIL ("pthread_barrier_wait (barrier1): %d", ret);
++    FAIL_EXIT1 ("pthread_barrier_wait (barrier1): %d", ret);
+ 
+   setuid_failure (2);
+ 
+   /* Check success case. */
+   if (setuid (getuid ()) != 0)
+-    FAIL_ERR ("setuid (%s)", "getuid ()");
++    FAIL_EXIT1 ("setuid (%s): %m", "getuid ()");
+ 
+   /* Shutdown.  */
+   ret = pthread_barrier_wait (&barrier2);
+   if (is_invalid_barrier_ret (ret))
+-    FAIL ("pthread_barrier_wait (barrier2): %d", ret);
++    FAIL_EXIT1 ("pthread_barrier_wait (barrier2): %d", ret);
+ 
+   ret = pthread_join (thread, NULL);
+   if (ret != 0)
+-    FAIL ("pthread_join: %d", ret);
++    FAIL_EXIT1 ("pthread_join: %d", ret);
+ 
+   return 0;
+ }
 diff --git a/sysdeps/riscv/utmp-size.h b/sysdeps/riscv/utmp-size.h
 new file mode 100644
 index 0000000000..8f21ebe1b6
@@ -12491,6 +14314,34 @@ index 0000000000..8f21ebe1b6
 @@ -0,0 +1,2 @@
 +#define UTMP_SIZE 384
 +#define LASTLOG_SIZE 292
+diff --git a/sysdeps/s390/wcsncmp-vx.S b/sysdeps/s390/wcsncmp-vx.S
+index c518539bfa..5db0c707a1 100644
+--- a/sysdeps/s390/wcsncmp-vx.S
++++ b/sysdeps/s390/wcsncmp-vx.S
+@@ -59,14 +59,7 @@ ENTRY(WCSNCMP_Z13)
+ 	sllg	%r4,%r4,2	/* Convert character-count to byte-count.  */
+ 	locgrne	%r4,%r1		/* Use max byte-count, if bit 0/1 was one.  */
+ 
+-	/* Check first character without vector load.  */
+-	lghi	%r5,4		/* current_len = 4 bytes.  */
+-	/* Check s1/2[0].  */
+-	lt	%r0,0(%r2)
+-	l	%r1,0(%r3)
+-	je	.Lend_cmp_one_char
+-	crjne	%r0,%r1,.Lend_cmp_one_char
+-
++	lghi	%r5,0		/* current_len = 0 bytes.  */
+ .Lloop:
+ 	vlbb	%v17,0(%r5,%r3),6 /* Load s2 to block boundary.  */
+ 	vlbb	%v16,0(%r5,%r2),6 /* Load s1 to block boundary.  */
+@@ -167,7 +160,6 @@ ENTRY(WCSNCMP_Z13)
+ 	srl	%r4,2		/* And convert it to character-index.  */
+ 	vlgvf	%r0,%v16,0(%r4)	/* Load character-values.  */
+ 	vlgvf	%r1,%v17,0(%r4)
+-.Lend_cmp_one_char:
+ 	cr	%r0,%r1
+ 	je	.Lend_equal
+ 	lghi	%r2,1
 diff --git a/sysdeps/sh/bits/wordsize.h b/sysdeps/sh/bits/wordsize.h
 new file mode 100644
 index 0000000000..6ecbfe7c86
@@ -12626,10 +14477,18 @@ index 0000000000..8f21ebe1b6
 +#define UTMP_SIZE 384
 +#define LASTLOG_SIZE 292
 diff --git a/sysdeps/unix/sysv/linux/Makefile b/sysdeps/unix/sysv/linux/Makefile
-index a139a16532..d5d9af4de2 100644
+index a139a16532..d92ea7a1f3 100644
 --- a/sysdeps/unix/sysv/linux/Makefile
 +++ b/sysdeps/unix/sysv/linux/Makefile
-@@ -265,6 +265,14 @@ $(objpfx)tst-mount-consts.out: ../sysdeps/unix/sysv/linux/tst-mount-consts.py
+@@ -131,6 +131,7 @@ tests += tst-clone tst-clone2 tst-clone3 tst-fanotify tst-personality \
+   tst-pidfd \
+   tst-process_mrelease \
+   tst-mount \
++  tst-linux-mremap1 \
+   # tests
+ 
+ # process_madvise requires CAP_SYS_ADMIN.
+@@ -265,6 +266,14 @@ $(objpfx)tst-mount-consts.out: ../sysdeps/unix/sysv/linux/tst-mount-consts.py
  	  < /dev/null > $@ 2>&1; $(evaluate-test)
  $(objpfx)tst-mount-consts.out: $(sysdeps-linux-python-deps)
  
@@ -12644,7 +14503,7 @@ index a139a16532..d5d9af4de2 100644
  tst-rseq-disable-ENV = GLIBC_TUNABLES=glibc.pthread.rseq=0
  
  endif # $(subdir) == misc
-@@ -354,6 +362,8 @@ sysdep_headers += netinet/if_fddi.h netinet/if_tr.h \
+@@ -354,6 +363,8 @@ sysdep_headers += netinet/if_fddi.h netinet/if_tr.h \
  		  netrom/netrom.h netpacket/packet.h netrose/rose.h \
  		  neteconet/ec.h netiucv/iucv.h
  sysdep_routines += netlink_assert_response
@@ -12653,6 +14512,14 @@ index a139a16532..d5d9af4de2 100644
  endif
  
  # Don't compile the ctype glue code, since there is no old non-GNU C library.
+@@ -392,6 +403,7 @@ endif
+ 
+ ifeq ($(subdir),elf)
+ sysdep-rtld-routines += dl-brk dl-sbrk dl-getcwd dl-openat64 dl-opendir
++dl-routines += dl-rseq-symbols
+ 
+ libof-lddlibc4 = lddlibc4
+ 
 diff --git a/sysdeps/unix/sysv/linux/aarch64/bits/hwcap.h b/sysdeps/unix/sysv/linux/aarch64/bits/hwcap.h
 index 616239bb84..b7ffea84e5 100644
 --- a/sysdeps/unix/sysv/linux/aarch64/bits/hwcap.h
@@ -13195,6 +15062,18 @@ index 25bd6cb638..fb11a3fba4 100644
  
 -
  #endif /* _BITS_STRUCT_STAT_H  */
+diff --git a/sysdeps/unix/sysv/linux/bits/uio-ext.h b/sysdeps/unix/sysv/linux/bits/uio-ext.h
+index 5b0dba08c5..e49b66facd 100644
+--- a/sysdeps/unix/sysv/linux/bits/uio-ext.h
++++ b/sysdeps/unix/sysv/linux/bits/uio-ext.h
+@@ -47,6 +47,7 @@ extern ssize_t process_vm_writev (pid_t __pid, const struct iovec *__lvec,
+ #define RWF_SYNC	0x00000004 /* per-IO O_SYNC.  */
+ #define RWF_NOWAIT	0x00000008 /* per-IO nonblocking mode.  */
+ #define RWF_APPEND	0x00000010 /* per-IO O_APPEND.  */
++#define RWF_NOAPPEND	0x00000020 /* per-IO negation of O_APPEND */
+ 
+ __END_DECLS
+ 
 diff --git a/sysdeps/unix/sysv/linux/check_pf.c b/sysdeps/unix/sysv/linux/check_pf.c
 index fe73fe3ba8..ca20043408 100644
 --- a/sysdeps/unix/sysv/linux/check_pf.c
@@ -13381,6 +15260,76 @@ index fb11a3fba4..f0ee455748 100644
    };
  #endif
  
+diff --git a/sysdeps/unix/sysv/linux/dl-rseq-symbols.S b/sysdeps/unix/sysv/linux/dl-rseq-symbols.S
+new file mode 100644
+index 0000000000..b4bba06a99
+--- /dev/null
++++ b/sysdeps/unix/sysv/linux/dl-rseq-symbols.S
+@@ -0,0 +1,64 @@
++/* Define symbols used by rseq.
++   Copyright (C) 2024 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, see
++   <https://www.gnu.org/licenses/>.  */
++
++#include <sysdep.h>
++
++#if __WORDSIZE == 64
++#define RSEQ_OFFSET_SIZE	8
++#else
++#define RSEQ_OFFSET_SIZE	4
++#endif
++
++/* Some targets define a macro to denote the zero register.  */
++#undef zero
++
++/* Define 2 symbols: '__rseq_size' is public const and '_rseq_size' (an
++   alias of '__rseq_size') is hidden and writable for internal use by the
++   dynamic linker which will initialize the value both symbols point to
++   before copy relocations take place. */
++
++	.globl	__rseq_size
++	.type	__rseq_size, %object
++	.size	__rseq_size, 4
++	.hidden _rseq_size
++	.globl	_rseq_size
++	.type	_rseq_size, %object
++	.size	_rseq_size, 4
++	.section .data.rel.ro
++	.balign 4
++__rseq_size:
++_rseq_size:
++	.zero	4
++
++/* Define 2 symbols: '__rseq_offset' is public const and '_rseq_offset' (an
++   alias of '__rseq_offset') is hidden and writable for internal use by the
++   dynamic linker which will initialize the value both symbols point to
++   before copy relocations take place. */
++
++	.globl	__rseq_offset
++	.type	__rseq_offset, %object
++	.size	__rseq_offset, RSEQ_OFFSET_SIZE
++	.hidden _rseq_offset
++	.globl	_rseq_offset
++	.type	_rseq_offset, %object
++	.size	_rseq_offset, RSEQ_OFFSET_SIZE
++	.section .data.rel.ro
++	.balign RSEQ_OFFSET_SIZE
++__rseq_offset:
++_rseq_offset:
++	.zero	RSEQ_OFFSET_SIZE
 diff --git a/sysdeps/unix/sysv/linux/getsysstats.c b/sysdeps/unix/sysv/linux/getsysstats.c
 index 064eaa08ae..4d01786120 100644
 --- a/sysdeps/unix/sysv/linux/getsysstats.c
@@ -13680,6 +15629,74 @@ index 0000000000..fe6c3a0dda
 +}
 +
 +weak_alias (__fstatat, fstatat)
+diff --git a/sysdeps/unix/sysv/linux/mremap-failure.h b/sysdeps/unix/sysv/linux/mremap-failure.h
+new file mode 100644
+index 0000000000..c99ab30ca9
+--- /dev/null
++++ b/sysdeps/unix/sysv/linux/mremap-failure.h
+@@ -0,0 +1,30 @@
++/* mremap failure handling.  Linux version.
++   Copyright (C) 2024 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, see
++   <https://www.gnu.org/licenses/>.  */
++
++#include <support/check.h>
++
++/* Return exit value on mremap failure with errno ERR.  */
++
++static int
++mremap_failure_exit (int err)
++{
++  if (err != EINVAL)
++    return EXIT_FAILURE;
++
++  return EXIT_UNSUPPORTED;
++}
+diff --git a/sysdeps/unix/sysv/linux/mremap.c b/sysdeps/unix/sysv/linux/mremap.c
+index e829a29dbd..c48932e569 100644
+--- a/sysdeps/unix/sysv/linux/mremap.c
++++ b/sysdeps/unix/sysv/linux/mremap.c
+@@ -20,6 +20,12 @@
+ #include <sysdep.h>
+ #include <stdarg.h>
+ #include <stddef.h>
++#include <errno.h>
++
++#define MREMAP_KNOWN_BITS \
++  (MREMAP_MAYMOVE \
++   | MREMAP_FIXED \
++   | MREMAP_DONTUNMAP)
+ 
+ void *
+ __mremap (void *addr, size_t old_len, size_t new_len, int flags, ...)
+@@ -27,7 +33,13 @@ __mremap (void *addr, size_t old_len, size_t new_len, int flags, ...)
+   va_list va;
+   void *new_addr = NULL;
+ 
+-  if (flags & MREMAP_FIXED)
++  if (flags & ~(MREMAP_KNOWN_BITS))
++    {
++      __set_errno (EINVAL);
++      return MAP_FAILED;
++    }
++
++  if (flags & (MREMAP_FIXED | MREMAP_DONTUNMAP))
+     {
+       va_start (va, flags);
+       new_addr = va_arg (va, void *);
 diff --git a/sysdeps/unix/sysv/linux/msgctl.c b/sysdeps/unix/sysv/linux/msgctl.c
 index e824ebb095..2072205252 100644
 --- a/sysdeps/unix/sysv/linux/msgctl.c
@@ -13974,6 +15991,61 @@ index d656aedcc2..4e65f337d4 100644
  #define __NR_migrate_pages 238
  #define __NR_mincore 232
  #define __NR_mkdirat 34
+diff --git a/sysdeps/unix/sysv/linux/rseq-internal.h b/sysdeps/unix/sysv/linux/rseq-internal.h
+index 210f3ec566..1aa63eca67 100644
+--- a/sysdeps/unix/sysv/linux/rseq-internal.h
++++ b/sysdeps/unix/sysv/linux/rseq-internal.h
+@@ -25,18 +25,48 @@
+ #include <stdio.h>
+ #include <sys/rseq.h>
+ 
++/* 32 is the initially required value for the area size.  The
++   actually used rseq size may be less (20 bytes initially).  */
++#define RSEQ_AREA_SIZE_INITIAL 32
++#define RSEQ_AREA_SIZE_INITIAL_USED 20
++
++/* The variables are in .data.relro but are not yet write-protected.  */
++extern unsigned int _rseq_size attribute_hidden;
++extern ptrdiff_t _rseq_offset attribute_hidden;
++
+ #ifdef RSEQ_SIG
+ static inline bool
+ rseq_register_current_thread (struct pthread *self, bool do_rseq)
+ {
+   if (do_rseq)
+     {
++      unsigned int size;
++#if IS_IN (rtld)
++      /* Use the hidden symbol in ld.so.  */
++      size = _rseq_size;
++#else
++      size = __rseq_size;
++#endif
++      if (size < RSEQ_AREA_SIZE_INITIAL)
++        /* The initial implementation used only 20 bytes out of 32,
++           but still expected size 32.  */
++        size = RSEQ_AREA_SIZE_INITIAL;
++
++      /* Initialize the rseq fields that are read by the kernel on
++         registration, there is no guarantee that struct pthread is
++         cleared on all architectures.  */
++      THREAD_SETMEM (self, rseq_area.cpu_id, RSEQ_CPU_ID_UNINITIALIZED);
++      THREAD_SETMEM (self, rseq_area.cpu_id_start, 0);
++      THREAD_SETMEM (self, rseq_area.rseq_cs, 0);
++      THREAD_SETMEM (self, rseq_area.flags, 0);
++
+       int ret = INTERNAL_SYSCALL_CALL (rseq, &self->rseq_area,
+-                                       sizeof (self->rseq_area),
+-                                       0, RSEQ_SIG);
++                                       size, 0, RSEQ_SIG);
+       if (!INTERNAL_SYSCALL_ERROR_P (ret))
+         return true;
+     }
++  /* When rseq is disabled by tunables or the registration fails, inform
++     userspace by setting 'cpu_id' to RSEQ_CPU_ID_REGISTRATION_FAILED.  */
+   THREAD_SETMEM (self, rseq_area.cpu_id, RSEQ_CPU_ID_REGISTRATION_FAILED);
+   return false;
+ }
 diff --git a/sysdeps/unix/sysv/linux/sched_getcpu.c b/sysdeps/unix/sysv/linux/sched_getcpu.c
 index 5c3301004c..3a2f712386 100644
 --- a/sysdeps/unix/sysv/linux/sched_getcpu.c
@@ -14535,6 +16607,75 @@ index 6c7b2f7011..028ad3107a 100644
  
  FAST_atomic_update
  FAST_cmpxchg
+diff --git a/sysdeps/unix/sysv/linux/tst-linux-mremap1.c b/sysdeps/unix/sysv/linux/tst-linux-mremap1.c
+new file mode 100644
+index 0000000000..408e8af2ab
+--- /dev/null
++++ b/sysdeps/unix/sysv/linux/tst-linux-mremap1.c
+@@ -0,0 +1,63 @@
++/* Test mremap with MREMAP_DONTUNMAP.
++   Copyright (C) 2024 Free Software Foundation, Inc.
++   This file is part of the GNU C Library.
++
++   The GNU C Library is free software; you can redistribute it and/or
++   modify it under the terms of the GNU Lesser General Public
++   License as published by the Free Software Foundation; either
++   version 2.1 of the License, or (at your option) any later version.
++
++   The GNU C Library is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
++   Lesser General Public License for more details.
++
++   You should have received a copy of the GNU Lesser General Public
++   License along with the GNU C Library; if not, see
++   <https://www.gnu.org/licenses/>.  */
++
++#include <errno.h>
++#include <sys/mman.h>
++#include <support/xstdlib.h>
++#include <support/xunistd.h>
++#include <support/check.h>
++#include <support/test-driver.h>
++#include <mremap-failure.h>
++
++static int
++do_test (void)
++{
++  size_t old_size = getpagesize ();
++  size_t new_size = old_size;
++  char *old_addr = xmmap (NULL, old_size, PROT_READ | PROT_WRITE,
++			  MAP_PRIVATE | MAP_ANONYMOUS, -1);
++  old_addr[0] = 1;
++  old_addr[old_size - 1] = 2;
++
++  /* Create an available 64-page mmap region.  */
++  size_t fixed_size = old_size * 64;
++  char *fixed_addr = xmmap (NULL, fixed_size, PROT_READ | PROT_WRITE,
++			    MAP_PRIVATE | MAP_ANONYMOUS, -1);
++  xmunmap (fixed_addr, fixed_size);
++
++  /* Add 3 * pagesize.  */
++  fixed_size += 3 * old_size;
++
++  /* Test MREMAP_DONTUNMAP.  It should return FIXED_ADDR created above.  */
++  char *new_addr = mremap (old_addr, old_size, new_size,
++			   MREMAP_DONTUNMAP | MREMAP_MAYMOVE,
++			   fixed_addr);
++  if (new_addr == MAP_FAILED)
++    return mremap_failure_exit (errno);
++  TEST_VERIFY_EXIT (fixed_addr == new_addr);
++  old_addr[0] = 3;
++  old_addr[old_size - 1] = 4;
++  new_addr[0] = 1;
++  new_addr[new_size - 1] = 2;
++  xmunmap (new_addr, new_size);
++  xmunmap (old_addr, old_size);
++
++  return 0;
++}
++
++#include <support/test-driver.c>
 diff --git a/sysdeps/unix/sysv/linux/tst-mount-compile.py b/sysdeps/unix/sysv/linux/tst-mount-compile.py
 new file mode 100755
 index 0000000000..0ec74d4e0b
@@ -14675,6 +16816,41 @@ index e1a2c02f78..a46b0d0562 100644
  #include <unistd.h>
  
  #ifdef RSEQ_SIG
+diff --git a/sysdeps/unix/sysv/linux/tst-rseq.c b/sysdeps/unix/sysv/linux/tst-rseq.c
+index fa6a89541f..613593f7f9 100644
+--- a/sysdeps/unix/sysv/linux/tst-rseq.c
++++ b/sysdeps/unix/sysv/linux/tst-rseq.c
+@@ -29,6 +29,7 @@
+ # include <stdlib.h>
+ # include <string.h>
+ # include <syscall.h>
++# include <sys/auxv.h>
+ # include <thread_pointer.h>
+ # include <tls.h>
+ # include "tst-rseq.h"
+@@ -42,7 +43,8 @@ do_rseq_main_test (void)
+   TEST_COMPARE (__rseq_flags, 0);
+   TEST_VERIFY ((char *) __thread_pointer () + __rseq_offset
+                == (char *) &pd->rseq_area);
+-  TEST_COMPARE (__rseq_size, sizeof (pd->rseq_area));
++  /* The current implementation only supports the initial size.  */
++  TEST_COMPARE (__rseq_size, 20);
+ }
+ 
+ static void
+@@ -52,6 +54,12 @@ do_rseq_test (void)
+     {
+       FAIL_UNSUPPORTED ("kernel does not support rseq, skipping test");
+     }
++  printf ("info: __rseq_size: %u\n", __rseq_size);
++  printf ("info: __rseq_offset: %td\n", __rseq_offset);
++  printf ("info: __rseq_flags: %u\n", __rseq_flags);
++  printf ("info: getauxval (AT_RSEQ_FEATURE_SIZE): %ld\n",
++          getauxval (AT_RSEQ_FEATURE_SIZE));
++  printf ("info: getauxval (AT_RSEQ_ALIGN): %ld\n", getauxval (AT_RSEQ_ALIGN));
+   do_rseq_main_test ();
+ }
+ #else /* RSEQ_SIG */
 diff --git a/sysdeps/x86/bits/wordsize.h b/sysdeps/x86/bits/wordsize.h
 index 70f652bca1..3f40aa76f9 100644
 --- a/sysdeps/x86/bits/wordsize.h
@@ -15943,7 +18119,7 @@ index 0000000000..8e1735c33b
 +
 +#endif /* bits/wchar2-decl.h.  */
 diff --git a/wcsmbs/bits/wchar2.h b/wcsmbs/bits/wchar2.h
-index 0e017f458b..3f110efe57 100644
+index 0e017f458b..1181d36c24 100644
 --- a/wcsmbs/bits/wchar2.h
 +++ b/wcsmbs/bits/wchar2.h
 @@ -21,9 +21,6 @@
@@ -15994,7 +18170,17 @@ index 0e017f458b..3f110efe57 100644
  extern wchar_t *__REDIRECT_NTH (__wcscpy_alias,
  				(wchar_t *__restrict __dest,
  				 const wchar_t *__restrict __src), wcscpy);
-@@ -127,9 +114,6 @@ __NTH (wcscpy (wchar_t *__restrict __dest, const wchar_t *__restrict __src))
+@@ -120,16 +107,13 @@ extern wchar_t *__REDIRECT_NTH (__wcscpy_alias,
+ __fortify_function wchar_t *
+ __NTH (wcscpy (wchar_t *__restrict __dest, const wchar_t *__restrict __src))
+ {
+-  size_t sz = __glibc_objsize (__dest);
+-  if (sz != (size_t) -1)
+-    return __wcscpy_chk (__dest, __src, sz / sizeof (wchar_t));
++  size_t __sz = __glibc_objsize (__dest);
++  if (__sz != (size_t) -1)
++    return __wcscpy_chk (__dest, __src, __sz / sizeof (wchar_t));
+   return __wcscpy_alias (__dest, __src);
  }
  
  
@@ -16004,7 +18190,17 @@ index 0e017f458b..3f110efe57 100644
  extern wchar_t *__REDIRECT_NTH (__wcpcpy_alias,
  				(wchar_t *__restrict __dest,
  				 const wchar_t *__restrict __src), wcpcpy);
-@@ -144,9 +128,6 @@ __NTH (wcpcpy (wchar_t *__restrict __dest, const wchar_t *__restrict __src))
+@@ -137,16 +121,13 @@ extern wchar_t *__REDIRECT_NTH (__wcpcpy_alias,
+ __fortify_function wchar_t *
+ __NTH (wcpcpy (wchar_t *__restrict __dest, const wchar_t *__restrict __src))
+ {
+-  size_t sz = __glibc_objsize (__dest);
+-  if (sz != (size_t) -1)
+-    return __wcpcpy_chk (__dest, __src, sz / sizeof (wchar_t));
++  size_t __sz = __glibc_objsize (__dest);
++  if (__sz != (size_t) -1)
++    return __wcpcpy_chk (__dest, __src, __sz / sizeof (wchar_t));
+   return __wcpcpy_alias (__dest, __src);
  }
  
  
@@ -16034,7 +18230,17 @@ index 0e017f458b..3f110efe57 100644
  extern wchar_t *__REDIRECT_NTH (__wcscat_alias,
  				(wchar_t *__restrict __dest,
  				 const wchar_t *__restrict __src), wcscat);
-@@ -209,9 +184,6 @@ __NTH (wcscat (wchar_t *__restrict __dest, const wchar_t *__restrict __src))
+@@ -202,16 +177,13 @@ extern wchar_t *__REDIRECT_NTH (__wcscat_alias,
+ __fortify_function wchar_t *
+ __NTH (wcscat (wchar_t *__restrict __dest, const wchar_t *__restrict __src))
+ {
+-  size_t sz = __glibc_objsize (__dest);
+-  if (sz != (size_t) -1)
+-    return __wcscat_chk (__dest, __src, sz / sizeof (wchar_t));
++  size_t __sz = __glibc_objsize (__dest);
++  if (__sz != (size_t) -1)
++    return __wcscat_chk (__dest, __src, __sz / sizeof (wchar_t));
+   return __wcscat_alias (__dest, __src);
  }
  
  
@@ -16044,7 +18250,17 @@ index 0e017f458b..3f110efe57 100644
  extern wchar_t *__REDIRECT_NTH (__wcsncat_alias,
  				(wchar_t *__restrict __dest,
  				 const wchar_t *__restrict __src,
-@@ -228,10 +200,6 @@ __NTH (wcsncat (wchar_t *__restrict __dest, const wchar_t *__restrict __src,
+@@ -221,17 +193,13 @@ __fortify_function wchar_t *
+ __NTH (wcsncat (wchar_t *__restrict __dest, const wchar_t *__restrict __src,
+ 		size_t __n))
+ {
+-  size_t sz = __glibc_objsize (__dest);
+-  if (sz != (size_t) -1)
+-    return __wcsncat_chk (__dest, __src, __n, sz / sizeof (wchar_t));
++  size_t __sz = __glibc_objsize (__dest);
++  if (__sz != (size_t) -1)
++    return __wcsncat_chk (__dest, __src, __n, __sz / sizeof (wchar_t));
+   return __wcsncat_alias (__dest, __src, __n);
  }
  
  
@@ -16055,6 +18271,20 @@ index 0e017f458b..3f110efe57 100644
  
  extern int __REDIRECT_NTH_LDBL (__swprintf_alias,
  				(wchar_t *__restrict __s, size_t __n,
+@@ -243,10 +211,10 @@ __fortify_function int
+ __NTH (swprintf (wchar_t *__restrict __s, size_t __n,
+ 		 const wchar_t *__restrict __fmt, ...))
+ {
+-  size_t sz = __glibc_objsize (__s);
+-  if (sz != (size_t) -1 || __USE_FORTIFY_LEVEL > 1)
++  size_t __sz = __glibc_objsize (__s);
++  if (__sz != (size_t) -1 || __USE_FORTIFY_LEVEL > 1)
+     return __swprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+-			   sz / sizeof (wchar_t), __fmt, __va_arg_pack ());
++			   __sz / sizeof (wchar_t), __fmt, __va_arg_pack ());
+   return __swprintf_alias (__s, __n, __fmt, __va_arg_pack ());
+ }
+ #elif !defined __cplusplus
 @@ -258,11 +226,6 @@ __NTH (swprintf (wchar_t *__restrict __s, size_t __n,
     : swprintf (s, n, __VA_ARGS__))
  #endif
@@ -16067,7 +18297,20 @@ index 0e017f458b..3f110efe57 100644
  
  extern int __REDIRECT_NTH_LDBL (__vswprintf_alias,
  				(wchar_t *__restrict __s, size_t __n,
-@@ -283,16 +246,6 @@ __NTH (vswprintf (wchar_t *__restrict __s, size_t __n,
+@@ -273,26 +236,16 @@ __fortify_function int
+ __NTH (vswprintf (wchar_t *__restrict __s, size_t __n,
+ 		  const wchar_t *__restrict __fmt, __gnuc_va_list __ap))
+ {
+-  size_t sz = __glibc_objsize (__s);
+-  if (sz != (size_t) -1 || __USE_FORTIFY_LEVEL > 1)
++  size_t __sz = __glibc_objsize (__s);
++  if (__sz != (size_t) -1 || __USE_FORTIFY_LEVEL > 1)
+     return __vswprintf_chk (__s, __n,  __USE_FORTIFY_LEVEL - 1,
+-			    sz / sizeof (wchar_t), __fmt, __ap);
++			    __sz / sizeof (wchar_t), __fmt, __ap);
+   return __vswprintf_alias (__s, __n, __fmt, __ap);
+ }
+ 
  
  #if __USE_FORTIFY_LEVEL > 1
  
@@ -16093,7 +18336,21 @@ index 0e017f458b..3f110efe57 100644
  extern wchar_t *__REDIRECT (__fgetws_alias,
  			    (wchar_t *__restrict __s, int __n,
  			     __FILE *__restrict __stream), fgetws) __wur;
-@@ -351,9 +302,6 @@ fgetws (wchar_t *__restrict __s, int __n, __FILE *__restrict __stream)
+@@ -342,18 +293,15 @@ extern wchar_t *__REDIRECT (__fgetws_chk_warn,
+ __fortify_function __wur wchar_t *
+ fgetws (wchar_t *__restrict __s, int __n, __FILE *__restrict __stream)
+ {
+-  size_t sz = __glibc_objsize (__s);
+-  if (__glibc_safe_or_unknown_len (__n, sizeof (wchar_t), sz))
++  size_t __sz = __glibc_objsize (__s);
++  if (__glibc_safe_or_unknown_len (__n, sizeof (wchar_t), __sz))
+     return __fgetws_alias (__s, __n, __stream);
+-  if (__glibc_unsafe_len (__n, sizeof (wchar_t), sz))
+-    return __fgetws_chk_warn (__s, sz / sizeof (wchar_t), __n, __stream);
+-  return __fgetws_chk (__s, sz / sizeof (wchar_t), __n, __stream);
++  if (__glibc_unsafe_len (__n, sizeof (wchar_t), __sz))
++    return __fgetws_chk_warn (__s, __sz / sizeof (wchar_t), __n, __stream);
++  return __fgetws_chk (__s, __sz / sizeof (wchar_t), __n, __stream);
  }
  
  #ifdef __USE_GNU
@@ -16103,7 +18360,23 @@ index 0e017f458b..3f110efe57 100644
  extern wchar_t *__REDIRECT (__fgetws_unlocked_alias,
  			    (wchar_t *__restrict __s, int __n,
  			     __FILE *__restrict __stream), fgetws_unlocked)
-@@ -379,9 +327,6 @@ fgetws_unlocked (wchar_t *__restrict __s, int __n, __FILE *__restrict __stream)
+@@ -368,20 +316,17 @@ extern wchar_t *__REDIRECT (__fgetws_unlocked_chk_warn,
+ __fortify_function __wur wchar_t *
+ fgetws_unlocked (wchar_t *__restrict __s, int __n, __FILE *__restrict __stream)
+ {
+-  size_t sz = __glibc_objsize (__s);
+-  if (__glibc_safe_or_unknown_len (__n, sizeof (wchar_t), sz))
++  size_t __sz = __glibc_objsize (__s);
++  if (__glibc_safe_or_unknown_len (__n, sizeof (wchar_t), __sz))
+     return __fgetws_unlocked_alias (__s, __n, __stream);
+-  if (__glibc_unsafe_len (__n, sizeof (wchar_t), sz))
+-    return __fgetws_unlocked_chk_warn (__s, sz / sizeof (wchar_t), __n,
++  if (__glibc_unsafe_len (__n, sizeof (wchar_t), __sz))
++    return __fgetws_unlocked_chk_warn (__s, __sz / sizeof (wchar_t), __n,
+ 				       __stream);
+-  return __fgetws_unlocked_chk (__s, sz / sizeof (wchar_t), __n, __stream);
++  return __fgetws_unlocked_chk (__s, __sz / sizeof (wchar_t), __n, __stream);
+ }
  #endif
  
  
