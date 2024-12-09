@@ -578,19 +578,25 @@ function setup_gcc () {
 		COMMON_CONFIG+=" --with-mpfr-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-mpfr-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
 		COMMON_CONFIG+=" --with-gmp-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-gmp-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
 		COMMON_CONFIG+=" --with-isl-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-isl-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
-		GCC_CONFIG="--enable-languages=${GCC_LANGUAGES:-c,c++} --enable-version-specific-runtime-libs  \
-			$( if [ "${MULTI_ARCH}" -eq 1 ] && [ -z "${HARCH_LIB}" ]; then echo --enable-multiarch; fi ) \
-			--enable-threads=posix --enable-tls --enable-checking=release --disable-multilib \
-			--enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object \
-			--enable-linker-build-id --with-gcc-major-version-only --enable-libstdcxx-backtrace \
-			--with-linker-hash-style=gnu --enable-plugin --enable-initfini-array \
-			--enable-gnu-indirect-function --disable-nls --disable-option-checking \
-			${SILENTCONFIG}"
 
-		if [[ "${GCC_LANGUAGES}" =~ "fortran" ]]
-		then
-			GCC_CONFIG+=" --enable-libquadmath --enable-libquadmath-support"
-		fi
+		GCC_CONFIG="--enable-version-specific-runtime-libs --with-gcc-major-version-only --enable-checking=release \
+			$( if [ "${MULTI_ARCH}" -eq 1 ] && [ -z "${HARCH_LIB}" ]; then echo --enable-multiarch; fi ) \
+			--disable-option-checking --disable-nls --disable-multilib --disable-option-checking --disable-nls"
+
+		case "${1}" in
+			--without-glibc) GCC_CONFIG+=" --enable-languages=c --without-headers"
+			;;
+			*) GCC_CONFIG+=" --enable-languages=${GCC_LANGUAGES:-c,c++} --enable-threads=posix --enable-tls \
+				--enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object \
+				--enable-linker-build-id --enable-libstdcxx-backtrace \
+				--with-linker-hash-style=gnu --enable-plugin --enable-initfini-array \
+				--enable-gnu-indirect-function"
+				if [[ "${GCC_LANGUAGES}" =~ "fortran" ]]
+				then
+					GCC_CONFIG+=" --enable-libquadmath --enable-libquadmath-support"
+				fi
+			;;
+		esac
 
 		COMPFLAGS="${GNU_EXTRACOMPFLAGS} -Wno-maybe-uninitialized -Wno-stringop-overflow -Wno-stack-usage -Wno-alloc-size-larger-than"
 		LINKERFLAGS="-Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib ${GNU_EXTRALDFLAGS}"
@@ -620,7 +626,7 @@ function setup_gcc () {
 		fi
 		run_cmd "mkdir -p \"${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}\""
 		pushd "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}"
-		gcc_buildenv
+		gcc_buildenv "${1}"
 		run_cmd "CC_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
 				CXX_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
 				AR_FOR_BUILD=\"${AR_FOR_BUILD}\" \\
@@ -689,7 +695,7 @@ function setup_gcc () {
 		if [ ! -f "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/config.status" ]
 		then
 			echo "Configuration... " | log_buffer info
-			gcc_configuration
+			gcc_configuration "${1}"
 		fi
 		pushd "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}"
 		create_sccache_wrapper
@@ -902,12 +908,13 @@ function setup_gcc () {
 		NUMSPACES=1 build lfs/libmpfr:native
 		NUMSPACES=1 build lfs/libmpc:native
 		NUMSPACES=1 build lfs/libisl:native
+		gcc_make_host --without-glibc >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
 		if [ "$(gcc_sysroot)" == "${BIN_PATH}" ]
 		then
 			NUMSPACES=1 build --temporary --no_gcc_check lfs/glibc:headers
 		fi
 		echo -n "${SPACES}Building ${GCC_LANGUAGES:-c,c++} compilers... "
-		gcc_make_host "${HARCH}" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
+		gcc_make_host >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
 		if [ "$(gcc_sysroot)" == "${BIN_PATH}" ]
 		then
 			echo -n "removing temporary headers..."
