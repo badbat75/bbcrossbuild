@@ -20,5 +20,9 @@ build lfs/create-base-fs_1.0
 setup_full_toolchain --with-llvm --with-gnu-install --with-main-gcc
 build lfs/bash
 build lfs/coreutils
-build lfs/curl
+build lfs/sudo
 build lfs/librespot
+
+build lfs/curl
+#build lfs/iputils
+build lfs/nc
