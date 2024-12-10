@@ -1,4 +1,4 @@
-# bbcrossbuild 3.0.3
+# bbcrossbuild 3.1.0
 This is a framework to automate the cross-compilation of packages through a project file.
 ## Current Limitations
 
