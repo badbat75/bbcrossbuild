@@ -2,7 +2,7 @@
 PKG_VER=0.6.0
 PKG_URL="https://github.com/librespot-org/librespot/archive/refs/tags/v${PKG_VER}.tar.gz"
 BUILD_PROCESS=cargobuild
-CONF_FLAGS=""
+CONF_FLAGS="--features alsa-backend"
 #PKG_RUSTFLAGS=
 PKG_DEPS="lfs/alsa-lib"
 CARGO_BINLIST="librespot"
