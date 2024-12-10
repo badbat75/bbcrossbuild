@@ -5,7 +5,7 @@ PKG_LDFLAGS="-Wl,-rpath,/lib/crda"
 BUILD_PROCESS=simplemake
 PKG_DEPS="raspbian/libnl3_3.7.0 raspbian/libgcrypt20_1.9.4-3 firmwares/wireless-regdb"
 RUNTIME_PUBKEY_DIR=/lib/crda/pubkeys
-PKG_MAKEVARS="PREFIX=${INSTALL_PREFIX} LIBDIR=/lib/crda INCDIR=${INSTALL_INCLUDEDIR} REG_BIN=/lib/crda/regulatory.bin PUBKEY_DIR=${PKG_PKGPATH}${RUNTIME_PUBKEY_DIR} RUNTIME_PUBKEY_DIR=${RUNTIME_PUBKEY_DIR} RUNTIME_PUBKEY_ONLY=1 all_noverify"
+PKG_MAKEVARS="PREFIX=${INSTALL_PREFIX} LIBDIR=/lib/crda INCDIR=${INSTALL_INCLUDEDIR} REG_BIN=/lib/crda/regulatory.bin PUBKEY_DIR=\${PKG_PKGPATH}${RUNTIME_PUBKEY_DIR} RUNTIME_PUBKEY_DIR=${RUNTIME_PUBKEY_DIR} RUNTIME_PUBKEY_ONLY=1 all_noverify"
 PKG_PREBUILD="sed -i '/^CFLAGS/ s/ -Werror\| -O2//' Makefile
 	sed -i 's/\$(Q)ldconfig//g' Makefile
 	sed -i 's/except \([a-zA-Z0-9_]*\), \([a-zA-Z0-9_]*\)/except \1 as \2/g' utils/key2pub.py
@@ -25,8 +25,8 @@ CRDA_CONF=/etc/default/crda
 
 exec /sbin/iw reg set "$REGDOMAIN"'
 
-PKG_POSTBUILD="echo '${SETREGDOMAINFILE}' >${PKG_PKGPATH}/lib/crda/setregdomain
-	chmod +x ${PKG_PKGPATH}/lib/crda/setregdomain"
+PKG_POSTBUILD="echo '${SETREGDOMAINFILE}' >\${PKG_PKGPATH}/lib/crda/setregdomain
+	chmod +x \${PKG_PKGPATH}/lib/crda/setregdomain"
 
 unset SETREGDOMAINFILE
 

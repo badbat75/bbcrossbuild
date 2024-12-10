@@ -11,10 +11,10 @@ PKG_PREBUILD="sed -i '/^.tmpl:/a \\\\tcp -r \$(srcdir)/linux .' Makefile.am
 	sed -i 's|ac_cv_lib_id3tag__lz___id3_file_open|ac_cv_lib_id3tag__lz_id3_file_open|' configure.ac
 	sed -i 's|ac_cv_lib_avformat__lavcodec__lavutil__lz___av_open_input_file|ac_cv_lib_avformat__lavcodec__lavutil__lz_av_open_input_file|' configure.ac
 	sed -i 's|ac_cv_lib_avformat__lavcodec__lavutil__lz___avformat_open_input|ac_cv_lib_avformat__lavcodec__lavutil__lz_avformat_open_input|' configure.ac"
-PKG_POSTBUILD="install -d ${PKG_PKGPATH}/var/lib/minidlna
-	install -d --mode=750 ${PKG_PKGPATH}/var/cache/minidlna
-	mkdir -pv ${PKG_PKGPATH}/lib/systemd/system ${PKG_PKGPATH}/etc/{logrotate.d,default}
-	cat <<-EOF > ${PKG_PKGPATH}/etc/logrotate.d/minidlna
+PKG_POSTBUILD="install -d \${PKG_PKGPATH}/var/lib/minidlna
+	install -d --mode=750 \${PKG_PKGPATH}/var/cache/minidlna
+	mkdir -pv \${PKG_PKGPATH}/lib/systemd/system \${PKG_PKGPATH}/etc/{logrotate.d,default}
+	cat <<-EOF > \${PKG_PKGPATH}/etc/logrotate.d/minidlna
 		/var/log/minidlna/*.log
 		{
 			rotate 4
@@ -29,7 +29,7 @@ PKG_POSTBUILD="install -d ${PKG_PKGPATH}/var/lib/minidlna
 			endscript
 		}
 	EOF
-	cat <<-EOF > ${PKG_PKGPATH}/etc/default/minidlna
+	cat <<-EOF > \${PKG_PKGPATH}/etc/default/minidlna
 		# Defaults for minidlna initscript
 		# sourced by minidlna.service and /etc/init.d/minidlna
 		#
@@ -57,7 +57,7 @@ PKG_POSTBUILD="install -d ${PKG_PKGPATH}/var/lib/minidlna
 		# If your systerm restarts often, you might want to remove this.
 		#DAEMON_OPTS=\"-r\"
 	EOF
-	cat <<-EOF > ${PKG_PKGPATH}/lib/systemd/system/minidlna.service
+	cat <<-EOF > \${PKG_PKGPATH}/lib/systemd/system/minidlna.service
 		[Unit]
 		Description=MiniDLNA lightweight DLNA/UPnP-AV server
 		Documentation=man:minidlnad(1) man:minidlna.conf(5)
@@ -80,7 +80,7 @@ PKG_POSTBUILD="install -d ${PKG_PKGPATH}/var/lib/minidlna
 		[Install]
 		WantedBy=multi-user.target
 	EOF
-	cat <<-EOF > ${PKG_PKGPATH}/etc/minidlna.conf
+	cat <<-EOF > \${PKG_PKGPATH}/etc/minidlna.conf
 		# This is the configuration file for the MiniDLNA daemon, a DLNA/UPnP-AV media
 		# server.
 		#

@@ -11,10 +11,10 @@ PKG_PREBUILD="sed -i '/PKG_CHECK_MODULES/ s/libplist >= 2.0.0/libplist-2.0 >= 2.
 		sed -i 's| org.gnome.ShairportSync.xml| \$(VPATH)/org.gnome.ShairportSync.xml|g' Makefile.am
 		sed -i '/#include <unistd.h>/a #include <inttypes.h>' common.c
 		sed -i '/#include <unistd.h>/a #include <inttypes.h>' shairport.c"
-PKG_POSTBUILD="install -d ${PKG_PKGPATH}/usr/local/bin
-		install -d ${PKG_PKGPATH}/usr/local/etc
-		ln -fs /usr/bin/shairport-sync ${PKG_PKGPATH}/usr/local/bin/shairport-sync
-		ln -fs /etc/shairport-sync.conf ${PKG_PKGPATH}/usr/local/etc/shairport-sync.conf"
+PKG_POSTBUILD="install -d \${PKG_PKGPATH}/usr/local/bin
+		install -d \${PKG_PKGPATH}/usr/local/etc
+		ln -fs /usr/bin/shairport-sync \${PKG_PKGPATH}/usr/local/bin/shairport-sync
+		ln -fs /etc/shairport-sync.conf \${PKG_PKGPATH}/usr/local/etc/shairport-sync.conf"
 PKG_CONFIG_SYSROOT_DIR=${DISTOS_PATH}
 
 case x${WITH_AIRPLAY2} in

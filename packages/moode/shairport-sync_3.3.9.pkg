@@ -30,12 +30,12 @@ case x${WITH_SSL} in
 	;;
 esac
 
-PKG_POSTBUILD="install -m 0755 -d ${PKG_PKGPATH}/run/shairport-sync
-	mkdir -pv ${PKG_PKGPATH}/etc/{dbus-1/system.d,default}
-	cp -pv \${PKG_SRCPATH}/scripts/shairport-sync-dbus-policy.conf ${PKG_PKGPATH}/etc/dbus-1/system.d/
-	cp -pv \${PKG_SRCPATH}/scripts/shairport-sync-mpris-policy.conf ${PKG_PKGPATH}/etc/dbus-1/system.d/
-	cp -pv \${PKG_SRCPATH}/scripts/shairport-sync.conf ${PKG_PKGPATH}/etc/
-	cat <<-EOF > ${PKG_PKGPATH}/etc/default/shairport-sync
+PKG_POSTBUILD="install -m 0755 -d \${PKG_PKGPATH}/run/shairport-sync
+	mkdir -pv \${PKG_PKGPATH}/etc/{dbus-1/system.d,default}
+	cp -pv \${PKG_SRCPATH}/scripts/shairport-sync-dbus-policy.conf \${PKG_PKGPATH}/etc/dbus-1/system.d/
+	cp -pv \${PKG_SRCPATH}/scripts/shairport-sync-mpris-policy.conf \${PKG_PKGPATH}/etc/dbus-1/system.d/
+	cp -pv \${PKG_SRCPATH}/scripts/shairport-sync.conf \${PKG_PKGPATH}/etc/
+	cat <<-EOF > \${PKG_PKGPATH}/etc/default/shairport-sync
 		# Defaults for shairport-sync initscript
 		# sourced by /etc/init.d/shairport-sync
 		# and /lib/systemd/system/shairport-sync.service
@@ -48,7 +48,7 @@ PKG_POSTBUILD="install -m 0755 -d ${PKG_PKGPATH}/run/shairport-sync
 		# above. This option will be added automatically as necessary. Please also note
 		# that most options are configurable using /etc/shairport-sync.conf.	
 	EOF
-	cat <<-EOF > ${PKG_PKGPATH}/lib/systemd/system/shairport-sync.service
+	cat <<-EOF > \${PKG_PKGPATH}/lib/systemd/system/shairport-sync.service
 		[Unit]
 		Description=Shairport Sync - AirPlay Audio Receiver
 		Documentation=man:shairport-sync(7)

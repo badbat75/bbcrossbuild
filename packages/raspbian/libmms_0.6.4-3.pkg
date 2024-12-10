@@ -1,7 +1,0 @@
-# libmms_0.6.4-3
-PKG_URL="http://archive.raspbian.org/raspbian/pool/main/libm/libmms/libmms_0.6.4.orig.tar.gz"
-PATCHDEB="http://archive.raspbian.org/raspbian/pool/main/libm/libmms/libmms_0.6.4-3.debian.tar.xz"
-BUILD_PROCESS=configmake
-# CONF_FLAGS=""
-INST_CMD=install-strip
-PKG_PREBUILD="./autogen.sh"

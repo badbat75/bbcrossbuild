@@ -11,6 +11,6 @@ PKG_POSTBUILD="
     npm install browserslist@latest
     find node_modules/*/lib -type f -name '*.js' -exec sed -i 's|md4|sha512|g' {} \\;    
     npm run build
-    mkdir -pv ${PKG_PKGPATH}/opt/camillagui
-    cp -frv build ${PKG_PKGPATH}/opt/camillagui/"
+    mkdir -pv \${PKG_PKGPATH}/opt/camillagui
+    cp -frv build \${PKG_PKGPATH}/opt/camillagui/"
 # CONF_FLAGS=""

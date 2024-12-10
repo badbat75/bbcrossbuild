@@ -135,7 +135,7 @@ download_uncompress () {
 	if [ ! -d "${DEST_DIR}" ] ; then run_cmd "mkdir -pv \"${DEST_DIR}\"" ; fi
 	case ${UNCOMPRESSED_FILE_TYPE} in
 		application/x-tar)
-			run_cmd "tar xf \"${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}\" ${TARFLAGS} -C \"${DEST_DIR}\" ${ARCHIVE_DIRS}"
+			run_cmd "tar xf \"${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}\" ${TARFLAGS} --no-same-owner -C \"${DEST_DIR}\" ${ARCHIVE_DIRS}"
 			;;
 		*)
 			case ${DOWNLOAD_FILE_TYPE} in
