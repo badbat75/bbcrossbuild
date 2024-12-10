@@ -8,7 +8,7 @@ CONF_FLAGS="--enable-install-program=hostname --enable-no-install-program=kill,u
 CONF_VARS="gl_cv_macro_MB_CUR_MAX_good=yes"
 PKG_MAKETARGETS="all,install-strip"
 
-if [ ${LFS_SPLITUSR} -eq 1 ]
+if [ ${LFS_SPLITUSR:-0} -eq 1 ]
 then
   PKG_POSTBUILD="mkdir -pv \${PKG_PKGPATH}/bin
     ln -s ../usr/bin/{false,true} \${PKG_PKGPATH}/bin"
