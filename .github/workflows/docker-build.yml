@@ -3,12 +3,11 @@ name: Docker Build and Push
 on:
   push:
     branches:
-      - '*'
-    paths:
-      - '**'
+      - development
+    tags:
+      - '[0-9]*.[0-9]*.[0-9]*'
   pull_request:
     branches: 
-      - master
       - development
   workflow_dispatch:
 
@@ -20,7 +19,7 @@ jobs:
   build:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/master' && 'Production' || 'Development' }}
+    environment: Development
     
     steps:
     - name: Checkout repository
@@ -37,29 +36,39 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
+    - name: Extract version from tag
+      id: get_version
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+        fi
+
     - name: Build, tag, and push image to Amazon ECR
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
         IMAGE_TAG: ${{ github.sha }}
+        VERSION: ${{ steps.get_version.outputs.version }}
       run: |
         # Build the Docker image
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         
-        # Tag based on branch
-        if [ "${{ github.ref }}" = "refs/heads/master" ]; then
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-        else
+        # Tag based on branch/tag
+        if [ "${{ github.ref }}" = "refs/heads/development" ]; then
+          # Development branch - tag as development
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:development
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:development
+        elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          # Release tag - tag with version and latest
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
         fi
         
-        # Push the Docker image
+        # Always push the SHA tagged image
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        if [ "${{ github.ref }}" = "refs/heads/master" ]; then
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-        else
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:development
-        fi
 
     - name: Clean up
       if: always()
