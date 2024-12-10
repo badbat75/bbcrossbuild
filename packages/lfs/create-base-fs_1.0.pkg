@@ -4,7 +4,7 @@ PKG_POSTBUILD="mkdir -pv \${PKG_PKGPATH}/{dev,proc,sys,run,etc,var}
 	then
 		local PREFIX=$(echo ${INSTALL_PREFIX} | sed 's|^/||')
 		mkdir -pv \${PKG_PKGPATH}/{\${PREFIX}/bin,\${PREFIX}/lib,\${PREFIX}/sbin}
-		if [ ${LFS_SPLITUSR} -eq 0 ]
+		if [ ${LFS_SPLITUSR:-0} -eq 0 ]
 		then
 			ln -sfv \${PREFIX}/bin \${PKG_PKGPATH}
 			ln -sfv \${PREFIX}/lib \${PKG_PKGPATH}

@@ -4,7 +4,7 @@ PKG_URL="https://github.com/librespot-org/librespot/archive/refs/tags/v${PKG_VER
 BUILD_PROCESS=cargobuild
 CONF_FLAGS=""
 #PKG_RUSTFLAGS=
-PKG_DEPS=""
+PKG_DEPS="lfs/alsa-lib"
 CARGO_BINLIST="librespot"
 case "${TOOLCHAIN}" in
     llvm) PKG_CFLAGS="-Wno-error=unused-command-line-argument" ;;
