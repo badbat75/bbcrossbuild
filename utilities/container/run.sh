@@ -14,4 +14,4 @@ then
 fi
 
 #docker build -t "${CONTAINER_NAME}" "${CONTAINERBUILD_PATH}/../.."
-docker run -it -v "${HOST_DATA_PATH}":/mnt/bbcrossbuild/datadir:Z "${CONTAINER_NAME}"
+docker run -it -v "${HOST_DATA_PATH}":/mnt/bbcrossbuild/datadir:Z --privileged ${@} "${CONTAINER_NAME}"

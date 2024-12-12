@@ -5,4 +5,6 @@ do
     docker rm "$line"
 done
 
-docker system prune -a
+case "${1}" in
+    all) docker system prune -a ;;
+esac
