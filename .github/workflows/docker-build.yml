@@ -36,18 +36,6 @@ jobs:
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1
 
-    - name: Create ECR repositories if they don't exist
-      env:
-        ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-      run: |
-        # Create main repository if it doesn't exist
-        aws ecr describe-repositories --repository-names $ECR_REPOSITORY || \
-        aws ecr create-repository --repository-name $ECR_REPOSITORY
-        
-        # Create base repository if it doesn't exist
-        aws ecr describe-repositories --repository-names $ECR_REPOSITORY-base || \
-        aws ecr create-repository --repository-name $ECR_REPOSITORY-base
-
     - name: Extract version from tag
       id: get_version
       run: |
@@ -56,22 +44,14 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
         fi
 
-    - name: Check and build base image if needed
+    - name: Build and push base image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-        IMAGE_TAG: ${{ github.sha }}
       run: |
-        # Check if base image exists
-        if ! docker manifest inspect $ECR_REGISTRY/$ECR_REPOSITORY-base:latest > /dev/null 2>&1; then
-          echo "Base image not found. Building..."
-          # Build the base image
-          docker build --target base -t $ECR_REGISTRY/$ECR_REPOSITORY-base:latest .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY-base:latest
-        else
-          echo "Base image found. Pulling..."
-          docker pull $ECR_REGISTRY/$ECR_REPOSITORY-base:latest
-        fi
+        # Build and push base image
+        docker build --target base -t $ECR_REGISTRY/$ECR_REPOSITORY-base:latest .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY-base:latest
 
     - name: Build and push development image
       env:
