@@ -573,7 +573,7 @@ function setup_gcc () {
 		fi
 
 		### Config parameters in common with GCC and Binutils
-		COMMON_CONFIG="--with-sysroot=$(gcc_sysroot) --enable-shared --with-system-zlib"
+		COMMON_CONFIG="--with-sysroot=$(gcc_sysroot) --with-system-zlib"
 		COMMON_CONFIG+=" --with-mpc-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-mpc-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
 		COMMON_CONFIG+=" --with-mpfr-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-mpfr-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
 		COMMON_CONFIG+=" --with-gmp-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-gmp-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
@@ -581,13 +581,13 @@ function setup_gcc () {
 
 		GCC_CONFIG="--enable-version-specific-runtime-libs --with-gcc-major-version-only --enable-checking=release \
 			$( if [ "${MULTI_ARCH}" -eq 1 ] && [ -z "${HARCH_LIB}" ]; then echo --enable-multiarch; fi ) \
-			--disable-option-checking --disable-nls --disable-multilib --disable-option-checking --disable-nls"
+			--disable-option-checking --disable-nls --disable-multilib --disable-option-checking"
 
 		case "${1}" in
-			--without-glibc) GCC_CONFIG+=" --enable-languages=c --without-headers"
+			--bootstrap) GCC_CONFIG+=" --enable-languages=c --without-headers --disable-shared"
 			;;
-			*) GCC_CONFIG+=" --enable-languages=${GCC_LANGUAGES:-c,c++} --enable-threads=posix --enable-tls \
-				--enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object \
+			*) GCC_CONFIG+=" --enable-languages=${GCC_LANGUAGES:-c,c++} --enable-threads=posix --enable-shared \
+				--enable-tls --enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object \
 				--enable-linker-build-id --enable-libstdcxx-backtrace \
 				--with-linker-hash-style=gnu --enable-plugin --enable-initfini-array \
 				--enable-gnu-indirect-function"
@@ -699,10 +699,17 @@ function setup_gcc () {
 		fi
 		pushd "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}"
 		create_sccache_wrapper
-		echo "Making compiler." | log_buffer info
-		run_cmd "make STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" all-host"
-		run_cmd "make STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" install-strip-host"
-
+		echo "Making ${1:-final} compiler." | log_buffer info
+		case "${1}" in
+			--bootstrap)
+				run_cmd "make STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" all-gcc"
+				run_cmd "make STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" install-strip-gcc"
+			;;
+			*)
+				run_cmd "make STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" all-host"
+				run_cmd "make STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" install-strip-host"
+			;;
+		esac
 		echo "Finalize the installation of the limits.h header" | log_buffer info
 		run_cmd "${TOOLCHAIN_PATH}/libexec/gcc/${HARCH}/${GCC_MAJVER}/install-tools/mkheaders"
 		echo "Install aclocal files" | log_buffer info
@@ -908,45 +915,32 @@ function setup_gcc () {
 		NUMSPACES=1 build lfs/libmpfr:native
 		NUMSPACES=1 build lfs/libmpc:native
 		NUMSPACES=1 build lfs/libisl:native
-		#gcc_make_host --without-glibc >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
+		NUMSPACES=1 build --no_gcc_check lfs/kernel:headers
+		if [ ! -f "${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" ]
+		then
+			### Build GCC Stage 1
+			echo -n "${SPACES}Bootstrapping c compiler... "
+			if [ -d "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}" ]
+			then
+				run_cmd "rm -rf \"${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}\"" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}-stage1.log"
+			fi
+			gcc_make_host --bootstrap >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}-stage1.log"
+		fi
+		### Build GLibC Stage 1
 		if [ "$(gcc_sysroot)" == "${BIN_PATH}" ]
 		then
-			NUMSPACES=1 build --temporary --no_gcc_check lfs/glibc:headers
+			NUMSPACES=1 build --temporary --no_gcc_check lfs/glibc:stage1
 		fi
 		echo -n "${SPACES}Building ${GCC_LANGUAGES:-c,c++} compilers... "
+		### Build GCC Stage 2
+		run_cmd "rm -rf \"${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}\"" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
 		gcc_make_host >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
-		if [ "$(gcc_sysroot)" == "${BIN_PATH}" ]
-		then
-			echo -n "removing temporary headers..."
-			run_cmd "rm -rf \"${BIN_PATH}${TARGET_INCLUDEDIR}\"" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
-		fi
 	echo -e "done.\n"
 	fi
-	if [ "$(gcc_sysroot)" == "${BIN_PATH}" ]
-	then
-		if [ ! -f "${STATUS_PATH}/gcc-libgcc_${GCC_VER}-bootstrap" ]
-		then
-			### Bootstrapping sysroot
-			echo "${SPACES}Bootstrapping foundation libraries... "
-			### Install glibc headers and raw libraries
-			NUMSPACES=1 build lfs/glibc:stage1
-			echo -n "${SPACES}Bootstrapping target libgcc... "
-			GCC_BOOTSTRAP=1 GCC_TARGETS="libgcc" gcc_make_target_libs
-			echo -e "done.\n"
-		fi
-		if [ ! -f "${STATUS_PATH}/gcc-libsanitizer_${GCC_VER}" ]
-		then
-			### Build & install glibc lib
-			NUMSPACES=1 build lfs/glibc:stage2
-			### Build & install libxcrypt
-			NUMSPACES=1 build --toolchain gnu lfs/libxcrypt:headers
-		fi
-	fi
-	setup_ldconfig
-	if [ ! -f "${STATUS_PATH}/gcc-libsanitizer_${GCC_VER}" ]
+	if [ ! -f "${STATUS_PATH}/gcc-libgcc_${GCC_VER}" ]
 	then
 		echo -n "${SPACES}Building target libraries... "
-		gcc_make_target_libs
+		GCC_BOOTSTRAP=1 GCC_TARGETS=libgcc gcc_make_target_libs
 		echo -e "done.\n"
 	fi
 	if [ "$(gcc_sysroot)" == "${BIN_PATH}" ]
@@ -954,14 +948,15 @@ function setup_gcc () {
 		### Build & install glibc
 		NUMSPACES=1 build lfs/glibc
 		### Build & install libxcrypt
-		# libxcrypt compat no more needed
-		# NUMSPACES=1 build --toolchain gnu lfs/libxcrypt:compat
 		NUMSPACES=1 build --toolchain gnu lfs/libxcrypt
 	fi
+	setup_ldconfig
 	ldconfig -v >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log" 2>&1
-	if [ -d "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}" ]
+	if [ ! -f "${STATUS_PATH}/gcc-libsanitizer_${GCC_VER}" ]
 	then
-		run_cmd "rm -rf \"${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}\"" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
+		echo -n "${SPACES}Building target libraries... "
+		gcc_make_target_libs libgcc
+		echo -e "done.\n"
 	fi
 	if [ -d "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}" ]
 	then
@@ -970,7 +965,6 @@ function setup_gcc () {
 	echo -e "done.\n"
 
 	setup_ldd "$(gcc_sysroot)"
-
 }
 
 function setup_toolchain_wrapper () {
