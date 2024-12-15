@@ -44,14 +44,20 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
         fi
 
-    - name: Build and push base image
+    - name: Check and build base image if needed
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
       run: |
-        # Build and push base image
-        docker build --target base -t $ECR_REGISTRY/$ECR_REPOSITORY-base:latest .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY-base:latest
+        # Try to pull the base image first
+        if ! docker pull $ECR_REGISTRY/$ECR_REPOSITORY-base:latest; then
+          echo "Base image not found. Building..."
+          # Build and push base image
+          docker build --target base -t $ECR_REGISTRY/$ECR_REPOSITORY-base:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY-base:latest
+        else
+          echo "Base image found and pulled successfully"
+        fi
 
     - name: Build and push development image
       env:
