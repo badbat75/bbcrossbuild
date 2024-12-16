@@ -44,43 +44,30 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
         fi
 
-    - name: Check and build base image if needed
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-      run: |
-        # Try to pull the base image first
-        if ! docker pull $ECR_REGISTRY/$ECR_REPOSITORY-base:latest; then
-          echo "Base image not found. Building..."
-          # Build and push base image
-          docker build --target base -t $ECR_REGISTRY/$ECR_REPOSITORY-base:latest .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY-base:latest
-        else
-          echo "Base image found and pulled successfully"
-        fi
-
-    - name: Build and push development image
+    - name: Build, tag, and push image to Amazon ECR
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
         IMAGE_TAG: ${{ github.sha }}
         VERSION: ${{ steps.get_version.outputs.version }}
       run: |
-        # Build the development image using base
-        docker build --cache-from $ECR_REGISTRY/$ECR_REPOSITORY-base:latest -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        # Build the Docker image
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         
-        # Tag development image according to branch/tag
+        # Tag based on branch/tag
         if [ "${{ github.ref }}" = "refs/heads/development" ]; then
+          # Development branch - tag as development
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:development
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:development
         elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          # Release tag - tag with version and latest
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
         fi
         
-        # Always push the SHA tagged development image
+        # Always push the SHA tagged image
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
     - name: Clean up

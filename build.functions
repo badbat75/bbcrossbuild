@@ -1205,7 +1205,7 @@ function kernelbuild () {
 				HOSTLDFLAGS="\${LDFLAGS_FOR_BUILD}" \\
 				EXTRAVERSION=${KERNEL_EXTRAVERSION} \\
 				LOCALVERSION=${KERNEL_LOCALVERSION} \\
-				${EXTRA_PARMS} ${PKG_MAKEVARS} \${@}
+				${PKG_MAKEVARS} \${@}
 		EOF
 		run_cmd "cat make4kern.sh"
 		run_cmd "chmod +x make4kern.sh"
@@ -1285,7 +1285,7 @@ function kernelbuild () {
 		run_cmd "mkdir -p \"${PKG_PKGPATH}/boot\""
 	fi
 
-	KERNEL_RELEASE=$(./make4kern.sh kernelrelease)
+	KERNEL_RELEASE=$(./make4kern.sh V=0 kernelrelease)
 	add_system_config_variable KERNEL_RELEASE "${KERNEL_RELEASE}"
 
 	run_cmd "cp -pv .config \"${PKG_PKGPATH}/boot/config-${KERNEL_RELEASE}\""
@@ -1334,13 +1334,9 @@ function kernelbuild () {
 	if [ "${PKG_KERNEL_INITRAMFS:-0}" -eq 1 ]
 	then
 		run_cmd "mkdir -pv \"${PKG_PKGPATH}/postinst_scripts\""
-		run_cmd "echo -n \"dracut --force --kver ${KERNEL_RELEASE} -N -a drm --fstab --zstd\" > \"${PKG_PKGPATH}/postinst_scripts/99_kernel\""
-		if [ -n "${PKG_KERNEL_INITRAMFS_DRIVERS}" ]
-		then
-			run_cmd "echo \" --add-drivers \\\"${PKG_KERNEL_INITRAMFS_DRIVERS}\\\"\" >> \"${PKG_PKGPATH}/postinst_scripts/99_kernel\""
-		else
-			run_cmd "echo >> \"${PKG_PKGPATH}/postinst_scripts/99_kernel\""
-		fi
+		run_cmd "echo \"dracut --force --kver ${KERNEL_RELEASE} -N -a drm --fstab --zstd --filesystems \\\"${PKG_KERNEL_INITRAMFS_DRIVERS:-ext4}\\\"\" > \"${PKG_PKGPATH}/postinst_scripts/99_kernel\""
+		#run_cmd "export QEMU_LD_PREFIX=\"${BIN_PATH}\" ; dracut --force --sysroot \"${BIN_PATH}\" --kver ${KERNEL_RELEASE} -N -a drm --zstd --filesystems \"${PKG_KERNEL_INITRAMFS_DRIVERS:-ext4}\""
+		#run_cmd "cp \"${BIN_PATH}/boot/initramfs-${KERNEL_RELEASE}.img\" \"${PKG_PKGPATH}/boot\""
 	fi
 
 	PKG_KERNEL_BLDPATH="${PWD}"
