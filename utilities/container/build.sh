@@ -7,8 +7,8 @@ source "${CONTAINERBUILD_PATH}"/getenv
 
 
 case "${1}" in
-	base) docker build --target base -t "${CONTAINER_NAME}-base" "${CONTAINERBUILD_PATH}/../.." ;;
-	*) docker build --cache-from "${CONTAINER_NAME}-base" -t "${CONTAINER_NAME}" "${CONTAINERBUILD_PATH}/../.." ;;
+	base) sudo docker build --target base -t "${CONTAINER_NAME}-base" "${CONTAINERBUILD_PATH}/../.." ;;
+	*) sudo docker build --cache-from "${CONTAINER_NAME}-base" -t "${CONTAINER_NAME}" "${CONTAINERBUILD_PATH}/../.." ;;
 esac
 
-docker system prune -f
+sudo docker system prune -f

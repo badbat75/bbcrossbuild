@@ -470,8 +470,8 @@ function settcenv () {
 						TOOLCHAIN_COMPFLAGS+=" ${LLVM_EXTRACLANGFLAGS}"
 						TOOLCHAIN_EXTRA_C_CMD="--target=${HARCH} ${SYSROOT_FLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
 					else
-						TOOLCHAIN_COMPFLAGS+=" ${SYSROOT_FLAGS} ${LLVM_EXTRACLANGFLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
-						TOOLCHAIN_EXTRA_C_CMD="--target=${HARCH}"
+						TOOLCHAIN_COMPFLAGS+=" --target=${HARCH} ${SYSROOT_FLAGS} ${LLVM_EXTRACLANGFLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
+						TOOLCHAIN_EXTRA_C_CMD=""
 					fi
 					TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LINKER} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
 				;;
@@ -660,7 +660,7 @@ function create_environment_source () {
 		cross|native)
 			cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 				export PKG_CONFIG='$(which pkg-config 2>/dev/null || :)'
-				export PKG_CONFIG_LIBDIR=${TOOLCHAIN_PATH}/lib/pkgconfig:${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig:/usr/lib64/pkgconfig
+				export PKG_CONFIG_LIBDIR=${TOOLCHAIN_PATH}/lib/pkgconfig:${TOOLCHAIN_PATH}/share/pkgconfig:${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig:${GLOBAL_TOOLCHAIN_PATH}/share/pkgconfig:/usr/lib64/pkgconfig
 				export PKG_CONFIG_SYSROOT_DIR=
 				export PKG_CONFIG_ALLOW_CROSS=
 			EOF
@@ -912,7 +912,7 @@ function cmakebuild () {
 	fi
 	local NINJA_FLAGS
 
-	NINJA_FLAGS="$(if [ "${MAKEVERBOSE}" -eq 1 ]; then echo -n '-v'; fi) -j${NPROCS}"
+	NINJA_FLAGS="$(if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -n '-v'; fi) -j${NPROCS}"
 	CMAKE_GENERATOR=${CMAKE_GENERATOR:-"Unix Makefiles"}
 
 	echo "CCWRAPPER=\"\" create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
@@ -1379,7 +1379,7 @@ function pythonbuild () {
 			PYTHON_LIB_PATH="$(dirname "$(ldd "${PYTHON_FOR_BUILD}" | grep "libpython${PYTHONBIN_VER}" | awk '{print $3}')")"
 			COMMON_LDFLAGS+=" -L${PYTHON_LIB_PATH}"
 		;;
-		target)
+		*)
 			if [ -d "${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m" ]
 			then
 				COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
@@ -1425,10 +1425,13 @@ function pythonbuild () {
 		local PYTHONBUILD="--no-binary :all:"
 	fi
 	case ${PKG_TARGET_ENV} in
-		native|cross)
+		native)
 			run_cmd "PIP_CACHE_DIR=${DOWNLOAD_PATH}/pip ${PYTHON_FOR_BUILD} -m pip ${VERBOSE} install --no-deps ${PYTHONBUILD} --prefix=${INSTALL_PREFIX} ${PIPPKG}"
 		;;
-		target)
+		cross)
+			run_cmd "PIP_CACHE_DIR=${DOWNLOAD_PATH}/pip ${PYTHON_FOR_BUILD} -m pip ${VERBOSE} install --no-deps ${PYTHONBUILD} --prefix=${INSTALL_PREFIX} ${PIPPKG}"
+		;;
+		*)
 			run_cmd "cross-python -m site"
 			run_cmd "PIP_CACHE_DIR=${DOWNLOAD_PATH}/pip cross-python -m pip ${VERBOSE} install --compile --force-reinstall --no-deps ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${INSTALL_PREFIX} ${PIPPKG}"
 			if [ "${PYTHON_PKGDIR}" == dist-packages ]
@@ -1639,6 +1642,7 @@ function build () {(
 		trow_error "${ERROR_FILE_NOT_FOUND}" "Package ${PKG_FILE} does not exists."
 	fi
 	
+
 	PKG_NAME=$(basename "${PKG_FILE}")
 	PKG_FULLNAME="\${PKG_NAME}\${PKG_SUFFIX}\${PKG_VER:+_\${PKG_VER}}"
 	PKG_SRCDIR=${PKG_SRCDIR:-${PKG_FULLNAME}}
@@ -1822,13 +1826,16 @@ function build () {(
 			cd "${PKG_SRCPATH}"
 		fi
 		echo "Running pre build script..." | log_buffer info >> "${LOG_FILE}"
-		(
-			run_cmd "set -x
-				set +o pipefail
-				source \"${PKG_BLDPATH}/environment.source\"
-				${PKG_PREBUILD}
-				set +x"
-		) >> "${LOG_FILE}"
+		cat > runprebuild.sh <<-EOF
+			#!/bin/bash
+			set -x
+			set +o pipefail
+			source "${PKG_BLDPATH}/environment.source"
+			${PKG_PREBUILD}
+			set +x
+		EOF
+		run_cmd "chmod +x runprebuild.sh" >> "${LOG_FILE}"
+		run_cmd "./runprebuild.sh" >> "${LOG_FILE}"
 	fi
 	#### Build
 	if [ ! "${BUILD_PROCESS:-none}" == none ]
@@ -1841,13 +1848,16 @@ function build () {(
 	then
 		cd "${PKG_BLDPATH}"
 		echo "Running post build script..." | log_buffer info >> "${LOG_FILE}"
-		(
-			run_cmd "set -ex
-				set +o pipefail
-				source \"${PKG_BLDPATH}/environment.source\"
-				${PKG_POSTBUILD}
-				set +ex"
-		) >> "${LOG_FILE}"
+		cat > runpostbuild.sh <<-EOF
+			#!/bin/bash
+			set -ex
+			set +o pipefail
+			source "${PKG_BLDPATH}/environment.source"
+			${PKG_POSTBUILD}
+			set +ex
+		EOF
+		run_cmd "chmod +x runpostbuild.sh" >> "${LOG_FILE}"
+		run_cmd "./runpostbuild.sh" >> "${LOG_FILE}"
 	fi
 	#### Post-Install
 	if [ -n "${PKG_POSTINSTALL}" ]

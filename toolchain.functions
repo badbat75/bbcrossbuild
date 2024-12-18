@@ -1366,7 +1366,7 @@ function setup_python () {
 		run_cmd "${PYTHON_FOR_BUILD} \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py\""
 		popd
 		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}\""
-		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip\" -v install --upgrade setuptools pip jinja2 docutils"
+		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip\" -v install --upgrade setuptools\<65 pip jinja2 docutils"
 	}
 
 	function build_python_crossenv () {
@@ -1389,16 +1389,17 @@ function setup_python () {
 			set -e
 			#shellcheck source=/dev/null
 			source "${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate"
-			run_cmd "build-python -m pip install --upgrade cython setuptools wheel"
+			run_cmd "build-python -m pip install --upgrade cython setuptools\<65 wheel"
 			run_cmd "mkdir -p \"${TOOLCHAIN_BLDPATH}/build_python_crossenv\""
 			pushd "${TOOLCHAIN_BLDPATH}/build_python_crossenv"
 			TOOLCHAIN=gnu PKG_BLDPATH=${PWD} create_environment_source
 			#shellcheck source=/dev/null
 			source environment.source
-			run_cmd "cross-pip -v install --upgrade setuptools cython Mako"
-			run_cmd "build-pip -v install --upgrade setuptools jinja2"
+			run_cmd "cross-pip -v install --upgrade setuptools\<65 cython Mako"
+			run_cmd "build-pip -v install --upgrade setuptools\<65 jinja2"
 			popd
 			run_cmd "rm -rf \"${TOOLCHAIN_BLDPATH}/build_python_crossenv\""
+			run_cmd "sed -i '1 a PYTHONPATH=\"\${SYSROOT}/usr/lib/python${PYTHONBIN_VER}/site-packages\"' ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/cross-python3"
 			set +e
 		)
 	}

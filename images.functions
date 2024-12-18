@@ -11,6 +11,35 @@ check_images_functions () {
 	fi
 }
 
+function loopdevmgr() {
+	### Usage: loopdevmgr create <image path>
+	### 		create: returns Loop Device
+	###			delete: returns null
+	local CMD="${1}"
+	local IMAGE_PATH="${2}"
+	case "${CMD}" in
+		create)
+			LODEVICE=$(sudo losetup -f --raw | awk '{print $1}')
+			local MINOR="${LODEVICE//\/dev\/loop/}"
+			if [ ! -e "${LODEVICE}" ]
+			then
+				run_cmd -s "mknod -m 0660 ${LODEVICE} b 7 ${MINOR}" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+			fi
+			run_cmd -s "losetup -f -P --show \"${IMAGE_PATH}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+			#LODEVICE=$(sudo losetup -l --raw | grep "${IMAGE_PATH}" | tail -n1 | awk '{print $1}')
+			while read -r line
+			do
+				eval "${line//MAJ:MIN/MAJMIN} bash -c '
+					if [ ! -e /dev/\${NAME} ];
+					then
+						run_cmd \"mknod -m 0660 /dev/\${NAME} b \$(echo \${MAJMIN} | cut -d: -f1) \$(echo \${MAJMIN} | cut -d: -f2)\" >> \"${LOG_PATH}/images_${MOUNT_NAME}.log\";
+					fi'"
+			done <<< "$(lsblk -P "${LODEVICE}" -Q 'TYPE == "part"')"
+			echo "${LODEVICE}"
+		;;
+	esac
+}
+
 function create_image() {
 	# create_image <tag_name> [--rootfstype <fs_type>] [--size <size_in_KiB> [--layout <layout_file>]
 
@@ -59,9 +88,11 @@ function create_image() {
 	echo -n "Partitioning... "
 	run_cmd "echo '${LAYOUT}' | sfdisk \"${IMAGE_PATH}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 	echo "ok."
-	echo -n "Creating loopback devices... "
-	run_cmd -s "losetup -f -P \"${IMAGE_PATH}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-	LODEVICE=$(sudo losetup -l --raw | grep "${IMAGE_PATH}" | tail -n1 | awk '{print $1}')
+	echo -n "Cleaning loopback devices... "
+	run_cmd -s "losetup -v -D" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+	echo "ok."
+	echo -n "Setting up loopback devices... "
+	LODEVICE=$(loopdevmgr create "${IMAGE_PATH}")
 	echo "ok."
 	echo -n "Creating filesystems... "
 	run_cmd -s "mkfs.vfat \"${LODEVICE}p1\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
@@ -164,15 +195,16 @@ function mount_tag () {
 
 	# Create loopback devices for the image and its partitions
 	echo -n "Creating loop devices... "
-	{
-		run_cmd -s "losetup -f -P \"${IMAGEFILE_PATH}\""
-		run_cmd -s "losetup -j \"${IMAGEFILE_PATH}\""
-		LOOPDEV=$(sudo losetup -j "${IMAGEFILE_PATH}" | awk '{print $1}' | sed 's/.$//g')
-		echo | log_buffer info
-		echo "Loop device for ${IMAGEFILE_PATH}: ${LOOPDEV}" | log_buffer info
-		run_cmd -s "partprobe \"${LOOPDEV}\""
-		run_cmd -s "kpartx \"${LOOPDEV}\""
-	} >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+		LOOPDEV=$(loopdevmgr create "${IMAGEFILE_PATH}")
+	#{
+		#run_cmd -s "losetup -f -P \"${IMAGEFILE_PATH}\""
+		#run_cmd -s "losetup -j \"${IMAGEFILE_PATH}\""
+		#LOOPDEV=$(sudo losetup -j "${IMAGEFILE_PATH}" | awk '{print $1}' | sed 's/.$//g')
+		#echo | log_buffer info
+		#echo "Loop device for ${IMAGEFILE_PATH}: ${LOOPDEV}" | log_buffer info
+		#run_cmd -s "partprobe \"${LOOPDEV}\""
+		#run_cmd -s "kpartx \"${LOOPDEV}\""
+	#} >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 	echo "ok."
 
 	if [ -n "${RESIZE}" ]
@@ -285,6 +317,7 @@ function unmount_tag () {
 			then
 				echo -n "deleting loopback device [${LOOPDEV}]... "
 				run_cmd -s "losetup -D \"${LOOPDEV}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+				run_cmd -s "rm -f \"/dev/${LOOPDEV}*\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 				echo "ok."
 				if [ "${FINALIZE}" -eq 1 ]
 				then

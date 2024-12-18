@@ -90,7 +90,16 @@ then
 	trow_error "${ERROR_FILE_NOT_FOUND}" "Project ${PROJECT} does not exist."
 fi
 
+echo
+echo "Core parameters:"
+echo "================"
 echo "Project path: ${DATA_PATH}/${PROJECT_NAME}"
+echo "Toolchain: ${TOOLCHAIN}"
+echo "Packages Optimization Level: ${OPTLEVEL:-2}"
+echo "Packages LTO Enabled: ${LTOENABLE:-off}"
+echo "Kernel Optimization Level: ${KERNEL_OPTLEVEL:-2}"
+echo "Kernel LTO Enabled: ${KERNEL_LTOENABLE:-off}"
+echo "Verbose build: ${MAKEVERBOSE:-0}"
 echo
 
 if [ ! -d "${GLOBAL_LOG_PATH}" ]

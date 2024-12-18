@@ -4,7 +4,7 @@ FROM amd64/fedora:latest as base
 # Install all dependencies in a single layer
 RUN dnf -y upgrade && \
     dnf -y install \
-    bc parted e2fsprogs btrfs-progs bzip2-devel rsync vim-common \
+    bc parted e2fsprogs btrfs-progs dosfstools bzip2-devel rsync vim-common \
     gcc g++ binutils binutils-gold dwarves elfutils-libelf-devel patchelf \
     libzstd libzstd-devel file tree curl wget gawk flex patch git \
     qemu-user-static dracut gperf help2man xmltoman docbook-utils docbook-utils-pdf \
