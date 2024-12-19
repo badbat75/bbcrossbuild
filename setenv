@@ -3,7 +3,7 @@ LTOPROCS=$(( $(nproc) / 4 ))
 
 HARCH=${HM}-${HOS}-${HLIBC}
 
-DATA_PATH=${DATA_PATH:-${HOME}/.bbxb}
+DATA_PATH=${DATA_PATH:-/mnt/bbcrossbuild/datadir}
 
 GLOBAL_SRC_PATH=${DATA_PATH}/${SRC_DIR:-sources}
 GLOBAL_BLD_PATH=${DATA_PATH}/${BLD_DIR:-builds}

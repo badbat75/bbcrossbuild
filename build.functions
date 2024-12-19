@@ -1286,6 +1286,7 @@ function kernelbuild () {
 	fi
 
 	KERNEL_RELEASE=$(./make4kern.sh V=0 kernelrelease)
+	add_system_config_variable KERNEL_VER "${KERNEL_VER}"
 	add_system_config_variable KERNEL_RELEASE "${KERNEL_RELEASE}"
 
 	run_cmd "cp -pv .config \"${PKG_PKGPATH}/boot/config-${KERNEL_RELEASE}\""
@@ -1821,21 +1822,18 @@ function build () {(
 	#### Pre-Build
 	if [ -n "${PKG_PREBUILD}" ]
 	then
-		if [ -d "${PKG_SRCPATH}" ]
-		then
-			cd "${PKG_SRCPATH}"
-		fi
-		echo "Running pre build script..." | log_buffer info >> "${LOG_FILE}"
-		cat > runprebuild.sh <<-EOF
+		cat > ${PKG_BLDPATH}/runprebuild.sh <<-EOF
 			#!/bin/bash
 			set -x
 			set +o pipefail
+			cd "${PKG_SRCPATH}"
 			source "${PKG_BLDPATH}/environment.source"
 			${PKG_PREBUILD}
 			set +x
 		EOF
-		run_cmd "chmod +x runprebuild.sh" >> "${LOG_FILE}"
-		run_cmd "./runprebuild.sh" >> "${LOG_FILE}"
+		run_cmd "chmod +x ${PKG_BLDPATH}/runprebuild.sh" >> "${LOG_FILE}"
+		echo "Running pre build script..." | log_buffer info >> "${LOG_FILE}"
+		run_cmd "${PKG_BLDPATH}/runprebuild.sh" >> "${LOG_FILE}"
 	fi
 	#### Build
 	if [ ! "${BUILD_PROCESS:-none}" == none ]
@@ -1846,18 +1844,18 @@ function build () {(
 	#### Post-Build
 	if [ -n "${PKG_POSTBUILD}" ]
 	then
-		cd "${PKG_BLDPATH}"
-		echo "Running post build script..." | log_buffer info >> "${LOG_FILE}"
-		cat > runpostbuild.sh <<-EOF
+		cat > ${PKG_BLDPATH}/runpostbuild.sh <<-EOF
 			#!/bin/bash
 			set -ex
 			set +o pipefail
+			cd "${PKG_BLDPATH}"
 			source "${PKG_BLDPATH}/environment.source"
 			${PKG_POSTBUILD}
 			set +ex
 		EOF
-		run_cmd "chmod +x runpostbuild.sh" >> "${LOG_FILE}"
-		run_cmd "./runpostbuild.sh" >> "${LOG_FILE}"
+		run_cmd "chmod +x ${PKG_BLDPATH}/runpostbuild.sh" >> "${LOG_FILE}"
+		echo "Running post build script..." | log_buffer info >> "${LOG_FILE}"
+		run_cmd "${PKG_BLDPATH}/runpostbuild.sh" >> "${LOG_FILE}"
 	fi
 	#### Post-Install
 	if [ -n "${PKG_POSTINSTALL}" ]

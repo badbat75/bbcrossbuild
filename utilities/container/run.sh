@@ -6,7 +6,7 @@ echo "Container build path: ${CONTAINERBUILD_PATH}"
 # shellcheck disable=SC1091
 source "${CONTAINERBUILD_PATH}"/getenv
 
-HOST_DATA_PATH=${HOST_DATA_PATH:-${HOME}/bbcrossbuild-data}
+HOST_DATA_PATH=${HOST_DATA_PATH:-/mnt/bbcrossbuild/datadir}
 
 if [ ! -d "${HOST_DATA_PATH}" ]
 then
