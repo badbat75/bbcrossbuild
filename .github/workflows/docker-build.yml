@@ -53,55 +53,39 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
         fi
 
-    - name: Build, tag, and push image
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: ${{ vars.AWS_ECR_REPOSITORY }}
-        DOCKER_REPOSITORY: ${{ vars.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPOSITORY || vars.AWS_ECR_REPOSITORY || 'bbcrossbuild' }}
-        IMAGE_TAG: ${{ github.sha }}
-        VERSION: ${{ steps.get_version.outputs.version }}
-        REPO_SERVICE: ${{ vars.REPO_SERVICE || 'dockerhub' }}
+    - name: Set repository variables
+      id: repo_vars
       run: |
-        # Build the Docker image for the appropriate repository
-        if [ "$REPO_SERVICE" = "aws_ecr" ]; then
-          # Build for ECR
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          
-          # Tag based on branch/tag
-          if [ "${{ github.ref }}" = "refs/heads/development" ]; then
-            # Development branch - tag as development
-            docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:development
-            docker push $ECR_REGISTRY/$ECR_REPOSITORY:development
-          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            # Release tag - tag with version and latest
-            docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION
-            docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
-            docker push $ECR_REGISTRY/$ECR_REPOSITORY:$VERSION
-            docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          fi
-          
-          # Always push the SHA tagged image
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        if [ "${{ vars.REPO_SERVICE }}" = "aws_ecr" ]; then
+          echo "repository=${{ steps.login-ecr.outputs.registry }}/${{ vars.AWS_ECR_REPOSITORY }}" >> $GITHUB_OUTPUT
         else
-          # Build for Docker Hub
-          docker build -t $DOCKER_REPOSITORY:$IMAGE_TAG .
-          
-          # Tag based on branch/tag
-          if [ "${{ github.ref }}" = "refs/heads/development" ]; then
-            # Development branch - tag as development
-            docker tag $DOCKER_REPOSITORY:$IMAGE_TAG $DOCKER_REPOSITORY:development
-            docker push $DOCKER_REPOSITORY:development
-          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            # Release tag - tag with version and latest
-            docker tag $DOCKER_REPOSITORY:$IMAGE_TAG $DOCKER_REPOSITORY:$VERSION
-            docker tag $DOCKER_REPOSITORY:$IMAGE_TAG $DOCKER_REPOSITORY:latest
-            docker push $DOCKER_REPOSITORY:$VERSION
-            docker push $DOCKER_REPOSITORY:latest
-          fi
-          
-          # Always push the SHA tagged image
-          docker push $DOCKER_REPOSITORY:$IMAGE_TAG
+          # Default to Docker Hub if REPO_SERVICE is not set or is set to dockerhub
+          echo "repository=${{ vars.DOCKERHUB_USERNAME }}/${{ vars.DOCKERHUB_REPOSITORY || 'bbcrossbuild' }}" >> $GITHUB_OUTPUT
         fi
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      
+    - name: Extract metadata for Docker
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: ${{ steps.repo_vars.outputs.repository }}
+        tags: |
+          type=sha,format=short
+          type=ref,event=branch
+          type=ref,event=tag
+          type=raw,value=latest,enable=${{ github.ref == format('refs/tags/{0}', github.event.repository.default_branch) }}
+    
+    - name: Build, tag, and push image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
     - name: Clean up
       if: always()
