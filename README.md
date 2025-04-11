@@ -1,94 +1,434 @@
-# bbcrossbuild 3.1.0
-This is a framework to automate the cross-compilation of packages through a project file.
+# BBCrossBuild 3.1.1
+
+A framework to automate cross-compilation of packages through project files.
+
 ## Current Limitations
 
- - Tested only ARM and ARM64 cross-compile projects and x86_64 straight compile projects. Other platforms would need
-   adjustments and integrations
+- Tested primarily with ARM, ARM64 cross-compile projects and x86_64 straight compile projects
+- Other platforms may require adjustments and integrations
 
 ## QuickStart
+
 **Prepare your environment**
 
-    $ git clone https://github.com/badbat75/bbcrossbuild.git
-    $ cd bbcrossbuild
-    $ cp bbxb.conf.default bbxb.conf
-    $ utilities/bootstrap.<fedora|ubuntu>
-`bootstrap`  installs all the dependencies on the build host *(the script is not complete, yet)*.
+```bash
+$ git clone https://github.com/badbat75/bbcrossbuild.git
+$ cd bbcrossbuild
+$ cp bbxb.conf.default bbxb.conf
+$ utilities/bootstrap.<fedora|ubuntu|aws>
+```
+
+The `bootstrap` script installs all required dependencies on the build host.
 
 **Customization**
 
-Edit your bbxb.conf and change the behaviour of the framework if you need (optional).
+Edit your `bbxb.conf` to configure the framework (optional):
 
-    $ vi bbxb.conf
+```bash
+$ vi bbxb.conf
+```
 
 **Run**
 
-Run your build using the predefined projects
+Build using predefined projects:
 
-    $ ./bbxb <project> <platform>
- 
+```bash
+$ ./bbxb <project> <platform>
+```
+
 **Output**
- 
-Get your package here: `.bbxb/<project>/<platform>/<project>.tar.xz`
 
-## Create your own project
+Find your package at: `.bbxb/<project>/<platform>/<project>.tar.xz`
 
-### Define your project
+## Deployment Options
 
-#### Directives
+### Docker
 
-**mount_tag:**  
-Download and mount system image.   
-`mount_tag <tag_name> --url "<image_url>" --imgfile "<image_filename>" --mountlist "<partition_list>" [--resize <resize_options>]`
-+ `tag_name:` tag name of the image. If "distos", it will be used as sysroot for build packages. If "binaries", it will be used as destination for built packages.
-+ `image_url:` URL where to download the image
-+ `image_filename:` image file name to extract from archive
-+ `partition_list:` how the build system should interpret the partitions of the images with following format "partno:mountpoint [partno:mountpoint] ..."
-+ `resize_options:` resize the last partition using the following format "partno:size"
+The project includes Docker support for containerized builds:
 
-**unmount_tag:**  
-Unmount image mounted with "tag_name". Always remember to unmount images before closing the project.   
-`unmount_tag <tag_name>`   
-+ `tag_name:` tag name of the image
+```bash
+# Build the container
+$ utilities/container/build.sh
 
-**prepare_sysroot:**  
-Relink (soft links) all the libraries with relative paths on DISTOS path.   
-`prepare_sysroot`  
+# Run the container
+$ utilities/container/run.sh
+```
 
-**run_on_root_dir:**  
-Execute a command like the system is running. A specified command will be executed in a chroot-ed environment inside the tag image.   
-`run_on_root_dir <tag_name> <as_user> "<command>" `
-+ `tag_name:` tag name of the image
-+ `as_user:` target user that is running the command
-+ `command:` command to run
+### AWS
 
-**setup_full_toolchain:**  
-Set up toolchain (gcc, llvm, rust, python, make, autotools, cmake, meson, ninja). If no DISTOS is present it will bootstrap a SYSROOT using lfs packages (kernel, glibc and libxcrypt).   
-`setup_full_toolchain [--with-gnu-install] [--with-main-gcc] [--with-llvm  [--with-llvm-install]] [--with-python]`
-+ `--with-gnu-install:` install gcc libraries (libgcc, libstdc++...) in the binary folder
-+ `--with-main-gcc:` links GCC target libraries in <PREFIX><LIBDIR><LIBSUFFIX> from <PREFIX>/lib/gcc/<HARCH>/<GCC_VER>
-+ `--with-llvm:` build also llvm toolchain (Clang + LLVM)
-+ `--with-llvm-install:` install clang and rt libraries in the binary folders
-+ `--with-python:` build pyhton and install it in the binary folders
+You can set up and run builds on an EC2 instance:
 
-**build**  
-build the package.   
-`[optional_env_vars] build [--keep_builddir] [--no_save_status] [--no_gcc_check] <package_name>`   
+```bash
+# Create and configure an EC2 instance
+$ utilities/aws_create_infrastructure run
 
-Options:   
-+ `--keep_builddir:` Specify to not delete the build directory after build
-+ `--no_save_status:` Don't save the build status. The package will be built even if it has been built in a previous build
-+ `--no_gcc_check:` Don't check if there's a gcc toolchain available (useful during bootstrap)
+# Check status
+$ utilities/aws_create_infrastructure show
 
-### Define your package
+# Terminate the instance
+$ utilities/aws_create_infrastructure terminate
 
-#### Package definition
+# Clean up resources
+$ utilities/aws_create_infrastructure destroy
+```
+
+## Creating Custom Projects
+
+Projects are defined in `.prj` files that specify build steps and package dependencies. To create a new project:
+
+1. Create a new file in the `projects/` directory with a `.prj` extension
+2. Configure build options and specify packages to build
+
+### Project Directives
+
+BBCrossBuild provides various functions for use in project files. These are organized into separate function files:
+
+#### Core Functions (core.functions)
+
+- **param2value**: Process command line parameters
+  ```
+  OPTS="option1 option2" OPTS_WITH_VALUE="option3 option4" param2value "${@}"
+  ```
+  - `OPTS`: Space-separated list of boolean options (without values)
+  - `OPTS_WITH_VALUE`: Space-separated list of options that require values
+  - `"${@}"`: Pass all command-line arguments
+
+- **download_uncompress**: Download and extract archives
+  ```
+  download_uncompress <URL> <destination> [files_to_extract]
+  ```
+  - `<URL>`: URL to download from
+  - `<destination>`: Directory where to extract files
+  - `[files_to_extract]`: Optional list of specific files to extract
+  - Environment variables:
+    - `STRIPCOMPONENTS=<n>`: Strip n leading components from paths
+    - `ARCHIVEDIRS=<dirs>`: Specify directories to extract
+    - `NODELETEDESTDIR=1`: Don't delete destination directory before extracting
+
+- **test_version**: Compare version strings 
+  ```
+  test_version <version1> <operator> <version2>
+  ```
+  - `<version1>`: First version to compare
+  - `<operator>`: Comparison operator (-gt, -ge, -lt, -le, -eq, -ne)
+  - `<version2>`: Second version to compare
+
+- **pause**: Pause execution until user presses a key
+  ```
+  pause
+  ```
+
+- **pathadd**: Add path to environment variable
+  ```
+  pathadd <PATH|LD_LIBRARY_PATH> <path-name>
+  ```
+  - `<PATH|LD_LIBRARY_PATH>`: Environment variable to modify
+  - `<path-name>`: Path to add
+
+- **pathremove**: Remove path from environment variable
+  ```
+  pathremove <PATH|LD_LIBRARY_PATH> <path-name>
+  ```
+  - `<PATH|LD_LIBRARY_PATH>`: Environment variable to modify
+  - `<path-name>`: Path to remove
+
+- **log_buffer**: Log messages to a buffer
+  ```
+  log_buffer [log_type] [log_file]
+  ```
+  - `[log_type]`: Type of log entry (cmd, info, log, status, error)
+  - `[log_file]`: File to log to (default: /dev/stdout)
+
+- **run_cmd**: Run commands with logging
+  ```
+  run_cmd [-S|-s] "command string"
+  ```
+  - `-S`: Run with sudo/bash
+  - `-s`: Run with sudo
+  - `"command string"`: Command to execute
+
+- **trow_error**: Throw an error with message
+  ```
+  trow_error <error_code> <error_message>
+  ```
+  - `<error_code>`: Numeric error code
+  - `<error_message>`: Error message text
+
+#### Build Functions (build.functions)
+
+- **build**: Build a package with given options
+  ```
+  build [--force] [--keep_builddir] [--no_save_status] [--no_gcc_check] [--temporary] [--toolchain <toolchain>] [--with_extra_modules <modules>] <package_name>
+  ```
+  - `--force`: Force rebuild even if already built
+  - `--keep_builddir`: Keep build directory after build
+  - `--no_save_status`: Don't save build status
+  - `--no_gcc_check`: Skip GCC toolchain check
+  - `--temporary`: Create temporary status file
+  - `--toolchain <toolchain>`: Specify toolchain (gnu, llvm)
+  - `--with_extra_modules <modules>`: Add kernel modules
+  - `<package_name>`: Name of package to build (can include target: package:target)
+
+- **setbuildenv**: Set up build environment
+  ```
+  setbuildenv [--target <env>]
+  ```
+  - `--target <env>`: Target environment (native, cross, target)
+
+- **settcenv**: Set up toolchain environment
+  ```
+  settcenv [--target <env>]
+  ```
+  - `--target <env>`: Target environment (native, cross, target)
+
+- **create_environment_source**: Create environment source file
+  ```
+  create_environment_source [--target <env>]
+  ```
+  - `--target <env>`: Target environment (native, cross, target)
+
+#### Project Functions (project.functions)
+
+- **clean_project**: Clean up project directories
+  ```
+  clean_project
+  ```
+
+- **root_project**: Change ownership of project files to root
+  ```
+  root_project
+  ```
+
+- **remove_devfiles**: Remove development files from binaries
+  ```
+  remove_devfiles [no-exitstatus]
+  ```
+  - `no-exitstatus`: Optional flag to suppress exit status output
+
+- **resume_devfiles**: Restore development files to binaries
+  ```
+  resume_devfiles [no-exitstatus]
+  ```
+  - `no-exitstatus`: Optional flag to suppress exit status output
+
+- **create_sfx_package**: Create a self-extracting package
+  ```
+  create_sfx_package <package_directory>
+  ```
+  - `<package_directory>`: Directory containing package files
+
+- **add_system_config_variable**: Add a variable to system configuration
+  ```
+  add_system_config_variable <variable_name> <value>
+  ```
+  - `<variable_name>`: Name of the variable
+  - `<value>`: Value to assign to the variable
+
+#### Images Functions (images.functions)
+
+- **create_image**: Create a new disk image
+  ```
+  create_image <tag_name> [--rootfstype <fs_type>] [--size <size>] [--layout <layout_file>]
+  ```
+  - `<tag_name>`: Name for the image
+  - `--rootfstype <fs_type>`: Filesystem type (ext4, btrfs, etc.)
+  - `--size <size>`: Size of the image (e.g., 2G, 4G)
+  - `--layout <layout_file>`: Partition layout file
+
+- **mount_tag**: Download and mount system image
+  ```
+  mount_tag <tag_name> [--url <image_url>] [--imgfile <image_filename>] --mountlist "<partition_list>" [--resize <resize_options>]
+  ```
+  - `<tag_name>`: Tag name of the image
+  - `--url <image_url>`: URL where to download the image
+  - `--imgfile <image_filename>`: Image file name to extract from archive
+  - `--mountlist "<partition_list>"`: Partitions to mount (format: "partno:mountpoint [partno:mountpoint]")
+  - `--resize <resize_options>`: Resize partition (format: "partno:size")
+
+- **unmount_tag**: Unmount image
+  ```
+  unmount_tag [--all] [--finalize] [--kill] <tag_name>
+  ```
+  - `<tag_name>`: Tag name of the image to unmount
+  - `--all`: Unmount all mounted images
+  - `--finalize`: Create .dd file for direct writing to SD/media
+  - `--kill`: Force kill processes using the mount point
+
+- **mount_from**: Mount from downloaded image
+  ```
+  mount_from --url <URL> --imgfile <Image2Mount> --tag <MountPointName> --resize <partnumber:size> --mountlist "<partnumber1:/> [partnumber2:mountpoint2]"
+  ```
+  - `--url <URL>`: URL to download image from
+  - `--imgfile <Image2Mount>`: Image filename in archive
+  - `--tag <MountPointName>`: Mount point name
+  - `--resize <partnumber:size>`: Resize partition
+  - `--mountlist "<partition_list>"`: Partitions to mount
+
+- **prepare_sysroot**: Relink libraries with relative paths
+  ```
+  prepare_sysroot
+  ```
+
+- **run_on_root_dir**: Execute commands in chroot environment
+  ```
+  run_on_root_dir <tag_name> <as_user> "<command>" [--allocate_pty]
+  ```
+  - `<tag_name>`: Tag name of the image
+  - `<as_user>`: User to run the command as
+  - `"<command>"`: Command to execute
+  - `--allocate_pty`: Allocate a pseudo-terminal
+
+- **set_ownership**: Set ownership on files
+  ```
+  set_ownership <owner:group> <target_directory> <copy_ownership_from_directory> <file>
+  ```
+  - `<owner:group>`: Owner and group (format: "user:group")
+  - `<target_directory>`: Target directory
+  - `<copy_ownership_from_directory>`: Reference directory
+  - `<file>`: File to set ownership on
+
+- **inject_into_mount_tag**: Copy content into mounted image
+  ```
+  inject_into_mount_tag <mount_tag> <object> <directory> [<owner>] [--remove_devfiles]
+  ```
+  - `<mount_tag>`: Tag name of the mounted image
+  - `<object>`: Object to inject (binaries or specific file)
+  - `<directory>`: Directory under mount point
+  - `[<owner>]`: Owner for the files (default: "root:root")
+  - `--remove_devfiles`: Remove development files
+
+- **run_postinstall_scripts**: Run post-installation scripts
+  ```
+  run_postinstall_scripts <mount_tag>
+  ```
+  - `<mount_tag>`: Tag name of the mounted image
+
+#### Toolchain Functions (toolchain.functions)
+
+- **setup_full_toolchain**: Set up the complete toolchain
+  ```
+  setup_full_toolchain [--with-gnu-install] [--with-main-gcc] [--with-llvm] [--with-python]
+  ```
+  - `--with-gnu-install`: Install gcc libraries in binary folder
+  - `--with-main-gcc`: Link GCC target libraries
+  - `--with-llvm`: Build LLVM toolchain
+  - `--with-python`: Build Python
+
+- **setup_rust**: Set up Rust compiler
+  ```
+  setup_rust
+  ```
+
+- **setup_autotools**: Set up autotools
+  ```
+  setup_autotools [<autoconf_ver>] [<automake_ver>] [<libtool_ver>] [<gettext_ver>] [--default]
+  ```
+  - `[<autoconf_ver>]`: Autoconf version (default: AUTOCONF_VER)
+  - `[<automake_ver>]`: Automake version (default: AUTOMAKE_VER)
+  - `[<libtool_ver>]`: Libtool version (default: LIBTOOL_VER)
+  - `[<gettext_ver>]`: Gettext version (default: GETTEXT_VER)
+  - `--default`: Use default versions
+
+- **setup_binutils**: Set up binutils
+  ```
+  setup_binutils
+  ```
+
+- **setup_gcc**: Set up GNU C compiler
+  ```
+  setup_gcc [--install] [--main_gcc] [--targets <targets>]
+  ```
+  - `--install`: Install GCC libraries
+  - `--main_gcc`: Link GCC target libraries
+  - `--targets <targets>`: Target libraries to build (all, comma-separated list)
+
+- **setup_llvm**: Set up LLVM compiler
+  ```
+  setup_llvm [--targets <targets>]
+  ```
+  - `--targets <targets>`: Target architecture
+
+- **setup_python**: Set up Python
+  ```
+  setup_python [<version>|detect|--native-only]
+  ```
+  - `<version>`: Python version (default: PYTHON_VER)
+  - `detect`: Auto-detect from sysroot
+  - `--native-only`: Only build for host
+
+- **prepare_sysroot**: Relink libraries with relative paths
+  ```
+  prepare_sysroot
+  ```
+
+- **create_sysroot**: Create sysroot from archive
+  ```
+  create_sysroot <archive_url_or_file>
+  ```
+  - `<archive_url_or_file>`: URL or local file containing root filesystem
+
+#### Data Functions (data.functions)
+
+- **create_key_sscertificate**: Create a self-signed certificate
+  ```
+  create_key_sscertificate
+  ```
+
+- **generate_ssh_keys**: Generate SSH keys
+  ```
+  generate_ssh_keys [--install <destination>]
+  ```
+  - `--install <destination>`: Install keys to destination
+
+Here's a simple example of how to create a project file:
+
+```bash
+#!/bin/bash
+# Example project file: example.prj
+
+## Configuration options
+BUILD_LIBSHARED=1
+BUILD_LIBSTATIC=0
+LTOENABLE=thin
+KERNEL_LTOENABLE=thin
+
+## Set up the toolchain
+setup_full_toolchain --with-gnu-install --with-llvm --with-python
+
+## Create a base filesystem
+build lfs/create-base-fs_1.0
+
+## Create and mount an image
+create_image myimage --rootfstype ext4 --size 2G
+mount_tag myimage --mountlist "2:/ 1:/boot"
+
+## Build some packages
+build package1
+build package2
+
+## Run post-installation commands
+run_on_root_dir myimage root "systemctl enable service1"
+run_on_root_dir myimage root "echo 'custom config' > /etc/config"
+
+## Unmount the image
+unmount_tag myimage
+
+## Create self-extracting package
+create_sfx_package ${PACKAGES_PATH}/my_package
+```
+
+### Package Parameters
+
+The following parameters are extracted from the build.functions file and can be used to define a package:
+
+#### Package Definition
 
 **PKG_URL: (*)**  
-URL where download the sources.   
+URL where to download the sources.   
 `PKG_URL="http://packages.org/package"`
 
 **GIT_URL:**  
-URL where clone the sources via git.  
+URL where to clone the sources via git.  
 `GIT_URL="http://git.repo/user/repo"`
 
 **GIT_COMMIT:**  
@@ -96,10 +436,26 @@ Tag or commit hash.
 `GIT_COMMIT="tags/v.1.5"`
 
 **PKG_DEPS:**  
-define dependencies to build and install before building this.  
+Define dependencies to build and install before building this.  
 `PKG_DEPS="dir1/package1 dir1/package2 dir2/package3"`
 
-#### Prebuild process
+**PKG_SRCDIR:**  
+Specify source directory name.  
+`PKG_SRCDIR="package-1.0"`
+
+**PKG_SUFFIX:**  
+Add a suffix to the package name.  
+`PKG_SUFFIX="-custom"`
+
+**PKG_VER:**  
+Specify package version.  
+`PKG_VER="1.0"`
+
+**PKG_CHECK:**  
+Command to check if package is already installed.  
+`PKG_CHECK="command arg1 arg2"`
+
+#### Prebuild Process
 
 **PATCHDEB:**  
 URL where to download Debian package that contains patches.  
@@ -110,197 +466,295 @@ Patch filename under bbxb/patches directory or URL.
 `PATCHES="[patch1.patch] [url]"`
 
 **PKG_PREBUILD:**  
-Runs commands on source files before autoreconf and configuration on source directory
-`PKG_PREBUILD="command1; command2 && command3"`  
-#### Build process
-
-**PKG_COPYSRC:**  
-Copy sources in the build directory (often needed for buggy build processes). Not enabled by default on configmake (0), enabled on other build processes (1).  
-`PKG_COPYSRC=1`
-
-**BUILD_PROCESS: (*)**  
-Define what build process to use:  
-`downloadonly`: it only downloads the package and creates the source directory  
-`configmake`: it downloads, creates source directory and run a standard configure/make build process  
-`cmakebuild`: it downloads, creates source directory and run a standard cmake/make build process  
-`mesonninja`: it downloads, creates source directory and run a standard meson/ninja build process  
-`cargobuild`: it downloads, creates source directory and run a standard Rust cargo build process  
-`simplemake`: it downloads, creates source directory, copy to build directory and run a standard make process  
-`pythonbuild`: it downloads, creates source directory and run a standard python module build  
-`kernelbuild`: it downloads, creates source directory and run a standard kernel build process using configuration provided in platform directory configuration file. 
-`custombuild`: it downloads, creates source directory and run a custim build process using PKG_BUILDSCRIPT variable to build package.
-`BUILD_PROCESS=downloadonly|configmake|mesonninja|simplemake|pythonbuild|kernelbuild`
+Runs commands on source files before autoreconf and configuration on source directory.  
+`PKG_PREBUILD="command1; command2 && command3"`
 
 **PKG_AUTOCONF:**  
-*[configmake]*  
 By default "autoreconf -fi" is not run before configure process (0). 1 to enable it.  
-`AUTOCONF=0|1`
+`PKG_AUTOCONF=0|1`
+
+**PKG_AUTOMAKE:**  
+Override automake version.  
+`PKG_AUTOMAKE="1.16.5"`
+
+**PKG_LIBTOOL:**  
+Override libtool version.  
+`PKG_LIBTOOL="2.4.7"`
+
+**PKG_GETTEXT:**  
+Override gettext version.  
+`PKG_GETTEXT="0.21.1"`
 
 **AUTOCONF_PATH:**  
-*[configmake]*  
-Specify source subdirectory where to run autoreconf:  
+Specify source subdirectory where to run autoreconf.  
 `AUTOCONF_PATH={subdir1/subdir2[,subdir3[,subdir1/subdir2/subdir4]],autoscan}`
-+ `autoscan:` Scan for configure.ac inside source directory
+
+**AUTOCONF_THREADS:**  
+Number of threads to use for autoreconf.  
+`AUTOCONF_THREADS=4`
+
+#### Build Process
+
+**BUILD_PROCESS: (*)**  
+Define what build process to use.  
+`BUILD_PROCESS=downloadonly|configmake|cmakebuild|mesonninja|cargobuild|simplemake|pythonbuild|kernelbuild|custombuild|perlmodule`
+
+Available build processes:
+- `downloadonly`: Only downloads the package and creates the source directory
+- `configmake`: Downloads, creates source directory and runs a standard configure/make build process
+- `cmakebuild`: Downloads, creates source directory and runs a standard cmake/make build process
+- `mesonninja`: Downloads, creates source directory and runs a standard meson/ninja build process
+- `cargobuild`: Downloads, creates source directory and runs a standard Rust cargo build process
+- `simplemake`: Downloads, creates source directory, copies to build directory and runs a standard make process
+- `pythonbuild`: Downloads, creates source directory and runs a standard python module build
+- `kernelbuild`: Downloads, creates source directory and runs a standard kernel build process using platform configuration
+- `custombuild`: Downloads, creates source directory and runs a custom build process using PKG_BUILDSCRIPT
+- `perlmodule`: Downloads, creates source directory and builds a Perl module
+
+**PKG_COPYSRC:**  
+Copy sources in the build directory (often needed for buggy build processes).  
+`PKG_COPYSRC=1`
+
+**PKG_TARGET:**  
+Specify build target.  
+`PKG_TARGET="native|cross|target"`
+
+**PKG_TARGET_ENV:**  
+Specify build target environment.  
+`PKG_TARGET_ENV="native|cross|target"`
+
+**PKG_DISABLECROSSPYTHON:**  
+Disable cross-python environment.  
+`PKG_DISABLECROSSPYTHON=1`
+
+**PKG_DISABLECCWRAPPER:**  
+Disable compiler wrapper.  
+`PKG_DISABLECCWRAPPER=1`
 
 **CONF_CMD:**  
-*[configmake]*  
-Override configure command. "configure" by default  
+Override configure command. "configure" by default.  
 `CONF_CMD="configure_new"`
 
+**CONF_ENV:**  
+Environment variables for configure command.  
+`CONF_ENV="VAR1=value1 VAR2=value2"`
+
 **CONF_FLAGS:**  
-*[configmake,cmakebuild,mesonninja,cargobuild,kernelbuild]*  
-Specify configure, cmake or meson parameters. For kernel enable, disable or build as module, following the scripts/config syntax (-e enable, -d disable, -m module)
+Specify configure, cmake or meson parameters. For kernel: -e enable, -d disable, -m module.  
 `CONF_FLAGS="--disable-feature or -DENABLE_FEATURE"`
 
 **CONF_PATH:**  
-*[configmake,simplemake,cmake,custom]*  
-Specify source subdirectory where to run the build  
+Specify source subdirectory where to run the build.  
 `CONF_PATH=subdir1/subdir2`
 
+**CONF_VARS:**  
+Variables to pass to configure.  
+`CONF_VARS="VAR1=value1 VAR2=value2"`
+
 **STD_CONF_FLAGS:**  
-*[configmake]*  
-Use standard conf flags used by bbxb (i.e. --prefix, --exec-prefix etc), default to 1, set to 0 to override it
+Use standard conf flags used by bbxb (--prefix, --exec-prefix, etc). Default: 1.  
 `STD_CONF_FLAGS=1`
 
+**CMAKE_GENERATOR:**  
+Specify CMake generator.  
+`CMAKE_GENERATOR="Ninja"`
+
 **PKG_TOOLCHAIN:**  
-*[common]*  
-Define what toolchain to use when building this package
+Define what toolchain to use when building this package.  
 `PKG_TOOLCHAIN=gnu|llvm`
 
+**PKG_LLVMPOLLYFEATURES:**  
+Specify LLVM Polly features.  
+`PKG_LLVMPOLLYFEATURES="polly vectorizer parallel"`
+
 **PKG_CFLAGS/PKG_CXXFLAGS/PKG_LDFLAGS/PKG_FCFLAGS:**  
-*[common]*  
-Permits to specify additional c/c++/ld compiler flags to build with:  
-`PKG_CFLAGS="-f<parameter> -W<parameter>"`
-`PKG_CXXFLAGS="-f<parameter> -W<parameter>"`
-`PKG_LDFLAGS="-l<library>"`
+Specify additional compiler flags.  
+`PKG_CFLAGS="-f<parameter> -W<parameter>"`  
+`PKG_CXXFLAGS="-f<parameter> -W<parameter>"`  
+`PKG_LDFLAGS="-l<library>"`  
+`PKG_FCFLAGS="-f<parameter>"`
 
 **PKG_FAULTYCFLAGS:**  
-*[common]*  
-Move compiler FLAGS from xFLAGS to CC/CXX/CPP in order to override some faulty build scripts (i.e.: old versions of libtool). Disabled (0) by default.
+Move compiler FLAGS from xFLAGS to CC/CXX/CPP for faulty build scripts.  
 `PKG_FAULTYCFLAGS=0`
 
 **PKG_CONFIG_SYSROOT_DIR:**  
-*[common]*  
-Override PKG_CONFIG_SYSROOT_DIR variable that is by default set on DISTOS path  
+Override PKG_CONFIG_SYSROOT_DIR variable.  
 `PKG_CONFIG_SYSROOT_DIR=${BIN_PATH}`
 
+**PKG_LD_LIBRARY_PATH:**  
+Additional LD_LIBRARY_PATH.  
+`PKG_LD_LIBRARY_PATH="/path/to/lib"`
+
+**PKG_MAKEENV:**  
+Environment variables for make.  
+`PKG_MAKEENV="VAR1=value1 VAR2=value2"`
+
+**PKG_MAKETARGETS:**  
+Make targets to build.  
+`PKG_MAKETARGETS="all,install"`
+
 **PKG_MAKEVARS:**  
-*[configmake,simplemake,cmakebuild,mesonninja,kernelbuild]*  
-Define make parameters or variabes to pass to Makefile  
+Make parameters or variables.  
 `PKG_MAKEVARS="-j1 VARIABLE1=value VARIABLE2=value2"`
 
-**CARGO_BIN/CARGO_LIB/CARGO_BINLIST/CARGO_STRIP:**  
-*[cargobuild]*  
-Override installation path for binary  
+**CARGO_BIN:**  
+Override installation path for binary.  
 `CARGO_BIN=${INSTALL_EXECPREFIX}/sbin`
 
-Override installation path for library  
+**CARGO_LIB:**  
+Override installation path for library.  
 `CARGO_LIB=${INSTALL_EXECPREFIX}/lib64`
 
-Define the list of binaries to build and install  
+**CARGO_BINLIST:**  
+Define binaries to build and install.  
 `CARGO_BINLIST="binary1 binary2 binary3"`
 
-Define the list of libraries to build and install  
+**CARGO_LIBLIST:**  
+Define libraries to build and install.  
 `CARGO_LIBLIST="lib1 lib2 lib3"`
 
-Specify if the binaries should be stripped out of unneeded symbols  
+**CARGO_STRIP:**  
+Specify if binaries should be stripped.  
 `CARGO_STRIP=1`
 
 **PKG_BUILDSCRIPT:**  
-*[custombuild]*  
-Run commands in the variable to build package  
+Run commands to build package (for custombuild).  
 `PKG_BUILDSCRIPT="command1; command2 && command3"`
 
+**PKG_KERNEL_MOD:**  
+Kernel module name.  
+`PKG_KERNEL_MOD="mymodule"`
+
+**PKG_KERNEL_MODPATH:**  
+Kernel module path.  
+`PKG_KERNEL_MODPATH="extra"`
+
 **PKG_KERNEL_INITRAMFS:**  
-*[kernelbuild]*  
-Create initramfs for the kernel (default: 0)  
-`PKG_KERNEL_INITRAMFS="{0|1}`
+Create initramfs for the kernel (default: 0).  
+`PKG_KERNEL_INITRAMFS=1`
 
 **PKG_KERNEL_INITRAMFS_DRIVERS:**  
-*[kernelbuild]*  
-Specify what drivers to install during initramfs initialization without .ko  
-`PKG_KERNEL_INITRAMFS_DRIVERS="[driver1 [driver2 [drivern]]]`
+Drivers to install during initramfs initialization.  
+`PKG_KERNEL_INITRAMFS_DRIVERS="driver1 driver2 driver3"`
+
+**PKG_KERNEL_BUILD_MODULES:**  
+Additional kernel modules to build.  
+`PKG_KERNEL_BUILD_MODULES="mod1,mod2,mod3"`
 
 **PKG_OVERRIDELTO:**  
-*[common]*  
-Override LTOENABLE environment variable that can be specified at bbxb.conf, project or package level by default (1) if not specified anywhere  
-`PKG_OVERRIDELTO=0`
+Override LTOENABLE environment variable.  
+`PKG_OVERRIDELTO=0|1|2|thin|fat`
 
 **PKG_OVERRIDELD:**  
-*[common]*  
-Override default linker environment variable that can be specified at bbxb.conf, project or package level by default (gold) if not specified anywhere  
-`PKG_OVERRIDELLD={gold,ld,lld}`
+Override default linker.  
+`PKG_OVERRIDELD=gold|ld|lld`
 
 **PKG_OVERRIDESHARED:**  
-*[common]*  
-Override BUILD_SHARED environment variable that can be specified at bbxb.conf, project or package level by default (1) if not specified anywhere  
-`PKG_OVERRIDESHARED=1`
+Override BUILD_SHARED environment variable.  
+`PKG_OVERRIDESHARED=0|1`
 
 **PKG_OVERRIDESTATIC:**  
-*[common]*  
-Override BUILD_STATIC environment variable that can be specified at bbxb.conf, project or package level by default (0) if not specified anywhere  
-`PKG_OVERRIDESTATIC=0`
+Override BUILD_STATIC environment variable.  
+`PKG_OVERRIDESTATIC=0|1`
+
+**PKG_RUSTFLAGS:**  
+Rust compiler flags.  
+`PKG_RUSTFLAGS="-C target-feature=+crt-static"`
 
 #### Post build process
 
 **PKG_POSTBUILD:**  
-Runs commands on source files after build and installation on build directory:  
+Runs commands after build and installation on build directory.  
 `PKG_POSTBUILD="command1; command2 && command3"`
 
-**PKG_POSTINSTALL:**
-Runs commands after package installation or image finalization in a sysrooted environment:  
+**PKG_POSTINSTALL:**  
+Runs commands after package installation in a sysrooted environment.  
 `PKG_POSTINSTALL="command1; command2 && command3"`
 
 **PKG_POSTINSTALL_PRIO:**  
-Define in what postition the postinstall script should be run:  
+Define the priority for the postinstall script.  
 `PKG_POSTINSTALL_PRIO=50`
 
-#### Environment variables
-The following environemnt variables can be used to create your package and default values are:
+**VAR_INSTALL_LIBDIR:**  
+Override INSTALL_LIBDIR.  
+`VAR_INSTALL_LIBDIR="/usr/lib64"`
 
-`BIN_PATH`: ${HOME}/.bbxb/< projectname >/< platformname >/binaries (destination of build)  
-`DISTOS_PATH`: ${HOME}/.bbxb/< projectname >/< platformname >/distos (source of distribution libraries)  
-`INSTALL_PREFIX`: /usr  
-`INSTALL_EXECPREFIX`: /usr  
-`INSTALL_INCLUDEDIR`: /usr/include  
-`INSTALL_LIBDIR`: /usr/lib or /usr/lib/(MULTIARCH suffix)  
-`INSTALL_SYSCONFDIR`: /usr/etc  
-`INSTALL_LOCALSTATEDIR`:/var  
+**VAR_INSTALL_LIBSUFFIX:**  
+Override INSTALL_LIBSUFFIX.  
+`VAR_INSTALL_LIBSUFFIX="64"`
 
-**: mandatory information*
+**VAR_INSTALL_INCDIR:**  
+Override INSTALL_INCLUDEDIR.  
+`VAR_INSTALL_INCDIR="/usr/include"`
 
-### Define your platform
+**VAR_INSTALL_CONFDIR:**  
+Override INSTALL_SYSCONFDIR.  
+`VAR_INSTALL_CONFDIR="/etc"`
 
-`HOS=<OS_Name>`: Operating system name  
-`HM=<CPU_Architecture>`: CPU Architecture (arm, aarch64, x86_64, ...)  
-`HLIBC=<C_Library>`: C Library type (gnu, gnueabi, gnueabihf, ...)  
-`HARCH_LIB=[64]`: Set to add 64 to lib directory  
-`HARCH_BITWIDTH={32|64}`: Architecture bit width  
+## Platform Configuration
 
-`HMARCH=<C_Comp_MARCH>`: Compiler architecure definition (-march)  
-`HMCPU=<C_Comp_MCPU>`: Compiler CPU definition (-mtune)  
-`HMFPU=<C_Comp_MFPU>`: Compiler FPU definition (-mfpu only for arm)  
-`HMFLOATABI={hard|soft}`: Compiler Float type (hard or soft)  
-`HMENDIAN={little|big}`: Compiler endianess  
-`HMGCCPARAMS="<Add_C_Comp_Flags>`: Additional C Compiler Flags  
-`HMARCH_RUST="<Add_Rust_Comp_Flags>"`: RUST Flags for architecture (i.e. "+neon,+crypto")  
+Platform files (`.conf`) define architecture settings:
 
-`KERNEL_ARCH=<Arch_Subdir>`: Kernel architecture subdirectory (arm, arm64, x86, ...)  
-`KERNEL_DEFCONFIG=<Kern_Config>`: What configuration file to use under (arch/[Arch_subdir]/config, i.e.: bcmrpi3_defconfig)  
-`KERNEL_EXTRAVERSION=<String>`: String to append to kernel version  
-`KERNEL_IMAGE=<Kern_Image>`: Name of the kernel image filename generated by kernel build process (i.e.: Image.gz, zImage, bzImage)  
-`KERNEL_NAME=<Boot_Kern_Image>`: Name of the kernel image filename to put in /boot directory  
-`KERNEL_DTBS={0|1}`: Specify the need of dtbs files  
+```bash
+HOS=linux            # Operating system name
+HM=aarch64           # CPU Architecture
+HLIBC=gnu            # C Library type
+HARCH_LIB=64         # Set to add 64 to lib directory
+HARCH_BITWIDTH=64    # Architecture bit width
 
-`QEMU_MACHINE=<machine>`: QEMU Machine name for emulator (i.e virt or q35)  
-`QEMU_CPU=<cpu>`: QEMU CPU type for emulator (i.e cortex-a53)  
-`QEMU_SMP=<smp>`: QEMU CPU numbers for emulator (i.e. 2)  
-`QEMU_RAM=<memory>`: QEMU RAM amount in M for emulator (i.e. 2048)  
-`QEMU_STORAGE=<storage_device>`: QEMU device for storage (i.e. virtio-blk-pci)  
-`QEMU_NETWORK=<netowrk_device>`: QEMU device for network (i.e. virtio-net-pci)  
-`QEMU_GRAPHIC=<graphic_device>`: QEMU device for graphic adapter (i.e. virtio-gpu-pci,xres=1600,yres=900)  
-`QEMU_INPUT="<input devices>"`: QEMU devices for inputa (i.e. "virtio-keyboard-pci virtio-mouse-pci")  
-`QEMU_CONSOLE=<tty_device>`: Specify where to output the console as a kernel_append parameter for emulator (i.e. ttyS0)  
-`QEMU_DTB=<DTB_Name>`: Specify what DTB to use (i.e. bcm2710-rpi-3-b.dtb)  
-`QEMU_OTHERDEVICES="<other_devices>"`: QEMU other needed devices (i.e. "virtio-balloon-pci virtio-rng-pci")  
-`QEMU_KERNCONFIG="<kernel_append_params"`: Further kernel_append parameters for emulator (i.e. "net.ifnames=0 video=1600x900-32")  
+HMARCH=armv8-a+crypto # Compiler architecture definition
+HMCPU=cortex-a53     # Compiler CPU definition
+HMENDIAN=little      # Compiler endianness
+
+KERNEL_ARCH=arm64    # Kernel architecture subdirectory
+KERNEL_DEFCONFIG=bcmrpi3_defconfig # Kernel configuration
+KERNEL_IMAGE=Image.gz # Kernel image name
+KERNEL_DTBS=1        # Enable device tree binaries
+
+# QEMU settings for emulation
+QEMU_MACHINE=raspi3b
+QEMU_CPU=cortex-a53
+QEMU_SMP=4
+QEMU_RAM=1024
+QEMU_STORAGE=sd-card
+QEMU_NETWORK=usb-net
+QEMU_CONSOLE=ttyAMA0
+QEMU_DTB=bcm2710-rpi-3-b.dtb
+```
+
+## Utilities
+
+BBCrossBuild includes several utility scripts to help with development:
+
+- `deptool`: Analyze package dependencies
+  ```
+  utilities/deptool search <directory> <library>   # Search for libraries
+  utilities/deptool show <file>                    # Show dependencies
+  utilities/deptool showall <directory>            # Show all dependencies
+  ```
+
+- `crossgdb`: Debug cross-compiled binaries
+  ```
+  utilities/crossgdb <executable> [args]
+  ```
+
+- `crossldd`: Show shared library dependencies
+  ```
+  utilities/crossldd <executable>
+  ```
+
+- `qemu_cmdgen`: Generate QEMU commands for testing
+  ```
+  utilities/qemu_cmdgen [--run] [--quiet] [--batchtype <type>] [--rootdev <dev>] [--rootfs <fs>] [--savecmd <file>] <project> <platform>
+  ```
+
+- `fs_manager`: Create and manage filesystem images
+  ```
+  utilities/fs_manager/fs_manager [-c] [-m] [-u] [-r] [-s <size>] [--rootfs <fs>] [--layout <file>] <image>
+  ```
+
+- `aws_create_infrastructure`: Manage AWS EC2 instances
+  ```
+  utilities/aws_create_infrastructure [run|terminate|destroy|show]
+  ```
