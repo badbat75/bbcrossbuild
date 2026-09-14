@@ -313,7 +313,7 @@ def script_text(assignments):
     return body.rstrip() + "\n"
 
 
-def analyse(recipe_path, text):
+def analyse(recipe_path, text, force_toplevel=False):
     """Return (chains, issues, superseded) for one recipe.
 
     chains: {var: [Assignment...]} for the variables that can be converted mechanically.
@@ -335,6 +335,10 @@ def analyse(recipe_path, text):
         if a.depth > 0:
             issues.append("%s%s at line %d is nested in case/if/for (depth %d): move the control flow into %s"
                           % (a.name, a.op, a.line_no, a.depth, SCRIPT_VARS[a.name]))
+            if force_toplevel:
+                # --force-toplevel: convert the top-level chain anyway, the nested fragments
+                # stay in the recipe for the manual conversion
+                continue
             chains.pop(a.name, None)
             chains.setdefault("__blocked__" + a.name, True)
             continue
@@ -560,13 +564,13 @@ def do_verify(bbxb, platform, dirs):
     return bad == 0
 
 
-def do_extract(bbxb, dirs):
+def do_extract(bbxb, dirs, force_toplevel=False):
     converted = 0
     for d in dirs:
         recipe = os.path.join(d, RECIPE_FILENAME)
         with open(recipe, encoding="utf-8") as fh:
             text = fh.read()
-        chains, _issues, superseded = analyse(recipe, text)
+        chains, _issues, superseded = analyse(recipe, text, force_toplevel)
         try:
             found, _suspicious = parse_recipe(text, set(SCRIPT_VARS) | set(DEAD_VARS))
         except ScanError as exc:
@@ -653,6 +657,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--bbxb", default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     parser.add_argument("--platform", default="generic-x64")
+    parser.add_argument("--force-toplevel", action="store_true",
+                        help="with --extract: convert the top-level chain even when nested fragments exist")
     mode = parser.add_mutually_exclusive_group(required=True)
     for m in ("move", "verify", "extract", "report", "check"):
         mode.add_argument("--" + m, action="store_true")
@@ -666,7 +672,7 @@ def main():
     if args.verify:
         return 0 if do_verify(bbxb, args.platform, dirs) else 1
     if args.extract:
-        do_extract(bbxb, dirs)
+        do_extract(bbxb, dirs, args.force_toplevel)
         return 0
     if args.report:
         do_report(bbxb, dirs)

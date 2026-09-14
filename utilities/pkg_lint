@@ -1,0 +1,216 @@
+#!/bin/bash
+# pkg_lint: static checks on the recipe directories under packages/.
+#
+# Usage: utilities/pkg_lint [<platform>] [packages/<group>/<name> ...]
+#
+# For every recipe directory (all of them by default) it checks that:
+#   - it contains package.env and nothing but package.env, prebuild.sh, postbuild.sh,
+#     build.sh, postinstall.sh, files/ and patches/;
+#   - package.env and every *.sh parse (bash -n) and pass shellcheck when it is installed;
+#   - sourced the way build does (targets "", native and cross), package.env does not assign
+#     the removed variables (PKG_PREBUILD, PKG_POSTBUILD, PKG_BUILDSCRIPT, PKG_POSTINSTALL and
+#     the dead ones), BUILD_PROCESS names a build process, BUILD_PROCESS=custom comes with
+#     build.sh, local PATCHES entries exist under patches/ and PKG_DEPS point to existing recipes.
+# Exit status is 1 when at least one error was reported.
+
+BB_HOME=$(realpath "$(dirname "${BASH_SOURCE[0]}")/..")
+PLATFORM_NAME=generic-x64
+if [ -n "${1}" ] && [ -f "${BB_HOME}/platforms/${1}.conf" ]
+then
+	PLATFORM_NAME=${1}
+	shift
+fi
+PROJECT_NAME=pkg_lint
+DATA_PATH=${DATA_PATH:-/tmp/pkg_lint}
+export BB_HOME PLATFORM_NAME PROJECT_NAME DATA_PATH
+
+cd "${BB_HOME}" || exit 1
+# shellcheck source=/dev/null
+source "${BB_HOME}/seterr"
+# shellcheck source=/dev/null
+source "${BB_HOME}/core.functions"
+# shellcheck source=/dev/null
+source "${BB_HOME}/platforms/${PLATFORM_NAME}.conf" 2> /dev/null
+# shellcheck source=/dev/null
+source "${BB_HOME}/setenv" 2> /dev/null
+# shellcheck source=/dev/null
+source "${BB_HOME}/build.functions"
+
+BUILD_PROCESSES="downloadonly configmake cmakebuild mesonninja cargobuild simplemake pythonbuild perlmodule kernelbuild kernelmodbuild custom none"
+REMOVED_VARS="PKG_PREBUILD PKG_POSTBUILD PKG_BUILDSCRIPT PKG_POSTINSTALL INST_CMD PKG_DPES PKG_POST_BUILD CONF_ENVS PKG_SEPS PKG_TWOSTEPSBUILD PKG_SKIPINSTALL CONF_COPYRSC"
+ALLOWED_FILES="${RECIPE_FILENAME} prebuild.sh postbuild.sh build.sh postinstall.sh files patches"
+
+# A recipe only assigns variables: make sure nothing it may call can run a build.
+for FN in run_cmd download_uncompress downloadsources preparesources downloadonly configmake \
+	cmakebuild mesonninja cargobuild simplemake pythonbuild perlmodule kernelbuild kernelmodbuild \
+	custom create_environment_source create_recipe_source create_sfx_package build
+do
+	eval "${FN} () { return 0; }"
+done
+
+ERRORS=0
+WARNINGS=0
+
+function report () {
+	# report <error|warning> <recipe> <message>
+	case ${1} in
+		error) ERRORS=$((ERRORS+1)) ;;
+		warning) WARNINGS=$((WARNINGS+1)) ;;
+	esac
+	echo "${1}: ${2}: ${3}"
+}
+
+function source_recipe () {
+	### source_recipe <recipe dir> <target>: source package.env the way build does and print
+	### the checks that only a sourced recipe allows. Runs in a subshell.
+	(
+		set +E
+		trap - ERR
+		# the variables below are read by the sourced recipe, not by this script
+		# shellcheck disable=SC2034
+		local INSTALL_PREFIX INSTALL_EXECPREFIX INSTALL_LIBDIR INSTALL_LIBSUFFIX INSTALL_INCLUDEDIR \
+			INSTALL_SYSCONFDIR INSTALL_LOCALSTATEDIR INSTALL_SHAREDIR PKG_TARGET_ENV PKG_PKGPATH \
+			PKG_FILE PKG_NAME PKG_RECIPEPATH PKG_FULLNAME PKG_SRCDIR PKG_BLDPATH PKG_TARGET VAR DEP PATCH
+		PKG_TARGET=${2}
+		case ${PKG_TARGET} in
+			native)
+				PKG_TARGET_ENV=native
+				PKG_PKGPATH=
+				INSTALL_PREFIX=${NATIVE_PREFIX}
+				INSTALL_EXECPREFIX=${NATIVE_EXECPREFIX}
+				INSTALL_LIBDIR=${NATIVE_LIBDIR}
+				INSTALL_LIBSUFFIX=
+				INSTALL_INCLUDEDIR=${NATIVE_INCLUDEDIR}
+				INSTALL_SYSCONFDIR=${NATIVE_SYSCONFDIR}
+				INSTALL_LOCALSTATEDIR=${NATIVE_LOCALSTATEDIR}
+				INSTALL_SHAREDIR=${NATIVE_SHAREDIR}
+			;;
+			cross)
+				PKG_TARGET_ENV=cross
+				PKG_PKGPATH=
+				INSTALL_PREFIX=${CROSS_PREFIX}
+				INSTALL_EXECPREFIX=${CROSS_EXECPREFIX}
+				INSTALL_LIBDIR=${CROSS_LIBDIR}
+				INSTALL_LIBSUFFIX=
+				INSTALL_INCLUDEDIR=${CROSS_INCLUDEDIR}
+				INSTALL_SYSCONFDIR=${CROSS_SYSCONFDIR}
+				INSTALL_LOCALSTATEDIR=${CROSS_LOCALSTATEDIR}
+				INSTALL_SHAREDIR=${CROSS_SHAREDIR}
+			;;
+			*)
+				PKG_TARGET_ENV=target
+				PKG_PKGPATH=${PACKAGES_PATH}/pkg_lint
+				INSTALL_PREFIX=${TARGET_PREFIX}
+				INSTALL_EXECPREFIX=${TARGET_EXECPREFIX}
+				INSTALL_LIBDIR=${TARGET_LIBDIR}
+				INSTALL_LIBSUFFIX=${TARGET_LIBSUFFIX}
+				INSTALL_INCLUDEDIR=${TARGET_INCLUDEDIR}
+				INSTALL_SYSCONFDIR=${TARGET_SYSCONFDIR}
+				INSTALL_LOCALSTATEDIR=${TARGET_LOCALSTATEDIR}
+				INSTALL_SHAREDIR=${TARGET_SHAREDIR}
+			;;
+		esac
+		PKG_RECIPEPATH=${1}
+		PKG_FILE=$(realpath --relative-to="${PKG_PATH}" "${PKG_RECIPEPATH}")
+		PKG_NAME=$(basename "${PKG_FILE}")
+		PKG_FULLNAME="\${PKG_NAME}\${PKG_SUFFIX}\${PKG_VER:+_\${PKG_VER}}"
+		PKG_SRCDIR=${PKG_FULLNAME}
+		PKG_BLDPATH=${BLD_PATH}/pkg_lint
+		# shellcheck source=/dev/null
+		if ! source "${PKG_RECIPEPATH}/${RECIPE_FILENAME}" > /dev/null 2>&1
+		then
+			echo "error: sourcing the recipe returned an error"
+		fi
+		for VAR in ${REMOVED_VARS}
+		do
+			if [ -n "${!VAR}" ]
+			then
+				echo "error: assigns the removed variable ${VAR} (target '${PKG_TARGET}')"
+			fi
+		done
+		case " ${BUILD_PROCESSES} " in
+			*" ${BUILD_PROCESS:-none} "*) ;;
+			*) echo "error: BUILD_PROCESS=${BUILD_PROCESS} is not a build process (target '${PKG_TARGET}')" ;;
+		esac
+		if [ "${BUILD_PROCESS}" = custom ] && [ ! -f "${PKG_RECIPEPATH}/build.sh" ]
+		then
+			echo "error: BUILD_PROCESS=custom without build.sh (target '${PKG_TARGET}')"
+		fi
+		IFS=,
+		for PATCH in ${PATCHES:-}
+		do
+			unset IFS
+			if [[ ! ${PATCH} =~ ^https?://|^ftp:// ]] && [ ! -f "${PKG_RECIPEPATH}/patches/${PATCH}" ]
+			then
+				echo "error: PATCHES entry ${PATCH} not found under patches/ (target '${PKG_TARGET}')"
+			fi
+			IFS=,
+		done
+		unset IFS
+		for DEP in ${PKG_DEPS}
+		do
+			if [ ! -f "$(recipe_file "${DEP/:*/}")" ]
+			then
+				echo "warning: dependency ${DEP/:*/} does not exist (target '${PKG_TARGET}')"
+			fi
+		done
+	)
+}
+
+function lint_recipe () {
+	### lint_recipe <recipe dir>
+	local DIR ENTRY SCRIPT LINE
+	DIR=${1%/}
+	if [ ! -f "${DIR}/${RECIPE_FILENAME}" ]
+	then
+		report error "${DIR}" "${RECIPE_FILENAME} is missing"
+		return
+	fi
+	for ENTRY in "${DIR}"/* "${DIR}"/.[!.]*
+	do
+		[ -e "${ENTRY}" ] || continue
+		case " ${ALLOWED_FILES} " in
+			*" $(basename "${ENTRY}") "*) ;;
+			*) report error "${DIR}" "unexpected entry $(basename "${ENTRY}")" ;;
+		esac
+	done
+	for SCRIPT in "${DIR}/${RECIPE_FILENAME}" "${DIR}"/*.sh
+	do
+		[ -f "${SCRIPT}" ] || continue
+		if ! bash -n "${SCRIPT}" 2> /dev/null
+		then
+			report error "${DIR}" "$(basename "${SCRIPT}") does not parse: $(bash -n "${SCRIPT}" 2>&1 | head -n 1)"
+		fi
+		if [ -n "${SHELLCHECK}" ]
+		then
+			while IFS= read -r LINE
+			do
+				report warning "${DIR}" "shellcheck: ${LINE}"
+			done < <(shellcheck -s bash -f gcc -e SC2148,SC2154,SC2034,SC2164,SC2086,SC2046,SC2016 "${SCRIPT}" 2> /dev/null | sed "s|^${BB_HOME}/||")
+		fi
+	done
+	for TARGET in "" native cross
+	do
+		while IFS= read -r LINE
+		do
+			report "${LINE%%:*}" "${DIR}" "${LINE#*: }"
+		done < <(source_recipe "${DIR}" "${TARGET}" | sort -u)
+	done
+}
+
+SHELLCHECK=$(command -v shellcheck || true)
+if [ "${#}" -gt 0 ]
+then
+	RECIPES=("${@}")
+else
+	mapfile -t RECIPES < <(find "${PKG_PATH}" -mindepth 2 -maxdepth 2 -type d -not -path "${PKG_PATH}/template*" | sort)
+fi
+for RECIPE in "${RECIPES[@]}"
+do
+	lint_recipe "$(realpath "${RECIPE}")"
+done | sed "s|${BB_HOME}/||" | sort -u | tee /tmp/pkg_lint.out
+ERRORS=$(grep -c '^error:' /tmp/pkg_lint.out)
+WARNINGS=$(grep -c '^warning:' /tmp/pkg_lint.out)
+rm -f /tmp/pkg_lint.out
+echo "pkg_lint: ${#RECIPES[@]} recipe(s), ${ERRORS} error(s), ${WARNINGS} warning(s)"
+[ "${ERRORS}" -eq 0 ]

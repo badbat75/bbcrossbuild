@@ -2004,12 +2004,12 @@ function build () {(
 		run_cmd "${PKG_BLDPATH}/runpostbuild.sh" >> "${LOG_FILE}"
 	fi
 	#### Post-Install
-	if [ -f "${PKG_RECIPEPATH}/postinstall.sh" ]
+	if [ -f "${PKG_RECIPEPATH}/postinstall.sh" ] && [ -z "${PKG_PKGPATH}" ]
 	then
-		if [ -z "${PKG_PKGPATH}" ]
-		then
-			trow_error "${ERROR_GENERIC}" "${PKG_FULLNAME}: postinstall.sh is not supported for ${PKG_TARGET_ENV} builds."
-		fi
+		### Post install scripts run inside the target image: nothing to do for native and cross builds
+		echo "postinstall.sh ignored for the ${PKG_TARGET_ENV} build" | log_buffer info >> "${LOG_FILE}"
+	elif [ -f "${PKG_RECIPEPATH}/postinstall.sh" ]
+	then
 		POSTINST_FILE="${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}"
 		run_cmd "mkdir -p \"${PKG_PKGPATH}/postinst_scripts\"" >> "${LOG_FILE}"
 		### The script runs inside the target chroot: prepend the image-safe values it may
