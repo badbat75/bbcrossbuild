@@ -123,7 +123,8 @@ download_uncompress () {
 	# if download file does not exists in filesystem
 	if [ ! -f "${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}" ]
 	then
-		run_cmd "curl -k -LsR -o \"${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}\" \"${URL}\""
+		### -f: an HTTP error must stop the build here instead of storing the error page as the source archive
+		run_cmd "curl -k -fLsR -o \"${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}\" \"${URL}\""
 	fi
 	if [ -d "${DEST_DIR}" ] && [ "${NODELETEDESTDIR}" -eq 0 ]
 	then
