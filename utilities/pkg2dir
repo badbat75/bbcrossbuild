@@ -314,16 +314,18 @@ def script_text(assignments):
 
 
 def analyse(recipe_path, text):
-    """Return (chains, issues) for one recipe.
+    """Return (chains, issues, superseded) for one recipe.
 
     chains: {var: [Assignment...]} for the variables that can be converted mechanically.
     issues: list of strings describing what needs manual work.
+    superseded: top-level assignments overwritten by a later top-level "=" (dead code).
     """
     issues = []
+    superseded = []
     try:
         found, suspicious = parse_recipe(text, set(SCRIPT_VARS) | set(DEAD_VARS))
     except ScanError as exc:
-        return {}, ["scanner: %s" % exc]
+        return {}, ["scanner: %s" % exc], []
     for line_no, line in suspicious:
         issues.append("line %d assigns a script variable in an unsupported position: %s" % (line_no, line[:60]))
     chains = {}
@@ -345,6 +347,10 @@ def analyse(recipe_path, text):
             chains["__blocked__" + a.name] = True
             continue
         if a.op == "=":
+            if a.name in chains:
+                issues.append("%s= at line %d overwrites the assignment at line %d (dead code, removed)"
+                              % (a.name, a.line_no, chains[a.name][0].line_no))
+                superseded.extend(chains[a.name])
             chains[a.name] = [a]
         else:
             if a.name not in chains:
@@ -368,7 +374,7 @@ def analyse(recipe_path, text):
                         issues.append("%s at line %d references ${%s} unescaped: it now takes the build environment value" % (name, a.line_no, env))
                 if "PATCH_PATH" in inner:
                     issues.append("%s at line %d references PATCH_PATH: patches now live in the recipe directory" % (name, a.line_no))
-    return chains, issues
+    return chains, issues, superseded
 
 
 STUB = r'''#!/bin/bash
@@ -514,7 +520,7 @@ def do_verify(bbxb, platform, dirs):
         recipe = os.path.join(d, RECIPE_FILENAME)
         with open(recipe, encoding="utf-8") as fh:
             text = fh.read()
-        chains, _issues = analyse(recipe, text)
+        chains, _issues, _superseded = analyse(recipe, text)
         for name, chain in chains.items():
             action = "OLD=${%s}\nNEW=\n" % name
             deferred = set()
@@ -560,13 +566,13 @@ def do_extract(bbxb, dirs):
         recipe = os.path.join(d, RECIPE_FILENAME)
         with open(recipe, encoding="utf-8") as fh:
             text = fh.read()
-        chains, _issues = analyse(recipe, text)
+        chains, _issues, superseded = analyse(recipe, text)
         try:
             found, _suspicious = parse_recipe(text, set(SCRIPT_VARS) | set(DEAD_VARS))
         except ScanError as exc:
             print("SKIP %s: %s" % (relname(bbxb, recipe), exc))
             continue
-        to_delete = []
+        to_delete = list(superseded)
         for name, chain in chains.items():
             body = script_text(chain)
             if body.strip() == "":
@@ -606,7 +612,7 @@ def do_report(bbxb, dirs):
         recipe = os.path.join(d, RECIPE_FILENAME)
         with open(recipe, encoding="utf-8") as fh:
             text = fh.read()
-        _chains, issues = analyse(recipe, text)
+        _chains, issues, _superseded = analyse(recipe, text)
         if issues:
             total += 1
             print(relname(bbxb, recipe))
