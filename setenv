@@ -1,6 +1,12 @@
 NPROCS=$(nproc --ignore=1)
 LTOPROCS=$(( $(nproc) / 4 ))
 
+# C standard for everything compiled with the host compiler (native builds, *_FOR_BUILD flags,
+# toolchain bootstrap). GCC 15 and later default to C23, where "int f ()" is a prototype with no
+# arguments, and several GNU packages built for the host (gettext, gmp...) still rely on the old
+# meaning. Override from bbxb.conf when the host compiler needs something else.
+HOST_CSTD=${HOST_CSTD:--std=gnu17}
+
 HARCH=${HM}-${HOS}-${HLIBC}
 
 DATA_PATH=${DATA_PATH:-/mnt/bbcrossbuild/datadir}

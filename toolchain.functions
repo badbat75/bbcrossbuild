@@ -99,7 +99,7 @@ function set_gnu_buildenv () {
 	AR_FOR_BUILD=$(which gcc-ar)
 	NM_FOR_BUILD=$(which gcc-nm)
 	RANLIB_FOR_BUILD=$(which gcc-ranlib)
-	CFLAGS_FOR_BUILD="-O3 -march=native -flto=${LTOPROCS}"
+	CFLAGS_FOR_BUILD="${HOST_CSTD} -O3 -march=native -flto=${LTOPROCS}"
 	CXXFLAGS_FOR_BUILD="-O3 -march=native -flto=${LTOPROCS}"
 	LDFLAGS_FOR_BUILD="-fuse-ld=gold -fuse-linker-plugin${OPTLINK_FLAGS:+ ${OPTLINK_FLAGS}}"
 	# shellcheck disable=SC2034
@@ -340,7 +340,7 @@ function setup_autotools () {
 				AR=\"${AR_FOR_BUILD}\" \\
 				NM=\"${NM_FOR_BUILD}\" \\
 				RANLIB=\"${RANLIB_FOR_BUILD}\" \\
-				CFLAGS=\"${CFLAGS_FOR_BUILD} -std=gnu17 -Wno-incompatible-pointer-types\" \\
+				CFLAGS=\"${CFLAGS_FOR_BUILD} -Wno-incompatible-pointer-types\" \\
 				CXXFLAGS=\"${CXXFLAGS_FOR_BUILD}\" \\
 				LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
 					\"${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}/configure\" --prefix=\"${AUTOTOOLS_PATH}\""
@@ -455,7 +455,7 @@ function setup_binutils () {
 				AR_FOR_BUILD=\"${AR_FOR_BUILD}\" \\
 				NM_FOR_BUILD=\"${NM_FOR_BUILD}\" \\
 				RANLIB_FOR_BUILD=\"${RANLIB_FOR_BUILD}\" \\
-				CFLAGS_FOR_BUILD=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}\" \\
+				CFLAGS_FOR_BUILD=\"${HOST_CSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}\" \\
 				CXXFLAGS_FOR_BUILD=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}\" \\
 				LDFLAGS_FOR_BUILD=\"${LINKERFLAGS}\" \\
 				CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
@@ -463,7 +463,7 @@ function setup_binutils () {
 				AR=\"${AR_FOR_BUILD}\" \\
 				NM=\"${NM_FOR_BUILD}\" \\
 				RANLIB=\"${RANLIB_FOR_BUILD}\" \\
-				CFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS}\" \\
+				CFLAGS=\"${HOST_CSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS}\" \\
 				CXXFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS}\" \\
 				LDFLAGS=\"${LINKERFLAGS}${LTO_LINKERFLAGS}\" \\
 				CFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
@@ -634,7 +634,7 @@ function setup_gcc () {
 				AR_FOR_BUILD=\"${AR_FOR_BUILD}\" \\
 				NM_FOR_BUILD=\"${NM_FOR_BUILD}\" \\
 				RANLIB_FOR_BUILD=\"${RANLIB_FOR_BUILD}\" \\
-				CFLAGS_FOR_BUILD=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}\" \\
+				CFLAGS_FOR_BUILD=\"${HOST_CSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}\" \\
 				CXXFLAGS_FOR_BUILD=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}\" \\
 				LDFLAGS_FOR_BUILD=\"${LINKERFLAGS}\" \\
 				CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
@@ -642,7 +642,7 @@ function setup_gcc () {
 				AR=\"${AR_FOR_BUILD}\" \\
 				NM=\"${NM_FOR_BUILD}\" \\
 				RANLIB=\"${RANLIB_FOR_BUILD}\" \\
-				CFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS}\" \\
+				CFLAGS=\"${HOST_CSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS}\" \\
 				CXXFLAGS=\"${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS}\" \\
 				LDFLAGS=\"${LINKERFLAGS}${LTO_LINKERFLAGS}\" \\
 				CFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
