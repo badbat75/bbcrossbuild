@@ -1,0 +1,666 @@
+#!/usr/bin/env python3
+"""pkg2dir: one-off migration of BBCrossBuild recipes to one directory per package.
+
+Modes (run them in this order):
+  --move      git mv packages/<group>/<name>.pkg -> packages/<group>/<name>/package.sh
+  --verify    cross-check the string scanner with bash: for every PKG_PREBUILD, PKG_POSTBUILD,
+              PKG_BUILDSCRIPT and PKG_POSTINSTALL assignment found at the top level of a
+              recipe, the extracted literal must evaluate to the value bash assigns when the
+              recipe is sourced. Run it before --extract.
+  --extract   move the top-level script strings into prebuild.sh / postbuild.sh / build.sh /
+              postinstall.sh (un-escaped), delete them from package.sh, drop dead variables.
+  --report    list the recipes that need manual work and why.
+  --check     after --extract: every package.sh parses and no longer assigns the moved variables.
+
+Options:
+  --bbxb <dir>       framework root (default: the parent directory of this script)
+  --platform <name>  platform used by the bash stub (default: generic-x64)
+  <recipe dir>...    restrict --verify/--extract/--report/--check to these package directories
+
+The un-escaping removes exactly one level of double-quote processing (\\\\ \\" \\` \\$ lose
+their backslash, \\<newline> is kept as a line continuation, anything else is kept), so the
+generated script is what the old runner contained, with the source-time ${VAR} references
+kept symbolic: every ALL_CAPS variable is provided at run time by recipe.source.
+"""
+
+import argparse
+import os
+import re
+import subprocess
+import sys
+import tempfile
+
+SCRIPT_VARS = {
+    "PKG_PREBUILD": "prebuild.sh",
+    "PKG_POSTBUILD": "postbuild.sh",
+    "PKG_BUILDSCRIPT": "build.sh",
+    "PKG_POSTINSTALL": "postinstall.sh",
+}
+SCRIPT_HEADERS = {
+    "PKG_PREBUILD": "pre-build script, sourced by runprebuild.sh (cwd: ${PKG_SRCPATH}, set -x, no -e)",
+    "PKG_POSTBUILD": "post-build script, sourced by runpostbuild.sh (cwd: ${PKG_BLDPATH}, set -ex)",
+    "PKG_BUILDSCRIPT": "custom build script, sourced by runmake.sh (cwd: ${PKG_BLDPATH}[/${CONF_PATH}], bash -ex)",
+    "PKG_POSTINSTALL": "post-install script, sourced as root inside the target chroot",
+}
+DEAD_VARS = [
+    "INST_CMD", "PKG_DPES", "PKG_POST_BUILD", "CONF_ENVS", "PKG_SEPS",
+    "PKG_TWOSTEPSBUILD", "PKG_SKIPINSTALL", "CONF_COPYRSC",
+]
+# Names exported by environment.source: a script that referenced them unescaped got the
+# bbxb process value at source time, now it gets the build environment value.
+ENV_OWNED = [
+    "SYSROOT", "CC", "CXX", "CPP", "FC", "F90", "CFLAGS", "CXXFLAGS", "CPPFLAGS", "FFLAGS",
+    "F90FLAGS", "LDFLAGS", "RUSTFLAGS", "AR", "AS", "NM", "RANLIB", "STRIP", "OBJCOPY",
+    "OBJDUMP", "READELF", "LINKER_EXE", "PATH", "LD_LIBRARY_PATH", "PKG_CONFIG",
+    "PKG_CONFIG_LIBDIR", "PKG_CONFIG_SYSROOT_DIR", "PKG_CONFIG_ALLOW_CROSS", "PYTHONPATH",
+    "CARGO_HOME", "CARGO_TARGET", "RUSTUP_HOME", "QEMU_LD_PREFIX", "LC_ALL", "CONFIG_SITE",
+]
+# Plain (non exported) assignments written by environment.source: visible to the old runners too.
+ENV_PLAIN = ["DISTOS_PATH", "BIN_PATH", "PKG_SRCPATH", "PKG_BLDPATH", "PKG_PKGPATH",
+             "PLATFORM_CFLAGS", "OPTCOMP_FLAGS", "OPTLINK_FLAGS"]
+RECIPE_FILENAME = "package.sh"
+
+# An assignment at the start of a line, optionally behind a case arm label ("llvm) VAR=...")
+ASSIGN_RE = re.compile(r"^(?P<indent>[ \t]*)(?P<arm>[A-Za-z0-9_|*?.-]+\)[ \t]+)?(?P<name>[A-Z_][A-Z0-9_]*)(?P<op>\+?=)")
+WORD_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+OPEN_RE = re.compile(r"(?<![\w$@{-])(?:case|if|for|while|until)(?![\w-])")
+CLOSE_RE = re.compile(r"(?<![\w$@{-])(?:esac|fi|done)(?![\w-])")
+QUOTED_RE = re.compile(r'"[^"]*"|\'[^\']*\'')
+COMMENT_RE = re.compile(r"(^|\s)#.*$")
+TAB_HACK_RE = re.compile(r'\$\(echo -e "\\\\?t"\)')
+
+
+def depth_delta(line):
+    """Net number of control-flow blocks opened by a line of recipe code (crude but adequate:
+    single-line quoted strings and comments are ignored first)."""
+    code = COMMENT_RE.sub("", QUOTED_RE.sub('""', line))
+    return len(OPEN_RE.findall(code)) - len(CLOSE_RE.findall(code))
+
+
+class ScanError(Exception):
+    pass
+
+
+def scan_word(text, i):
+    """Scan the shell word starting at text[i].
+
+    Returns (end, unescaped, segments) where end is the index just past the word, unescaped
+    is the value with one level of quoting removed and segments lists ('DQ'|'SQ'|'RAW', ...).
+    Content inside $( ), backticks and nested quotes is copied verbatim, as bash does.
+    """
+    n = len(text)
+    out = []
+    segments = []
+    stack = []
+    j = i
+    while j < n:
+        c = text[j]
+        top = stack[-1][0] if stack else None
+        if top is None:
+            if c == '"':
+                stack.append(["DQ"])
+                segments.append("DQ")
+                j += 1
+                continue
+            if c == "'":
+                stack.append(["SQ", True])
+                segments.append("SQ")
+                j += 1
+                continue
+            if c in " \t\n;":
+                return j, "".join(out), segments
+            if c == "\\" and j + 1 < n:
+                out.append(text[j + 1])
+                segments.append("RAW")
+                j += 2
+                continue
+            out.append(c)
+            segments.append("RAW")
+            j += 1
+            continue
+        if top == "SQ":
+            if c == "'":
+                stack.pop()
+            else:
+                out.append(c)
+            j += 1
+            continue
+        if top == "DQ":
+            if c == "\\" and j + 1 < n:
+                nxt = text[j + 1]
+                if nxt in '\\"$`':
+                    out.append(nxt)
+                else:
+                    out.append(c)
+                    out.append(nxt)
+                j += 2
+                continue
+            if c == '"':
+                stack.pop()
+                j += 1
+                continue
+            if c == "$" and text[j + 1:j + 2] == "(":
+                stack.append(["CS", 0, 0])
+                out.append("$(")
+                j += 2
+                continue
+            if c == "`":
+                stack.append(["BT"])
+                out.append(c)
+                j += 1
+                continue
+            out.append(c)
+            j += 1
+            continue
+        # Inside a command substitution, a backtick or a quote nested in one of them:
+        # everything is copied verbatim, only the structure is tracked.
+        out.append(c)
+        if top == "BT":
+            if c == "\\" and j + 1 < n:
+                out.append(text[j + 1])
+                j += 2
+                continue
+            if c == "`":
+                stack.pop()
+            j += 1
+            continue
+        if top == "IDQ":
+            if c == "\\" and j + 1 < n:
+                out.append(text[j + 1])
+                j += 2
+                continue
+            if c == '"':
+                stack.pop()
+            elif c == "$" and text[j + 1:j + 2] == "(":
+                out.append("(")
+                stack.append(["CS", 0, 0])
+                j += 1
+            elif c == "`":
+                stack.append(["BT"])
+            j += 1
+            continue
+        if top == "ISQ":
+            if c == "'":
+                stack.pop()
+            j += 1
+            continue
+        # top == "CS"
+        entry = stack[-1]
+        if c == "\\" and j + 1 < n:
+            out.append(text[j + 1])
+            j += 2
+            continue
+        if c == '"':
+            stack.append(["IDQ"])
+            j += 1
+            continue
+        if c == "'":
+            stack.append(["ISQ"])
+            j += 1
+            continue
+        if c == "`":
+            stack.append(["BT"])
+            j += 1
+            continue
+        if c == "$" and text[j + 1:j + 2] == "(":
+            out.append("(")
+            stack.append(["CS", 0, 0])
+            j += 2
+            continue
+        if c == "(":
+            entry[1] += 1
+            j += 1
+            continue
+        if c == ")":
+            if entry[1] > 0:
+                entry[1] -= 1
+            elif entry[2] > 0:
+                pass  # pattern terminator of a case arm
+            else:
+                stack.pop()
+            j += 1
+            continue
+        if c.isalpha() or c == "_":
+            m = WORD_RE.match(text, j)
+            word = m.group(0)
+            prev = text[j - 1] if j > 0 else " "
+            if prev in " \t\n;(":
+                if word == "case":
+                    entry[2] += 1
+                elif word == "esac" and entry[2] > 0:
+                    entry[2] -= 1
+            out.append(word[1:])
+            j = m.end()
+            continue
+        j += 1
+    if stack:
+        raise ScanError("unterminated quoted value")
+    return j, "".join(out), segments
+
+
+class Assignment:
+    def __init__(self, name, op, start, end, line_no, depth, raw, value, segments, tail):
+        self.name = name
+        self.op = op
+        self.start = start        # offset of the line start
+        self.end = end            # offset just past the closing newline (or EOF)
+        self.line_no = line_no
+        self.depth = depth
+        self.raw = raw            # literal as written, quotes included
+        self.value = value        # one level of quoting removed
+        self.segments = segments
+        self.tail = tail          # what follows the value on its last line
+
+
+def parse_recipe(text, names):
+    """Find every assignment of the given variables, with its control-flow depth.
+
+    Returns (assignments, suspicious) where suspicious lists (line_no, line) for lines that
+    mention one of the variables in a position the scanner does not handle.
+    """
+    found = []
+    suspicious = []
+    pos = 0
+    depth = 0
+    line_no = 0
+    n = len(text)
+    mention_re = re.compile(r"\b(?:%s)\+?=" % "|".join(sorted(names)))
+    while pos < n:
+        eol = text.find("\n", pos)
+        if eol < 0:
+            eol = n
+        line = text[pos:eol]
+        line_no += 1
+        m = ASSIGN_RE.match(line)
+        if m and m.group("name") in names:
+            vstart = pos + m.end()
+            try:
+                vend, value, segments = scan_word(text, vstart)
+            except ScanError as exc:
+                raise ScanError("%s at line %d: %s" % (m.group("name"), line_no, exc))
+            raw = text[vstart:vend]
+            teol = text.find("\n", vend)
+            if teol < 0:
+                teol = n
+            tail = text[vend:teol]
+            arm_depth = depth + (1 if m.group("arm") else 0)
+            found.append(Assignment(m.group("name"), m.group("op"), pos, min(teol + 1, n),
+                                    line_no, arm_depth, raw, value, segments, tail))
+            line_no += raw.count("\n")
+            pos = min(teol + 1, n)
+            continue
+        if mention_re.search(COMMENT_RE.sub("", line)):
+            suspicious.append((line_no, line.strip()))
+        depth += depth_delta(line)
+        pos = eol + 1
+    return found, suspicious
+
+
+def unescape_single_quoted(value):
+    return TAB_HACK_RE.sub("\t", value)
+
+
+def script_text(assignments):
+    """Concatenate the values of a top-level = / += chain into the script body."""
+    body = ""
+    for a in assignments:
+        v = a.value
+        if a.segments == ["SQ"]:
+            v = unescape_single_quoted(v)
+        body += v
+    body = body.strip("\n")
+    body = "\n".join(line.rstrip() if line.strip() == "" else line for line in body.split("\n"))
+    return body.rstrip() + "\n"
+
+
+def analyse(recipe_path, text):
+    """Return (chains, issues) for one recipe.
+
+    chains: {var: [Assignment...]} for the variables that can be converted mechanically.
+    issues: list of strings describing what needs manual work.
+    """
+    issues = []
+    try:
+        found, suspicious = parse_recipe(text, set(SCRIPT_VARS) | set(DEAD_VARS))
+    except ScanError as exc:
+        return {}, ["scanner: %s" % exc]
+    for line_no, line in suspicious:
+        issues.append("line %d assigns a script variable in an unsupported position: %s" % (line_no, line[:60]))
+    chains = {}
+    for a in found:
+        if a.name in DEAD_VARS:
+            continue
+        if a.depth > 0:
+            issues.append("%s%s at line %d is nested in case/if/for (depth %d): move the control flow into %s"
+                          % (a.name, a.op, a.line_no, a.depth, SCRIPT_VARS[a.name]))
+            chains.pop(a.name, None)
+            chains.setdefault("__blocked__" + a.name, True)
+            continue
+        if "__blocked__" + a.name in chains:
+            issues.append("%s%s at line %d follows a nested assignment: convert by hand" % (a.name, a.op, a.line_no))
+            continue
+        if a.tail.strip() and not a.tail.strip().startswith("#"):
+            issues.append("%s at line %d has trailing code on the closing line (%r)" % (a.name, a.line_no, a.tail.strip()))
+            chains.pop(a.name, None)
+            chains["__blocked__" + a.name] = True
+            continue
+        if a.op == "=":
+            chains[a.name] = [a]
+        else:
+            if a.name not in chains:
+                issues.append("%s+= at line %d has no previous top-level assignment" % (a.name, a.line_no))
+                chains["__blocked__" + a.name] = True
+                continue
+            chains[a.name].append(a)
+    chains = {k: v for k, v in chains.items() if not k.startswith("__blocked__")}
+    for name, chain in chains.items():
+        for a in chain:
+            if a.segments and a.segments != ["DQ"] and a.segments != ["SQ"]:
+                issues.append("%s at line %d mixes quoting styles (%s): convert by hand" % (name, a.line_no, "+".join(a.segments)))
+            if a.segments == ["SQ"]:
+                issues.append("%s at line %d is single-quoted: review the script, patch4package tab hack reverted" % (name, a.line_no))
+            if a.segments == ["DQ"]:
+                inner = a.raw[1:-1]
+                if re.search(r"(?<!\\)\$\(", inner) or re.search(r"(?<!\\)`", inner):
+                    issues.append("%s at line %d contains an unescaped $( ) or backtick: it ran at source time, now it runs at build time" % (name, a.line_no))
+                for env in ENV_OWNED:
+                    if re.search(r"(?<!\\)\$\{?%s\b" % env, inner):
+                        issues.append("%s at line %d references ${%s} unescaped: it now takes the build environment value" % (name, a.line_no, env))
+                if "PATCH_PATH" in inner:
+                    issues.append("%s at line %d references PATCH_PATH: patches now live in the recipe directory" % (name, a.line_no))
+    return chains, issues
+
+
+STUB = r'''#!/bin/bash
+# pkg2dir bash stub: source a recipe the way build() does, then run an action file.
+# args: BB_HOME PLATFORM RECIPE PKG_TARGET TOOLCHAIN ACTION
+set +E
+trap - ERR
+BB_HOME=${1}
+PLATFORM_NAME=${2}
+RECIPE=${3}
+PKG_TARGET=${4}
+TOOLCHAIN=${5}
+ACTION=${6}
+PROJECT_NAME=pkg2dir
+DATA_PATH=/tmp/pkg2dir-stub
+export BB_HOME PLATFORM_NAME PROJECT_NAME DATA_PATH TOOLCHAIN
+cd "${BB_HOME}" || exit 1
+source "${BB_HOME}/seterr"
+source "${BB_HOME}/core.functions"
+source "${BB_HOME}/platforms/${PLATFORM_NAME}.conf"
+source "${BB_HOME}/setenv"
+source "${BB_HOME}/build.functions"
+stub () {
+	local INSTALL_PREFIX INSTALL_EXECPREFIX INSTALL_LIBDIR INSTALL_LIBSUFFIX INSTALL_INCLUDEDIR \
+		INSTALL_SYSCONFDIR INSTALL_LOCALSTATEDIR INSTALL_SHAREDIR PKG_TARGET_ENV PKG_PKGPATH \
+		PKG_FILE PKG_NAME PKG_RECIPEPATH PKG_FULLNAME PKG_SRCDIR PKG_BLDPATH
+	case ${PKG_TARGET} in
+		native)
+			PKG_TARGET_ENV=native
+			PKG_PKGPATH=
+			INSTALL_PREFIX=${NATIVE_PREFIX}
+			INSTALL_EXECPREFIX=${NATIVE_EXECPREFIX}
+			INSTALL_LIBDIR=${NATIVE_LIBDIR}
+			INSTALL_LIBSUFFIX=
+			INSTALL_INCLUDEDIR=${NATIVE_INCLUDEDIR}
+			INSTALL_SYSCONFDIR=${NATIVE_SYSCONFDIR}
+			INSTALL_LOCALSTATEDIR=${NATIVE_LOCALSTATEDIR}
+			INSTALL_SHAREDIR=${NATIVE_SHAREDIR}
+		;;
+		cross)
+			PKG_TARGET_ENV=cross
+			PKG_PKGPATH=
+			INSTALL_PREFIX=${CROSS_PREFIX}
+			INSTALL_EXECPREFIX=${CROSS_EXECPREFIX}
+			INSTALL_LIBDIR=${CROSS_LIBDIR}
+			INSTALL_LIBSUFFIX=
+			INSTALL_INCLUDEDIR=${CROSS_INCLUDEDIR}
+			INSTALL_SYSCONFDIR=${CROSS_SYSCONFDIR}
+			INSTALL_LOCALSTATEDIR=${CROSS_LOCALSTATEDIR}
+			INSTALL_SHAREDIR=${CROSS_SHAREDIR}
+		;;
+		*)
+			PKG_TARGET_ENV=target
+			PKG_PKGPATH=${PACKAGES_PATH}/stub
+			INSTALL_PREFIX=${TARGET_PREFIX}
+			INSTALL_EXECPREFIX=${TARGET_EXECPREFIX}
+			INSTALL_LIBDIR=${TARGET_LIBDIR}
+			INSTALL_LIBSUFFIX=${TARGET_LIBSUFFIX}
+			INSTALL_INCLUDEDIR=${TARGET_INCLUDEDIR}
+			INSTALL_SYSCONFDIR=${TARGET_SYSCONFDIR}
+			INSTALL_LOCALSTATEDIR=${TARGET_LOCALSTATEDIR}
+			INSTALL_SHAREDIR=${TARGET_SHAREDIR}
+		;;
+	esac
+	PKG_RECIPEPATH=$(dirname "${RECIPE}")
+	PKG_FILE=$(realpath --relative-to="${PKG_PATH}" "${PKG_RECIPEPATH}")
+	PKG_NAME=$(basename "${PKG_FILE}")
+	PKG_FULLNAME="\${PKG_NAME}\${PKG_SUFFIX}\${PKG_VER:+_\${PKG_VER}}"
+	PKG_SRCDIR=${PKG_FULLNAME}
+	PKG_BLDPATH=${BLD_PATH}/stub
+	source "${RECIPE}" > /dev/null 2>&1
+	source "${ACTION}"
+}
+stub
+'''
+
+
+def run_stub(bbxb, platform, recipe, action_text, target="", toolchain="gnu"):
+    with tempfile.NamedTemporaryFile("w", suffix=".sh", delete=False) as stub, \
+            tempfile.NamedTemporaryFile("w", suffix=".sh", delete=False) as action:
+        stub.write(STUB)
+        action.write(action_text)
+        stub_name, action_name = stub.name, action.name
+    try:
+        proc = subprocess.run(["bash", stub_name, bbxb, platform, recipe, target, toolchain, action_name],
+                              capture_output=True, text=True)
+    finally:
+        os.unlink(stub_name)
+        os.unlink(action_name)
+    return proc.returncode, proc.stdout, proc.stderr
+
+
+def recipe_dirs(bbxb, selected):
+    pkg_root = os.path.join(bbxb, "packages")
+    if selected:
+        dirs = [os.path.abspath(d) for d in selected]
+    else:
+        dirs = []
+        for group in sorted(os.listdir(pkg_root)):
+            gpath = os.path.join(pkg_root, group)
+            if not os.path.isdir(gpath):
+                continue
+            if os.path.isfile(os.path.join(gpath, RECIPE_FILENAME)):
+                dirs.append(gpath)  # packages/template
+                continue
+            for name in sorted(os.listdir(gpath)):
+                d = os.path.join(gpath, name)
+                if os.path.isfile(os.path.join(d, RECIPE_FILENAME)):
+                    dirs.append(d)
+    return dirs
+
+
+def relname(bbxb, path):
+    return os.path.relpath(path, bbxb)
+
+
+def do_move(bbxb):
+    pkg_root = os.path.join(bbxb, "packages")
+    moves = []
+    for root, _dirs, files in os.walk(pkg_root):
+        for f in files:
+            if f.endswith(".pkg"):
+                src = os.path.join(root, f)
+                dst = os.path.join(root, f[:-4], RECIPE_FILENAME)
+                moves.append((src, dst))
+    for src, dst in sorted(moves):
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        subprocess.run(["git", "-C", bbxb, "mv", relname(bbxb, src), relname(bbxb, dst)], check=True)
+    print("moved %d recipes" % len(moves))
+
+
+def do_verify(bbxb, platform, dirs):
+    bad = 0
+    for d in dirs:
+        recipe = os.path.join(d, RECIPE_FILENAME)
+        with open(recipe, encoding="utf-8") as fh:
+            text = fh.read()
+        chains, _issues = analyse(recipe, text)
+        for name, chain in chains.items():
+            action = "OLD=${%s}\nNEW=\n" % name
+            deferred = set()
+            for a in chain:
+                action += "NEW+=%s\n" % a.raw
+                if a.segments == ["DQ"]:
+                    # \${NAME} was expanded by the old runner, i.e. empty unless exported;
+                    # with recipe.source it now takes the recipe-time value.
+                    for v in re.findall(r"\\\$\{?([A-Z_][A-Z0-9_]*)", a.raw[1:-1]):
+                        if v not in ENV_OWNED and v not in ENV_PLAIN:
+                            deferred.add(v)
+            action += ('if [ "${OLD}" == "${NEW}" ]; then echo VERIFY-OK; else echo VERIFY-MISMATCH; '
+                       'printf "%s" "${OLD}" > /tmp/pkg2dir-old.txt; printf "%s" "${NEW}" > /tmp/pkg2dir-new.txt; fi\n')
+            if deferred:
+                # session variables are never written to recipe.source, skip them here too
+                action += ('for V in %s; do case ${V} in HOME|USER|USERNAME|LOGNAME|LANG|LC_*|TERM|DISPLAY|XDG_*|DBUS_*|SSH_*|SUDO_*) continue;; esac; '
+                           'D=$(declare -p "${V}" 2>/dev/null) || continue; '
+                           'case ${D%%%% *} in *x*) ;; *) echo "NOW-RESOLVES ${V}";; esac; done\n'
+                           % " ".join(sorted(deferred)))
+            rc, out, err = run_stub(bbxb, platform, recipe, action)
+            for line in out.splitlines():
+                if line.startswith("NOW-RESOLVES"):
+                    print("NOTE     %s %s: %s was empty at build time, now it resolves"
+                          % (relname(bbxb, recipe), name, line.split()[1]))
+            if "VERIFY-OK" not in out:
+                bad += 1
+                print("MISMATCH %s %s (rc=%d)" % (relname(bbxb, recipe), name, rc))
+                if err.strip():
+                    print("  stderr: " + err.strip().splitlines()[-1])
+                if "VERIFY-MISMATCH" in out:
+                    diff = subprocess.run(["diff", "/tmp/pkg2dir-old.txt", "/tmp/pkg2dir-new.txt"],
+                                          capture_output=True, text=True).stdout
+                    print("  " + "\n  ".join(diff.splitlines()[:12]))
+            else:
+                print("ok       %s %s (%d fragment%s)" % (relname(bbxb, recipe), name, len(chain), "s" if len(chain) > 1 else ""))
+    print("verify: %d mismatch(es)" % bad)
+    return bad == 0
+
+
+def do_extract(bbxb, dirs):
+    converted = 0
+    for d in dirs:
+        recipe = os.path.join(d, RECIPE_FILENAME)
+        with open(recipe, encoding="utf-8") as fh:
+            text = fh.read()
+        chains, _issues = analyse(recipe, text)
+        try:
+            found, _suspicious = parse_recipe(text, set(SCRIPT_VARS) | set(DEAD_VARS))
+        except ScanError as exc:
+            print("SKIP %s: %s" % (relname(bbxb, recipe), exc))
+            continue
+        to_delete = []
+        for name, chain in chains.items():
+            body = script_text(chain)
+            if body.strip() == "":
+                to_delete.extend(chain)
+                continue
+            pkgname = os.path.basename(d)
+            header = ("# shellcheck shell=bash\n"
+                      "# shellcheck disable=SC2154\n"
+                      "# %s: %s.\n"
+                      "# Every ALL_CAPS variable visible to package.sh is available here as ${VAR}.\n\n"
+                      % (pkgname, SCRIPT_HEADERS[name]))
+            target = os.path.join(d, SCRIPT_VARS[name])
+            with open(target, "w", encoding="utf-8") as fh:
+                fh.write(header + body)
+            to_delete.extend(chain)
+            converted += 1
+        for a in found:
+            if a.name in DEAD_VARS and a.depth == 0 and not (a.tail.strip() and not a.tail.strip().startswith("#")):
+                to_delete.append(a)
+        if not to_delete:
+            continue
+        # delete whole assignment lines, from the end so offsets stay valid
+        new_text = text
+        for a in sorted(to_delete, key=lambda x: x.start, reverse=True):
+            new_text = new_text[:a.start] + new_text[a.end:]
+        new_text = re.sub(r"\n{3,}", "\n\n", new_text)
+        if not new_text.endswith("\n"):
+            new_text += "\n"
+        with open(recipe, "w", encoding="utf-8") as fh:
+            fh.write(new_text)
+    print("extracted %d script(s)" % converted)
+
+
+def do_report(bbxb, dirs):
+    total = 0
+    for d in dirs:
+        recipe = os.path.join(d, RECIPE_FILENAME)
+        with open(recipe, encoding="utf-8") as fh:
+            text = fh.read()
+        _chains, issues = analyse(recipe, text)
+        if issues:
+            total += 1
+            print(relname(bbxb, recipe))
+            for i in issues:
+                print("  - " + i)
+    print("report: %d recipe(s) need manual work" % total)
+
+
+def do_check(bbxb, platform, dirs):
+    bad = 0
+    action = ("for V in %s; do if [ -n \"${!V}\" ]; then echo \"STILL-SET ${V}\"; fi; done\n"
+              % " ".join(list(SCRIPT_VARS) + DEAD_VARS))
+    for d in dirs:
+        recipe = os.path.join(d, RECIPE_FILENAME)
+        syntax = subprocess.run(["bash", "-n", recipe], capture_output=True, text=True)
+        if syntax.returncode != 0:
+            bad += 1
+            print("SYNTAX %s: %s" % (relname(bbxb, recipe), syntax.stderr.strip()))
+            continue
+        for script in SCRIPT_VARS.values():
+            path = os.path.join(d, script)
+            if os.path.isfile(path):
+                syntax = subprocess.run(["bash", "-n", path], capture_output=True, text=True)
+                if syntax.returncode != 0:
+                    bad += 1
+                    print("SYNTAX %s: %s" % (relname(bbxb, path), syntax.stderr.strip()))
+        for target in ("", "native", "cross"):
+            _rc, out, _err = run_stub(bbxb, platform, recipe, action, target=target)
+            for line in out.splitlines():
+                if line.startswith("STILL-SET"):
+                    bad += 1
+                    print("%s [%s]: %s" % (relname(bbxb, recipe), target or "target", line))
+    print("check: %d problem(s)" % bad)
+    return bad == 0
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--bbxb", default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    parser.add_argument("--platform", default="generic-x64")
+    mode = parser.add_mutually_exclusive_group(required=True)
+    for m in ("move", "verify", "extract", "report", "check"):
+        mode.add_argument("--" + m, action="store_true")
+    parser.add_argument("dirs", nargs="*")
+    args = parser.parse_args()
+    bbxb = os.path.abspath(args.bbxb)
+    if args.move:
+        do_move(bbxb)
+        return 0
+    dirs = recipe_dirs(bbxb, args.dirs)
+    if args.verify:
+        return 0 if do_verify(bbxb, args.platform, dirs) else 1
+    if args.extract:
+        do_extract(bbxb, dirs)
+        return 0
+    if args.report:
+        do_report(bbxb, dirs)
+        return 0
+    if args.check:
+        return 0 if do_check(bbxb, args.platform, dirs) else 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

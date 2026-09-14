@@ -97,17 +97,21 @@ then
 fi
 git -C "/tmp/$(gitrepo4pkg)" fetch
 
-if [ -f "${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak" ] && [ "${SAFE:-1}" -eq 1 ]
+# The recipe lives in packages/lfs/<package>/package.sh; the backup is kept outside the recipe
+# directory so that it never enters the recipe checksum computed by build.
+RECIPE="${BBXB_PATH}/packages/lfs/${PACKAGE}/package.sh"
+RECIPE_BAK="${BBXB_PATH}/packages/lfs/${PACKAGE}.package.sh.bak"
+if [ -f "${RECIPE_BAK}" ] && [ "${SAFE:-1}" -eq 1 ]
 then
-	echo "Please remove or restore ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak before update"
+	echo "Please remove or restore ${RECIPE_BAK} before update"
 else
-	cp "${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg" "${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak"
+	cp "${RECIPE}" "${RECIPE_BAK}"
 	for PKG_VER in ${VERSIONS}
 	do
 		PKG_MAJVER=$(echo "${PKG_VER}" | cut -d'.' -f1)
 		PKG_USCOREVER=${PKG_VER//./_}
 		echo -n "Generating patch for ${PACKAGE}_${PKG_VER}... "
-		eval "sed -i '/^\t${PKG_VER})/,/\t\t;;/c $(generate_patch_and_print)' ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg"
+		eval "sed -i '/^\t${PKG_VER})/,/\t\t;;/c $(generate_patch_and_print)' ${RECIPE}"
 		echo "done."
 	done
 fi

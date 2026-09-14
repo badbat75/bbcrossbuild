@@ -769,13 +769,32 @@ function recipe_path () {
 
 function recipe_file () {
 	### recipe_file <group>/<name>: path of the recipe file (<group>/<name>/${RECIPE_FILENAME})
-	### Transitional: falls back to the flat <group>/<name>.pkg layout while recipes are migrated
-	if [ -f "${PKG_PATH}/${1}/${RECIPE_FILENAME}" ] || [ ! -f "${PKG_PATH}/${1}.pkg" ]
-	then
-		echo "${PKG_PATH}/${1}/${RECIPE_FILENAME}"
-	else
-		echo "${PKG_PATH}/${1}.pkg"
-	fi
+	echo "${PKG_PATH}/${1}/${RECIPE_FILENAME}"
+}
+
+function recipe_checksum () {
+	### recipe_checksum <recipe dir>: md5 over the names, types, symlink targets and contents of
+	### the whole recipe directory, so that editing a script, a static file or a patch rebuilds
+	### the package like editing the recipe does. Symlinks are hashed by target, never followed.
+	### Editor and patch leftovers (*.bak, *.orig, *.rej, *~, .*.swp) are ignored.
+	local ENTRY
+	(
+		cd "${1}" || exit 1
+		find . \( -name '*.bak' -o -name '*.orig' -o -name '*.rej' -o -name '*~' -o -name '.*.sw?' \) -prune -o -print0 |
+		LC_ALL=C sort -z |
+		while IFS= read -r -d '' ENTRY
+		do
+			if [ -L "${ENTRY}" ]
+			then
+				printf 'l %s %s\n' "${ENTRY}" "$(readlink "${ENTRY}")"
+			elif [ -d "${ENTRY}" ]
+			then
+				printf 'd %s\n' "${ENTRY}"
+			else
+				printf 'f %s %s\n' "${ENTRY}" "$(md5sum < "${ENTRY}" | cut -d' ' -f1)"
+			fi
+		done | md5sum | cut -d' ' -f1
+	)
 }
 
 function preparesources () {
@@ -1803,6 +1822,8 @@ function build () {(
 	SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
 	echo -n "${SPACES}Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}"
 
+	### Status is the checksum of the whole recipe directory (recipe, scripts, files/, patches/)
+	PKG_CHKSUM="$( recipe_checksum "${PKG_RECIPEPATH}" )"
 	if [ -z "${PKG_CHECK}" ]
 	then
 		if [ "${PKG_TARGET}" == "native" ]
@@ -1811,7 +1832,6 @@ function build () {(
 			trow_error "${ERROR_GENERIC}" "PKG_CHECK is empty and PKG_TARGET is native. Exiting..."
 		fi
 		### Check if target package or default package has already built
-		PKG_CHKSUM="$( md5sum "${PKG_PATH}/${PKG_FILE}.pkg" )"
 		if [ -f "${STATUS_FILE_DEFAULT_TARGET}" ]
 		then
 			STATUS_CHK_FILE=${STATUS_FILE_DEFAULT_TARGET}${PKG_TARGET:+-${PKG_TARGET}}
@@ -2050,7 +2070,7 @@ function build () {(
 	fi
 	if [ "${NOSAVESTATUS}" -eq 0 ]
 	then
-		run_cmd "md5sum \"${PKG_PATH}/${PKG_FILE}.pkg\" > \"${STATUS_FILE}\"" >> "${LOG_FILE}"
+		run_cmd "echo \"${PKG_CHKSUM}\" > \"${STATUS_FILE}\"" >> "${LOG_FILE}"
 	else
 		run_cmd "rm -f \"${STATUS_PATH}/*.tmp\"" >> "${LOG_FILE}"
 	fi
