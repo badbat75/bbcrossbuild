@@ -31,6 +31,8 @@ export DISTOS_PATH BIN_PATH TOOLCHAIN_PATH
 
 PRJ_PATH=${BB_HOME}/${PRJ_DIR:-projects}
 PKG_PATH=${BB_HOME}/${PKG_DIR:-packages}
+# Name of the recipe file inside every packages/<group>/<name>/ directory
+RECIPE_FILENAME=package.pkg
 PATCH_PATH=${BB_HOME}/${PATCH_DIR:-patches}
 IMG_PATH=${BB_HOME}/${IMG_DIR:-images}
 

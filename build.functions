@@ -711,6 +711,22 @@ function create_environment_source () {
 	EOF
 }
 
+function recipe_path () {
+	### recipe_path <group>/<name>: directory holding the recipe, its scripts, files/ and patches/
+	echo "${PKG_PATH}/${1}"
+}
+
+function recipe_file () {
+	### recipe_file <group>/<name>: path of the recipe file (<group>/<name>/${RECIPE_FILENAME})
+	### Transitional: falls back to the flat <group>/<name>.pkg layout while recipes are migrated
+	if [ -f "${PKG_PATH}/${1}/${RECIPE_FILENAME}" ] || [ ! -f "${PKG_PATH}/${1}.pkg" ]
+	then
+		echo "${PKG_PATH}/${1}/${RECIPE_FILENAME}"
+	else
+		echo "${PKG_PATH}/${1}.pkg"
+	fi
+}
+
 function preparesources () {
 
 	cd "${PKG_SRCPATH}"
@@ -1545,6 +1561,7 @@ function build () {(
 		PKG_CFLAGS \
 		PKG_CHECK \
 		PKG_COPYSRC \
+		PKG_CPPFLAGS \
 		PKG_CXXFLAGS \
 		PKG_DEPS \
 		PKG_DISABLECROSSPYTHON \
@@ -1555,6 +1572,7 @@ function build () {(
 		PKG_KERNEL_BUILD_MODULES \
 		PKG_KERNEL_INITRAMFS \
 		PKG_KERNEL_INITRAMFS_DRIVERS \
+		PKG_KERNEL_LOCALBUILD \
 		PKG_KERNEL_MOD \
 		PKG_KERNEL_MODPATH \
 		PKG_LDFLAGS \
@@ -1572,6 +1590,7 @@ function build () {(
 		PKG_POSTINSTALL \
 		PKG_POSTINSTALL_PRIO \
 		PKG_PREBUILD \
+		PKG_PYTHONBUILD \
 		PKG_RUSTFLAGS \
 		PKG_SRCDIR \
 		PKG_SUFFIX \
@@ -1610,6 +1629,7 @@ function build () {(
 		PKG_FULLNAME \
 		PKG_NAME \
 		PKG_PKGPATH \
+		PKG_RECIPEPATH \
 		PKG_REMOVELAFILES \
 		PKG_SRCDIR \
 		PKG_TARGET \
@@ -1638,13 +1658,15 @@ function build () {(
 		NUMSPACES=0
 	fi
 
-	if [ ! -f "${PKG_PATH}/${PKG_FILE}.pkg" ]
+	if [ ! -f "$(recipe_file "${PKG_FILE}")" ]
 	then
 		trow_error "${ERROR_FILE_NOT_FOUND}" "Package ${PKG_FILE} does not exists."
 	fi
 	
 
 	PKG_NAME=$(basename "${PKG_FILE}")
+	PKG_RECIPEPATH=$(recipe_path "${PKG_FILE}")
+	export PKG_RECIPEPATH
 	PKG_FULLNAME="\${PKG_NAME}\${PKG_SUFFIX}\${PKG_VER:+_\${PKG_VER}}"
 	PKG_SRCDIR=${PKG_SRCDIR:-${PKG_FULLNAME}}
 	PKG_BLDPATH=${BLD_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}
@@ -1689,7 +1711,7 @@ function build () {(
 	esac
 
 	# shellcheck source=/dev/null
-	source "${PKG_PATH}/${PKG_FILE}.pkg"
+	source "$(recipe_file "${PKG_FILE}")"
 
 	PKG_TOOLCHAIN=${_param_toolchain:-${PKG_TOOLCHAIN}}
 	PKG_KERNEL_BUILD_MODULES="${_param_with_extra_modules:-${PKG_KERNEL_BUILD_MODULES}}"
@@ -1744,7 +1766,7 @@ function build () {(
 	echo
 	for dep in ${PKG_DEPS}
 	do
-		if [ ! -f "${PKG_PATH}/${dep/:*/}.pkg" ]
+		if [ ! -f "$(recipe_file "${dep/:*/}")" ]
 		then
 			trow_error "${ERROR_FILE_NOT_FOUND}" "Dependency package ${dep/:*/} does not exists."
 		fi
