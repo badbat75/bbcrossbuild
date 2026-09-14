@@ -1,0 +1,6 @@
+# shellcheck shell=bash
+# shellcheck disable=SC2154
+# mediainfo_22.06: post-build script, sourced by runpostbuild.sh (cwd: ${PKG_BLDPATH}, set -ex).
+# Every ALL_CAPS variable visible to package.env is available here as ${VAR}.
+
+rm -f ${BIN_PATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/{libcurl.la,/libcurl-gnutls.so}
