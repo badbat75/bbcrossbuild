@@ -6,6 +6,9 @@ LTOPROCS=$(( $(nproc) / 4 ))
 # arguments, and several GNU packages built for the host (gettext, gmp...) still rely on the old
 # meaning. Override from bbxb.conf when the host compiler needs something else.
 HOST_CSTD=${HOST_CSTD:--std=gnu17}
+# Same for the C++ sources of the toolchain bootstrap (binutils, gcc): GCC 16 defaults to C++20,
+# where u8"" literals are char8_t and gcc 14 libcody no longer compiles.
+HOST_CXXSTD=${HOST_CXXSTD:--std=gnu++17}
 
 HARCH=${HM}-${HOS}-${HLIBC}
 
