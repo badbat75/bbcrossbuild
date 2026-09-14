@@ -117,5 +117,5 @@
 
 	mkdir -pv ${PKG_PKGPATH}/postinst_scripts
 	cp ${SRC_PATH}/moode-pkgbuild_8/packages/moode-player/postinstall.sh ${PKG_PKGPATH}/postinst_scripts/99_moode_player
-	sed -i '/PKG_VERSION/ s/x.x.x/${MOODEVER}/' ${PKG_PKGPATH}/postinst_scripts/99_moode_player
+	sed -i "/PKG_VERSION/ s/x.x.x/${MOODEVER}/" ${PKG_PKGPATH}/postinst_scripts/99_moode_player
 	sed -i 's/systemctl st/# systemctl st/g' ${PKG_PKGPATH}/postinst_scripts/99_moode_player
