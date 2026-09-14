@@ -417,9 +417,26 @@ unmount_tag myimage
 create_sfx_package ${PACKAGES_PATH}/my_package
 ```
 
+### Package Layout
+
+Every package is a directory under `packages/<group>/<name>/` (the directory name is the package name used by `build <group>/<name>`):
+
+```
+packages/<group>/<name>/
+  package.env       # the recipe: variable assignments, sourced by build with PKG_TARGET, TOOLCHAIN, HARCH, INSTALL_* set
+  prebuild.sh       # optional, runs in the source directory before autoreconf/configure (set -x, no -e)
+  build.sh          # optional, the whole build when BUILD_PROCESS=custom (bash -ex, build directory)
+  postbuild.sh      # optional, runs in the build directory after the build process (set -ex)
+  postinstall.sh    # optional, copied into the sysroot and sourced as root inside the target image
+  files/            # optional, static files referenced as ${PKG_RECIPEPATH}/files/<name>
+  patches/          # optional, the files named by PATCHES
+```
+
+The scripts are plain Bash: build writes a snapshot of every ALL_CAPS variable visible to `package.env` into `recipe.source` and every generated runner sources it before `environment.source`, so `INSTALL_PREFIX`, `PKG_PKGPATH`, `HARCH` or `SYSROOT` are simply `${VAR}` inside them (no escaping). `postinstall.sh` only sees the image-safe values (`INSTALL_*`, `PKG_NAME`, `PKG_VER`, `PKG_FULLNAME`, `PKG_TARGET`, `HARCH`, `HM`, `HOS`, `HLIBC`, `HARCH_LIB`, `PLATFORM_NAME`, `TOOLCHAIN`) and is ignored for native and cross builds. The build status is the checksum of the whole directory: editing any file rebuilds the package. `packages/template/` is an annotated starting point and `utilities/pkg_lint` checks the directories.
+
 ### Package Parameters
 
-The following parameters are extracted from the build.functions file and can be used to define a package:
+The following parameters can be assigned in `package.env`:
 
 #### Package Definition
 
@@ -462,12 +479,11 @@ URL where to download Debian package that contains patches.
 `PATCHDEB="http://packages.org/debian_patches"`
 
 **PATCHES:**  
-Patch filename under bbxb/patches directory or URL.  
-`PATCHES="[patch1.patch] [url]"`
+Comma separated list of patches applied in order with `patch -f -p1`: a file under the `patches/` directory of the package or a URL.  
+`PATCHES="patch1.patch,https://example.org/patch2.patch"`
 
-**PKG_PREBUILD:**  
-Runs commands on source files before autoreconf and configuration on source directory.  
-`PKG_PREBUILD="command1; command2 && command3"`
+**prebuild.sh:**  
+Script sourced in the source directory before autoreconf and configuration (replaces the former `PKG_PREBUILD` string).
 
 **PKG_AUTOCONF:**  
 By default "autoreconf -fi" is not run before configure process (0). 1 to enable it.  
@@ -497,7 +513,7 @@ Number of threads to use for autoreconf.
 
 **BUILD_PROCESS: (*)**  
 Define what build process to use.  
-`BUILD_PROCESS=downloadonly|configmake|cmakebuild|mesonninja|cargobuild|simplemake|pythonbuild|kernelbuild|custombuild|perlmodule`
+`BUILD_PROCESS=downloadonly|configmake|cmakebuild|mesonninja|cargobuild|simplemake|pythonbuild|kernelbuild|kernelmodbuild|custom|perlmodule|none`
 
 Available build processes:
 - `downloadonly`: Only downloads the package and creates the source directory
@@ -508,8 +524,10 @@ Available build processes:
 - `simplemake`: Downloads, creates source directory, copies to build directory and runs a standard make process
 - `pythonbuild`: Downloads, creates source directory and runs a standard python module build
 - `kernelbuild`: Downloads, creates source directory and runs a standard kernel build process using platform configuration
-- `custombuild`: Downloads, creates source directory and runs a custom build process using PKG_BUILDSCRIPT
+- `kernelmodbuild`: Builds an out of tree kernel module against the kernel built by `kernelbuild`
+- `custom`: Downloads, creates source directory and runs the `build.sh` script of the package
 - `perlmodule`: Downloads, creates source directory and builds a Perl module
+- `none`: Runs only the package scripts, no download and no build
 
 **PKG_COPYSRC:**  
 Copy sources in the build directory (often needed for buggy build processes).  
@@ -618,9 +636,8 @@ Define libraries to build and install.
 Specify if binaries should be stripped.  
 `CARGO_STRIP=1`
 
-**PKG_BUILDSCRIPT:**  
-Run commands to build package (for custombuild).  
-`PKG_BUILDSCRIPT="command1; command2 && command3"`
+**build.sh:**  
+Script sourced in the build directory to build and install the package when `BUILD_PROCESS=custom` (replaces the former `PKG_BUILDSCRIPT` string).
 
 **PKG_KERNEL_MOD:**  
 Kernel module name.  
@@ -664,16 +681,14 @@ Rust compiler flags.
 
 #### Post build process
 
-**PKG_POSTBUILD:**  
-Runs commands after build and installation on build directory.  
-`PKG_POSTBUILD="command1; command2 && command3"`
+**postbuild.sh:**  
+Script sourced in the build directory after the build process, with the package staged in `${PKG_PKGPATH}` (replaces the former `PKG_POSTBUILD` string).
 
-**PKG_POSTINSTALL:**  
-Runs commands after package installation in a sysrooted environment.  
-`PKG_POSTINSTALL="command1; command2 && command3"`
+**postinstall.sh:**  
+Script copied into the sysroot as `postinst_scripts/<prio>_<name>` and sourced as root inside the target image by `run_postinstall_scripts` (replaces the former `PKG_POSTINSTALL` string).
 
 **PKG_POSTINSTALL_PRIO:**  
-Define the priority for the postinstall script.  
+Define the priority of postinstall.sh among the post install scripts.  
 `PKG_POSTINSTALL_PRIO=50`
 
 **VAR_INSTALL_LIBDIR:**  
@@ -757,4 +772,14 @@ BBCrossBuild includes several utility scripts to help with development:
 - `aws_create_infrastructure`: Manage AWS EC2 instances
   ```
   utilities/aws_create_infrastructure [run|terminate|destroy|show]
+  ```
+
+- `pkg_lint`: Check the package directories (layout, syntax, shellcheck, removed variables, BUILD_PROCESS, PATCHES and PKG_DEPS resolution)
+  ```
+  utilities/pkg_lint [<platform>] [packages/<group>/<name> ...]
+  ```
+
+- `update_patches`: Regenerate the branch tracking patches of gcc, binutils, glibc or gdb under `packages/lfs/<pkg>/patches/` and rewrite the version block of the recipe
+  ```
+  utilities/update_patches <package> <ver1> [<ver2>...]
   ```
