@@ -22,6 +22,8 @@ function setbuildenv () {
 			COMMON_CFLAGS="-I${GLOBAL_TOOLCHAIN_PATH}/include"
 			COMMON_CXXFLAGS="${COMMON_CFLAGS}"
 			COMMON_FCFLAGS="${COMMON_CFLAGS}"
+			# C only: the host compiler builds this package (see HOST_CSTD in setenv)
+			COMMON_CFLAGS+=" ${HOST_CSTD}"
 			COMMON_LDFLAGS="-L${GLOBAL_TOOLCHAIN_PATH}/lib"
 			COMMON_LDFLAGS+=" -Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib"
 			COMMON_LDFLAGS+=" -Wl,-rpath-link -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib"
@@ -36,6 +38,8 @@ function setbuildenv () {
 			COMMON_CFLAGS+=" -I${TOOLCHAIN_PATH}/include"
 			COMMON_CXXFLAGS="${COMMON_CFLAGS}"
 			COMMON_FCFLAGS="${COMMON_CFLAGS}"
+			# C only: the host compiler builds this package (see HOST_CSTD in setenv)
+			COMMON_CFLAGS+=" ${HOST_CSTD}"
 			COMMON_LDFLAGS="-L${TOOLCHAIN_PATH}/lib"
 			COMMON_LDFLAGS+=" -L${GLOBAL_TOOLCHAIN_PATH}/lib"
 			COMMON_LDFLAGS+=" -Wl,-rpath -Wl,${TOOLCHAIN_PATH}/lib:${GLOBAL_TOOLCHAIN_PATH}/lib"
