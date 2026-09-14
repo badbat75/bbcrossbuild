@@ -1554,9 +1554,6 @@ function custom () {
 	if [ -f "${PKG_RECIPEPATH}/build.sh" ]
 	then
 		echo "source \"${PKG_RECIPEPATH}/build.sh\"" >>runmake.sh
-	elif [ -n "${PKG_BUILDSCRIPT}" ]
-	then
-		echo "${PKG_BUILDSCRIPT}" >>runmake.sh
 	else
 		trow_error "${ERROR_FILE_NOT_FOUND}" "${PKG_FULLNAME}: BUILD_PROCESS=custom requires ${PKG_RECIPEPATH}/build.sh"
 	fi
@@ -1650,7 +1647,6 @@ function build () {(
 		PATCHES \
 		PKG_AUTOCONF \
 		PKG_AUTOMAKE \
-		PKG_BUILDSCRIPT \
 		PKG_CFLAGS \
 		PKG_CHECK \
 		PKG_COPYSRC \
@@ -1679,10 +1675,7 @@ function build () {(
 		PKG_OVERRIDELTO \
 		PKG_OVERRIDESHARED \
 		PKG_OVERRIDESTATIC \
-		PKG_POSTBUILD \
-		PKG_POSTINSTALL \
 		PKG_POSTINSTALL_PRIO \
-		PKG_PREBUILD \
 		PKG_PYTHONBUILD \
 		PKG_RUSTFLAGS \
 		PKG_SRCDIR \
@@ -1729,6 +1722,7 @@ function build () {(
 		PKG_TARGET_ENV \
 		POSTINST_FILE \
 		POSTINST_VAR \
+		RECIPE_SCRIPT \
 		STATUS_CHK_FILE \
 		STATUS_FILE \
 		STATUS_FILE_DEFAULT_TARGET \
@@ -1900,23 +1894,19 @@ function build () {(
 	then
 		run_cmd "mkdir -p \"${BIN_PATH}\"" >> "${LOG_FILE}"
 	fi
-	cat <<-EOF >> "${LOG_FILE}"
-		Pre build script:
-		==================
-		${PKG_PREBUILD}
-		==================
-
-		Post build script:
-		==================
-		${PKG_POSTBUILD} 
-		==================
-
-		Post install script:
-		==================
-		${PKG_POSTINSTALL}
-		==================
-
-	EOF
+	for RECIPE_SCRIPT in prebuild.sh build.sh postbuild.sh postinstall.sh
+	do
+		if [ -f "${PKG_RECIPEPATH}/${RECIPE_SCRIPT}" ]
+		then
+			{
+				echo "Recipe script ${RECIPE_SCRIPT}:"
+				echo "=================="
+				cat "${PKG_RECIPEPATH}/${RECIPE_SCRIPT}"
+				echo "=================="
+				echo
+			} >> "${LOG_FILE}"
+		fi
+	done
 	if [ -n "${PKG_URL}" ] || [ -n "${GIT_URL}" ]
 	then
 		echo -n "Downloading ${PKG_FULLNAME}..."
@@ -1954,20 +1944,6 @@ function build () {(
 		run_cmd "chmod +x \"${PKG_BLDPATH}/runprebuild.sh\"" >> "${LOG_FILE}"
 		echo "Running pre build script..." | log_buffer info >> "${LOG_FILE}"
 		run_cmd "\"${PKG_BLDPATH}/runprebuild.sh\"" >> "${LOG_FILE}"
-	elif [ -n "${PKG_PREBUILD}" ]
-	then
-		cat > ${PKG_BLDPATH}/runprebuild.sh <<-EOF
-			#!/bin/bash
-			set -x
-			set +o pipefail
-			cd "${PKG_SRCPATH}"
-			source "${PKG_BLDPATH}/environment.source"
-			${PKG_PREBUILD}
-			set +x
-		EOF
-		run_cmd "chmod +x ${PKG_BLDPATH}/runprebuild.sh" >> "${LOG_FILE}"
-		echo "Running pre build script..." | log_buffer info >> "${LOG_FILE}"
-		run_cmd "${PKG_BLDPATH}/runprebuild.sh" >> "${LOG_FILE}"
 	fi
 	#### Build
 	if [ ! "${BUILD_PROCESS:-none}" == none ]
@@ -1991,20 +1967,6 @@ function build () {(
 		run_cmd "chmod +x \"${PKG_BLDPATH}/runpostbuild.sh\"" >> "${LOG_FILE}"
 		echo "Running post build script..." | log_buffer info >> "${LOG_FILE}"
 		run_cmd "\"${PKG_BLDPATH}/runpostbuild.sh\"" >> "${LOG_FILE}"
-	elif [ -n "${PKG_POSTBUILD}" ]
-	then
-		cat > ${PKG_BLDPATH}/runpostbuild.sh <<-EOF
-			#!/bin/bash
-			set -ex
-			set +o pipefail
-			cd "${PKG_BLDPATH}"
-			source "${PKG_BLDPATH}/environment.source"
-			${PKG_POSTBUILD}
-			set +ex
-		EOF
-		run_cmd "chmod +x ${PKG_BLDPATH}/runpostbuild.sh" >> "${LOG_FILE}"
-		echo "Running post build script..." | log_buffer info >> "${LOG_FILE}"
-		run_cmd "${PKG_BLDPATH}/runpostbuild.sh" >> "${LOG_FILE}"
 	fi
 	#### Post-Install
 	if [ -f "${PKG_RECIPEPATH}/postinstall.sh" ] && [ -z "${PKG_PKGPATH}" ]
@@ -2030,11 +1992,6 @@ function build () {(
 			cat "${PKG_RECIPEPATH}/postinstall.sh"
 		} > "${POSTINST_FILE}"
 		run_cmd "cat \"${POSTINST_FILE}\"" >> "${LOG_FILE}"
-	elif [ -n "${PKG_POSTINSTALL}" ]
-	then
-		run_cmd "mkdir -p ${PKG_PKGPATH}/postinst_scripts" >> "${LOG_FILE}"
-		echo "${PKG_POSTINSTALL}" > "${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}"
-		run_cmd "cat \"${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}\"" >> "${LOG_FILE}"
 	fi
 
 	##### Create package
