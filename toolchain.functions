@@ -416,7 +416,9 @@ function setup_binutils () {
 		COMMON_CONFIG+=" --with-isl-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-isl-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
 
 		### Workaround for latest patches (--disable-werror)
-		BINUTILS_CONFIG="--enable-gold=default --enable-ld --enable-gprofng=yes --enable-lto \
+		### gprofng is not needed by the cross toolchain and its libcollector does not build against
+		### the _Generic string macros of recent glibc headers before binutils 2.44
+		BINUTILS_CONFIG="--enable-gold=default --enable-ld --enable-gprofng=no --enable-lto \
 			--enable-new-dtags --disable-rpath --enable-threads=yes --enable-plugins --enable-64-bit-bfd \
 			--enable-compressed-debug-sections=all --enable-separate-code=yes --enable-plugins --disable-werror ${SILENTCONFIG}"
 
