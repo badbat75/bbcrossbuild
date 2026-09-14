@@ -34,7 +34,6 @@ PKG_PATH=${BB_HOME}/${PKG_DIR:-packages}
 # Name of the recipe file inside every packages/<group>/<name>/ directory: variable definitions
 # sourced by build, the shell scripts live next to it as *.sh files
 RECIPE_FILENAME=package.env
-PATCH_PATH=${BB_HOME}/${PATCH_DIR:-patches}
 IMG_PATH=${BB_HOME}/${IMG_DIR:-images}
 
 MULTI_ARCH=${MULTIARCH:-1}

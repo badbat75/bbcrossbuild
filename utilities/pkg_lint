@@ -60,14 +60,14 @@ function report () {
 	echo "${1}: ${2}: ${3}"
 }
 
+# The INSTALL_* and PKG_* variables set below are read by the sourced recipe, not by this script
+# shellcheck disable=SC2034
 function source_recipe () {
 	### source_recipe <recipe dir> <target>: source package.env the way build does and print
 	### the checks that only a sourced recipe allows. Runs in a subshell.
 	(
 		set +E
 		trap - ERR
-		# the variables below are read by the sourced recipe, not by this script
-		# shellcheck disable=SC2034
 		local INSTALL_PREFIX INSTALL_EXECPREFIX INSTALL_LIBDIR INSTALL_LIBSUFFIX INSTALL_INCLUDEDIR \
 			INSTALL_SYSCONFDIR INSTALL_LOCALSTATEDIR INSTALL_SHAREDIR PKG_TARGET_ENV PKG_PKGPATH \
 			PKG_FILE PKG_NAME PKG_RECIPEPATH PKG_FULLNAME PKG_SRCDIR PKG_BLDPATH PKG_TARGET VAR DEP PATCH

@@ -48,16 +48,18 @@ generate_patch_and_print () {
 	PATCH_FILE=${PACKAGE}_${PKG_VER}+${LAST_COMMIT}.patch
 	LINK_FILE=${PACKAGE}_${PKG_VER}.patch
 	git -C "/tmp/$(gitrepo4pkg)" branch -m "$(head4pkg)"
-	mkdir -p "${BBXB_PATH}/patches/${PACKAGE}"
+	# Patches live in the recipe directory; the <pkg>_<ver>.patch symlink is what the
+	# toolchain bootstrap (toolchain.functions) applies to the raw gcc/binutils sources.
+	mkdir -p "${PATCHES_PATH}"
 	# shellcheck disable=SC2046
-	git -C "/tmp/$(gitrepo4pkg)" diff "$(rel4pkg)..${LAST_COMMIT}" $(gitrepo_additional_params) > "${BBXB_PATH}/patches/${PACKAGE}/${PATCH_FILE}"
-	ln -fs "${PATCH_FILE}" "${BBXB_PATH}/patches/${PACKAGE}/${LINK_FILE}"
+	git -C "/tmp/$(gitrepo4pkg)" diff "$(rel4pkg)..${LAST_COMMIT}" $(gitrepo_additional_params) > "${PATCHES_PATH}/${PATCH_FILE}"
+	ln -fs "${PATCH_FILE}" "${PATCHES_PATH}/${LINK_FILE}"
 	# shellcheck disable=SC2028
 	echo -n "\\\t${PKG_VER})\n"
 	# shellcheck disable=SC2028
 	echo -n "\\t\\tPKG_VER=${PKG_VER}+${LAST_COMMIT}\n"
 	# shellcheck disable=SC2028
-	echo -n "\\t\\tPATCHES=${PACKAGE}/${PATCH_FILE}\n"
+	echo -n "\\t\\tPATCHES=${PATCH_FILE}\n"
 	# shellcheck disable=SC2028
 	echo -n "\\t\\t;;"
 }
@@ -101,6 +103,7 @@ git -C "/tmp/$(gitrepo4pkg)" fetch
 # directory so that it never enters the recipe checksum computed by build.
 RECIPE="${BBXB_PATH}/packages/lfs/${PACKAGE}/package.env"
 RECIPE_BAK="${BBXB_PATH}/packages/lfs/${PACKAGE}.package.env.bak"
+PATCHES_PATH="${BBXB_PATH}/packages/lfs/${PACKAGE}/patches"
 if [ -f "${RECIPE_BAK}" ] && [ "${SAFE:-1}" -eq 1 ]
 then
 	echo "Please remove or restore ${RECIPE_BAK} before update"
