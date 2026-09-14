@@ -974,9 +974,10 @@ function simplemake () {
 	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* ${PKG_BLDPATH}"
 	cd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	cat >runmake.sh <<-EOF
-		#!/bin/bash -x
+		#!/bin/bash
 		source "${PKG_BLDPATH}/recipe.source"
 		source "${PKG_BLDPATH}/environment.source"
+		set -x
 		${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} PREFIX=${INSTALL_PREFIX} LIBSUFFIX=${INSTALL_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
 	EOF
 	run_cmd "chmod +x runmake.sh"
@@ -1015,9 +1016,10 @@ function cmakebuild () {
 	CCWRAPPER="" create_environment_source --target "${PKG_TARGET_ENV}"
 	
 	cat >runconfig.sh <<-EOF
-		#!/bin/bash -x
+		#!/bin/bash
 		source "${PKG_BLDPATH}/recipe.source"
 		source "${PKG_BLDPATH}/environment.source"
+		set -x
 		${CONF_ENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/cmake ${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}} \\
 		   -G "${CMAKE_GENERATOR}" \\
 		   -DCMAKE_BUILD_TYPE="Release" \\
@@ -1044,17 +1046,19 @@ function cmakebuild () {
 	case "${CMAKE_GENERATOR}" in
 		"Ninja")
 			cat >runmake.sh <<-EOF
-				#!/bin/bash -x
+				#!/bin/bash
 				source "${PKG_BLDPATH}/recipe.source"
 				source "${PKG_BLDPATH}/environment.source"
+				set -x
 				${PKG_MAKEENV} DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}
 			EOF
 		;;
 		"Unix Makefiles")
 			cat >runmake.sh <<-EOF
-				#!/bin/bash -x
+				#!/bin/bash
 				source "${PKG_BLDPATH}/recipe.source"
 				source "${PKG_BLDPATH}/environment.source"
+				set -x
 				${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make VERBOSE=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
 			EOF
 		;;
@@ -1175,15 +1179,17 @@ function mesonninja () {
 		;;
 	esac
 	cat > runconfig.sh <<-EOF
-		#!/bin/bash -x
+		#!/bin/bash
 		source "${PKG_BLDPATH}/recipe.source"
 		source "${PKG_BLDPATH}/environment.source"
+		set -x
 		${CONF_ENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/meson ${PKG_SRCPATH} ${PKG_BLDPATH} ${MESON_FLAGS} ${CONF_FLAGS} \${@}
 	EOF
 	cat >runmake.sh <<-EOF
-		#!/bin/bash -x
+		#!/bin/bash
 		source "${PKG_BLDPATH}/recipe.source"
 		source "${PKG_BLDPATH}/environment.source"
+		set -x
 		${PKG_MAKEENV} DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}
 	EOF
 	run_cmd "chmod +x runconfig.sh runmake.sh"
@@ -1205,9 +1211,10 @@ function cargobuild () {
 	cd "${PKG_BLDPATH}"
 	# shellcheck disable=SC2034
 	cat >runmake.sh <<-EOF
-		#!/bin/bash -x
+		#!/bin/bash
 		source recipe.source
 		source environment.source
+		set -x
 
 		case \${1} in
 		  install)
