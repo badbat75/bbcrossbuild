@@ -740,7 +740,7 @@ function create_recipe_source () {
 				PS[0-9]|PWD|RANDOM|READLINE*|SECONDS|SHELL|SHELLOPTS|SHLVL|SRANDOM|UID|_) continue ;;
 				HOME|USER|USERNAME|LOGNAME|LANG|LC_*|TERM|DISPLAY|XDG_*|DBUS_*|SSH_*|SUDO_*) continue ;;
 				PROMPT_COMMAND|LS_COLORS|MAIL*|EDITOR|VISUAL|TMPDIR|COLUMNS|LINES) continue ;;
-				SPACES|NUMSPACES|LOG_FILE|STATUS_FILE*|STATUS_CHK_FILE|PKG_CHKSUM) continue ;;
+				SPACES|NUMSPACES|LOG_FILE|STATUS_FILE*|STATUS_CHK_FILE|PKG_CHKSUM|RECIPE_SCRIPT|RECIPE_SOURCE) continue ;;
 			esac
 			case ${RESERVED} in *" ${NAME} "*) continue ;; esac
 			DEF=$( declare -p "${NAME}" 2>/dev/null ) || continue
@@ -1546,9 +1546,10 @@ function custom () {
 	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	cat >runmake.sh <<-EOF
-		#!/bin/bash -ex
+		#!/bin/bash -e
 		source "${PKG_BLDPATH}/recipe.source"
 		source "${PKG_BLDPATH}/environment.source"
+		set -x
 
 	EOF
 	if [ -f "${PKG_RECIPEPATH}/build.sh" ]
@@ -1933,11 +1934,11 @@ function build () {(
 	then
 		cat > "${PKG_BLDPATH}/runprebuild.sh" <<-EOF
 			#!/bin/bash
-			set -x
 			set +o pipefail
 			cd "${PKG_SRCPATH}"
 			source "${PKG_BLDPATH}/recipe.source"
 			source "${PKG_BLDPATH}/environment.source"
+			set -x
 			source "${PKG_RECIPEPATH}/prebuild.sh"
 			set +x
 		EOF
@@ -1956,11 +1957,12 @@ function build () {(
 	then
 		cat > "${PKG_BLDPATH}/runpostbuild.sh" <<-EOF
 			#!/bin/bash
-			set -ex
+			set -e
 			set +o pipefail
 			cd "${PKG_BLDPATH}"
 			source "${PKG_BLDPATH}/recipe.source"
 			source "${PKG_BLDPATH}/environment.source"
+			set -x
 			source "${PKG_RECIPEPATH}/postbuild.sh"
 			set +ex
 		EOF
