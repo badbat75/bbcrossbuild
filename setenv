@@ -31,8 +31,9 @@ export DISTOS_PATH BIN_PATH TOOLCHAIN_PATH
 
 PRJ_PATH=${BB_HOME}/${PRJ_DIR:-projects}
 PKG_PATH=${BB_HOME}/${PKG_DIR:-packages}
-# Name of the recipe file inside every packages/<group>/<name>/ directory (it is Bash, hence .sh)
-RECIPE_FILENAME=package.sh
+# Name of the recipe file inside every packages/<group>/<name>/ directory: variable definitions
+# sourced by build, the shell scripts live next to it as *.sh files
+RECIPE_FILENAME=package.env
 PATCH_PATH=${BB_HOME}/${PATCH_DIR:-patches}
 IMG_PATH=${BB_HOME}/${IMG_DIR:-images}
 

@@ -2,15 +2,15 @@
 """pkg2dir: one-off migration of BBCrossBuild recipes to one directory per package.
 
 Modes (run them in this order):
-  --move      git mv packages/<group>/<name>.pkg -> packages/<group>/<name>/package.sh
+  --move      git mv packages/<group>/<name>.pkg -> packages/<group>/<name>/package.env
   --verify    cross-check the string scanner with bash: for every PKG_PREBUILD, PKG_POSTBUILD,
               PKG_BUILDSCRIPT and PKG_POSTINSTALL assignment found at the top level of a
               recipe, the extracted literal must evaluate to the value bash assigns when the
               recipe is sourced. Run it before --extract.
   --extract   move the top-level script strings into prebuild.sh / postbuild.sh / build.sh /
-              postinstall.sh (un-escaped), delete them from package.sh, drop dead variables.
+              postinstall.sh (un-escaped), delete them from package.env, drop dead variables.
   --report    list the recipes that need manual work and why.
-  --check     after --extract: every package.sh parses and no longer assigns the moved variables.
+  --check     after --extract: every package.env parses and no longer assigns the moved variables.
 
 Options:
   --bbxb <dir>       framework root (default: the parent directory of this script)
@@ -58,7 +58,7 @@ ENV_OWNED = [
 # Plain (non exported) assignments written by environment.source: visible to the old runners too.
 ENV_PLAIN = ["DISTOS_PATH", "BIN_PATH", "PKG_SRCPATH", "PKG_BLDPATH", "PKG_PKGPATH",
              "PLATFORM_CFLAGS", "OPTCOMP_FLAGS", "OPTLINK_FLAGS"]
-RECIPE_FILENAME = "package.sh"
+RECIPE_FILENAME = "package.env"
 
 # An assignment at the start of a line, optionally behind a case arm label ("llvm) VAR=...")
 ASSIGN_RE = re.compile(r"^(?P<indent>[ \t]*)(?P<arm>[A-Za-z0-9_|*?.-]+\)[ \t]+)?(?P<name>[A-Z_][A-Z0-9_]*)(?P<op>\+?=)")
@@ -391,6 +391,14 @@ source "${BB_HOME}/core.functions"
 source "${BB_HOME}/platforms/${PLATFORM_NAME}.conf"
 source "${BB_HOME}/setenv"
 source "${BB_HOME}/build.functions"
+# A recipe is only meant to assign variables: neutralise every framework function that could
+# run a build or touch the filesystem, in case a recipe (or a malformed one) calls them.
+for FN in run_cmd download_uncompress downloadsources preparesources downloadonly configmake \
+	cmakebuild mesonninja cargobuild simplemake pythonbuild perlmodule kernelbuild kernelmodbuild \
+	custom create_environment_source create_recipe_source create_sfx_package build
+do
+	eval "${FN} () { return 0; }"
+done
 stub () {
 	local INSTALL_PREFIX INSTALL_EXECPREFIX INSTALL_LIBDIR INSTALL_LIBSUFFIX INSTALL_INCLUDEDIR \
 		INSTALL_SYSCONFDIR INSTALL_LOCALSTATEDIR INSTALL_SHAREDIR PKG_TARGET_ENV PKG_PKGPATH \
@@ -472,7 +480,7 @@ def recipe_dirs(bbxb, selected):
             if not os.path.isdir(gpath):
                 continue
             if os.path.isfile(os.path.join(gpath, RECIPE_FILENAME)):
-                dirs.append(gpath)  # packages/template
+                # packages/template: documentation, not a recipe (it is not even valid Bash)
                 continue
             for name in sorted(os.listdir(gpath)):
                 d = os.path.join(gpath, name)
@@ -568,7 +576,7 @@ def do_extract(bbxb, dirs):
             header = ("# shellcheck shell=bash\n"
                       "# shellcheck disable=SC2154\n"
                       "# %s: %s.\n"
-                      "# Every ALL_CAPS variable visible to package.sh is available here as ${VAR}.\n\n"
+                      "# Every ALL_CAPS variable visible to package.env is available here as ${VAR}.\n\n"
                       % (pkgname, SCRIPT_HEADERS[name]))
             target = os.path.join(d, SCRIPT_VARS[name])
             with open(target, "w", encoding="utf-8") as fh:

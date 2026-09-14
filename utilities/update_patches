@@ -97,10 +97,10 @@ then
 fi
 git -C "/tmp/$(gitrepo4pkg)" fetch
 
-# The recipe lives in packages/lfs/<package>/package.sh; the backup is kept outside the recipe
+# The recipe lives in packages/lfs/<package>/package.env; the backup is kept outside the recipe
 # directory so that it never enters the recipe checksum computed by build.
-RECIPE="${BBXB_PATH}/packages/lfs/${PACKAGE}/package.sh"
-RECIPE_BAK="${BBXB_PATH}/packages/lfs/${PACKAGE}.package.sh.bak"
+RECIPE="${BBXB_PATH}/packages/lfs/${PACKAGE}/package.env"
+RECIPE_BAK="${BBXB_PATH}/packages/lfs/${PACKAGE}.package.env.bak"
 if [ -f "${RECIPE_BAK}" ] && [ "${SAFE:-1}" -eq 1 ]
 then
 	echo "Please remove or restore ${RECIPE_BAK} before update"
