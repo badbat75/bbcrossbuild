@@ -10,7 +10,7 @@ PACKAGES+=" clang clang-devel libedit-devel lua-devel"
 PACKAGES+=" qemu-user-static"
 
 # for autoconf runtime
-PACKAGES+=" perl-FindBin"
+PACKAGES+=" perl-FindBin perl-IPC-Cmd perl-Pod-Html"
 
 # for Python3
 PACKAGES+=" openssl-devel libffi-devel libuuid-devel tcl-devel tk-devel"

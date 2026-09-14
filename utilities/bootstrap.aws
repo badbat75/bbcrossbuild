@@ -10,7 +10,7 @@ PACKAGES+=" libedit-devel lua-devel ocaml-findlib ocaml-ctypes ocaml-ocamldoc"
 PACKAGES+=" qemu-*-static qemu-kvm-tools qemu-kvm qemu-system-*"
 
 # for autoconf runtime
-PACKAGES+=" perl-FindBin"
+PACKAGES+=" perl-FindBin perl-IPC-Cmd perl-Pod-Html"
 
 # for Python3
 PACKAGES+=" openssl-devel libffi-devel libuuid-devel tcl-devel"
