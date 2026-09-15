@@ -1,4 +1,10 @@
 #!/bin/bash -e
+# update_patches <package> <ver1> [<ver2..n>]: regenerate the release branch patch of gcc,
+# binutils, glibc or gdb for the given versions. For every version it writes
+# packages/lfs/<package>/patches/<package>_<ver>+<sha>.patch, refreshes the <package>_<ver>.patch
+# symlink that toolchain.functions applies to the toolchain sources, and writes the PATCHES line
+# of the recipe variant packages/lfs/<package>/variants/version/<ver>/package.env (created when
+# missing, other lines of an existing file are kept).
 
 url4pkg () {
 	case ${PACKAGE} in
@@ -42,35 +48,43 @@ head4pkg () {
 	esac
 }
 
-generate_patch_and_print () {
-	local LAST_COMMIT PATCH_FILE LINK_FILE
+generate_patch () {
+	### generate_patch: write the patch and the symlink, then the version variant of the recipe
+	local LAST_COMMIT PATCH_FILE LINK_FILE VARIANT PATCHES_LINE
 	LAST_COMMIT=$(git -C "/tmp/$(gitrepo4pkg)" rev-parse --short -1 "$(head4pkg)")
 	PATCH_FILE=${PACKAGE}_${PKG_VER}+${LAST_COMMIT}.patch
 	LINK_FILE=${PACKAGE}_${PKG_VER}.patch
 	git -C "/tmp/$(gitrepo4pkg)" branch -m "$(head4pkg)"
-	# Patches live in the recipe directory; the <pkg>_<ver>.patch symlink is what the
-	# toolchain bootstrap (toolchain.functions) applies to the raw gcc/binutils sources.
 	mkdir -p "${PATCHES_PATH}"
 	# shellcheck disable=SC2046
 	git -C "/tmp/$(gitrepo4pkg)" diff "$(rel4pkg)..${LAST_COMMIT}" $(gitrepo_additional_params) > "${PATCHES_PATH}/${PATCH_FILE}"
 	ln -fs "${PATCH_FILE}" "${PATCHES_PATH}/${LINK_FILE}"
-	# shellcheck disable=SC2028
-	echo -n "\\\t${PKG_VER})\n"
-	# shellcheck disable=SC2028
-	echo -n "\\t\\tPKG_VER=${PKG_VER}+${LAST_COMMIT}\n"
-	# shellcheck disable=SC2028
-	echo -n "\\t\\tPATCHES=${PATCH_FILE}\n"
-	# shellcheck disable=SC2028
-	echo -n "\\t\\t;;"
+	# The variant selects the patch by PKG_VER; glibc also carries the LFS FHS patch of the version
+	PATCHES_LINE="PATCHES=${PATCH_FILE}"
+	if [ "${PACKAGE}" = glibc ] && [ -f "${PATCHES_PATH}/glibc-${PKG_VER}-fhs-1.patch" ]
+	then
+		PATCHES_LINE+=",glibc-${PKG_VER}-fhs-1.patch"
+	fi
+	VARIANT="${RECIPE_PATH}/variants/version/${PKG_VER}/package.env"
+	if [ -f "${VARIANT}" ] && grep -q '^PATCHES=' "${VARIANT}"
+	then
+		sed -i "s|^PATCHES=.*|${PATCHES_LINE}|" "${VARIANT}"
+	else
+		mkdir -p "$(dirname "${VARIANT}")"
+		{
+			echo "# ${PACKAGE}, version ${PKG_VER}: release branch patch (utilities/update_patches)"
+			echo "${PATCHES_LINE}"
+		} >> "${VARIANT}"
+	fi
 }
 
-BBXB_PATH=$(realpath "$(dirname ${0})/..")
+BBXB_PATH=$(realpath "$(dirname "${0}")/..")
 echo "bbxbuild path: ${BBXB_PATH}"
 PACKAGE=${1}
 shift
 VERSIONS=${*}
 
-if [ -z "${VERSIONS}" ] && [ -z ${PACKAGE} ]
+if [ -z "${VERSIONS}" ] || [ -z "${PACKAGE}" ]
 then
 	echo "No package and versions has been specified"
 	echo
@@ -85,7 +99,7 @@ case ${PACKAGE} in
 	gcc|binutils|glibc|gdb)
 	;;
 	*)
-		echo "Only gcc binutils and glibc supported."
+		echo "Only gcc, binutils, glibc and gdb are supported."
 		echo
 		exit 1
 	;;
@@ -99,22 +113,13 @@ then
 fi
 git -C "/tmp/$(gitrepo4pkg)" fetch
 
-# The recipe lives in packages/lfs/<package>/package.env; the backup is kept outside the recipe
-# directory so that it never enters the recipe checksum computed by build.
-RECIPE="${BBXB_PATH}/packages/lfs/${PACKAGE}/package.env"
-RECIPE_BAK="${BBXB_PATH}/packages/lfs/${PACKAGE}.package.env.bak"
-PATCHES_PATH="${BBXB_PATH}/packages/lfs/${PACKAGE}/patches"
-if [ -f "${RECIPE_BAK}" ] && [ "${SAFE:-1}" -eq 1 ]
-then
-	echo "Please remove or restore ${RECIPE_BAK} before update"
-else
-	cp "${RECIPE}" "${RECIPE_BAK}"
-	for PKG_VER in ${VERSIONS}
-	do
-		PKG_MAJVER=$(echo "${PKG_VER}" | cut -d'.' -f1)
-		PKG_USCOREVER=${PKG_VER//./_}
-		echo -n "Generating patch for ${PACKAGE}_${PKG_VER}... "
-		eval "sed -i '/^\t${PKG_VER})/,/\t\t;;/c $(generate_patch_and_print)' ${RECIPE}"
-		echo "done."
-	done
-fi
+RECIPE_PATH="${BBXB_PATH}/packages/lfs/${PACKAGE}"
+PATCHES_PATH="${RECIPE_PATH}/patches"
+for PKG_VER in ${VERSIONS}
+do
+	PKG_MAJVER=$(echo "${PKG_VER}" | cut -d'.' -f1)
+	PKG_USCOREVER=${PKG_VER//./_}
+	echo -n "Generating patch for ${PACKAGE}_${PKG_VER}... "
+	generate_patch
+	echo "done."
+done
