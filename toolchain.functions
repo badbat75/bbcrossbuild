@@ -1370,7 +1370,7 @@ function setup_python () {
 		run_cmd "${PYTHON_FOR_BUILD} \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py\""
 		popd
 		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}\""
-		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip\" -v install --upgrade setuptools\<65 pip jinja2 docutils"
+		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip\" -v install --upgrade setuptools pip jinja2 docutils"
 	}
 
 	function build_python_crossenv () {
@@ -1393,17 +1393,17 @@ function setup_python () {
 			set -e
 			#shellcheck source=/dev/null
 			source "${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate"
-			run_cmd "build-python -m pip install --upgrade cython setuptools\<65 wheel"
+			### setuptools stays current: crossenv keeps build-python's site-packages ahead of pip's
+			### isolated build environments, so an old setuptools here would validate every sdist
+			### metadata (PEP 639 licence strings need setuptools >= 77)
+			run_cmd "build-python -m pip install --upgrade cython setuptools wheel"
 			run_cmd "mkdir -p \"${TOOLCHAIN_BLDPATH}/build_python_crossenv\""
 			pushd "${TOOLCHAIN_BLDPATH}/build_python_crossenv"
 			TOOLCHAIN=gnu PKG_BLDPATH=${PWD} create_environment_source
 			#shellcheck source=/dev/null
 			source environment.source
-			# MarkupSafe >= 3.0.3 (Mako's only dependency) is built from source and declares its
-			# licence in the PEP 639 string form; the setuptools < 65 kept in build-python shadows
-			# pip's isolated build environment under crossenv and rejects that metadata.
-			run_cmd "cross-pip -v install --upgrade setuptools\<65 cython Mako MarkupSafe\<3"
-			run_cmd "build-pip -v install --upgrade setuptools\<65 jinja2"
+			run_cmd "cross-pip -v install --upgrade setuptools cython Mako"
+			run_cmd "build-pip -v install --upgrade setuptools jinja2"
 			popd
 			run_cmd "rm -rf \"${TOOLCHAIN_BLDPATH}/build_python_crossenv\""
 			run_cmd "sed -i '1 a PYTHONPATH=\"\${SYSROOT}/usr/lib/python${PYTHONBIN_VER}/site-packages\"' ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/cross-python3"
