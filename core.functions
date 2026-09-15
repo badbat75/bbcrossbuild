@@ -133,6 +133,13 @@ download_uncompress () {
 	FILE_ENCODING=$(file -iz "${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}")
 	DOWNLOAD_FILE_TYPE=$(echo "${FILE_ENCODING}" | grep -E -o "compressed-encoding=[^;]*" | sed 's/compressed-encoding=//' || true )
 	UNCOMPRESSED_FILE_TYPE=$(echo "${FILE_ENCODING}" | awk '{print $2}' | sed 's/;$//')
+	### A server that answers 200 with an HTML page (a moved repository, a landing page) must
+	### not leave that page in the cache in place of the archive: drop it and fail here.
+	if [ "${UNCOMPRESSED_FILE_TYPE}" = "text/html" ]
+	then
+		run_cmd "rm -f \"${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}\""
+		trow_error "${ERROR_GENERIC}" "The download of ${URL} is an HTML page, not an archive"
+	fi
 	if [ ! -d "${DEST_DIR}" ] ; then run_cmd "mkdir -pv \"${DEST_DIR}\"" ; fi
 	case ${UNCOMPRESSED_FILE_TYPE} in
 		application/x-tar)
