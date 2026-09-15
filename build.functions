@@ -776,6 +776,245 @@ function recipe_file () {
 	echo "${PKG_PATH}/${1}/${RECIPE_FILENAME}"
 }
 
+function set_target_prefixes () {
+	### set_target_prefixes <target>: PKG_TARGET_ENV, PKG_PKGPATH and the INSTALL_* prefixes of a
+	### build target: native installs into the global toolchain and never records a status, cross
+	### into the platform toolchain, any other name (bootstrap, stage1, a flavour or the empty
+	### default) into the sysroot through the staging directory PKG_PKGPATH.
+	### Shared by build and by the recipe utilities (pkg_lint, pkg_show).
+	case ${1} in
+		native)
+			PKG_TARGET_ENV=native
+			PKG_PKGPATH=
+			INSTALL_PREFIX=${NATIVE_PREFIX}
+			INSTALL_EXECPREFIX=${NATIVE_EXECPREFIX}
+			INSTALL_LIBDIR=${NATIVE_LIBDIR}
+			INSTALL_LIBSUFFIX=
+			INSTALL_INCLUDEDIR=${NATIVE_INCLUDEDIR}
+			INSTALL_SYSCONFDIR=${NATIVE_SYSCONFDIR}
+			INSTALL_LOCALSTATEDIR=${NATIVE_LOCALSTATEDIR}
+			INSTALL_SHAREDIR=${NATIVE_SHAREDIR}
+			NOSAVESTATUS=1
+		;;
+		cross)
+			PKG_TARGET_ENV=cross
+			PKG_PKGPATH=
+			INSTALL_PREFIX=${CROSS_PREFIX}
+			INSTALL_EXECPREFIX=${CROSS_EXECPREFIX}
+			INSTALL_LIBDIR=${CROSS_LIBDIR}
+			INSTALL_LIBSUFFIX=
+			INSTALL_INCLUDEDIR=${CROSS_INCLUDEDIR}
+			INSTALL_SYSCONFDIR=${CROSS_SYSCONFDIR}
+			INSTALL_LOCALSTATEDIR=${CROSS_LOCALSTATEDIR}
+			INSTALL_SHAREDIR=${CROSS_SHAREDIR}
+		;;
+		*)
+			PKG_TARGET_ENV=target
+			PKG_PKGPATH=${PACKAGES_PATH}/${PKG_FULLNAME}${1:+-${1}}
+			INSTALL_PREFIX=${TARGET_PREFIX}
+			INSTALL_EXECPREFIX=${TARGET_EXECPREFIX}
+			INSTALL_LIBDIR=${TARGET_LIBDIR}
+			INSTALL_LIBSUFFIX=${TARGET_LIBSUFFIX}
+			INSTALL_INCLUDEDIR=${TARGET_INCLUDEDIR}
+			INSTALL_SYSCONFDIR=${TARGET_SYSCONFDIR}
+			INSTALL_LOCALSTATEDIR=${TARGET_LOCALSTATEDIR}
+			INSTALL_SHAREDIR=${TARGET_SHAREDIR}
+		;;
+	esac
+}
+
+function recipe_variants () {
+	### recipe_variants: print, one per line and in application order, the directories under
+	### ${PKG_RECIPEPATH}/variants that select the current build (paths relative to variants/).
+	### A variant directory has the layout of a recipe (package.env, the scripts, files/, patches/)
+	### and is named after one selector:
+	###   target/<native|cross|sysroot>   the install class (sysroot: anything but native and cross)
+	###   target/<default|name>           the PKG_TARGET name (default: no target given)
+	###   toolchain/<gnu|llvm>            the toolchain the package is built with (PKG_TOOLCHAIN and
+	###                                   build --toolchain included)
+	###   arch/<HM>  platform/<PLATFORM_NAME>  version/<PKG_VER>
+	###   option/<name>                   WITH_<NAME> is set and not 0, no, false or off
+	###   option/<name>=<value>           <value> is one of the words of WITH_<NAME>
+	###   <axis>/other                    no other directory of that axis matched
+	### A directory name may list several values separated by commas (target/native,cross). The
+	### axes nest inside a variant directory, in the order above, to select a conjunction
+	### (target/default/arch/aarch64). Every single-selector directory is applied first (target
+	### class, target name, toolchain, arch, platform, version, options), then the conjunctions by
+	### depth, so that a more specific directory always follows the ones it refines.
+	local VARIANTS_PATH RECIPE_TOOLCHAIN
+	local -a VARIANT_AXES=(target toolchain arch platform version option)
+	VARIANTS_PATH="${PKG_RECIPEPATH}/variants"
+	if [ ! -d "${VARIANTS_PATH}" ]
+	then
+		return 0
+	fi
+	# shellcheck disable=SC2154
+	RECIPE_TOOLCHAIN=${_param_toolchain:-${PKG_TOOLCHAIN:-${TOOLCHAIN}}}
+
+	function variant_matches () {
+		### variant_matches <axis> <directory name>: succeeds when one of the comma separated
+		### values of the name selects the current build
+		local VALUE OPTION
+		for VALUE in ${2//,/ }
+		do
+			case ${1} in
+				target)
+					case ${VALUE} in
+						native|cross) [ "${PKG_TARGET_ENV}" = "${VALUE}" ] && return 0 ;;
+						sysroot) [ "${PKG_TARGET_ENV}" = target ] && return 0 ;;
+						default) [ -z "${PKG_TARGET}" ] && return 0 ;;
+						*) [ "${PKG_TARGET}" = "${VALUE}" ] && return 0 ;;
+					esac
+				;;
+				toolchain) [ "${RECIPE_TOOLCHAIN}" = "${VALUE}" ] && return 0 ;;
+				arch) [ "${HM}" = "${VALUE}" ] && return 0 ;;
+				platform) [ "${PLATFORM_NAME}" = "${VALUE}" ] && return 0 ;;
+				version) [ "${PKG_VER}" = "${VALUE}" ] && return 0 ;;
+				option)
+					OPTION="WITH_$( echo "${VALUE%%=*}" | tr 'a-z-' 'A-Z_' )"
+					if [ "${VALUE}" = "${VALUE%%=*}" ]
+					then
+						case ${!OPTION:-} in
+							""|0|no|false|off) ;;
+							*) return 0 ;;
+						esac
+					else
+						case " ${!OPTION:-} " in
+							*" ${VALUE#*=} "*) return 0 ;;
+						esac
+					fi
+				;;
+			esac
+		done
+		return 1
+	}
+
+	function variant_walk () {
+		### variant_walk <directory> <depth> <first axis index>: print "<depth> <relative path>"
+		### for every matching directory below <directory>, then recurse into it for the axes
+		### that follow in the canonical order
+		local DIR DEPTH AXIS ENTRY NAME I
+		local -a MATCHES
+		DIR=${1}
+		DEPTH=${2}
+		for (( I = ${3}; I < ${#VARIANT_AXES[@]}; I++ ))
+		do
+			AXIS=${VARIANT_AXES[I]}
+			if [ ! -d "${DIR}/${AXIS}" ]
+			then
+				continue
+			fi
+			MATCHES=()
+			for ENTRY in "${DIR}/${AXIS}"/*/
+			do
+				NAME=$(basename "${ENTRY}")
+				if [ "${NAME}" = "*" ] || [ "${NAME}" = other ]
+				then
+					continue
+				fi
+				if variant_matches "${AXIS}" "${NAME}"
+				then
+					### The install class comes before the target name
+					case ${AXIS}/${NAME} in
+						target/native|target/cross|target/sysroot) MATCHES=("${NAME}" "${MATCHES[@]}") ;;
+						*) MATCHES+=("${NAME}") ;;
+					esac
+				fi
+			done
+			if [ "${#MATCHES[@]}" -eq 0 ] && [ -d "${DIR}/${AXIS}/other" ]
+			then
+				MATCHES=(other)
+			fi
+			for NAME in "${MATCHES[@]}"
+			do
+				ENTRY="${DIR}/${AXIS}/${NAME}"
+				echo "${DEPTH} ${ENTRY#"${VARIANTS_PATH}"/}"
+				variant_walk "${ENTRY}" $((DEPTH+1)) $((I+1))
+			done
+		done
+		return 0
+	}
+
+	variant_walk "${VARIANTS_PATH}" 1 0 | LC_ALL=C sort -s -k1,1n | cut -d' ' -f2-
+	return 0
+}
+
+function apply_recipe_variants () {
+	### apply_recipe_variants: source the package.env of every variant directory selected by
+	### recipe_variants, in that order, and record the directories in PKG_VARIANTS (used by
+	### recipe_script and recipe_patch). The target directories are applied first on their own:
+	### they may set PKG_TOOLCHAIN or PKG_VER, which the other selectors read.
+	local VARIANT
+	PKG_VARIANTS=
+	for VARIANT in $( recipe_variants )
+	do
+		case ${VARIANT} in
+			target/*/*|*/*/*) continue ;;
+			target/*) ;;
+			*) continue ;;
+		esac
+		if [ -f "${PKG_RECIPEPATH}/variants/${VARIANT}/${RECIPE_FILENAME}" ]
+		then
+			# shellcheck source=/dev/null
+			source "${PKG_RECIPEPATH}/variants/${VARIANT}/${RECIPE_FILENAME}"
+		fi
+		PKG_VARIANTS+="${PKG_VARIANTS:+ }${VARIANT}"
+	done
+	for VARIANT in $( recipe_variants )
+	do
+		case " ${PKG_VARIANTS} " in
+			*" ${VARIANT} "*) continue ;;
+		esac
+		if [ -f "${PKG_RECIPEPATH}/variants/${VARIANT}/${RECIPE_FILENAME}" ]
+		then
+			# shellcheck source=/dev/null
+			source "${PKG_RECIPEPATH}/variants/${VARIANT}/${RECIPE_FILENAME}"
+		fi
+		PKG_VARIANTS+="${PKG_VARIANTS:+ }${VARIANT}"
+	done
+	return 0
+}
+
+function recipe_script () {
+	### recipe_script <prebuild.sh|build.sh|postbuild.sh|postinstall.sh>: print the path of the
+	### script to run, the one of the last selected variant directory that carries it, else the
+	### one of the recipe directory; print nothing when there is none.
+	local VARIANT SCRIPT
+	SCRIPT="${PKG_RECIPEPATH}/${1}"
+	for VARIANT in ${PKG_VARIANTS}
+	do
+		if [ -f "${PKG_RECIPEPATH}/variants/${VARIANT}/${1}" ]
+		then
+			SCRIPT="${PKG_RECIPEPATH}/variants/${VARIANT}/${1}"
+		fi
+	done
+	if [ -f "${SCRIPT}" ]
+	then
+		echo "${SCRIPT}"
+	fi
+	return 0
+}
+
+function recipe_patch () {
+	### recipe_patch <file name>: print the path of a PATCHES entry, looked up in the patches/
+	### directory of the selected variants (last one first) and then of the recipe; print
+	### nothing when the file does not exist.
+	local VARIANT PATCH
+	PATCH="${PKG_RECIPEPATH}/patches/${1}"
+	for VARIANT in ${PKG_VARIANTS}
+	do
+		if [ -f "${PKG_RECIPEPATH}/variants/${VARIANT}/patches/${1}" ]
+		then
+			PATCH="${PKG_RECIPEPATH}/variants/${VARIANT}/patches/${1}"
+		fi
+	done
+	if [ -f "${PATCH}" ]
+	then
+		echo "${PATCH}"
+	fi
+	return 0
+}
+
 function recipe_checksum () {
 	### recipe_checksum <recipe dir>: md5 over the names, types, symlink targets and contents of
 	### the whole recipe directory, so that editing a script, a static file or a patch rebuilds
@@ -802,6 +1041,7 @@ function recipe_checksum () {
 }
 
 function preparesources () {
+	local PATCH_FILE
 
 	cd "${PKG_SRCPATH}"
 	if [ "x${PATCHDEB}" != x ]
@@ -850,7 +1090,12 @@ function preparesources () {
 			"
 		else
 			echo -n "${SPACES}Applying ${scanpatch} patch..."
-			run_cmd "patch -f -p1 < \"${PKG_RECIPEPATH}/patches/${scanpatch}\""
+			PATCH_FILE=$( recipe_patch "${scanpatch}" )
+			if [ -z "${PATCH_FILE}" ]
+			then
+				trow_error "${ERROR_FILE_NOT_FOUND}" "${PKG_FULLNAME}: patch ${scanpatch} not found under the patches/ directories of the recipe"
+			fi
+			run_cmd "patch -f -p1 < \"${PATCH_FILE}\""
 			echo "Done."
 		fi
 		IFS=,
@@ -1563,11 +1808,11 @@ function custom () {
 		set -x
 
 	EOF
-	if [ -f "${PKG_RECIPEPATH}/build.sh" ]
+	if [ -n "$( recipe_script build.sh )" ]
 	then
-		echo "source \"${PKG_RECIPEPATH}/build.sh\"" >>runmake.sh
+		echo "source \"$( recipe_script build.sh )\"" >>runmake.sh
 	else
-		trow_error "${ERROR_FILE_NOT_FOUND}" "${PKG_FULLNAME}: BUILD_PROCESS=custom requires ${PKG_RECIPEPATH}/build.sh"
+		trow_error "${ERROR_FILE_NOT_FOUND}" "${PKG_FULLNAME}: BUILD_PROCESS=custom requires build.sh in the recipe or in a selected variant"
 	fi
 	run_cmd "chmod +x runmake.sh"
 	run_cmd "./runmake.sh"
@@ -1732,9 +1977,11 @@ function build () {(
 		PKG_SRCDIR \
 		PKG_TARGET \
 		PKG_TARGET_ENV \
+		PKG_VARIANTS \
 		POSTINST_FILE \
 		POSTINST_VAR \
 		RECIPE_SCRIPT \
+		RECIPE_SCRIPT_FILE \
 		STATUS_CHK_FILE \
 		STATUS_FILE \
 		STATUS_FILE_DEFAULT_TARGET \
@@ -1771,48 +2018,13 @@ function build () {(
 	PKG_FULLNAME="\${PKG_NAME}\${PKG_SUFFIX}\${PKG_VER:+_\${PKG_VER}}"
 	PKG_SRCDIR=${PKG_SRCDIR:-${PKG_FULLNAME}}
 	PKG_BLDPATH=${BLD_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}
-	case ${PKG_TARGET} in
-		native)
-			PKG_TARGET_ENV=native
-			PKG_PKGPATH=
-			INSTALL_PREFIX=${NATIVE_PREFIX}
-			INSTALL_EXECPREFIX=${NATIVE_EXECPREFIX}
-			INSTALL_LIBDIR=${NATIVE_LIBDIR}
-			INSTALL_LIBSUFFIX=
-			INSTALL_INCLUDEDIR=${NATIVE_INCLUDEDIR}
-			INSTALL_SYSCONFDIR=${NATIVE_SYSCONFDIR}
-			INSTALL_LOCALSTATEDIR=${NATIVE_LOCALSTATEDIR}
-			INSTALL_SHAREDIR=${NATIVE_SHAREDIR}
-			NOSAVESTATUS=1
-		;;
-		cross)
-			PKG_TARGET_ENV=cross
-			PKG_PKGPATH=
-			INSTALL_PREFIX=${CROSS_PREFIX}
-			INSTALL_EXECPREFIX=${CROSS_EXECPREFIX}
-			INSTALL_LIBDIR=${CROSS_LIBDIR}
-			INSTALL_LIBSUFFIX=
-			INSTALL_INCLUDEDIR=${CROSS_INCLUDEDIR}
-			INSTALL_SYSCONFDIR=${CROSS_SYSCONFDIR}
-			INSTALL_LOCALSTATEDIR=${CROSS_LOCALSTATEDIR}
-			INSTALL_SHAREDIR=${CROSS_SHAREDIR}
-		;;
-		*)
-			PKG_TARGET_ENV=target
-			PKG_PKGPATH=${PACKAGES_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}
-			INSTALL_PREFIX=${TARGET_PREFIX}
-			INSTALL_EXECPREFIX=${TARGET_EXECPREFIX}
-			INSTALL_LIBDIR=${TARGET_LIBDIR}
-			INSTALL_LIBSUFFIX=${TARGET_LIBSUFFIX}
-			INSTALL_INCLUDEDIR=${TARGET_INCLUDEDIR}
-			INSTALL_SYSCONFDIR=${TARGET_SYSCONFDIR}
-			INSTALL_LOCALSTATEDIR=${TARGET_LOCALSTATEDIR}
-			INSTALL_SHAREDIR=${TARGET_SHAREDIR}
-		;;
-	esac
+	set_target_prefixes "${PKG_TARGET}"
 
 	# shellcheck source=/dev/null
 	source "$(recipe_file "${PKG_FILE}")"
+	### Then the variant directories selected by the target, toolchain, arch, platform, version
+	### and options of this build (see recipe_variants)
+	apply_recipe_variants
 
 	PKG_TOOLCHAIN=${_param_toolchain:-${PKG_TOOLCHAIN}}
 	PKG_KERNEL_BUILD_MODULES="${_param_with_extra_modules:-${PKG_KERNEL_BUILD_MODULES}}"
@@ -1906,14 +2118,16 @@ function build () {(
 	then
 		run_cmd "mkdir -p \"${BIN_PATH}\"" >> "${LOG_FILE}"
 	fi
+	echo "Recipe variants: ${PKG_VARIANTS:-none}" >> "${LOG_FILE}"
 	for RECIPE_SCRIPT in prebuild.sh build.sh postbuild.sh postinstall.sh
 	do
-		if [ -f "${PKG_RECIPEPATH}/${RECIPE_SCRIPT}" ]
+		RECIPE_SCRIPT_FILE=$( recipe_script "${RECIPE_SCRIPT}" )
+		if [ -n "${RECIPE_SCRIPT_FILE}" ]
 		then
 			{
-				echo "Recipe script ${RECIPE_SCRIPT}:"
+				echo "Recipe script ${RECIPE_SCRIPT} (${RECIPE_SCRIPT_FILE#"${PKG_RECIPEPATH}"/}):"
 				echo "=================="
-				cat "${PKG_RECIPEPATH}/${RECIPE_SCRIPT}"
+				cat "${RECIPE_SCRIPT_FILE}"
 				echo "=================="
 				echo
 			} >> "${LOG_FILE}"
@@ -1941,7 +2155,8 @@ function build () {(
 	( create_environment_source --target "${PKG_TARGET_ENV}" ) | log_buffer info >> "${LOG_FILE}"
 	create_recipe_source | log_buffer info >> "${LOG_FILE}"
 	#### Pre-Build
-	if [ -f "${PKG_RECIPEPATH}/prebuild.sh" ]
+	RECIPE_SCRIPT_FILE=$( recipe_script prebuild.sh )
+	if [ -n "${RECIPE_SCRIPT_FILE}" ]
 	then
 		cat > "${PKG_BLDPATH}/runprebuild.sh" <<-EOF
 			#!/bin/bash
@@ -1950,7 +2165,7 @@ function build () {(
 			source "${PKG_BLDPATH}/recipe.source"
 			source "${PKG_BLDPATH}/environment.source"
 			set -x
-			source "${PKG_RECIPEPATH}/prebuild.sh"
+			source "${RECIPE_SCRIPT_FILE}"
 			set +x
 		EOF
 		run_cmd "chmod +x \"${PKG_BLDPATH}/runprebuild.sh\"" >> "${LOG_FILE}"
@@ -1964,7 +2179,8 @@ function build () {(
 		${BUILD_PROCESS} >> "${LOG_FILE}" 2>&1
 	fi
 	#### Post-Build
-	if [ -f "${PKG_RECIPEPATH}/postbuild.sh" ]
+	RECIPE_SCRIPT_FILE=$( recipe_script postbuild.sh )
+	if [ -n "${RECIPE_SCRIPT_FILE}" ]
 	then
 		cat > "${PKG_BLDPATH}/runpostbuild.sh" <<-EOF
 			#!/bin/bash
@@ -1974,7 +2190,7 @@ function build () {(
 			source "${PKG_BLDPATH}/recipe.source"
 			source "${PKG_BLDPATH}/environment.source"
 			set -x
-			source "${PKG_RECIPEPATH}/postbuild.sh"
+			source "${RECIPE_SCRIPT_FILE}"
 			set +ex
 		EOF
 		run_cmd "chmod +x \"${PKG_BLDPATH}/runpostbuild.sh\"" >> "${LOG_FILE}"
@@ -1982,11 +2198,12 @@ function build () {(
 		run_cmd "\"${PKG_BLDPATH}/runpostbuild.sh\"" >> "${LOG_FILE}"
 	fi
 	#### Post-Install
-	if [ -f "${PKG_RECIPEPATH}/postinstall.sh" ] && [ -z "${PKG_PKGPATH}" ]
+	RECIPE_SCRIPT_FILE=$( recipe_script postinstall.sh )
+	if [ -n "${RECIPE_SCRIPT_FILE}" ] && [ -z "${PKG_PKGPATH}" ]
 	then
 		### Post install scripts run inside the target image: nothing to do for native and cross builds
 		echo "postinstall.sh ignored for the ${PKG_TARGET_ENV} build" | log_buffer info >> "${LOG_FILE}"
-	elif [ -f "${PKG_RECIPEPATH}/postinstall.sh" ]
+	elif [ -n "${RECIPE_SCRIPT_FILE}" ]
 	then
 		POSTINST_FILE="${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}"
 		run_cmd "mkdir -p \"${PKG_PKGPATH}/postinst_scripts\"" >> "${LOG_FILE}"
@@ -2002,7 +2219,7 @@ function build () {(
 				printf '%s=%q\n' "${POSTINST_VAR}" "${!POSTINST_VAR}"
 			done
 			echo
-			cat "${PKG_RECIPEPATH}/postinstall.sh"
+			cat "${RECIPE_SCRIPT_FILE}"
 		} > "${POSTINST_FILE}"
 		run_cmd "cat \"${POSTINST_FILE}\"" >> "${LOG_FILE}"
 	fi

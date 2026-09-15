@@ -1,0 +1,98 @@
+#!/bin/bash
+# pkg_show: resolve a recipe the way build does and print what the build would see.
+#
+# Usage: utilities/pkg_show [-p <platform>] [-t gnu|llvm] [-d] <group>/<name>[:<target>] ...
+#
+#   -p <platform>   platform configuration to load (default generic-x64)
+#   -t <toolchain>  the --toolchain option of build (the toolchain selector reads
+#                   PKG_TOOLCHAIN and this before TOOLCHAIN)
+#   -d              dump mode: only the resolved variables as sorted declare lines, for diffing
+#
+# For every package it prints the selected variant directories, the script that each step would
+# run, and every ALL_CAPS variable the recipe and its variants set or changed. Every setenv or
+# bbxb.conf variable can be overridden from the environment (TOOLCHAIN=llvm utilities/pkg_show ...).
+
+BB_HOME=$(realpath "$(dirname "${BASH_SOURCE[0]}")/..")
+DUMP=0
+SHOW_TOOLCHAIN=
+while getopts "p:t:d" OPT
+do
+	case ${OPT} in
+		p) PLATFORM_NAME=${OPTARG} ;;
+		t) SHOW_TOOLCHAIN=${OPTARG} ;;
+		d) DUMP=1 ;;
+		*) exit 1 ;;
+	esac
+done
+shift $((OPTIND-1))
+if [ "${#}" -eq 0 ]
+then
+	sed -n '2,/^$/{s/^# \{0,1\}//p}' "${BASH_SOURCE[0]}"
+	exit 1
+fi
+# shellcheck source=utilities/pkgtools.functions
+source "${BB_HOME}/utilities/pkgtools.functions"
+
+function show_recipe () {
+	### show_recipe <group>/<name>[:<target>]: runs in a subshell
+	(
+		local PKG_SPEC TARGET DIR BEFORE AFTER NAME SCRIPT FILE
+		PKG_SPEC=${1%%:*}
+		TARGET=$(cut -s -d':' -f2 <<<"${1}")
+		DIR="${PKG_PATH}/${PKG_SPEC}"
+		if [ ! -f "${DIR}/${RECIPE_FILENAME}" ]
+		then
+			echo "pkg_show: ${PKG_SPEC}: no ${RECIPE_FILENAME} under ${DIR}" >&2
+			exit 1
+		fi
+		BEFORE=$(mktemp)
+		AFTER=$(mktemp)
+		for NAME in $(compgen -v | LC_ALL=C sort -u)
+		do
+			case ${NAME} in
+				*[a-z]*|_|BASH*|RANDOM|SECONDS|LINENO|EPOCH*|SRANDOM) continue ;;
+			esac
+			declare -p "${NAME}" 2>/dev/null
+		done | LC_ALL=C sort > "${BEFORE}"
+		recipe_resolve "${DIR}" "${TARGET}" "${SHOW_TOOLCHAIN}" 2> "${AFTER}.err" ||
+			echo "pkg_show: ${1}: sourcing the recipe returned an error" >&2
+		if [ -s "${AFTER}.err" ]
+		then
+			sed "s|^|pkg_show: ${1}: |" "${AFTER}.err" >&2
+		fi
+		for NAME in $(compgen -v | LC_ALL=C sort -u)
+		do
+			case ${NAME} in
+				*[a-z]*|_|BASH*|RANDOM|SECONDS|LINENO|EPOCH*|SRANDOM) continue ;;
+				PKG_FILE|PKG_RECIPEPATH|PKG_BLDPATH|PKG_SRCDIR|PKG_VARIANTS|OPT|OPTARG|OPTIND|DUMP|SHOW_TOOLCHAIN) continue ;;
+			esac
+			declare -p "${NAME}" 2>/dev/null
+		done | LC_ALL=C sort > "${AFTER}"
+		if [ "${DUMP}" -eq 1 ]
+		then
+			echo "### ${PKG_SPEC}${TARGET:+:${TARGET}} ${PLATFORM_NAME} ${SHOW_TOOLCHAIN:-${TOOLCHAIN}}"
+			LC_ALL=C comm -13 "${BEFORE}" "${AFTER}"
+		else
+			echo "${PKG_SPEC}${TARGET:+:${TARGET}} (${PKG_FULLNAME}, platform ${PLATFORM_NAME}, toolchain ${PKG_TOOLCHAIN:-${TOOLCHAIN}})"
+			echo "  variants: ${PKG_VARIANTS:-none}"
+			for SCRIPT in prebuild.sh build.sh postbuild.sh postinstall.sh
+			do
+				FILE=$(recipe_script "${SCRIPT}")
+				if [ -n "${FILE}" ]
+				then
+					echo "  ${SCRIPT}: ${FILE#"${PKG_RECIPEPATH}"/}"
+				fi
+			done
+			LC_ALL=C comm -13 "${BEFORE}" "${AFTER}" | sed 's/^declare -[-a-zA-Z]* /  /'
+			echo
+		fi
+		rm -f "${BEFORE}" "${AFTER}" "${AFTER}.err"
+	)
+}
+
+STATUS=0
+for SPEC in "${@}"
+do
+	show_recipe "${SPEC}" || STATUS=1
+done
+exit "${STATUS}"

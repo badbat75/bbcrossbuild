@@ -1,0 +1,87 @@
+# pkgtools.functions: shared setup of the recipe utilities (pkg_lint, pkg_show).
+#
+# Sources the framework the way bbxb does (seterr, core.functions, the platform, setenv,
+# build.functions) with every build step stubbed out, and defines recipe_resolve, which sets up
+# the variables build sets before sourcing a recipe, sources package.env and applies the variant
+# directories through the same functions build uses.
+# Expects BB_HOME; honours PLATFORM_NAME (default generic-x64) and DATA_PATH.
+
+PLATFORM_NAME=${PLATFORM_NAME:-generic-x64}
+PROJECT_NAME=${PROJECT_NAME:-pkgtools}
+DATA_PATH=${DATA_PATH:-/tmp/pkgtools}
+export BB_HOME PLATFORM_NAME PROJECT_NAME DATA_PATH
+
+cd "${BB_HOME}" || exit 1
+# shellcheck source=/dev/null
+source "${BB_HOME}/seterr"
+# shellcheck source=/dev/null
+source "${BB_HOME}/core.functions"
+# shellcheck source=/dev/null
+source "${BB_HOME}/platforms/${PLATFORM_NAME}.conf" 2> /dev/null
+# shellcheck source=/dev/null
+source "${BB_HOME}/setenv" 2> /dev/null
+# shellcheck source=/dev/null
+source "${BB_HOME}/build.functions"
+
+# A recipe only assigns variables: make sure nothing it may call can run a build.
+for FN in run_cmd download_uncompress downloadsources preparesources downloadonly configmake \
+	cmakebuild mesonninja cargobuild simplemake pythonbuild perlmodule kernelbuild kernelmodbuild \
+	custom create_environment_source create_recipe_source create_sfx_package build
+do
+	eval "${FN} () { return 0; }"
+done
+
+BUILD_PROCESSES="downloadonly configmake cmakebuild mesonninja cargobuild simplemake pythonbuild perlmodule kernelbuild kernelmodbuild custom none"
+RECIPE_ENTRIES="${RECIPE_FILENAME} prebuild.sh postbuild.sh build.sh postinstall.sh files patches"
+VARIANT_AXES_LIST="target toolchain arch platform version option"
+
+# The INSTALL_* and PKG_* variables set below are read by the sourced recipe, not by the caller
+# shellcheck disable=SC2034
+function recipe_resolve () {
+	### recipe_resolve <recipe dir> <target> [<toolchain>]: resolve a recipe for one target the
+	### way build does (prefixes, package.env, variants) and leave every variable set for the
+	### caller. Meant to run in a subshell. Returns 1 when sourcing a file returned an error.
+	local STATUS=0
+	set +E
+	trap - ERR
+	PKG_RECIPEPATH=$(realpath "${1}")
+	PKG_FILE=$(realpath --relative-to="${PKG_PATH}" "${PKG_RECIPEPATH}")
+	PKG_NAME=$(basename "${PKG_FILE}")
+	PKG_TARGET=${2}
+	_param_toolchain=${3}
+	PKG_FULLNAME="\${PKG_NAME}\${PKG_SUFFIX}\${PKG_VER:+_\${PKG_VER}}"
+	PKG_SRCDIR=${PKG_FULLNAME}
+	PKG_BLDPATH=${BLD_PATH}/pkgtools
+	set_target_prefixes "${PKG_TARGET}"
+	# shellcheck source=/dev/null
+	source "${PKG_RECIPEPATH}/${RECIPE_FILENAME}" > /dev/null || STATUS=1
+	apply_recipe_variants > /dev/null || STATUS=1
+	PKG_TOOLCHAIN=${_param_toolchain:-${PKG_TOOLCHAIN}}
+	eval PKG_FULLNAME="${PKG_FULLNAME}"
+	eval PKG_PKGPATH="${PKG_PKGPATH}"
+	return "${STATUS}"
+}
+
+function recipe_targets () {
+	### recipe_targets <recipe dir>: print the target names that have a variant directory in
+	### the recipe (every target/<name> found at any depth, commas split, the install classes,
+	### default and other excluded), one per line
+	local NAME VALUE
+	if [ ! -d "${1}/variants" ]
+	then
+		return 0
+	fi
+	find "${1}/variants" -type d -path '*/target/*' -printf '%P\n' |
+		sed -n 's|.*/target/\([^/]*\)$|\1|p; s|^target/\([^/]*\)$|\1|p' |
+		while IFS= read -r NAME
+		do
+			for VALUE in ${NAME//,/ }
+			do
+				case ${VALUE} in
+					native|cross|sysroot|default|other) ;;
+					*) echo "${VALUE}" ;;
+				esac
+			done
+		done | LC_ALL=C sort -u
+	return 0
+}
