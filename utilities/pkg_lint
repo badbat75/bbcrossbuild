@@ -70,7 +70,7 @@ function source_recipe () {
 		trap - ERR
 		local INSTALL_PREFIX INSTALL_EXECPREFIX INSTALL_LIBDIR INSTALL_LIBSUFFIX INSTALL_INCLUDEDIR \
 			INSTALL_SYSCONFDIR INSTALL_LOCALSTATEDIR INSTALL_SHAREDIR PKG_TARGET_ENV PKG_PKGPATH \
-			PKG_FILE PKG_NAME PKG_RECIPEPATH PKG_FULLNAME PKG_SRCDIR PKG_BLDPATH PKG_TARGET VAR DEP PATCH
+			PKG_FILE PKG_NAME PKG_RECIPEPATH PKG_FULLNAME PKG_SRCDIR PKG_BLDPATH PKG_TARGET VAR DEP PATCH SOURCE_ERRORS
 		PKG_TARGET=${2}
 		case ${PKG_TARGET} in
 			native)
@@ -116,11 +116,18 @@ function source_recipe () {
 		PKG_FULLNAME="\${PKG_NAME}\${PKG_SUFFIX}\${PKG_VER:+_\${PKG_VER}}"
 		PKG_SRCDIR=${PKG_FULLNAME}
 		PKG_BLDPATH=${BLD_PATH}/pkg_lint
+		### A failing command inside the recipe does not change the status of source, so anything
+		### printed on stderr while sourcing (an unquoted PKG_DEPS list run as a command, a missing
+		### file...) is reported as an error as well.
+		SOURCE_ERRORS=$(mktemp)
 		# shellcheck source=/dev/null
-		if ! source "${PKG_RECIPEPATH}/${RECIPE_FILENAME}" > /dev/null 2>&1
+		source "${PKG_RECIPEPATH}/${RECIPE_FILENAME}" > /dev/null 2> "${SOURCE_ERRORS}" ||
+			echo "error: sourcing the recipe returned an error (target '${PKG_TARGET}')"
+		if [ -s "${SOURCE_ERRORS}" ]
 		then
-			echo "error: sourcing the recipe returned an error"
+			echo "error: sourcing the recipe printed: $(head -n 1 "${SOURCE_ERRORS}" | sed "s|^${PKG_RECIPEPATH}/||") (target '${PKG_TARGET}')"
 		fi
+		rm -f "${SOURCE_ERRORS}"
 		for VAR in ${REMOVED_VARS}
 		do
 			if [ -n "${!VAR}" ]
