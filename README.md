@@ -429,14 +429,14 @@ packages/<group>/<name>/
   postbuild.sh      # optional, runs in the build directory after the build process (set -ex)
   postinstall.sh    # optional, copied into the sysroot and sourced as root inside the target image
   files/            # optional, static files referenced as ${PKG_RECIPEPATH}/files/<name>
-  patches/          # optional, the files named by PATCHES
+  patches/          # optional, *.patch and *.diff files applied in name order (00-first.patch, 10-second.patch)
   variants/         # optional, what differs for a target, toolchain, arch, platform, version or option
     target/<native|cross|sysroot|default|name>/   # same layout as the recipe: package.env, scripts, files/, patches/
     toolchain/<gnu|llvm>/  arch/<HM>/  platform/<PLATFORM_NAME>/  version/<PKG_VER>/
     option/<name>/  option/<name>=<value>/         # selected by WITH_<NAME>
 ```
 
-`package.env` describes the default build; nothing in it needs a `case`. After sourcing it, `build` applies on top of it the `package.env` of every variant directory whose selector matches, in a fixed order: the target class (`native`, `cross` or `sysroot` for anything else), the target name (`default` when no `:<target>` was given), the toolchain the package is really built with (`PKG_TOOLCHAIN` and `build --toolchain` included), the platform `HM`, the platform name, `PKG_VER`, the options (`option/<name>` when `WITH_<NAME>` is set and not 0/no/false/off, `option/<name>=<value>` when `<value>` is one of the words of `WITH_<NAME>`), then the nested conjunctions by depth (`target/default/arch/aarch64`, axes nest in that order). A directory name may list several values separated by commas (`target/native,cross`). A variant replaces (`=`) or extends (`+=`) what `package.env` set, so a target that must not have a default dependency restates `PKG_DEPS`; a value the default computes and a variant overrides is best kept in a recipe variable used through single quotes (`OPENSSL_TARGET` in `packages/lfs/openssl`), expanded when `runconfig.sh` runs. A script in a selected variant replaces the recipe one, its `patches/` directory is searched before the recipe one, and `PKG_VARIANTS` lists the selected directories inside the scripts. `utilities/pkg_show <group>/<name>[:<target>]` prints what a build would get.
+`package.env` describes the default build; nothing in it needs a `case`. After sourcing it, `build` applies on top of it the `package.env` of every variant directory whose selector matches, in a fixed order: the target class (`native`, `cross` or `sysroot` for anything else), the target name (`default` when no `:<target>` was given), the toolchain the package is really built with (`PKG_TOOLCHAIN` and `build --toolchain` included), the platform `HM`, the platform name, `PKG_VER`, the options (`option/<name>` when `WITH_<NAME>` is set and not 0/no/false/off, `option/<name>=<value>` when `<value>` is one of the words of `WITH_<NAME>`), then the nested conjunctions by depth (`target/default/arch/aarch64`, axes nest in that order). A directory name may list several values separated by commas (`target/native,cross`). A variant replaces (`=`) or extends (`+=`) what `package.env` set, so a target that must not have a default dependency restates `PKG_DEPS`; a value the default computes and a variant overrides is best kept in a recipe variable used through single quotes (`OPENSSL_TARGET` in `packages/lfs/openssl`), expanded when `runconfig.sh` runs. A script in a selected variant replaces the recipe one, the files of its `patches/` directory are applied together with the recipe ones in name order (a file with the same name replaces the recipe one, an empty file cancels it), and `PKG_VARIANTS` lists the selected directories inside the scripts. `utilities/pkg_show <group>/<name>[:<target>]` prints what a build would get.
 
 The scripts are plain Bash: build writes a snapshot of every ALL_CAPS variable visible to `package.env` into `recipe.source` and every generated runner sources it before `environment.source`, so `INSTALL_PREFIX`, `PKG_PKGPATH`, `HARCH` or `SYSROOT` are simply `${VAR}` inside them (no escaping). `postinstall.sh` only sees the image-safe values (`INSTALL_*`, `PKG_NAME`, `PKG_VER`, `PKG_FULLNAME`, `PKG_TARGET`, `HARCH`, `HM`, `HOS`, `HLIBC`, `HARCH_LIB`, `PLATFORM_NAME`, `TOOLCHAIN`) and is ignored for native and cross builds. The build status is the checksum of the whole directory: editing any file rebuilds the package. `packages/template/` is an annotated starting point and `utilities/pkg_lint` checks the directories.
 
@@ -484,9 +484,8 @@ Command to check if package is already installed.
 URL where to download Debian package that contains patches.  
 `PATCHDEB="http://packages.org/debian_patches"`
 
-**PATCHES:**  
-Comma separated list of patches applied in order with `patch -f -p1`: a file under the `patches/` directory of the package or a URL.  
-`PATCHES="patch1.patch,https://example.org/patch2.patch"`
+**patches/:**  
+Not a variable: every `*.patch` and `*.diff` file of the `patches/` directory of the package and of the selected variants is applied with `patch -f -p1`, in the byte order of the file names (`00-first.patch`, `10-second.patch`). `utilities/pkg_show` prints the resolved list.
 
 **prebuild.sh:**  
 Script sourced in the source directory before autoreconf and configuration (replaces the former `PKG_PREBUILD` string).
@@ -784,7 +783,7 @@ BBCrossBuild includes several utility scripts to help with development:
   utilities/aws_create_infrastructure [run|terminate|destroy|show]
   ```
 
-- `pkg_lint`: Check the package directories (layout, variants tree, syntax, shellcheck, removed variables, BUILD_PROCESS, PATCHES and PKG_DEPS resolution for every target that has a variant, with both toolchains)
+- `pkg_lint`: Check the package directories (layout, variants tree, patches/ content, syntax, shellcheck, removed variables, BUILD_PROCESS and PKG_DEPS resolution for every target that has a variant, with both toolchains)
   ```
   utilities/pkg_lint [<platform>] [packages/<group>/<name> ...]
   ```
@@ -794,7 +793,7 @@ BBCrossBuild includes several utility scripts to help with development:
   utilities/pkg_show [-p <platform>] [-t gnu|llvm] [-d] <group>/<name>[:<target>] ...
   ```
 
-- `update_patches`: Regenerate the branch tracking patches of gcc, binutils, glibc or gdb under `packages/lfs/<pkg>/patches/` and write the `variants/version/<ver>/package.env` of the recipe
+- `update_patches`: Regenerate the branch tracking patches of gcc, binutils, glibc or gdb under `packages/lfs/<pkg>/variants/version/<ver>/patches/`
   ```
   utilities/update_patches <package> <ver1> [<ver2>...]
   ```

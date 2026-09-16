@@ -1,10 +1,10 @@
 #!/bin/bash -e
 # update_patches <package> <ver1> [<ver2..n>]: regenerate the release branch patch of gcc,
 # binutils, glibc or gdb for the given versions. For every version it writes
-# packages/lfs/<package>/patches/<package>_<ver>+<sha>.patch, refreshes the <package>_<ver>.patch
-# symlink that toolchain.functions applies to the toolchain sources, and writes the PATCHES line
-# of the recipe variant packages/lfs/<package>/variants/version/<ver>/package.env (created when
-# missing, other lines of an existing file are kept).
+# packages/lfs/<package>/variants/version/<ver>/patches/00-<package>_<ver>+<sha>.patch, replacing
+# the patch of a previous branch head; the version variant selects it when PKG_VER matches and
+# toolchain.functions applies the same directory to the toolchain sources. Other patches of the
+# variant (the 10-glibc-<ver>-fhs-1.patch of glibc) are kept.
 
 url4pkg () {
 	case ${PACKAGE} in
@@ -49,33 +49,18 @@ head4pkg () {
 }
 
 generate_patch () {
-	### generate_patch: write the patch and the symlink, then the version variant of the recipe
-	local LAST_COMMIT PATCH_FILE LINK_FILE VARIANT PATCHES_LINE
+	### generate_patch: write the patch into the version variant of the recipe, replacing the
+	### one of a previous branch head
+	local LAST_COMMIT PATCH_FILE PATCHES_PATH
 	LAST_COMMIT=$(git -C "/tmp/$(gitrepo4pkg)" rev-parse --short -1 "$(head4pkg)")
-	PATCH_FILE=${PACKAGE}_${PKG_VER}+${LAST_COMMIT}.patch
-	LINK_FILE=${PACKAGE}_${PKG_VER}.patch
+	PATCH_FILE="00-${PACKAGE}_${PKG_VER}+${LAST_COMMIT}.patch"
+	PATCHES_PATH="${RECIPE_PATH}/variants/version/${PKG_VER}/patches"
 	git -C "/tmp/$(gitrepo4pkg)" branch -m "$(head4pkg)"
 	mkdir -p "${PATCHES_PATH}"
+	rm -f "${PATCHES_PATH}/00-${PACKAGE}_${PKG_VER}+"*.patch
 	# shellcheck disable=SC2046
 	git -C "/tmp/$(gitrepo4pkg)" diff "$(rel4pkg)..${LAST_COMMIT}" $(gitrepo_additional_params) > "${PATCHES_PATH}/${PATCH_FILE}"
-	ln -fs "${PATCH_FILE}" "${PATCHES_PATH}/${LINK_FILE}"
-	# The variant selects the patch by PKG_VER; glibc also carries the LFS FHS patch of the version
-	PATCHES_LINE="PATCHES=${PATCH_FILE}"
-	if [ "${PACKAGE}" = glibc ] && [ -f "${PATCHES_PATH}/glibc-${PKG_VER}-fhs-1.patch" ]
-	then
-		PATCHES_LINE+=",glibc-${PKG_VER}-fhs-1.patch"
-	fi
-	VARIANT="${RECIPE_PATH}/variants/version/${PKG_VER}/package.env"
-	if [ -f "${VARIANT}" ] && grep -q '^PATCHES=' "${VARIANT}"
-	then
-		sed -i "s|^PATCHES=.*|${PATCHES_LINE}|" "${VARIANT}"
-	else
-		mkdir -p "$(dirname "${VARIANT}")"
-		{
-			echo "# ${PACKAGE}, version ${PKG_VER}: release branch patch (utilities/update_patches)"
-			echo "${PATCHES_LINE}"
-		} >> "${VARIANT}"
-	fi
+	echo -n "${PATCH_FILE} "
 }
 
 BBXB_PATH=$(realpath "$(dirname "${0}")/..")
@@ -114,7 +99,6 @@ fi
 git -C "/tmp/$(gitrepo4pkg)" fetch
 
 RECIPE_PATH="${BBXB_PATH}/packages/lfs/${PACKAGE}"
-PATCHES_PATH="${RECIPE_PATH}/patches"
 for PKG_VER in ${VERSIONS}
 do
 	PKG_MAJVER=$(echo "${PKG_VER}" | cut -d'.' -f1)

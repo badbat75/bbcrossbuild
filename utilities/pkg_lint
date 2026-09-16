@@ -16,8 +16,10 @@
 #   - resolved the way build does (targets "", native, cross and every target that has a
 #     variant, with both toolchains), the recipe does not assign the removed variables
 #     (PKG_PREBUILD, PKG_POSTBUILD, PKG_BUILDSCRIPT, PKG_POSTINSTALL and the dead ones),
-#     BUILD_PROCESS names a build process, BUILD_PROCESS=custom comes with a build.sh, local
-#     PATCHES entries exist under a patches/ directory and PKG_DEPS point to existing recipes.
+#     BUILD_PROCESS names a build process, BUILD_PROCESS=custom comes with a build.sh and
+#     PKG_DEPS point to existing recipes;
+#   - every patches/ directory holds only regular *.patch or *.diff files (and a README.md),
+#     and when more than one patch applies to a build every name has a NN- ordering prefix.
 # Exit status is 1 when at least one error was reported.
 
 BB_HOME=$(realpath "$(dirname "${BASH_SOURCE[0]}")/..")
@@ -31,7 +33,7 @@ DATA_PATH=${DATA_PATH:-/tmp/pkg_lint}
 # shellcheck source=utilities/pkgtools.functions
 source "${BB_HOME}/utilities/pkgtools.functions"
 
-REMOVED_VARS="PKG_PREBUILD PKG_POSTBUILD PKG_BUILDSCRIPT PKG_POSTINSTALL INST_CMD PKG_DPES PKG_POST_BUILD CONF_ENVS PKG_SEPS PKG_TWOSTEPSBUILD PKG_SKIPINSTALL CONF_COPYRSC"
+REMOVED_VARS="PKG_PREBUILD PKG_POSTBUILD PKG_BUILDSCRIPT PKG_POSTINSTALL PATCHES INST_CMD PKG_DPES PKG_POST_BUILD CONF_ENVS PKG_SEPS PKG_TWOSTEPSBUILD PKG_SKIPINSTALL CONF_COPYRSC"
 ALLOWED_FILES="${RECIPE_ENTRIES} variants"
 PLATFORM_NAMES=$(find "${BB_HOME}/platforms" -name '*.conf' -printf '%f\n' | sed 's|\.conf$||' | sort | tr '\n' ' ')
 ARCH_NAMES=$(sed -n 's/^HM=\([^ #]*\).*/\1/p' "${BB_HOME}"/platforms/*.conf | sort -u | tr '\n' ' ')
@@ -52,7 +54,7 @@ function source_recipe () {
 	### source_recipe <recipe dir> <target> <toolchain>: resolve the recipe the way build does
 	### and print the checks that only a resolved recipe allows. Runs in a subshell.
 	(
-		local VAR DEP PATCH SOURCE_ERRORS WHERE
+		local VAR DEP PATCH PATCH_COUNT UNORDERED SOURCE_ERRORS WHERE
 		WHERE="target '${2}', toolchain ${TOOLCHAIN}"
 		### A failing command inside the recipe does not change the status of source, so anything
 		### printed on stderr while sourcing (an unquoted PKG_DEPS list run as a command, a missing
@@ -80,17 +82,17 @@ function source_recipe () {
 		then
 			echo "error: BUILD_PROCESS=custom without build.sh (${WHERE})"
 		fi
-		IFS=,
-		for PATCH in ${PATCHES:-}
+		PATCH_COUNT=0
+		UNORDERED=
+		for PATCH in $(recipe_patches)
 		do
-			unset IFS
-			if [[ ! ${PATCH} =~ ^https?://|^ftp:// ]] && [ -z "$(recipe_patch "${PATCH}")" ]
-			then
-				echo "error: PATCHES entry ${PATCH} not found under a patches/ directory (${WHERE})"
-			fi
-			IFS=,
+			PATCH_COUNT=$((PATCH_COUNT+1))
+			[[ $(basename "${PATCH}") =~ ^[0-9][0-9]- ]] || UNORDERED+=" $(basename "${PATCH}")"
 		done
-		unset IFS
+		if [ "${PATCH_COUNT}" -gt 1 ] && [ -n "${UNORDERED}" ]
+		then
+			echo "warning: ${PATCH_COUNT} patches apply in name order, give every one a NN- prefix:${UNORDERED} (${WHERE})"
+		fi
 		for DEP in ${PKG_DEPS}
 		do
 			if [ ! -f "$(recipe_file "${DEP/:*/}")" ]
@@ -126,6 +128,29 @@ function lint_scripts () {
 	then
 		report warning "${1}" "${REL:+${REL}/}${RECIPE_FILENAME} contains control flow (case, if, for or while): a variant directory is the way to select values"
 	fi
+}
+
+function lint_patches () {
+	### lint_patches <recipe dir> <directory>: the patches/ directory of the recipe or of a
+	### variant holds only regular *.patch and *.diff files (and a README.md)
+	local ENTRY NAME REL
+	REL=${2#"${1}"}
+	REL=${REL#/}
+	[ -d "${2}/patches" ] || return 0
+	for ENTRY in "${2}"/patches/* "${2}"/patches/.[!.]*
+	do
+		[ -e "${ENTRY}" ] || [ -L "${ENTRY}" ] || continue
+		NAME=$(basename "${ENTRY}")
+		if [ -L "${ENTRY}" ] || [ ! -f "${ENTRY}" ]
+		then
+			report error "${1}" "${REL:+${REL}/}patches/${NAME} is not a regular file"
+			continue
+		fi
+		case ${NAME} in
+			*.patch|*.diff|README.md) ;;
+			*) report error "${1}" "${REL:+${REL}/}patches/${NAME}: unexpected entry, only *.patch and *.diff files are applied" ;;
+		esac
+	done
 }
 
 function lint_variant () {
@@ -174,6 +199,7 @@ function lint_variant () {
 					report warning "${1}" "${REL}/${NAME}/${VALUE} is empty"
 				fi
 				lint_scripts "${1}" "${VALUEDIR}"
+				lint_patches "${1}" "${VALUEDIR}"
 				lint_variant "${1}" "${VALUEDIR}" "${INDEX}"
 			done
 		fi
@@ -243,6 +269,7 @@ function lint_recipe () {
 		esac
 	done
 	lint_scripts "${DIR}" "${DIR}"
+	lint_patches "${DIR}" "${DIR}"
 	if [ -d "${DIR}/variants" ]
 	then
 		lint_variant "${DIR}" "${DIR}/variants" 0

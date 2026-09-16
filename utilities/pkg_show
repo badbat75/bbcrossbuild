@@ -9,7 +9,8 @@
 #   -d              dump mode: only the resolved variables as sorted declare lines, for diffing
 #
 # For every package it prints the selected variant directories, the script that each step would
-# run, and every ALL_CAPS variable the recipe and its variants set or changed. Every setenv or
+# run, the patches in application order, and every ALL_CAPS variable the recipe and its variants
+# set or changed. Every setenv or
 # bbxb.conf variable can be overridden from the environment (TOOLCHAIN=llvm utilities/pkg_show ...).
 
 BB_HOME=$(realpath "$(dirname "${BASH_SOURCE[0]}")/..")
@@ -36,7 +37,7 @@ source "${BB_HOME}/utilities/pkgtools.functions"
 function show_recipe () {
 	### show_recipe <group>/<name>[:<target>]: runs in a subshell
 	(
-		local PKG_SPEC TARGET DIR BEFORE AFTER NAME SCRIPT FILE
+		local PKG_SPEC TARGET DIR BEFORE AFTER NAME SCRIPT FILE PATCH_LIST
 		PKG_SPEC=${1%%:*}
 		TARGET=$(cut -s -d':' -f2 <<<"${1}")
 		DIR="${PKG_PATH}/${PKG_SPEC}"
@@ -68,9 +69,11 @@ function show_recipe () {
 			esac
 			declare -p "${NAME}" 2>/dev/null
 		done | LC_ALL=C sort > "${AFTER}"
+		PATCH_LIST=$(recipe_patches | sed "s|^${PKG_RECIPEPATH}/||" | tr '\n' ' ')
 		if [ "${DUMP}" -eq 1 ]
 		then
 			echo "### ${PKG_SPEC}${TARGET:+:${TARGET}} ${PLATFORM_NAME} ${SHOW_TOOLCHAIN:-${TOOLCHAIN}}"
+			echo "patches: ${PATCH_LIST:-none}"
 			LC_ALL=C comm -13 "${BEFORE}" "${AFTER}"
 		else
 			echo "${PKG_SPEC}${TARGET:+:${TARGET}} (${PKG_FULLNAME}, platform ${PLATFORM_NAME}, toolchain ${PKG_TOOLCHAIN:-${TOOLCHAIN}})"
@@ -83,6 +86,7 @@ function show_recipe () {
 					echo "  ${SCRIPT}: ${FILE#"${PKG_RECIPEPATH}"/}"
 				fi
 			done
+			echo "  patches: ${PATCH_LIST:-none}"
 			LC_ALL=C comm -13 "${BEFORE}" "${AFTER}" | sed 's/^declare -[-a-zA-Z]* /  /'
 			echo
 		fi

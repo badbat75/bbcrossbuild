@@ -392,11 +392,10 @@ function setup_binutils () {
 	function binutils_download () {
 
 		download_uncompress "${BINUTILSURL}" "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}"
-		### The branch tracking patch lives with the binutils recipe (see utilities/update_patches)
-		if [ -f "${PKG_PATH}/lfs/binutils/patches/binutils_${BINUTILS_VER}.patch" ]
-		then
-			( cd "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}"; run_cmd "patch -p1 < \"${PKG_PATH}/lfs/binutils/patches/binutils_${BINUTILS_VER}.patch\"" )
-		fi
+		### The branch tracking patch lives in the version variant of the binutils recipe (see
+		### utilities/update_patches); an unknown version has none
+		# shellcheck disable=SC2046
+		( cd "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}"; apply_patches $( patch_list "${PKG_PATH}/lfs/binutils/variants/version/${BINUTILS_VER}" ) )
 	}
 
 	function binutils_buildenv () {
@@ -559,11 +558,10 @@ function setup_gcc () {
 	function gcc_download () {
 
 		download_uncompress "${GCCURL}" "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}"
-		### The branch tracking patch lives with the gcc recipe (see utilities/update_patches)
-		if [ -f "${PKG_PATH}/lfs/gcc/patches/gcc_${GCC_VER}.patch" ]
-		then
-			( cd "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}"; run_cmd "patch -t -p1 < \"${PKG_PATH}/lfs/gcc/patches/gcc_${GCC_VER}.patch\"" )
-		fi
+		### The branch tracking patch lives in the version variant of the gcc recipe (see
+		### utilities/update_patches); an unknown version has none
+		# shellcheck disable=SC2046
+		( cd "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}"; apply_patches $( patch_list "${PKG_PATH}/lfs/gcc/variants/version/${GCC_VER}" ) )
 		run_cmd "sed 's@^#include <limits.h>@#include <linux/limits.h>@' -i \"${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/libsanitizer/asan/asan_linux.cpp\""
 	}
 
