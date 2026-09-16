@@ -845,7 +845,9 @@ function setup_gcc () {
 		fi
 		if [ "${GCC_TARGETS}" = "all" ]
 		then
-			GCC_TARGETS="libgcc libstdc++-v3 libgomp libssp libatomic libvtv libsanitizer"
+			### libatomic right after libgcc: since gcc 16 the other libraries link against its
+			### libatomic_asneeded.so linker script
+			GCC_TARGETS="libgcc libatomic libstdc++-v3 libgomp libssp libvtv libsanitizer"
 			if [[ "${GCC_LANGUAGES}" =~ "fortran" ]]
 			then
 				GCC_TARGETS+=" libquadmath"
