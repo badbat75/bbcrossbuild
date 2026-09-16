@@ -110,6 +110,10 @@ function setbuildenv () {
 				fi
 			else
 				SYSROOT="${BIN_PATH}"
+				### ld.bfd resolves the DT_NEEDED entries of a library only in the -rpath-link dirs and in
+				### <sysroot>/lib and <sysroot>/usr/lib: the multiarch directory needs the hint (gold and
+				### lld also searched the -L dirs, so libX11 -> libxcb resolved without it)
+				COMMON_LDFLAGS+=" -Wl,-rpath-link,${BIN_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}"
 				if "${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" -dumpversion >/dev/null 2>&1
 				then
 					SYSROOT_GCCVER=$("${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" -dumpversion 2>/dev/null)
