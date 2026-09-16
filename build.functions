@@ -318,7 +318,7 @@ function settcenv () {
 			TOOLCHAIN_OBJCOPY_FOR_BUILD=$(which objcopy)
 			TOOLCHAIN_OBJDUMP_FOR_BUILD=$(which objdump)
 			TOOLCHAIN_READELF_FOR_BUILD=$(which readelf)
-			TOOLCHAIN_LINKER_FOR_BUILD=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
+			TOOLCHAIN_LINKER_FOR_BUILD=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-bfd}}
 			TOOLCHAIN_LINKER_EXE_FOR_BUILD=$(which "ld.${TOOLCHAIN_LINKER_FOR_BUILD}")
 			TOOLCHAIN_LINKERFLAGS_FOR_BUILD="-fuse-ld=${TOOLCHAIN_LINKER_FOR_BUILD}"
 
@@ -375,7 +375,7 @@ function settcenv () {
 						TOOLCHAIN_OBJCOPY=$(which "${HARCH}-objcopy")
 						TOOLCHAIN_OBJDUMP=$(which "${HARCH}-objdump")
 						TOOLCHAIN_READELF=$(which "${HARCH}-readelf")
-						TOOLCHAIN_LINKER=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
+						TOOLCHAIN_LINKER=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-bfd}}
 						TOOLCHAIN_LINKER_EXE=$(which "${HARCH}-ld.${TOOLCHAIN_LINKER}")
 					fi
 					if [ "${PKG_FAULTYCFLAGS:-0}" -eq 1 ]
@@ -490,6 +490,7 @@ function settcenv () {
 			fi
 			;;
 		gold)
+			### gold is gone since binutils 2.45: only usable with an older BINUTILS_VER
 			if [ -n "${SYSROOT_FLAGS}" ]
 			then
 				TOOLCHAIN_LINKERFLAGS+=" -Wl,${SYSROOT_FLAGS}"

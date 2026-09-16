@@ -674,7 +674,7 @@ Override LTOENABLE environment variable.
 
 **PKG_OVERRIDELD:**  
 Override default linker.  
-`PKG_OVERRIDELD=gold|ld|lld`
+`PKG_OVERRIDELD=bfd|lld` (`gold` only with a binutils older than 2.45; the default is `GCC_DEFAULT_LD`, `bfd`)
 
 **PKG_OVERRIDESHARED:**  
 Override BUILD_SHARED environment variable.  

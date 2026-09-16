@@ -101,7 +101,7 @@ function set_gnu_buildenv () {
 	RANLIB_FOR_BUILD=$(which gcc-ranlib)
 	CFLAGS_FOR_BUILD="${HOST_CSTD} -O3 -march=native -flto=${LTOPROCS}"
 	CXXFLAGS_FOR_BUILD="-O3 -march=native -flto=${LTOPROCS}"
-	LDFLAGS_FOR_BUILD="-fuse-ld=gold -fuse-linker-plugin${OPTLINK_FLAGS:+ ${OPTLINK_FLAGS}}"
+	LDFLAGS_FOR_BUILD="-fuse-ld=bfd -fuse-linker-plugin${OPTLINK_FLAGS:+ ${OPTLINK_FLAGS}}"
 	# shellcheck disable=SC2034
 	LIBRARY_PATH_FOR_BUILD=$(gcc_toolchain_print_searchdirs build 5)
 	# shellcheck disable=SC2034
@@ -416,8 +416,9 @@ function setup_binutils () {
 
 		### Workaround for latest patches (--disable-werror)
 		### gprofng is not needed by the cross toolchain and its libcollector does not build against
-		### the _Generic string macros of recent glibc headers before binutils 2.44
-		BINUTILS_CONFIG="--enable-gold=default --enable-ld --enable-gprofng=no --enable-lto \
+		### the _Generic string macros of recent glibc headers before binutils 2.44; gold was removed
+		### in binutils 2.45, ld.bfd is the default linker
+		BINUTILS_CONFIG="--enable-ld=default --enable-gprofng=no --enable-lto \
 			--enable-new-dtags --disable-rpath --enable-threads=yes --enable-plugins --enable-64-bit-bfd \
 			--enable-compressed-debug-sections=all --enable-separate-code=yes --enable-plugins --disable-werror ${SILENTCONFIG}"
 
@@ -1034,8 +1035,8 @@ function setup_llvm () {
 				AR="${AR_FOR_BUILD}"
 				NM="${NM_FOR_BUILD}"
 				RANLIB="${RANLIB_FOR_BUILD}"
-				LINKER=gold
-				LINKER_FLAGS="-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS}"
+				LINKER=bfd
+				LINKER_FLAGS="-fuse-ld=bfd"
 				LTO=OFF
 				echo "GNU gcc for build and lto not active."
 				run_cmd "sed -i 's/-flto\"/-flto=${LTOPROCS}\"/g' \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/AddLLVM.cmake\""
@@ -1344,7 +1345,7 @@ function setup_python () {
 				export NM="${HOST_NM}"
 				export RANLIB="${HOST_RANLIB}"
 				export LDFLAGS="-Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib ${GNU_EXTRALDFLAGS} \
-					-fuse-ld=gold -Wl,--threads -Wl,--thread-count,${NPROCS} ${OPTLINK_FLAGS}"
+					-fuse-ld=bfd ${OPTLINK_FLAGS}"
 				;;
 			llvm)
 				export CC="${CCWRAPPER:+${CCWRAPPER} }clang"
