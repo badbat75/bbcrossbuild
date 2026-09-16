@@ -10,9 +10,9 @@ LTOPROCS=$(( $(nproc) / 4 ))
 # meaning. Override from bbxb.conf when the host compiler needs something else.
 HOST_CSTD=${HOST_CSTD:--std=gnu17}
 # Same for the C++ sources of the toolchain bootstrap (binutils, gcc): GCC 16 defaults to C++20,
-# where u8"" literals are char8_t and gcc 14 libcody no longer compiles; libcody also insists on
-# exactly C++11 (__cplusplus == 201103) in its configure, hence gnu++11 and not a newer standard.
-HOST_CXXSTD=${HOST_CXXSTD:--std=gnu++11}
+# where u8"" literals are char8_t and older sources no longer compile. gcc 16 requires a C++14
+# compiler (its configure rejects -std=gnu++11); gcc 14 needed gnu++11 for libcody.
+HOST_CXXSTD=${HOST_CXXSTD:--std=gnu++14}
 
 HARCH=${HM}-${HOS}-${HLIBC}
 
