@@ -1,3 +1,6 @@
+# setenv: every path and version default, computed from what bbxb.conf and the platform set.
+# Sourced by bbxb (and by utilities/pkgtools.functions): the variables are read by the libraries.
+# shellcheck shell=bash disable=SC2034
 NPROCS=$(nproc --ignore=1)
 LTOPROCS=$(( $(nproc) / 4 ))
 
@@ -82,19 +85,19 @@ BUILD_LIBSTATIC=${BUILD_LIBSTATIC:-1}
 TOOLCHAIN=${TOOLCHAIN:-gnu}
 
 ### GNU gcc tools versions
-BINUTILS_VER=${BINUTILS_VER:-2.43}
-GCC_VER=${GCC_VER:-14.2.0}
+BINUTILS_VER=${BINUTILS_VER:-2.47}
+GCC_VER=${GCC_VER:-16.2.0}
 ### LLVM version
-LLVM_VER=${LLVM_VER:-19.1.0}
+LLVM_VER=${LLVM_VER:-23.1.1}
 ### Python version
-PYTHON_VER=${PYTHON_VER:-3.10.15}
+PYTHON_VER=${PYTHON_VER:-3.14.7}
 #### Tools version
-AUTOCONF_VER=${AUTOCONF_VER:-2.71}
-AUTOCONFARCHIVE_VER=${AUTOCONFARCHIVE_VER:-2022.09.03}
-AUTOMAKE_VER=${AUTOMAKE_VER:-1.16.5}
-LIBTOOL_VER=${LIBTOOL_VER:-2.4.7}
-GETTEXT_VER=${GETTEXT_VER:-0.21.1}
+AUTOCONF_VER=${AUTOCONF_VER:-2.73}
+AUTOCONFARCHIVE_VER=${AUTOCONFARCHIVE_VER:-2024.10.16}
+AUTOMAKE_VER=${AUTOMAKE_VER:-1.19}
+LIBTOOL_VER=${LIBTOOL_VER:-2.6.2}
+GETTEXT_VER=${GETTEXT_VER:-1.0}
 export AUTOMAKE_VER
 ### Bootstrap libraries and headers versions
-KERNEL_VER=${KERNEL_VER:-6.12.1}
-GLIBC_VER=${GLIBC_VER:-2.40}
+KERNEL_VER=${KERNEL_VER:-7.2.6}
+GLIBC_VER=${GLIBC_VER:-2.44}

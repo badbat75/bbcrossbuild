@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-BBCrossBuild (`bbxb`) is a pure-Bash framework that cross-compiles whole Linux systems (LFS-style root filesystems, kernels, disk images) from declarative `.prj` project files and `.pkg` package recipes. There is no build system, no compiled code and no unit-test suite: everything is Bash sourced into one process. The README is the reference for every `PKG_*` / `CONF_*` package parameter and every library function signature; do not duplicate it here, read it when writing a recipe.
+BBCrossBuild (`bbxb`) is a pure-Bash framework that cross-compiles whole Linux systems (LFS-style root filesystems, kernels, disk images) from declarative `.prj` project files and `.pkg` package recipes. There is no build system and no compiled code: everything is Bash sourced into one process. The only tests are the bats suite under `tests/` (pure functions on fixture recipes, no build) and the hour-long smoke build `utilities/bbxb_test`. The README is the reference for every `PKG_*` / `CONF_*` package parameter and every library function signature; do not duplicate it here, read it when writing a recipe.
 
 ## Commands
 
@@ -48,9 +48,19 @@ utilities/update_patches gcc 14.2.0
 utilities/pkg_lint [generic-x64] [packages/lfs/gcc ...]
 # See what a build would get: selected variants, effective scripts, resolved variables (-d: declare lines for diffing)
 utilities/pkg_show [-p rpi3-aarch64] [-t llvm] [-d] lfs/systemd:bootstrap lfs/glibc:stage1
+# Latest upstream versions (GitHub tags or the archive directory of PKG_URL, Anitya as second opinion); -P: what a
+# project builds in build order; -a: rewrite PKG_VER when the new archive answers; <recipe>=<ver> forces a version
+utilities/pkg_upstream [-p rpi3-aarch64] [-P lfs] [-a] [-o report.tsv] [lfs/curl lfs/expat=2.7.1 ...]
 
-# Lint: the sources carry `# shellcheck disable=` directives, so shellcheck is the expected linter
-shellcheck -x bbxb core.functions build.functions toolchain.functions images.functions project.functions data.functions
+# Lint: the sources carry `# shellcheck disable=` directives, so shellcheck is the expected linter. The CI
+# workflow .github/workflows/checks.yml gates exactly these three commands plus pkg_lint per package group.
+shellcheck -x bbxb seterr setenv core.functions build.functions toolchain.functions images.functions project.functions data.functions
+shellcheck -x utilities/pkgtools.functions utilities/pkg_lint utilities/pkg_show utilities/update_patches
+shellcheck -x tests/test_helper.bash tests/*.bats
+# Unit tests (bats-core, seconds): variant selection, patch lists, recipe scripts, recipe checksum, target
+# prefixes, recipe resolution, core helpers. tests/test_helper.bash sources the framework through
+# utilities/pkgtools.functions and builds fixture recipes under the per-test temporary directory.
+bats tests                    # dnf install bats / apt install bats; bats tests/variants.bats for one file
 ```
 
 Where things land (`DATA_PATH` defaults to `/mnt/bbcrossbuild/datadir`; the config template switches it to `~/.bbxb`):
@@ -111,10 +121,12 @@ The script runs with `set -E -o pipefail` and an ERR trap: any non-zero command 
 - `packages/<group>/<name>/`: `lfs/` (BLFS-style recipes, the bulk), `raspberrypi/`, `moode/`, `python/`, `perl/`, `firmwares/`, `fonts/`, `microsoft/` (WSL kernel). Every group is a git submodule of its own repository `packages-<group>` (`.gitmodules`); `bbxb` stops with an error when a group directory is empty. `packages/template/` is the annotated starting point for a new recipe and lives in this repository.
 - `configurations/`: templates for `bbxb.conf` and `lfs.conf`.
 - `utilities/`: host helpers (`deptool`, `crossgdb`, `crossldd`, `qemu_cmdgen`, `fs_manager`, `aws_create_infrastructure`, bootstrap scripts, container scripts); `pkg_lint` and `pkg_show` share `utilities/pkgtools.functions`, which sources the framework with the build steps stubbed out and resolves a recipe through `set_target_prefixes` and `apply_recipe_variants`, the same code `build` uses.
+- `tests/*.bats`: the bats suite; `tests/test_helper.bash` loads the framework the same way (`load_framework`, platform from `PLATFORM_NAME`) and offers `make_recipe`, `put`, `select_target`, `assert_output_lines`, `assert_equal` to build and check fixture recipes under `BATS_TEST_TMPDIR`. One file per area: `variants`, `recipe_files` (patches, scripts), `checksum`, `prefixes`, `pkgtools` (`recipe_resolve`), `core`.
 
 ## Conventions
 
 - Bash is indented with tabs; functions are declared `function name () {`; nested helper functions are defined inside their parent. Keep `# shellcheck disable=SCxxxx` / `# shellcheck source=/dev/null` directives on lines that need them.
 - Every external command inside a library function goes through `run_cmd` (with `-s` for sudo) so it is logged via `log_buffer` into the package log; do not print progress with bare `echo` inside build steps, the console line is written by `build` itself.
 - New optional recipe variables must also be added to the `unset` list at the top of `build` in `build.functions`, otherwise they leak from one package into the next.
-- Branching: work happens on `development`; `master` holds releases tagged `X.Y.Z`. The GitHub Action builds and pushes the Docker image on pushes to `development` and on version tags.
+- A change to the pure logic of `build.functions` (variant selection, patch lists, checksum, prefixes) or of `core.functions` comes with a bats test in `tests/`; run `bats tests` and the shellcheck commands above before committing, they are what CI gates.
+- Branching: work happens on `development`; `master` holds releases tagged `X.Y.Z`. Two GitHub Actions: `docker-build.yml` builds and pushes the Docker image on pushes to `development` and on version tags; `checks.yml` runs shellcheck, the bats suite and `pkg_lint` (one job per package group, with the submodules checked out) on every push and pull request to `development` and `master`.

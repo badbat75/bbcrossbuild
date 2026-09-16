@@ -1,10 +1,11 @@
-# pkgtools.functions: shared setup of the recipe utilities (pkg_lint, pkg_show).
+# pkgtools.functions: shared setup of the recipe utilities (pkg_lint, pkg_show, tests/).
 #
 # Sources the framework the way bbxb does (seterr, core.functions, the platform, setenv,
 # build.functions) with every build step stubbed out, and defines recipe_resolve, which sets up
 # the variables build sets before sourcing a recipe, sources package.env and applies the variant
 # directories through the same functions build uses.
 # Expects BB_HOME; honours PLATFORM_NAME (default generic-x64) and DATA_PATH.
+# shellcheck shell=bash disable=SC2034
 
 PLATFORM_NAME=${PLATFORM_NAME:-generic-x64}
 PROJECT_NAME=${PROJECT_NAME:-pkgtools}

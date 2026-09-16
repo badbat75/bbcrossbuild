@@ -1,0 +1,79 @@
+name: Checks
+
+# Static and unit checks, no build: shellcheck on the framework and the recipe utilities, the
+# bats suite under tests/, and pkg_lint over every package group (one job per group, so that a
+# broken recipe in one submodule does not hide the state of the others).
+
+on:
+  push:
+    branches:
+      - development
+      - master
+  pull_request:
+    branches:
+      - development
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SHELLCHECK_VERSION: v0.11.0
+
+jobs:
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: |
+          curl -sSL "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/shellcheck-${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" | tar -xJ
+          sudo install "shellcheck-${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/shellcheck
+          shellcheck --version
+
+      - name: Lint the framework and the recipe utilities
+        run: |
+          shellcheck -x bbxb seterr setenv core.functions build.functions toolchain.functions images.functions project.functions data.functions
+          shellcheck -x utilities/pkgtools.functions utilities/pkg_lint utilities/pkg_show utilities/update_patches
+          shellcheck -x tests/test_helper.bash tests/*.bats
+
+  bats:
+    name: bats
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install bats
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bats
+          bats --version
+
+      - name: Run the unit tests
+        run: bats tests
+
+  pkg_lint:
+    name: pkg_lint ${{ matrix.group }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [lfs, raspberrypi, moode, python, perl, firmwares, fonts, microsoft]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install shellcheck
+        run: |
+          curl -sSL "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/shellcheck-${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" | tar -xJ
+          sudo install "shellcheck-${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/shellcheck
+
+      - name: Lint the recipes of packages/${{ matrix.group }}
+        run: utilities/pkg_lint generic-x64 packages/${{ matrix.group }}/*/

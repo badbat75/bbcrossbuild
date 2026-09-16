@@ -1073,7 +1073,7 @@ function recipe_checksum () {
 
 function preparesources () {
 	cd "${PKG_SRCPATH}"
-	if [ "x${PATCHDEB}" != x ]
+	if [ -n "${PATCHDEB}" ]
 	then
 		echo -n "${SPACES}Retrieve DEB patch info..."
 		[ ! -d "${PKG_SRCPATH}/debian" ] && mkdir -p "${PKG_SRCPATH}/debian"
@@ -1268,6 +1268,7 @@ function cmakebuild () {
 		${CONF_ENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/cmake ${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}} \\
 		   -G "${CMAKE_GENERATOR}" \\
 		   -DCMAKE_BUILD_TYPE="Release" \\
+		   -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \\
 		   -DTOOLCHAIN_PREFIX=${HARCH}- \\
 		   -DCMAKE_SYSROOT=${SYSROOT} \\
 		   -DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \\
@@ -1605,7 +1606,7 @@ function kernelbuild () {
 			;;
 	esac
 
-	if [ "x${CONF_FLAGS}" != "x" ]
+	if [ -n "${CONF_FLAGS}" ]
 	then
 		run_cmd "scripts/config ${CONF_FLAGS}"
 	fi
@@ -2168,9 +2169,11 @@ function build () {(
 			source "${RECIPE_SCRIPT_FILE}"
 			set +x
 		EOF
-		run_cmd "chmod +x \"${PKG_BLDPATH}/runprebuild.sh\"" >> "${LOG_FILE}"
-		echo "Running pre build script..." | log_buffer info >> "${LOG_FILE}"
-		run_cmd "\"${PKG_BLDPATH}/runprebuild.sh\"" >> "${LOG_FILE}"
+		{
+			run_cmd "chmod +x \"${PKG_BLDPATH}/runprebuild.sh\""
+			echo "Running pre build script..." | log_buffer info
+			run_cmd "\"${PKG_BLDPATH}/runprebuild.sh\""
+		} >> "${LOG_FILE}"
 	fi
 	#### Build
 	if [ ! "${BUILD_PROCESS:-none}" == none ]
@@ -2193,9 +2196,11 @@ function build () {(
 			source "${RECIPE_SCRIPT_FILE}"
 			set +ex
 		EOF
-		run_cmd "chmod +x \"${PKG_BLDPATH}/runpostbuild.sh\"" >> "${LOG_FILE}"
-		echo "Running post build script..." | log_buffer info >> "${LOG_FILE}"
-		run_cmd "\"${PKG_BLDPATH}/runpostbuild.sh\"" >> "${LOG_FILE}"
+		{
+			run_cmd "chmod +x \"${PKG_BLDPATH}/runpostbuild.sh\""
+			echo "Running post build script..." | log_buffer info
+			run_cmd "\"${PKG_BLDPATH}/runpostbuild.sh\""
+		} >> "${LOG_FILE}"
 	fi
 	#### Post-Install
 	RECIPE_SCRIPT_FILE=$( recipe_script postinstall.sh )

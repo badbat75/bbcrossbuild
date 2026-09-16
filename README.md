@@ -793,7 +793,25 @@ BBCrossBuild includes several utility scripts to help with development:
   utilities/pkg_show [-p <platform>] [-t gnu|llvm] [-d] <group>/<name>[:<target>] ...
   ```
 
+- `pkg_upstream`: Find the latest upstream version of the recipes (the tags of the GitHub repository or the parent directory of the archive named by `PKG_URL`, release-monitoring.org as a second opinion) and report `current`, `outdated`, `ahead` or `unknown` per recipe. `-P <project>` surveys what a project builds in build order, dependencies first; `-a` rewrites `PKG_VER` in `package.env` when the archive of the new version answers (`<group>/<name>=<version>` forces a version). Versions taken from `setenv` (`GCC_VER`, `KERNEL_VER`...) are reported, never rewritten.
+  ```
+  utilities/pkg_upstream [-p <platform>] [-P <project>] [-a] [-A] [-f] [-o <report.tsv>] [<group>/<name>[=<version>] ...]
+  ```
+
 - `update_patches`: Regenerate the branch tracking patches of gcc, binutils, glibc or gdb under `packages/lfs/<pkg>/variants/version/<ver>/patches/`
   ```
   utilities/update_patches <package> <ver1> [<ver2>...]
   ```
+
+## Tests and checks
+
+The pure functions of the framework (variant selection and application, patch lists, recipe scripts, the recipe checksum, the install prefixes of the three targets, recipe resolution and the helpers of `core.functions`) have a [bats-core](https://github.com/bats-core/bats-core) suite under `tests/`. It sources the framework through `utilities/pkgtools.functions`, with every build step stubbed out, and works on fixture recipes created in a temporary directory: nothing is downloaded or built and the whole suite runs in seconds. Install `bats` from the distribution (`dnf install bats`, `apt install bats`) and run:
+
+```
+bats tests                 # the whole suite
+bats tests/variants.bats   # one file
+```
+
+`tests/test_helper.bash` provides `load_framework` (platform from `PLATFORM_NAME`, default `generic-x64`), `make_recipe`, `put`, `select_target`, `assert_output_lines` and `assert_equal`; a new test for a pure function is a fixture recipe plus a `run` of the function.
+
+The GitHub Action `checks.yml` runs on every push and pull request to `development` and `master`: `shellcheck` on the framework and on the recipe utilities, the bats suite, and `pkg_lint` on every package group (one job per group, submodules included). A change to `build.functions` or `core.functions` should keep the three green; `utilities/bbxb_test` remains the build smoke test.
