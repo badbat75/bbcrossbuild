@@ -1,0 +1,24 @@
+[submodule "packages/lfs"]
+	path = packages/lfs
+	url = ../packages-lfs.git
+[submodule "packages/raspberrypi"]
+	path = packages/raspberrypi
+	url = ../packages-raspberrypi.git
+[submodule "packages/moode"]
+	path = packages/moode
+	url = ../packages-moode.git
+[submodule "packages/python"]
+	path = packages/python
+	url = ../packages-python.git
+[submodule "packages/perl"]
+	path = packages/perl
+	url = ../packages-perl.git
+[submodule "packages/firmwares"]
+	path = packages/firmwares
+	url = ../packages-firmwares.git
+[submodule "packages/fonts"]
+	path = packages/fonts
+	url = ../packages-fonts.git
+[submodule "packages/microsoft"]
+	path = packages/microsoft
+	url = ../packages-microsoft.git

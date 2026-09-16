@@ -11,6 +11,11 @@ BBCrossBuild (`bbxb`) is a pure-Bash framework that cross-compiles whole Linux s
 The framework only runs on Linux with sudo, loop devices and `qemu-user-static`. This checkout lives inside WSL (`FedoraLinux-44`); run `bbxb` and `git` from inside WSL. From the Windows side git refuses the UNC path with "dubious ownership", so use `wsl -d FedoraLinux-44 -- git -C ~/git/bbcrossbuild ...`.
 
 ```bash
+# The package groups are git submodules (packages/<group> -> repository packages-<group>, URLs relative to origin)
+git clone --recurse-submodules https://github.com/badbat75/bbcrossbuild.git   # or, in a checkout: git submodule update --init
+# A recipe change is committed inside packages/<group> (its own repository, branch main), then the new
+# submodule commit is committed here: git -C packages/lfs commit ...; git add packages/lfs; git commit
+
 # One-time host setup and configuration
 utilities/bootstrap.fedora            # or bootstrap.ubuntu / bootstrap.aws
 cp configurations/bbxb.conf bbxb.conf # README mentions bbxb.conf.default; that file does not exist
@@ -103,7 +108,7 @@ The script runs with `set -E -o pipefail` and an ERR trap: any non-zero command 
 ### Projects and packages layout
 
 - `projects/*.prj`: `lfs.prj` is the full reference project (toolchain, kernel, ~100 packages, image creation, QEMU command generation). `librespot.prj` and `rpi-kernel.prj` are minimal examples. `projects/*.conf` and `projects/test*.prj` are gitignored user files.
-- `packages/<group>/<name>/`: `lfs/` (BLFS-style recipes, the bulk), `raspberrypi/`, `moode/`, `python/`, `perl/`, `firmwares/`, `fonts/`, `microsoft/` (WSL kernel). `packages/template/` is the annotated starting point for a new recipe.
+- `packages/<group>/<name>/`: `lfs/` (BLFS-style recipes, the bulk), `raspberrypi/`, `moode/`, `python/`, `perl/`, `firmwares/`, `fonts/`, `microsoft/` (WSL kernel). Every group is a git submodule of its own repository `packages-<group>` (`.gitmodules`); `bbxb` stops with an error when a group directory is empty. `packages/template/` is the annotated starting point for a new recipe and lives in this repository.
 - `configurations/`: templates for `bbxb.conf` and `lfs.conf`.
 - `utilities/`: host helpers (`deptool`, `crossgdb`, `crossldd`, `qemu_cmdgen`, `fs_manager`, `aws_create_infrastructure`, bootstrap scripts, container scripts); `pkg_lint` and `pkg_show` share `utilities/pkgtools.functions`, which sources the framework with the build steps stubbed out and resolves a recipe through `set_target_prefixes` and `apply_recipe_variants`, the same code `build` uses.
 

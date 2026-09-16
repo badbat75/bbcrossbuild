@@ -56,6 +56,17 @@ fi
 source "${PLATFORM}"
 # shellcheck source=/dev/null
 source "${BB_HOME}/setenv"
+
+### The package groups are git submodules: an empty packages/<group> is a checkout without them
+for PKG_GROUP in "${PKG_PATH}"/*/
+do
+	if [ -z "$(ls -A "${PKG_GROUP}")" ]
+	then
+		trow_error "${ERROR_FILE_NOT_FOUND}" "${PKG_GROUP} is empty: run 'git submodule update --init' in ${BB_HOME}."
+	fi
+done
+unset PKG_GROUP
+
 # shellcheck source=/dev/null
 source "${BB_HOME}/build.functions"
 # shellcheck source=/dev/null

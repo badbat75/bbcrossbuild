@@ -12,13 +12,13 @@ A framework to automate cross-compilation of packages through project files.
 **Prepare your environment**
 
 ```bash
-$ git clone https://github.com/badbat75/bbcrossbuild.git
+$ git clone --recurse-submodules https://github.com/badbat75/bbcrossbuild.git
 $ cd bbcrossbuild
 $ cp bbxb.conf.default bbxb.conf
 $ utilities/bootstrap.<fedora|ubuntu|aws>
 ```
 
-The `bootstrap` script installs all required dependencies on the build host.
+The package groups under `packages/` are git submodules (`packages-lfs`, `packages-moode`... next to this repository): an existing checkout gets them with `git submodule update --init`, and `bbxb` refuses to run while a group directory is empty. The `bootstrap` script installs all required dependencies on the build host.
 
 **Customization**
 
@@ -419,7 +419,7 @@ create_sfx_package ${PACKAGES_PATH}/my_package
 
 ### Package Layout
 
-Every package is a directory under `packages/<group>/<name>/` (the directory name is the package name used by `build <group>/<name>`):
+Every package is a directory under `packages/<group>/<name>/` (the directory name is the package name used by `build <group>/<name>`). Each group is a git submodule with its own repository (`packages-<group>`, `.gitmodules` lists them with URLs relative to this one), so a recipe change is committed in the group repository and the new commit is then recorded here; `packages/template/` belongs to this repository.
 
 ```
 packages/<group>/<name>/
