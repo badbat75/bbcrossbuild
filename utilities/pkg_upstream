@@ -1,0 +1,521 @@
+#!/usr/bin/env python3
+# pkg_upstream: find the latest upstream version of the package recipes and optionally apply it.
+#
+# Usage: utilities/pkg_upstream [-p <platform>] [-P <project>] [-g <group>[,<group>]] [-a] [-A] [-f]
+#                               [-o <report.tsv>] [<group>/<name>[=<version>] ...]
+#
+#   -p <platform>   platform the recipes are resolved for (default generic-x64)
+#   -P <project>    survey every recipe projects/<project>.prj builds, dependencies first, in build
+#                   order (the setup_full_toolchain steps of toolchain.functions come first); the
+#                   recipes given on the command line then only carry a forced version
+#   -g <groups>     only the recipes of these package groups (lfs, moode...)
+#   -a              apply: rewrite the PKG_VER line of package.env with the latest version when the
+#                   archive URL of the new version answers; <group>/<name>=<version> forces a version
+#                   (the current version pins the recipe: lfs/BerkeleyDB=5.3.28)
+#   -A              do not query release-monitoring.org (Anitya) for a second opinion
+#   -f              refresh: ignore the cached answers (default cache: one day, under ~/.cache/bbxb)
+#   -o <file>       write the tab separated report to a file instead of standard output
+#   without recipes and without -P: every recipe of every group
+#
+# The latest version is derived from PKG_URL alone, no per-recipe configuration: the version string
+# of the recipe is located inside the archive name (2.6.4, 2_6_4 or 2-6-4) and the same pattern is
+# matched against the tags of the GitHub or GitLab repository or against the links of the parent
+# directory of the archive (and of the newest sibling directories when the parent is named after
+# the version, python/3.10.15/, glib/2.83/, kernel/v6.x/). Pre-release names (rc, alpha, beta, a1,
+# b2, dev, pre) are skipped. A pythonbuild recipe without PKG_URL is looked up on PyPI. Anitya is
+# looked up by recipe name (language ecosystems excluded, the project whose homepage matches the
+# URL host preferred).
+# Recipes whose PKG_VER comes from setenv (${GCC_VER}...) are reported with the variable name and
+# never rewritten. GITHUB_TOKEN (or the token of the gh command) raises the GitHub rate limit.
+#
+# Report columns: recipe, current, latest, backend, anitya, status, url. The status is current,
+# outdated, ahead (the recipe is newer than what the backend sees: a commit pin, a development
+# series), unknown (no version in the URL, no listing, no tags), noversion (no PKG_VER), with a
+# "/disagree" suffix when Anitya names another latest version, "/setenv:<VAR>" for the framework
+# versions and, in apply mode, "applied" or "url-missing" (the new archive URL does not answer).
+
+import hashlib
+import json
+import os
+import re
+import shlex
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+
+BB_HOME = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), ".."))
+CACHE_DIR = os.path.join(os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache")), "bbxb", "pkg_upstream")
+CACHE_TTL = 86400
+USER_AGENT = "bbcrossbuild-pkg_upstream/1.0"
+LANG_ECOSYSTEMS = {"crates.io", "pypi", "rubygems", "hackage", "npm", "cpan", "maven", "packagist", "nuget", "go", "cran"}
+VERSION_RX = r"(\d+(?:[._-]\d+)*(?:[._-]?[A-Za-z]\d*)?)"
+# rc, alpha, beta, pre, dev..., 3.15.0b4 and the x.y.9nn release candidates of X.org and libinput
+PRERELEASE = re.compile(r"(^|[._-])(rc|alpha|beta|pre|dev|snapshot|nightly|test)[._-]?\d*($|[._-])|\d(a|b|rc)\d+$|\.9\d\d$", re.I)
+ALIASES = {
+    "D-Bus": "dbus", "Linux-PAM": "pam", "GRUB": "grub", "kernel": "linux", "python3": "python",
+    "perl5": "perl", "BerkeleyDB": "db", "libgmp": "gmp", "libmpfr": "mpfr", "libmpc": "mpc",
+    "libisl": "isl", "libmpdec": "mpdecimal", "LibTIFF": "tiff", "LittleCMS": "lcms2",
+    "Vulkan-SPIRV-Tools": "spirv-tools", "Vulkan-SPIRV-Headers": "spirv-headers",
+}
+
+OPTIONS = {"platform": "generic-x64", "project": None, "groups": None, "apply": False, "anitya": True, "refresh": False, "output": None}
+GH_TOKEN = ""
+
+
+def usage(status):
+    with open(__file__) as f:
+        for line in f.readlines()[1:]:
+            if not line.startswith("#"):
+                break
+            sys.stderr.write(line[2:] if line.startswith("# ") else line[1:])
+    sys.exit(status)
+
+
+def bash_unquote(value):
+    """the value of a declare -p line: "..." with backslash escapes or $'...'"""
+    if value.startswith("$'"):
+        return value[2:-1].encode().decode("unicode_escape")
+    if value.startswith('"'):
+        return re.sub(r'\\([\\"$`\n])', r"\1", value[1:-1])
+    return value
+
+
+def resolve(spec, platform):
+    """resolve <group>/<name>[:<target>] with pkg_show -d: dict of the recipe variables"""
+    cmd = [os.path.join(BB_HOME, "utilities", "pkg_show"), "-d", "-p", platform, spec]
+    out = subprocess.run(cmd, capture_output=True, text=True, cwd=BB_HOME)
+    values = {}
+    for line in out.stdout.splitlines():
+        m = re.match(r"^declare -[-a-zA-Z]+ ([A-Z0-9_]+)=(.*)$", line)
+        if m:
+            values[m.group(1)] = bash_unquote(m.group(2))
+    return values
+
+
+def version_source(recipe):
+    """the PKG_VER line of package.env: (literal version or None, setenv variable or None)"""
+    path = os.path.join(BB_HOME, "packages", recipe, "package.env")
+    try:
+        with open(path) as f:
+            for line in f:
+                m = re.match(r"^\s*PKG_VER=(.*?)\s*$", line)
+                if m:
+                    value = m.group(1).strip('"').strip("'")
+                    mv = re.match(r"^\$\{?([A-Z0-9_]+)\}?$", value)
+                    if mv:
+                        return None, mv.group(1)
+                    return value, None
+    except OSError:
+        pass
+    return None, None
+
+
+def project_order(project, platform):
+    """the recipes a project builds, dependencies first, in build order (deduplicated by recipe)"""
+    seen = set()
+    order = []
+
+    def calls(path, anchored):
+        rx = (r"^\s*" if anchored else r"\b") + r"build(?: +--[a-z_]+(?: +[a-z]+)?)* +([a-z]+/[A-Za-z0-9_.+-]+(?::[a-z0-9]+)?)"
+        with open(path) as f:
+            return re.findall(rx, f.read(), re.M)
+
+    def visit(spec, parent_target=""):
+        pkg, _, target = spec.partition(":")
+        if parent_target in ("native", "cross") and not target:
+            target = parent_target
+        if (pkg, target) in seen:
+            return
+        seen.add((pkg, target))
+        if not os.path.isfile(os.path.join(BB_HOME, "packages", pkg, "package.env")):
+            return
+        values = resolve(pkg + (":" + target if target else ""), platform)
+        for dep in values.get("PKG_DEPS", "").split():
+            visit(dep, target)
+        if pkg not in order:
+            order.append(pkg)
+
+    for spec in calls(os.path.join(BB_HOME, "toolchain.functions"), False):
+        visit(spec)
+    prj = os.path.join(BB_HOME, "projects", project + ".prj")
+    if not os.path.isfile(prj):
+        sys.stderr.write(f"pkg_upstream: no such project: {prj}\n")
+        sys.exit(1)
+    for spec in calls(prj, True):
+        visit(spec)
+    return order
+
+
+def all_recipes():
+    out = []
+    pkgs = os.path.join(BB_HOME, "packages")
+    for group in sorted(os.listdir(pkgs)):
+        if group == "template" or not os.path.isdir(os.path.join(pkgs, group)):
+            continue
+        for name in sorted(os.listdir(os.path.join(pkgs, group))):
+            if os.path.isfile(os.path.join(pkgs, group, name, "package.env")):
+                out.append(group + "/" + name)
+    return out
+
+
+def fetch(url, headers=None):
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    key = os.path.join(CACHE_DIR, hashlib.md5(url.encode()).hexdigest())
+    if not OPTIONS["refresh"] and os.path.exists(key) and time.time() - os.path.getmtime(key) < CACHE_TTL:
+        with open(key, "rb") as f:
+            return f.read().decode("utf-8", "replace")
+    req = urllib.request.Request(url, headers=dict(headers or {}, **{"User-Agent": USER_AGENT}))
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            data = r.read()
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        sys.stderr.write(f"pkg_upstream: {url}: {e}\n")
+        return None
+    with open(key, "wb") as f:
+        f.write(data)
+    return data.decode("utf-8", "replace")
+
+
+def url_answers(url):
+    """HEAD (or a one byte GET when HEAD is refused) of an archive URL"""
+    for method, headers in (("HEAD", {}), ("GET", {"Range": "bytes=0-0"})):
+        req = urllib.request.Request(url, method=method, headers=dict(headers, **{"User-Agent": USER_AGENT}))
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return r.status < 400
+        except urllib.error.HTTPError as e:
+            if e.code not in (403, 405):
+                return False
+        except (urllib.error.URLError, TimeoutError, OSError):
+            return False
+    return False
+
+
+def vkey(version):
+    """sort key: numeric fields as numbers, a letter suffix after the number"""
+    key = []
+    for part in re.split(r"[._-]", version):
+        m = re.match(r"^(\d+)(.*)$", part)
+        key.append((0, int(m.group(1)), m.group(2)) if m else (1, 0, part))
+    return key
+
+
+STYLES = (".", "_", "-", "p")
+
+
+def spell(version, style):
+    """a version as it may appear in a URL: 2.6.4, 2_6_4, 2-6-4, and 5.2p37 as 5.2.37 (style p)"""
+    if style == "p":
+        return version.replace("p", ".") if re.search(r"\dp\d", version) else None
+    if style == ".":
+        return version
+    return version.replace(".", style) if "." in version and style not in version else None
+
+
+def unspell(spelled, style):
+    return spelled.replace(style, ".") if style in ("_", "-") else spelled
+
+
+def version_pattern(text, version):
+    """(regex matching text with the version replaced by a capture group, style) or None"""
+    for style in STYLES:
+        spelled = spell(version, style)
+        if spelled and spelled in text:
+            return re.compile("^" + re.escape(text).replace(re.escape(spelled), VERSION_RX, 1) + "$"), style
+    return None
+
+
+def newest(names, pattern, style, current):
+    """the newest version among the names matching the pattern: pre-releases and versions of
+    another magnitude (a 20001016 date tag next to a 4.16.0 version) are ignored"""
+    found = set()
+    digits = len(current.split(".")[0])
+    for name in names:
+        m = pattern.match(name)
+        if m:
+            version = unspell(m.group(1), style)
+            if not PRERELEASE.search(version) and abs(len(version.split(".")[0]) - digits) <= 2:
+                found.add(version)
+    return max(found, key=vkey) if found else None
+
+
+def prefix_pattern(text, version):
+    """(regex, style) for a directory named after a leading part of the version (2.83 for 2.83.2,
+    v6.x for 6.12.1), or None: the longest prefix wins (1 alone would match 1.82 and 1.86 alike)"""
+    parts = version.split(".")
+    for n in range(len(parts) - 1, 0, -1):
+        found = version_pattern(text, ".".join(parts[:n]))
+        if found:
+            return found
+    return None
+
+
+def github_latest(url, version):
+    m = re.match(r"https://github\.com/([^/]+)/([^/]+)/(.*)$", url)
+    if not m:
+        return "unknown", None
+    owner, repo, rest = m.groups()
+    repo = repo[:-4] if repo.endswith(".git") else repo
+    tag = None
+    for rx in (r"releases/download/([^/]+)/", r"archive/refs/tags/(.+?)\.(?:tar\.gz|tar\.xz|zip)$", r"archive/([^/]+?)(?:/|\.(?:tar\.gz|tar\.xz|zip)$)"):
+        mm = re.match(rx, rest)
+        if mm:
+            tag = mm.group(1)
+            break
+    pat = version_pattern(tag, version) if tag else None
+    if pat is None:
+        return "unknown", None
+    headers = {"Accept": "application/vnd.github+json"}
+    if GH_TOKEN:
+        headers["Authorization"] = "Bearer " + GH_TOKEN
+    names = []
+    for page in range(1, 11):
+        data = fetch(f"https://api.github.com/repos/{owner}/{repo}/tags?per_page=100&page={page}", headers)
+        try:
+            items = json.loads(data) if data else []
+        except ValueError:
+            items = []
+        if not isinstance(items, list) or not items:
+            break
+        names += [t.get("name", "") for t in items]
+        if len(items) < 100:
+            break
+    return "github", newest(names, pat[0], pat[1], version)
+
+
+def gitlab_latest(url, version):
+    """the tags of a GitLab project: <host>/<group>/<project>/-/... or <host>/api/v4/projects/<id>/..."""
+    m = re.match(r"https://([^/]+)/(.+)$", url)
+    host, rest = m.groups()
+    m = re.match(r"api/v4/projects/([^/]+)/", rest)
+    if m:
+        project = m.group(1)
+    elif "/-/" in rest:
+        project = urllib.parse.quote(rest.split("/-/")[0], safe="")
+    else:
+        return "unknown", None
+    # the tag as it appears in the URL: /-/archive/<tag>/..., /-/releases/<tag>/..., packages/generic/<name>/<tag>/
+    tag = None
+    for rx in (r".*/-/archive/([^/]+)/", r".*/-/releases/([^/]+)/", r".*/packages/generic/[^/]+/([^/]+)/"):
+        mm = re.match(rx, rest)
+        if mm:
+            tag = mm.group(1)
+            break
+    pat = version_pattern(tag, version) if tag else None
+    if pat is None:
+        return "unknown", None
+    names = []
+    for page in range(1, 6):
+        data = fetch(f"https://{host}/api/v4/projects/{project}/repository/tags?per_page=100&page={page}")
+        try:
+            items = json.loads(data) if data else []
+        except ValueError:
+            items = []
+        if not isinstance(items, list) or not items:
+            break
+        names += [t.get("name", "") for t in items]
+        if len(items) < 100:
+            break
+    return "gitlab", newest(names, pat[0], pat[1], version)
+
+
+def links(listing):
+    return [urllib.parse.unquote(h.rstrip("/").rsplit("/", 1)[-1]) for h in re.findall(r'href="([^"?#]+)"', listing)]
+
+
+def listing_latest(url, version):
+    parent, base = url.rsplit("/", 1)
+    pat = version_pattern(base, version)
+    if pat is None:
+        return "unknown", None
+    names = []
+    data = fetch(parent + "/")
+    if data:
+        names += links(data)
+    # a versioned parent directory (mpfr-4.2.1/, python/3.10.15/, glib/2.83/, kernel/v6.x/): the
+    # newest sibling directories are listed too
+    grand, pdir = parent.rsplit("/", 1)
+    dirpat = version_pattern(pdir, version) or prefix_pattern(pdir, version)
+    if dirpat:
+        data = fetch(grand + "/")
+        if data:
+            dirs = [d for d in links(data) if dirpat[0].match(d) and not PRERELEASE.search(d)]
+            dirs.sort(key=lambda d: vkey(unspell(dirpat[0].match(d).group(1), dirpat[1])))
+            for d in dirs[-3:]:
+                data = fetch(grand + "/" + d + "/")
+                if data:
+                    names += links(data)
+    return "listing", newest(names, pat[0], pat[1], version)
+
+
+def pypi_latest(recipe):
+    """a pythonbuild recipe without PKG_URL is installed by pip: the version PyPI publishes"""
+    name = re.sub(r"_[0-9].*$", "", recipe.split("/")[-1])
+    data = fetch("https://pypi.org/pypi/" + urllib.parse.quote(name) + "/json")
+    try:
+        return "pypi", json.loads(data)["info"]["version"] if data else None
+    except (ValueError, KeyError):
+        return "pypi", None
+
+
+def anitya_latest(recipe, url):
+    name = re.sub(r"_[0-9].*$", "", recipe.split("/")[-1])
+    host = urllib.parse.urlparse(url).netloc.replace("www.", "") if url else ""
+    tries = []
+    for n in (ALIASES.get(name), name, name.lower()):
+        if n and n not in tries:
+            tries.append(n)
+    for n in tries:
+        data = fetch("https://release-monitoring.org/api/v2/projects/?name=" + urllib.parse.quote(n))
+        if not data:
+            continue
+        try:
+            items = json.loads(data).get("items", [])
+        except ValueError:
+            continue
+        items = [i for i in items if i.get("ecosystem") not in LANG_ECOSYSTEMS or i.get("ecosystem", "") in host]
+        if not items:
+            continue
+        preferred = [i for i in items if host and urllib.parse.urlparse(i.get("homepage", "")).netloc.replace("www.", "") in host]
+        item = (preferred or items)[0]
+        stable = item.get("stable_versions") or []
+        return stable[0] if stable else item.get("version")
+    return None
+
+
+def new_url(url, old, new):
+    """the URL of the new version: every spelling of the old version replaced by the same spelling of the new one"""
+    for style in STYLES:
+        spelled_old, spelled_new = spell(old, style), spell(new, style) or new
+        if spelled_old and spelled_old in url:
+            url = url.replace(spelled_old, spelled_new)
+    return url
+
+
+def apply_version(recipe, old, new, platform):
+    """rewrite the PKG_VER line, resolve the recipe again and keep the change only when the URL
+    of the new version answers: ("applied", url), ("url-missing", url) or ("not-rewritten", "")"""
+    path = os.path.join(BB_HOME, "packages", recipe, "package.env")
+    with open(path) as f:
+        text = f.read()
+    new_text, count = re.subn(r"^([ \t]*)PKG_VER=(['\"]?)" + re.escape(old) + r"\2[ \t]*$", lambda m: m.group(1) + "PKG_VER=" + m.group(2) + new + m.group(2), text, count=1, flags=re.M)
+    if count != 1:
+        return "not-rewritten", ""
+    with open(path, "w") as f:
+        f.write(new_text)
+    url = resolve(recipe, platform).get("PKG_URL", "").split()
+    url = url[0] if url else ""
+    if not url or url_answers(url):
+        # no URL: a pythonbuild recipe that pip fetches from PyPI
+        return "applied", url
+    with open(path, "w") as f:
+        f.write(text)
+    return "url-missing", url
+
+
+def survey(recipe, forced, platform):
+    values = resolve(recipe, platform)
+    current = values.get("PKG_VER", "")
+    url = values.get("PKG_URL", "").split()[0] if values.get("PKG_URL") else ""
+    literal, setenv_var = version_source(recipe)
+    backend, latest = "none", None
+    if current and url:
+        if url.startswith("https://github.com/"):
+            backend, latest = github_latest(url, current)
+        elif re.match(r"https://gitlab\.[^/]+/", url):
+            backend, latest = gitlab_latest(url, current)
+        else:
+            backend, latest = listing_latest(url, current)
+    elif current and values.get("BUILD_PROCESS") == "pythonbuild":
+        backend, latest = pypi_latest(recipe)
+    anitya = anitya_latest(recipe, url) if OPTIONS["anitya"] else None
+    best = forced or latest or anitya
+    if not current:
+        status = "noversion"
+    elif not best:
+        status = "unknown"
+    elif vkey(best) > vkey(current):
+        status = "outdated"
+    elif vkey(best) < vkey(current):
+        status = "ahead"
+    else:
+        status = "current"
+    if anitya and latest and vkey(anitya) != vkey(latest):
+        status += "/disagree"
+    if setenv_var:
+        status += "/setenv:" + setenv_var
+    target_url = new_url(url, current, best) if url and current and best and best != current else url
+    if OPTIONS["apply"] and best and current and best != current and not setenv_var:
+        if literal != current:
+            status += "/not-rewritten"
+        else:
+            outcome, resolved = apply_version(recipe, current, best, platform)
+            status += "/" + outcome
+            target_url = resolved or target_url
+    return [recipe, current, latest or "", backend, anitya or "", status, target_url]
+
+
+def main():
+    global GH_TOKEN
+    args = sys.argv[1:]
+    specs = []
+    while args:
+        a = args.pop(0)
+        if a == "-p":
+            OPTIONS["platform"] = args.pop(0)
+        elif a == "-P":
+            OPTIONS["project"] = args.pop(0)
+        elif a == "-g":
+            OPTIONS["groups"] = args.pop(0).split(",")
+        elif a == "-a":
+            OPTIONS["apply"] = True
+        elif a == "-A":
+            OPTIONS["anitya"] = False
+        elif a == "-f":
+            OPTIONS["refresh"] = True
+        elif a == "-o":
+            OPTIONS["output"] = args.pop(0)
+        elif a in ("-h", "--help"):
+            usage(0)
+        elif a.startswith("-"):
+            usage(1)
+        else:
+            specs.append(a)
+    GH_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+    if not GH_TOKEN:
+        try:
+            GH_TOKEN = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True).stdout.strip()
+        except OSError:
+            GH_TOKEN = ""
+    forced = {}
+    recipes = []
+    for spec in specs:
+        recipe, _, version = spec.partition("=")
+        recipe = recipe.split(":")[0]
+        recipes.append(recipe)
+        if version:
+            forced[recipe] = version
+    if OPTIONS["project"]:
+        # every recipe of the project; the ones given on the command line only carry a forced version
+        recipes = project_order(OPTIONS["project"], OPTIONS["platform"])
+    elif not recipes:
+        recipes = all_recipes()
+    if OPTIONS["groups"]:
+        recipes = [r for r in recipes if r.split("/")[0] in OPTIONS["groups"]]
+    out = open(OPTIONS["output"], "w") if OPTIONS["output"] else sys.stdout
+    out.write("\t".join(["recipe", "current", "latest", "backend", "anitya", "status", "url"]) + "\n")
+    for recipe in recipes:
+        if not os.path.isfile(os.path.join(BB_HOME, "packages", recipe, "package.env")):
+            sys.stderr.write(f"pkg_upstream: {recipe}: no package.env\n")
+            continue
+        out.write("\t".join(survey(recipe, forced.get(recipe), OPTIONS["platform"])) + "\n")
+        out.flush()
+    if out is not sys.stdout:
+        out.close()
+
+
+if __name__ == "__main__":
+    main()
