@@ -1,4 +1,4 @@
-# BBCrossBuild 3.1.1
+# BBCrossBuild 4.0.0
 
 A framework to automate cross-compilation of packages through project files.
 
