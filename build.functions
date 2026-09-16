@@ -1400,8 +1400,9 @@ function mesonninja () {
 	esac
 	if [ "${STD_CONF_FLAGS:-1}" -eq 1 ]
 	then
+		### CONF_FLAGS follow MESON_FLAGS on the meson command line (runconfig.sh below), once
 		MESON_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} --includedir=${INSTALL_INCLUDEDIR} \
-			--sysconfdir=${INSTALL_SYSCONFDIR} --localstatedir=${INSTALL_LOCALSTATEDIR} --datadir=${INSTALL_SHAREDIR} ${CONF_FLAGS}"
+			--sysconfdir=${INSTALL_SYSCONFDIR} --localstatedir=${INSTALL_LOCALSTATEDIR} --datadir=${INSTALL_SHAREDIR}"
 		if [ "${PKG_OVERRIDESHARED:-${BUILD_LIBSHARED}}" -eq 0 ] && [ "${PKG_OVERRIDESTATIC:-${BUILD_LIBSTATIC}}" -eq 1 ]
 		then
 			MESON_FLAGS+=" --default-library=static"
