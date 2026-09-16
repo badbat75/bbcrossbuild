@@ -826,8 +826,8 @@ function set_target_prefixes () {
 function recipe_variants () {
 	### recipe_variants: print, one per line and in application order, the directories under
 	### ${PKG_RECIPEPATH}/variants that select the current build (paths relative to variants/).
-	### A variant directory has the layout of a recipe (package.env, the scripts, files/, patches/)
-	### and is named after one selector:
+	### package.env is the default build; a variant directory has the same layout (package.env,
+	### the scripts, files/, patches/), is named after one selector and is applied on top of it:
 	###   target/<native|cross|sysroot>   the install class (sysroot: anything but native and cross)
 	###   target/<default|name>           the PKG_TARGET name (default: no target given)
 	###   toolchain/<gnu|llvm>            the toolchain the package is built with (PKG_TOOLCHAIN and
@@ -835,7 +835,6 @@ function recipe_variants () {
 	###   arch/<HM>  platform/<PLATFORM_NAME>  version/<PKG_VER>
 	###   option/<name>                   WITH_<NAME> is set and not 0, no, false or off
 	###   option/<name>=<value>           <value> is one of the words of WITH_<NAME>
-	###   <axis>/other                    no other directory of that axis matched
 	### A directory name may list several values separated by commas (target/native,cross). The
 	### axes nest inside a variant directory, in the order above, to select a conjunction
 	### (target/default/arch/aarch64). Every single-selector directory is applied first (target
@@ -908,7 +907,7 @@ function recipe_variants () {
 			for ENTRY in "${DIR}/${AXIS}"/*/
 			do
 				NAME=$(basename "${ENTRY}")
-				if [ "${NAME}" = "*" ] || [ "${NAME}" = other ]
+				if [ "${NAME}" = "*" ]
 				then
 					continue
 				fi
@@ -921,10 +920,6 @@ function recipe_variants () {
 					esac
 				fi
 			done
-			if [ "${#MATCHES[@]}" -eq 0 ] && [ -d "${DIR}/${AXIS}/other" ]
-			then
-				MATCHES=(other)
-			fi
 			for NAME in "${MATCHES[@]}"
 			do
 				ENTRY="${DIR}/${AXIS}/${NAME}"

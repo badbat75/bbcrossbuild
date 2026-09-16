@@ -8,8 +8,8 @@
 #     build.sh, postinstall.sh, files/, patches/ and variants/;
 #   - variants/ only holds the axes target, toolchain, arch, platform, version and option, each
 #     value directory has a valid name (toolchain gnu|llvm, arch and platform from platforms/,
-#     option <name> or <name>=<value>, or "other"), has the layout of a recipe and nests only
-#     the axes that follow its own in that order;
+#     option <name> or <name>=<value>; package.env is the default, there is no "other"), has
+#     the layout of a recipe and nests only the axes that follow its own in that order;
 #   - package.env and every *.sh, in the recipe and in the variants, parse (bash -n) and
 #     pass shellcheck when it is installed; a package.env with control flow (case, if, for,
 #     while) gets a warning, variants are the way to express it;
@@ -183,15 +183,16 @@ function lint_variant () {
 function lint_variant_name () {
 	### lint_variant_name <recipe dir> <relative axis dir> <axis> <directory name>
 	local VALUE
-	if [ "${4}" = other ]
-	then
-		return
-	fi
 	case ${4} in
-		*,,*|,*|*,|*other*) report error "${1}" "${2}/${4}: malformed value list (other stands alone)"; return ;;
+		*,,*|,*|*,) report error "${1}" "${2}/${4}: malformed value list"; return ;;
 	esac
 	for VALUE in ${4//,/ }
 	do
+		if [ "${VALUE}" = other ]
+		then
+			report error "${1}" "${2}/${4}: there is no other selector, the default build is ${RECIPE_FILENAME}"
+			continue
+		fi
 		case ${3} in
 			target)
 				[[ ${VALUE} =~ ^[A-Za-z0-9_.+-]+$ ]] || report error "${1}" "${2}/${4}: invalid target name ${VALUE}"

@@ -78,7 +78,7 @@ function recipe_targets () {
 			for VALUE in ${NAME//,/ }
 			do
 				case ${VALUE} in
-					native|cross|sysroot|default|other) ;;
+					native|cross|sysroot|default) ;;
 					*) echo "${VALUE}" ;;
 				esac
 			done
