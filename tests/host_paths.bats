@@ -183,7 +183,11 @@ setup () {
 		"slim ${STAGE}/usr/lib/libgccslim.a" \
 		"fat ${STAGE}/usr/lib/libltotool.a"
 	printf 'BC\300\336' > "${STAGE}/usr/lib/bitcode.o"
+	### readelf fails on a bitcode file, which is the answer itself: the run of a build has pipefail,
+	### where the status of a pipe is the failure of readelf and not the answer of the search
+	set -o pipefail
 	run lto_object_files "${STAGE}"
+	set +o pipefail
 	assert_equal "$(head -n 1 <<< "${output}")" "slim ${STAGE}/usr/lib/bitcode.o"
 	run lto_object_files "${BATS_TEST_TMPDIR}/missing"
 	assert_output_lines

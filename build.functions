@@ -1023,6 +1023,33 @@ function find_host_paths () {
 	done | LC_ALL=C sort -u
 }
 
+function target_tool () {
+	### target_tool <name>: the binutils program of the target, by path when the platform toolchain holds
+	### it and by name otherwise. The framework reads and rewrites the objects of a package with these
+	### programs, and the PATH of a build is the one its toolchain needs: with llvm it names the llvm
+	### programs, and <HARCH>-readelf resolved through it is not always there
+	local NAME
+	NAME=${HARCH:+${HARCH}-}${1}
+	if [ -n "${TOOLCHAIN_PATH}" ] && [ -x "${TOOLCHAIN_PATH}/bin/${NAME}" ]
+	then
+		echo "${TOOLCHAIN_PATH}/bin/${NAME}"
+	else
+		echo "${NAME}"
+	fi
+}
+
+function readelf_prints () {
+	### readelf_prints <readelf> <text> <option>...: whether the readelf of the target prints <text> on
+	### either stream. Its status is not the answer, and never the status of a pipe: it fails on the
+	### bytecode of clang, which is the answer itself, and the run has pipefail
+	local TOOL TEXT OUTPUT
+	TOOL=${1}
+	TEXT=${2}
+	shift 2
+	OUTPUT=$( "${TOOL}" "${@}" 2>&1 || true )
+	[[ ${OUTPUT} == *"${TEXT}"* ]]
+}
+
 function lto_object_files () {
 	### lto_object_files <dir>: the objects and static libraries under <dir> that hold LTO bytecode, one
 	### "<kind> <path>" per line in byte order, <kind> fat when they also hold machine code, slim when
@@ -1032,18 +1059,19 @@ function lto_object_files () {
 	### for the bytecode of an archive of gcc-ar, through the LTO plugin, and never shows the marker.
 	### clang puts the bytecode in the .llvm.lto section of a fat object and writes a slim one as a
 	### bitcode file, which the readelf of the target does not take for ELF
-	local DIR FILE
+	local DIR FILE READELF
 	DIR=${1%/}
 	if [ ! -d "${DIR}" ]
 	then
 		return 0
 	fi
+	READELF=$( target_tool readelf )
 	find "${DIR}" -type f \( -name '*.a' -o -name '*.o' \) -print0 | LC_ALL=C sort -z |
 	while IFS= read -r -d '' FILE
 	do
 		if { LC_ALL=C grep -q -a -F -e __gnu_lto_slim -- "${FILE}" && \
-			"${HARCH}-readelf" --wide --syms -- "${FILE}" 2>/dev/null | grep -q -E ' __gnu_lto_slim$'; } || \
-			{ "${HARCH}-readelf" -h -- "${FILE}" 2>&1 > /dev/null | grep -q -F 'LLVM bitcode'; }
+			readelf_prints "${READELF}" ' __gnu_lto_slim' --wide --syms -- "${FILE}"; } || \
+			readelf_prints "${READELF}" 'LLVM bitcode' -h -- "${FILE}"
 		then
 			echo "slim ${FILE}"
 		elif LC_ALL=C grep -q -a -F -e .gnu.lto_ -e .llvm.lto -- "${FILE}"
@@ -1065,7 +1093,9 @@ function strip_lto_objects () {
 	###   loses the bytecode: an ordinary object, which any compiler links
 	### - a slim object has nothing else and stays: build stops on it (lto_object_files)
 	### Remove the bytecode part once the compilers map those paths
-	local KIND FILE
+	local KIND FILE OBJCOPY RANLIB
+	OBJCOPY=$( target_tool objcopy )
+	RANLIB=$( target_tool ranlib )
 	while read -r KIND FILE
 	do
 		if [ "${PKG_OVERRIDESTATIC:-${BUILD_LIBSTATIC}}" -eq 0 ] && [[ ${FILE} == */lib*.a ]] && \
@@ -1074,10 +1104,10 @@ function strip_lto_objects () {
 			run_cmd "rm -v \"${FILE}\""
 		elif [ "${KIND}" == fat ]
 		then
-			run_cmd "\"${HARCH}-objcopy\" --wildcard -R '.gnu.lto_*' -R '.gnu.debuglto_*' -R .llvm.lto \"${FILE}\""
+			run_cmd "\"${OBJCOPY}\" --wildcard -R '.gnu.lto_*' -R '.gnu.debuglto_*' -R .llvm.lto \"${FILE}\""
 			if [[ ${FILE} == *.a ]]
 			then
-				run_cmd "\"${HARCH}-ranlib\" \"${FILE}\""
+				run_cmd "\"${RANLIB}\" \"${FILE}\""
 			fi
 		fi
 	done < <( lto_object_files "${1}" )
