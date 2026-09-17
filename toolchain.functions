@@ -606,6 +606,14 @@ function setup_gcc () {
 		### LDFLAGS_FOR_TARGET goes without it, or libstdc++, libgcc_s and the other target libraries
 		### of the image carry it as RUNPATH
 		LINKERFLAGS="-Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib ${GNU_EXTRALDFLAGS}"
+		### The target libraries (libstdc++, libgomp...) go into the image: the source path maps of a target
+		### build (host_path_maps), or __FILE__ of their assert messages names the build and source trees
+		local PREFIX_MAP
+		TARGET_PREFIXMAP_FLAGS=
+		while read -r PREFIX_MAP
+		do
+			TARGET_PREFIXMAP_FLAGS+=" -ffile-prefix-map=${PREFIX_MAP}"
+		done < <( SYSROOT=$(gcc_sysroot) host_path_maps )
 		LTO_COMPFLAGS=
 		LTO_LINKERFLAGS=
 		if [ "${GCC_LTOENABLE:-0}" -eq 1 ]
@@ -649,8 +657,8 @@ function setup_gcc () {
 				CFLAGS=\"${HOST_CSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS}\" \\
 				CXXFLAGS=\"${HOST_CXXSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS}\" \\
 				LDFLAGS=\"${LINKERFLAGS}${LTO_LINKERFLAGS}\" \\
-				CFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
-				CXXFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
+				CFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}${TARGET_PREFIXMAP_FLAGS}\" \\
+				CXXFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}${TARGET_PREFIXMAP_FLAGS}\" \\
 				LDFLAGS_FOR_TARGET=\"${GNU_EXTRALDFLAGS} ${OPTLINK_FLAGS}\" \\
 				\"${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure\" \\
 					${CONFIG_ARCH_PARAMS} ${PLATFORM_ARCHFLAGS} \\

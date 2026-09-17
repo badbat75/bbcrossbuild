@@ -488,6 +488,19 @@ function settcenv () {
 			esac
 			;;
 	esac
+	### The source paths a target build records in its binaries (__FILE__ of the assert and log messages,
+	### the debug information, the panic locations of Rust) are not the ones of the build host
+	local PREFIX_MAP RUST_PREFIX_MAPS
+	RUST_PREFIX_MAPS=
+	if [ "${TARGET_ENV}" == target ]
+	then
+		RUST_PREFIX_MAPS="--remap-path-scope=object"
+		while read -r PREFIX_MAP
+		do
+			TOOLCHAIN_COMPFLAGS+=" -ffile-prefix-map=${PREFIX_MAP}"
+			RUST_PREFIX_MAPS+=" --remap-path-prefix=${PREFIX_MAP}"
+		done < <( host_path_maps )
+	fi
 	case ${TOOLCHAIN_LINKER} in
 		bfd)
 			if [ -n "${SYSROOT_FLAGS}" ]
@@ -520,7 +533,7 @@ function settcenv () {
 	do
 		TOOLCHAIN_RUSTFLAGS+="-C link-arg=${param} "
 	done
-	TOOLCHAIN_RUSTFLAGS+="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}"
+	TOOLCHAIN_RUSTFLAGS+="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}${RUST_PREFIX_MAPS:+ ${RUST_PREFIX_MAPS}}"
 	
 	TOOLCHAIN_CFLAGS_FOR_BUILD="${HOST_CSTD} -I${GLOBAL_TOOLCHAIN_PATH}/include"
 	TOOLCHAIN_CFLAGS_FOR_BUILD+=" -I${TOOLCHAIN_PATH}/include"
@@ -787,6 +800,8 @@ function strip_host_paths () {
 	### - the compiler wrapper (CCWRAPPER) goes;
 	### - --sysroot and -Wl,--sysroot of the sysroot, -Wl,-rpath-link into it, the -I and -L of its
 	###   system directories and every -I and -L into a toolchain go;
+	### - the source path maps of the build go (-ffile-prefix-map and the other -f*-prefix-map,
+	###   --remap-path-prefix and --remap-path-scope, see host_path_maps);
 	### - a program of a toolchain keeps its name only (aarch64-linux-gnu-gcc, clang, python3);
 	### - the sysroot in front of any other path goes; with --cmake it becomes ${CMAKE_SYSROOT}, which a
 	###   cross build sets and the image leaves empty.
@@ -823,6 +838,7 @@ function strip_host_paths () {
 	### One token per substitution and a new pass while any matched: two tokens in a row share the
 	### blank between them
 	EXPRS+=(-e ":token")
+	EXPRS+=(-e "s#${START}(-f(file|macro|debug|profile)-prefix-map|--remap-path-(prefix|scope))=${TOKEN}${END}#\1\5#")
 	for ROOT in $(printf '%s\n' "${SYSROOT}" "${BIN_PATH}" | LC_ALL=C sort -u)
 	do
 		RE=$(strip_host_paths_regex "${ROOT}")
@@ -851,6 +867,17 @@ function strip_host_paths () {
 		EXPRS+=(-e "s#$(strip_host_paths_regex "${ROOT}")(/|${END})#${ROOT_TO}\1#g")
 	done
 	run_cmd "sed -E -i $(printf '%q ' "${EXPRS[@]}" "${@}")"
+}
+
+function host_path_maps () {
+	### host_path_maps: the OLD=NEW source path maps of a target build, one per line, which settcenv
+	### passes to the C compilers (-ffile-prefix-map) and to rustc (--remap-path-prefix), gcc_buildenv to
+	### the gcc target libraries. A path under
+	### the data directory (sources, build trees, toolchains, cargo registry) is recorded under
+	### /usr/src/bbxb, a path in a sysroot as the path of the image. gcc and rustc apply the last map
+	### that matches, clang the longest: the sysroots, inside the data directory, come after it
+	echo "${DATA_PATH}=/usr/src/bbxb"
+	printf '%s=\n' "${BIN_PATH}" "${SYSROOT}" | sed '/^=$/d' | LC_ALL=C sort -u
 }
 
 function recipe_path () {

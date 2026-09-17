@@ -195,6 +195,7 @@ BBCrossBuild provides various functions for use in project files. These are orga
   settcenv [--target <env>]
   ```
   - `--target <env>`: Target environment (native, cross, target)
+  - A target build gets the source path maps of `host_path_maps`: `-ffile-prefix-map` in the C, C++ and preprocessor flags, `--remap-path-scope=object` and `--remap-path-prefix` in `RUSTFLAGS`
 
 - **create_environment_source**: Create environment source file
   ```
@@ -206,9 +207,15 @@ BBCrossBuild provides various functions for use in project files. These are orga
   ```
   strip_host_paths [--cmake] <file>...
   ```
-  - The compiler wrapper goes; `--sysroot` and `-Wl,--sysroot` of the sysroot, `-Wl,-rpath-link` into it, the `-I`/`-L` of its system directories and every `-I`/`-L` into a toolchain go; a program of a toolchain keeps its name only; the sysroot in front of any other path goes
+  - The compiler wrapper goes; `--sysroot` and `-Wl,--sysroot` of the sysroot, `-Wl,-rpath-link` into it, the `-I`/`-L` of its system directories and every `-I`/`-L` into a toolchain go; the source path maps (`-f*-prefix-map`, `--remap-path-prefix`, `--remap-path-scope`) go; a program of a toolchain keeps its name only; the sysroot in front of any other path goes
   - `--cmake`: the sysroot becomes `${CMAKE_SYSROOT}` instead (cmake config and export files), set by a cross build and empty in the image
   - The source and build trees of the package are left to the recipe; nothing happens in native and cross builds. Available to the recipe scripts through `recipe.source`
+
+- **host_path_maps**: Print the `OLD=NEW` source path maps of a target build, one per line; `settcenv` passes them to the C compilers and to rustc, the gcc setup to the target libraries (`CFLAGS_FOR_TARGET`), so `__FILE__` in assert and log messages, the debug information and the panic locations of Rust name no path of the build host
+  ```
+  host_path_maps
+  ```
+  - `DATA_PATH` (sources, build trees, toolchains, cargo registry) becomes `/usr/src/bbxb`, then `BIN_PATH` and `SYSROOT` become the path in the image; gcc and rustc apply the last matching map, clang the longest
 
 #### Project Functions (project.functions)
 

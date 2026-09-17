@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 # host_paths.bats: strip_host_paths of build.functions, the rewrite of the files a target build
-# installs to record how it was built (compiler wrapper, toolchain programs, sysroot flags and paths)
+# installs to record how it was built (compiler wrapper, toolchain programs, sysroot flags and paths),
+# and host_path_maps, the source path maps of the compilers of a target build
 # The tests set variables the sourced framework reads:
 # shellcheck disable=SC1091,SC2016,SC2034
 
@@ -12,6 +13,7 @@ setup () {
 	# shellcheck disable=SC2329
 	function run_cmd () { eval "${*}"; }
 	PKG_TARGET_ENV=target
+	DATA_PATH=/data
 	BIN_PATH=/data/lfs/rpi/binaries
 	SYSROOT=${BIN_PATH}
 	TOOLCHAIN_PATH=/data/lfs/rpi/toolchain
@@ -51,6 +53,30 @@ setup () {
 		'cflags=" -I/usr/include/libxml2 "' \
 		'libs=" -lxslt -L/usr/lib/aarch64-linux-gnu/private -lxml2"' \
 		"config_args='--with-sysroot= --prefix=/usr'"
+}
+
+@test "strip_host_paths drops the source path maps of the compilers" {
+	cat > "${RECORD}" <<-'EOF'
+		CFLAGS='--sysroot=/data/lfs/rpi/binaries -O2 -ffile-prefix-map=/data=/usr/src/bbxb -ffile-prefix-map=/data/lfs/rpi/binaries= -g'
+		'CONFIG_ARGS': "CFLAGS=-fmacro-prefix-map=/data/lfs/sources/python3=/usr/lib/python3.14/config -fdebug-prefix-map=/x=/y -Wall",
+		RUSTFLAGS="-C linker=aarch64-linux-gnu-gcc --remap-path-scope=object --remap-path-prefix=/data=/usr/src/bbxb"
+	EOF
+	strip_host_paths "${RECORD}"
+	run tr -s ' ' < "${RECORD}"
+	assert_output_lines "CFLAGS=' -O2 -g'" \
+		"'CONFIG_ARGS': \"CFLAGS= -Wall\"," \
+		'RUSTFLAGS="-C linker=aarch64-linux-gnu-gcc "'
+}
+
+@test "host_path_maps maps the data directory, then every sysroot to the image" {
+	run host_path_maps
+	assert_output_lines '/data=/usr/src/bbxb' \
+		'/data/lfs/rpi/binaries='
+	SYSROOT=/data/lfs/rpi/distos
+	run host_path_maps
+	assert_output_lines '/data=/usr/src/bbxb' \
+		'/data/lfs/rpi/binaries=' \
+		'/data/lfs/rpi/distos='
 }
 
 @test "strip_host_paths removes the sysroot in front of a path, CMAKE_SYSROOT takes its place with --cmake" {
