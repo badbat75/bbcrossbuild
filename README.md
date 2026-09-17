@@ -146,6 +146,14 @@ BBCrossBuild provides various functions for use in project files. These are orga
   - `-S`: Run with sudo/bash
   - `-s`: Run with sudo
   - `"command string"`: Command to execute
+  - Returns the status of the command once its whole output is in the log; `MAX_RETRIES=<n>` repeats a failing command
+
+- **log_run**: Run a command or a function with stdout and stderr logged through `log_buffer`
+  ```
+  log_run <log_file> <command> [<argument>...]
+  ```
+  - `<log_file>`: File to log to (empty: the current stdout)
+  - Waits for the log writers (`LOG_WAIT_TIMEOUT` seconds at most, default 10) and returns the status of the command. The command runs in a `||` list: a function passed here has to return its own status
 
 - **trow_error**: Throw an error with message
   ```
@@ -153,6 +161,13 @@ BBCrossBuild provides various functions for use in project files. These are orga
   ```
   - `<error_code>`: Numeric error code
   - `<error_message>`: Error message text
+
+- **on_error**, **on_interrupt**: The ERR and SIGINT traps of `bbxb`
+  ```
+  trap 'on_error ${?}' ERR
+  trap 'on_interrupt' SIGINT
+  ```
+  - A failure inside nested builds is reported once, by the innermost shell: message, package, call stack, log file and its last `ERROR_LOG_LINES` (default 20) error lines, preceded by half as many output lines (meson and cmake explain a failure on stdout). The parent shells pass the status on, the main shell unmounts the images and prints `Build stopped [status <n>]`
 
 #### Build Functions (build.functions)
 

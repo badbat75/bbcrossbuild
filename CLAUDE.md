@@ -84,7 +84,7 @@ Where things land (`DATA_PATH` defaults to `/mnt/bbcrossbuild/datadir`; the conf
 
 Precedence for a setting: environment variable > `bbxb.conf` > platform `.conf` > `setenv` default, and a `.prj` can overwrite any of them before the first `build`.
 
-The script runs with `set -E -o pipefail` and an ERR trap: any non-zero command aborts the whole run after `unmount_tag --all`. Commands that may legitimately fail need `|| true`. SIGINT also unmounts everything.
+The script runs with `set -E -o pipefail` and an ERR trap (`on_error` in `core.functions`): any non-zero command aborts the whole run. Commands that may legitimately fail need `|| true`. A failure climbs the nested `build` subshells one level at a time: the innermost shell reports it once on the console (`BBXB_CONSOLE_FD`, the stderr `bbxb` started with) with the package, the call stack, the log file and its last error lines, the parents only pass the status on (flag file `/tmp/bbxb_error.<pid>`), and the main shell runs `unmount_tag --all`. SIGINT (`on_interrupt`) also unmounts everything. `run_cmd` never traps the failure itself: through `log_run` it waits for its two `log_buffer` writers and returns the status, so the log is complete before anything exits (a shell that exits with the writers behind loses the last lines, which are the error; as PID 1 of a container it also kills them, which used to show up as `fork: Cannot allocate memory`). A function passed to `log_run` runs in a `||` list, where the ERR trap is off: it has to return its own status.
 
 ### Platforms
 

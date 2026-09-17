@@ -131,6 +131,7 @@ function create_image() {
 	then
 		echo "Active mounts:" "${MOUNTED_IMAGES[@]}"
 	fi
+	return "${UNMOUNT_FAILED}"
 }
 
 function mount_tag () {
@@ -269,7 +270,8 @@ function unmount_tag () {
 
 	OPTS="--all --finalize --kill" OPTS_WITH_VALUE="" param2value "${@}"
 
-	local ALL KILL WHAT2UNMOUNT MOUNT_NAME MOUNT_DIR IMAGEFILE_PATH PROC STATUS ACTIVE_MOUNTS LOOPDEV
+	local ALL KILL WHAT2UNMOUNT MOUNT_NAME MOUNT_DIR IMAGEFILE_PATH PROC STATUS ACTIVE_MOUNTS LOOPDEV UNMOUNT_TRIES UNMOUNT_FAILED
+	UNMOUNT_FAILED=0
 
 	ALL=${_param_all:-0}
 	FINALIZE=${_param_finalize:-0}
@@ -306,8 +308,17 @@ function unmount_tag () {
 			run_cmd -s "mv \"${MOUNT_DIR}/etc/resolv.conf.bbxb\" \"${MOUNT_DIR}/etc/resolv.conf\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 		fi
 
+		UNMOUNT_TRIES=0
 		while mountpoint -q "${MOUNT_DIR}"
 		do
+			### A busy mount is retried every second, not forever: this also runs from the error handler
+			UNMOUNT_TRIES=$((UNMOUNT_TRIES+1))
+			if [ "${UNMOUNT_TRIES}" -gt "${UNMOUNT_MAX_TRIES:-30}" ]
+			then
+				echo "giving up: ${MOUNT_DIR} is still mounted."
+				UNMOUNT_FAILED=1
+				break
+			fi
 			echo -n "Unmounting ${MOUNT_DIR}... "
 			LOOPDEV=$(lsblk -ndo pkname "$(findmnt --raw -no source "${MOUNT_DIR}")")
 			IMAGEFILE_PATH=$(losetup -nO back-file "/dev/${LOOPDEV}")
@@ -343,8 +354,8 @@ function unmount_tag () {
 			fi
 		done
 
-		# remove MOUNT_NAME from MOUNTED_IMAGES array
-		if [ "${#MOUNTED_IMAGES[@]}" -gt 0 ]
+		# remove MOUNT_NAME from MOUNTED_IMAGES array (it stays there when the unmount gave up)
+		if [ "${#MOUNTED_IMAGES[@]}" -gt 0 ] && ! mountpoint -q "${MOUNT_DIR}"
 		then
 			local ARRAY_INDEX
 			ARRAY_INDEX=0
@@ -418,25 +429,30 @@ function run_on_root_dir () {
 	# shellcheck disable=SC2154
 	ALLOCATE_PTY=${_param_allocate_pty:-0}
 
-	{
+	# shellcheck disable=SC2329
+	function chroot_cmd () {
+		### Runs under log_run, that is in a || list where the ERR trap is off: every step
+		### returns its own status
 		if [ "${CHROOT_USER}" = root ]
 		then
-			CHROOT_PWD=$(sudo chroot "${PLATFORM_PATH}/${CHROOT_DIR}" pwd)
+			CHROOT_PWD=$(sudo chroot "${PLATFORM_PATH}/${CHROOT_DIR}" pwd) || return "${?}"
 			CHROOT_PROMPT="${CHROOT_USER}:${CHROOT_PWD}# "
 		else
-			CHROOT_PWD=$(sudo chroot "${PLATFORM_PATH}/${CHROOT_DIR}" su - "${CHROOT_USER}" -c pwd)
+			CHROOT_PWD=$(sudo chroot "${PLATFORM_PATH}/${CHROOT_DIR}" su - "${CHROOT_USER}" -c pwd) || return "${?}"
 			CHROOT_PROMPT="${CHROOT_USER}:${CHROOT_PWD}$ "
 		fi
 		echo "${CHROOT_PROMPT}${CHROOT_CMD}"
 		if [ "${CHROOT_USER}" = root ]
 		then
-			sudo chroot "${PLATFORM_PATH}/${CHROOT_DIR}" bash -c "${CHROOT_CMD}"
+			sudo chroot "${PLATFORM_PATH}/${CHROOT_DIR}" bash -c "${CHROOT_CMD}" || return "${?}"
 		else
 			sudo chroot "${PLATFORM_PATH}/${CHROOT_DIR}" su - "$( if [ "${ALLOCATE_PTY}" -eq 1 ]; then echo "--pty"; fi )" \
-				"${CHROOT_USER}" -c "${CHROOT_CMD}" 
+				"${CHROOT_USER}" -c "${CHROOT_CMD}" || return "${?}"
 		fi
 		echo
-	} 2> >(log_buffer error "${LOG_PATH}/images_${CHROOT_DIR}.log") > >(log_buffer log "${LOG_PATH}/images_${CHROOT_DIR}.log")
+	}
+
+	log_run "${LOG_PATH}/images_${CHROOT_DIR}.log" chroot_cmd
 }
 
 function set_ownership () {
@@ -551,7 +567,8 @@ function run_postinstall_scripts () {
 		echo "Running post install scripts on ${_param_1}... " | log_buffer info
 		export PLATFORM_PATH LOG_PATH
 		export -f param2value run_on_root_dir
-		find "${PLATFORM_PATH}/${_param_1}/postinst_scripts" -type f -printf '%P\0' | sort -nz | xargs -0 -I{} bash -c "run_on_root_dir \"${MOUNT_NAME}\" root 'set -x; source /postinst_scripts/{}'"
+		### A failing post install script does not stop the image (it never did): it is reported in the log
+		find "${PLATFORM_PATH}/${_param_1}/postinst_scripts" -type f -printf '%P\0' | sort -nz | xargs -0 -I{} bash -c "run_on_root_dir \"${MOUNT_NAME}\" root 'set -x; source /postinst_scripts/{}' || echo \"Post install script {} failed [status \${?}]\" | log_buffer error"
 		run_cmd -s "rm -rfv ${PLATFORM_PATH}/${_param_1}/postinst_scripts"
 		echo "Done." | log_buffer info 
 	} >> "${LOG_PATH}/images_${_param_1}.log"

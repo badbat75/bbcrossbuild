@@ -306,37 +306,112 @@ pathremove () {
 }
 
 log_buffer () {
+	### log_buffer [log_type] [log_file]: prefix every line of stdin with time, directory and type.
+	### No external command per line: the writer has to keep up with the output of a parallel make.
 	(
-		unset IFS
 		local LOG_TYPE="${1:-log}"
-		local LOG_FILE="${2:-/dev/stdout}"
+		local LOG_DEST="${2:-/dev/stdout}"
+		local LOG_CHAR LOG_DIR LOG_LINE
 		case ${LOG_TYPE} in
-			cmd)    local LOG_CHAR='$';;
-			info)   local LOG_CHAR='#';;
-			log)    local LOG_CHAR='-';;
-			status) local LOG_CHAR='=';;
-			error)  local LOG_CHAR='!';;
-			*)      local LOG_CHAR="${LOG_TYPE}";;
+			cmd)    LOG_CHAR='$';;
+			info)   LOG_CHAR='#';;
+			log)    LOG_CHAR='-';;
+			status) LOG_CHAR='=';;
+			error)  LOG_CHAR='!';;
+			*)      LOG_CHAR="${LOG_TYPE}";;
 		esac
-		while read -r line
+		LOG_DIR=${PWD##*/}
+		while IFS= read -r LOG_LINE || [ -n "${LOG_LINE}" ]
 		do
-			printf "%s - [%s]${LOG_CHAR} %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$(basename "${PWD}")" "${line}" >> "${LOG_FILE}"
-		done < /dev/stdin
+			printf '%(%Y-%m-%d %H:%M:%S)T - [%s]%s %s\n' -1 "${LOG_DIR:-/}" "${LOG_CHAR}" "${LOG_LINE}"
+		done >> "${LOG_DEST}"
 	)
 }
 
-run_cmd () {
-	
-	local CMDLINE STATUS RETRIES
+log_wait () {
+	### log_wait <pid>...: wait for the log writers started by log_run, LOG_WAIT_TIMEOUT seconds
+	### at most (default 10): a command that leaves a daemon behind (the sccache server) keeps the
+	### pipes open and its writers never end.
+	local LOG_PID LOG_POLLS
+	LOG_POLLS=$(( ${LOG_WAIT_TIMEOUT:-10} * 50 ))
+	for LOG_PID in "${@}"
+	do
+		while [ "${LOG_POLLS}" -gt 0 ] && kill -0 "${LOG_PID}" 2> /dev/null
+		do
+			sleep 0.02
+			LOG_POLLS=$((LOG_POLLS-1))
+		done
+	done
+	return 0
+}
 
-	unset RUNCMD_SUDO
+log_run () {
+	### log_run <log_file> <command> [<argument>...]: run the command (in this shell, so eval and
+	### functions work) with stdout and stderr going through log_buffer into <log_file> (empty:
+	### the current stdout) and return its status once both log writers are done. The log is
+	### therefore complete when the caller, or the ERR trap, acts on a failure; a shell that
+	### exits with the writers still behind loses the last lines, which are the error. The
+	### command runs in a || list: a function passed here has to return its own status.
+	local LOG_RUN_FILE LOG_RUN_STATUS LOG_RUN_OUT LOG_RUN_ERR LOG_RUN_OUTPID LOG_RUN_ERRPID LOG_RUN_SHELL
+	LOG_RUN_FILE=${1:-/dev/stdout}
+	shift
+	exec {LOG_RUN_OUT}> >(log_buffer log "${LOG_RUN_FILE}")
+	LOG_RUN_OUTPID=${!}
+	exec {LOG_RUN_ERR}> >(log_buffer error "${LOG_RUN_FILE}")
+	LOG_RUN_ERRPID=${!}
+	LOG_RUN_STATUS=0
+	ERROR_LOG=
+	if [ -n "${BBXB_CONSOLE_FD}" ]
+	then
+		### The command does not inherit the console of error_console: a daemon would keep it open
+		"${@}" 1>&"${LOG_RUN_OUT}" 2>&"${LOG_RUN_ERR}" {BBXB_CONSOLE_FD}>&- || LOG_RUN_STATUS=${?}
+	else
+		"${@}" 1>&"${LOG_RUN_OUT}" 2>&"${LOG_RUN_ERR}" || LOG_RUN_STATUS=${?}
+	fi
+	exec {LOG_RUN_OUT}>&- {LOG_RUN_ERR}>&-
+	log_wait "${LOG_RUN_OUTPID}" "${LOG_RUN_ERRPID}"
+	if [ "${LOG_RUN_STATUS}" -ne 0 ]
+	then
+		### Global on purpose: on_error reports the log of the command that failed
+		if [ "${LOG_RUN_FILE}" == /dev/stdout ]
+		then
+			LOG_RUN_SHELL=${BASHPID}
+			ERROR_LOG=$(stdout_log "${LOG_RUN_SHELL}")
+		else
+			ERROR_LOG=${LOG_RUN_FILE}
+		fi
+	fi
+	return "${LOG_RUN_STATUS}"
+}
+
+stdout_log () {
+	### stdout_log <pid of the calling shell>: print the file the stdout of that shell is
+	### redirected to, when it is a regular file and not the stdout of the main shell as well
+	### (bbxb itself redirected to a file is the console, not a log)
+	local SHELL_OUT MAIN_OUT
+	SHELL_OUT=$(readlink "/proc/${1}/fd/1" 2> /dev/null || true)
+	MAIN_OUT=$(readlink "/proc/${$}/fd/1" 2> /dev/null || true)
+	if [ -f "${SHELL_OUT}" ] && [ "${SHELL_OUT}" != "${MAIN_OUT}" ]
+	then
+		echo "${SHELL_OUT}"
+	fi
+	return 0
+}
+
+run_cmd () {
+	### run_cmd [-S|-s] "command string": log the command and run it through log_run. The status
+	### is returned, never trapped here: the ERR trap fires at the call site, once the log is
+	### complete, and MAX_RETRIES can repeat the command.
+	local CMDLINE STATUS RETRIES RUNCMD_SUDO LOG_TYPE LOG_LINE
+
+	RUNCMD_SUDO=
 	case "${1}" in
-		"-S") 
-			local RUNCMD_SUDO="sudo/bash"
+		"-S")
+			RUNCMD_SUDO="sudo/bash"
 			shift
 			;;
 		"-s")
-			local RUNCMD_SUDO="sudo"
+			RUNCMD_SUDO="sudo"
 			shift
 			;;
 	esac
@@ -345,33 +420,25 @@ run_cmd () {
 	RETRIES=0
 	while [ "${STATUS}" -ne 0 ] && [ "${RETRIES}" -lt "${MAX_RETRIES:-1}" ]
 	do
-		local RETRIES=$((RETRIES+1))
+		RETRIES=$((RETRIES+1))
 		if [ ${RETRIES} -gt 1 ]
 		then
 			# Sleep random between 6 and 10 seconds
 			sleep $((6 + "${RANDOM}" % 5))
 			echo "Try ${RETRIES}" | log_buffer info
 		fi
-		(
-			local LINENO=0
-			while IFS= read -r line
-			do
-				local LINE=$((LINE+1))
-				case ${LINE} in
-					1) local LOG_TYPE=cmd ;;
-					*) local LOG_TYPE='>' ;;
-				esac
-				echo "${line}" | log_buffer "${LOG_TYPE}"
-			done <<< "${RUNCMD_SUDO:+[${RUNCMD_SUDO}] }${CMDLINE}"
-		)
+		LOG_TYPE=cmd
+		while IFS= read -r LOG_LINE
+		do
+			echo "${LOG_LINE}" | log_buffer "${LOG_TYPE}"
+			LOG_TYPE='>'
+		done <<< "${RUNCMD_SUDO:+[${RUNCMD_SUDO}] }${CMDLINE}"
+		STATUS=0
 		case "${RUNCMD_SUDO}" in
-		"sudo/bash") 
-			# shellcheck disable=SC2024
-			sudo bash -c "${CMDLINE}" 2> >(log_buffer error) > >(log_buffer)
-			STATUS=${PIPESTATUS[0]}
+		"sudo/bash")
+			log_run "" sudo bash -c "${CMDLINE}" || STATUS=${?}
 			;;
-		*)	eval "${RUNCMD_SUDO:+${RUNCMD_SUDO} }${CMDLINE}" 2> >(log_buffer error) > >(log_buffer)
-			STATUS=${PIPESTATUS[0]}
+		*)	log_run "" eval "${RUNCMD_SUDO:+${RUNCMD_SUDO} }${CMDLINE}" || STATUS=${?}
 			;;
 		esac
 	done
@@ -379,16 +446,131 @@ run_cmd () {
 }
 
 trow_error () {
+	### trow_error <error_code> <error_message>: return the code; under bbxb the ERR trap
+	### (on_error) reports the message, elsewhere (utilities, recipe scripts) it is printed here.
 	local ERROR_CODE=${1}
-	local ERROR_MSG=${2}
-	#local ERROR_PARAM=${3}
+	### Global on purpose: on_error reads it
+	ERROR_MSG=${2}
 
-	echo >&2
-	echo "${ERROR_MSG:-ERR received.} [${FUNCNAME[*]} - ERR: ${ERROR_CODE}]" >&2
+	if [[ $(trap -p ERR) != *on_error* ]]
+	then
+		echo >&2
+		echo "${ERROR_MSG:-ERR received.} [${FUNCNAME[*]} - ERR: ${ERROR_CODE}]" >&2
+	fi
 	return "${ERROR_CODE}"
 }
 
-export -f run_cmd log_buffer
+error_console () {
+	### error_console: print stdin on the console, the stderr bbxb started with, which it keeps
+	### as BBXB_CONSOLE_FD: a failing step usually has its own stderr redirected to a log.
+	if [ -n "${BBXB_CONSOLE_FD}" ] && { : >&"${BBXB_CONSOLE_FD}"; } 2> /dev/null
+	then
+		cat >&"${BBXB_CONSOLE_FD}"
+	else
+		cat >&2
+	fi
+	return 0
+}
+
+on_error () {
+	### on_error <status>: the ERR trap of bbxb (trap 'on_error ${?}' ERR, with set -E). A failure
+	### inside nested builds climbs one subshell at a time: the innermost shell reports it, once
+	### (message, package, call stack, log file and its last lines), the parent shells only pass
+	### the status on, and the main shell unmounts the images and exits.
+	local STATUS=${1:-1}
+	local ERROR_FLAG ERROR_SHELL
+	set +E +o pipefail
+	trap - ERR
+	ERROR_FLAG="${TMPDIR:-/tmp}/bbxb_error.${$}"
+	if [ "${STATUS}" -ne 130 ] && [ ! -f "${ERROR_FLAG}" ]
+	then
+		: > "${ERROR_FLAG}"
+		if [ -z "${ERROR_LOG}" ] || [ ! -f "${ERROR_LOG}" ]
+		then
+			ERROR_SHELL=${BASHPID}
+			ERROR_LOG=$(stdout_log "${ERROR_SHELL}")
+			if [ -z "${ERROR_LOG}" ]
+			then
+				### The log of the package, when the failure is inside build
+				# shellcheck disable=SC2153
+				ERROR_LOG=${LOG_FILE}
+			fi
+		fi
+		{
+			echo
+			echo "ERROR: ${ERROR_MSG:-command failed} [status ${STATUS}]"
+			if [ -n "${PKG_FULLNAME}" ]
+			then
+				echo "   Package: ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}"
+			fi
+			echo "   Stack:   ${FUNCNAME[*]:1}"
+			if [ -n "${ERROR_LOG}" ] && [ -f "${ERROR_LOG}" ]
+			then
+				echo "   Log:     ${ERROR_LOG}"
+				### stdout and stderr have a log writer each: the error lines (type !) are
+				### not necessarily the last ones of the log, and some tools (meson, cmake)
+				### explain the failure on stdout, so the end of both streams is shown
+				if grep -q '^[-0-9]* [0-9:]* - \[[^]]*\]! ' "${ERROR_LOG}"
+				then
+					if grep -q '^[-0-9]* [0-9:]* - \[[^]]*\]- ' "${ERROR_LOG}"
+					then
+						echo "   Last $(( ${ERROR_LOG_LINES:-20} / 2 )) output lines of the log:"
+						grep '^[-0-9]* [0-9:]* - \[[^]]*\]- ' "${ERROR_LOG}" | tail -n "$(( ${ERROR_LOG_LINES:-20} / 2 ))" | sed 's/^/   | /'
+					fi
+					echo "   Last ${ERROR_LOG_LINES:-20} error lines of the log:"
+					grep '^[-0-9]* [0-9:]* - \[[^]]*\]! ' "${ERROR_LOG}" | tail -n "${ERROR_LOG_LINES:-20}" | sed 's/^/   | /'
+				else
+					echo "   Last ${ERROR_LOG_LINES:-20} lines of the log:"
+					tail -n "${ERROR_LOG_LINES:-20}" "${ERROR_LOG}" | sed 's/^/   | /'
+				fi
+			fi
+			echo
+		} 2>&1 | error_console
+		if [ -n "${ERROR_LOG}" ] && [ -f "${ERROR_LOG}" ]
+		then
+			echo "ERROR: ${ERROR_MSG:-command failed} [status ${STATUS}] [${FUNCNAME[*]:1}]" | log_buffer error "${ERROR_LOG}"
+		fi
+	fi
+	if [ "${BASH_SUBSHELL}" -eq 0 ]
+	then
+		on_exit "${STATUS}"
+	fi
+	exit "${STATUS}"
+}
+
+on_interrupt () {
+	### on_interrupt: the SIGINT trap of bbxb. Every shell of the process group gets the signal:
+	### the subshells leave with 130, which on_error passes on silently, the main shell cleans up.
+	set +E +o pipefail
+	trap - ERR SIGINT
+	if [ "${BASH_SUBSHELL}" -eq 0 ]
+	then
+		on_exit 130
+	fi
+	exit 130
+}
+
+on_exit () {
+	### on_exit <status>: what the main shell does before leaving on an error or on SIGINT
+	trap - ERR SIGINT
+	{
+		if [ "${1}" -eq 130 ]
+		then
+			echo
+			echo "Interrupted."
+		fi
+		if declare -F unmount_tag > /dev/null
+		then
+			unmount_tag --all || true
+		fi
+		echo "Build stopped [status ${1}]."
+		echo
+	} 2>&1 | error_console
+	rm -f "${TMPDIR:-/tmp}/bbxb_error.${$}"
+	return 0
+}
+
+export -f run_cmd log_run log_wait log_buffer stdout_log
 
 tab () {
 	echo -en '\t'

@@ -18,6 +18,14 @@ source "${BB_HOME}/seterr"
 source "${BB_HOME}/core.functions"
 check_core_functions
 
+### From here on the handlers of core.functions: one report from the innermost shell, the
+### images unmounted by the main shell only (unmount_tag is looked up when the error happens)
+rm -f "${TMPDIR:-/tmp}/bbxb_error.${$}"
+# shellcheck disable=SC2034
+exec {BBXB_CONSOLE_FD}>&2
+trap 'on_error ${?}' ERR
+trap 'on_interrupt' SIGINT
+
 OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
 
 # shellcheck disable=SC2154
@@ -78,24 +86,6 @@ source "${BB_HOME}/images.functions"
 # shellcheck source=/dev/null
 source "${BB_HOME}/data.functions"
 
-trap 'STATUS=${?}; \
-	echo >&2; \
-	echo "${ERROR_MSG:-ERR received.} [${FUNCNAME[*]} - ERR: ${STATUS}]" >&2; \
-	echo >&2; \
-	set +E +o pipefail; \
-	trap - SIGINT; \
-	unmount_tag --all || true; \
-	trap - ERR; \
-	exit ${STATUS}' ERR
-trap 'echo >&2; \
-	echo "[${FUNCNAME[*]}] SIGINT received." >&2; \
-	echo >&2; \
-	set +E +o pipefail; \
-	trap - SIGINT; \
-	unmount_tag --all || true; \
-	trap - ERR; \
-	exit 0' SIGINT
-
 if [ ! -f "${PROJECT}" ]
 then
 	trow_error "${ERROR_FILE_NOT_FOUND}" "Project ${PROJECT} does not exist."
@@ -137,3 +127,4 @@ echo -e "Build completed!\n"
 
 set +E +o pipefail
 trap - ERR SIGINT
+rm -f "${TMPDIR:-/tmp}/bbxb_error.${$}"

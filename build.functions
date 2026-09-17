@@ -750,6 +750,7 @@ function create_recipe_source () {
 				HOME|USER|USERNAME|LOGNAME|LANG|LC_*|TERM|DISPLAY|XDG_*|DBUS_*|SSH_*|SUDO_*) continue ;;
 				PROMPT_COMMAND|LS_COLORS|MAIL*|EDITOR|VISUAL|TMPDIR|COLUMNS|LINES) continue ;;
 				SPACES|NUMSPACES|LOG_FILE|STATUS_FILE*|STATUS_CHK_FILE|PKG_CHKSUM|RECIPE_SCRIPT|RECIPE_SOURCE) continue ;;
+				ERROR_LOG|ERROR_MSG|BBXB_CONSOLE_FD) continue ;;
 			esac
 			case ${RESERVED} in *" ${NAME} "*) continue ;; esac
 			DEF=$( declare -p "${NAME}" 2>/dev/null ) || continue
@@ -766,7 +767,7 @@ function create_recipe_source () {
 		done < <( compgen -v | LC_ALL=C sort -u )
 		echo
 		echo "### Framework helpers available to the recipe scripts"
-		declare -f run_cmd log_buffer trow_error test_version download_uncompress tab || true
+		declare -f run_cmd log_run log_wait log_buffer stdout_log trow_error test_version download_uncompress tab || true
 	} > "${RECIPE_SOURCE}"
 	echo "Recipe variables snapshot written to ${RECIPE_SOURCE}"
 }
