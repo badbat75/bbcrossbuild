@@ -677,10 +677,15 @@ function create_environment_source () {
 			EOF
 		;;
 		target)
+			### The FDO sysroot rules: pkgconf prepends the sysroot to the -I and -L flags only, a variable
+			### keeps the value it has in the image (install directories, run time paths baked into
+			### binaries). A pc variable naming a program or a file the build reads carries
+			### ${pc_sysrootdir} instead (lfs/GLib, lfs/gobject-introspection, lfs/wayland...)
 			cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 				export PKG_CONFIG='$(which "${HARCH}-pkg-config" 2>/dev/null || :)'
 				export PKG_CONFIG_LIBDIR='${COMMON_PKG_CONFIG_LIBDIR}'
 				export PKG_CONFIG_SYSROOT_DIR='${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}'
+				export PKG_CONFIG_FDO_SYSROOT_RULES='1'
 				export PKG_CONFIG_ALLOW_CROSS='${PKG_CONFIG_ALLOW_CROSS}'
 			EOF
 			if [ -f "${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate" ] && [ "${PKG_DISABLECROSSPYTHON:-0}" -eq 0 ]

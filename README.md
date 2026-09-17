@@ -621,7 +621,7 @@ Move compiler FLAGS from xFLAGS to CC/CXX/CPP for faulty build scripts.
 `PKG_FAULTYCFLAGS=0`
 
 **PKG_CONFIG_SYSROOT_DIR:**  
-Override PKG_CONFIG_SYSROOT_DIR variable.  
+Override PKG_CONFIG_SYSROOT_DIR variable. Target builds use the FDO sysroot rules of pkgconf: the sysroot is prepended to the `-I` and `-L` flags only, a variable read with `--variable` is the path in the image. A pc file whose variable names a program or a file that later builds read writes it as `${pc_sysrootdir}${bindir}/...`.  
 `PKG_CONFIG_SYSROOT_DIR=${BIN_PATH}`
 
 **PKG_LD_LIBRARY_PATH:**  
