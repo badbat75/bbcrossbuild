@@ -37,16 +37,3 @@ workaround is part of closing the item.
 3. **gdk-pixbuf glycin loader.** The 2.44.8 recipe sets `-Dglycin=disabled` (glycin is a Rust
    sandboxed image loader with no recipe) and keeps the classic loaders. Upstream is moving the
    loaders to glycin: a recipe will be needed when the classic ones go.
-4. **Host paths inside the installed files.** A scan of the lfs rpi3-aarch64 sysroot of September 2026
-   finds paths of the build host in files that go into the image:
-   - staging directory: the groff perl scripts (`chem`, `gperl`, `glilypond`), `libtcl8.6.so`,
-     `/etc/pki/anchors.md5sums` of make-ca;
-   - shebangs: `checkmk` (the awk of the sysroot), `g-ir-scanner` and `g-ir-annotation-tool` (the
-     cross-python3 of the toolchain);
-   - toolchain programs: `compress` and `uncompress` in libXpm, the gdb python directories in
-     `libstdc++.so.6.0.36-gdb.py`, `CC` in bash.pc;
-   - sysroot library directory: the RUNPATH of sudo, the `-L` flags copied from `pkg-config --libs`
-     into libkmod.pc, mit-krb5.pc, tss2-esys.pc and xsltConf.sh (`-I` in xshmfence.pc).
-
-   Each one is a recipe fix (a path option, or a sed of the installed file). Source and build paths
-   in the debug information and assertion strings of the binaries are not part of this item.

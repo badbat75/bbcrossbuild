@@ -470,7 +470,7 @@ function setup_binutils () {
 				LDFLAGS=\"${LINKERFLAGS}${LTO_LINKERFLAGS}\" \\
 				CFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
 				CXXFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
-				LDFLAGS_FOR_TARGET=\"${LINKERFLAGS} ${OPTLINK_FLAGS}\" \\
+				LDFLAGS_FOR_TARGET=\"${GNU_EXTRALDFLAGS} ${OPTLINK_FLAGS}\" \\
 				\"${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/configure\" \\
 					${CONFIG_ARCH_PARAMS} ${PLATFORM_ARCHFLAGS} \\
 					${COMMON_CONFIG} ${BINUTILS_CONFIG} \\
@@ -602,6 +602,9 @@ function setup_gcc () {
 		esac
 
 		COMPFLAGS="${GNU_EXTRACOMPFLAGS} -Wno-maybe-uninitialized -Wno-stringop-overflow -Wno-stack-usage -Wno-alloc-size-larger-than"
+		### The run time path of the global toolchain libraries (gmp, mpfr...) is for the host programs:
+		### LDFLAGS_FOR_TARGET goes without it, or libstdc++, libgcc_s and the other target libraries
+		### of the image carry it as RUNPATH
 		LINKERFLAGS="-Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib ${GNU_EXTRALDFLAGS}"
 		LTO_COMPFLAGS=
 		LTO_LINKERFLAGS=
@@ -756,7 +759,7 @@ function setup_gcc () {
 		}
 
 		function build_gcc_library () {
-			local OBJECT PKG_NAME
+			local OBJECT PKG_NAME GDB_PY
 
 			OBJECT=${1}
 			PKG_NAME="gcc-${OBJECT}_${GCC_VER}${OBJECT_TARGET}"
@@ -784,9 +787,17 @@ function setup_gcc () {
 				run_cmd "mkdir -pv \"${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${HARCH}/libgcc\""
 				run_cmd "ln -fs \"${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/libgcc/gthr-posix.h\" \"${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${HARCH}/libgcc/gthr-default.h\""
 			fi
+			### libstdc++-v3/python/gdb.py holds pythondir and toolexeclibdir, written once from the
+			### prefix of the make run that creates it: removed before each install, the toolchain copy
+			### gets the toolchain directories and the package copy (prefix=${TARGET_PREFIX}) the image ones
+			GDB_PY="${HARCH}/libstdc++-v3/python/gdb.py"
 			echo "Making target ${OBJECT} libraries." | log_buffer info
 			run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" all-target-${OBJECT}"
 			echo "Installing ${OBJECT} in the toolchain dir" | log_buffer info
+			if [ "${OBJECT}" == "libstdc++-v3" ]
+			then
+				run_cmd "rm -fv \"${GDB_PY}\""
+			fi
 			run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" install-strip-target-${OBJECT}"
 			run_cmd "rm -fv ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER}/*.la"
 			#relink_la_libraries "${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER}"
@@ -796,6 +807,10 @@ function setup_gcc () {
 				if [ -d "${PACKAGES_PATH}/${PKG_NAME}" ]
 				then
 					run_cmd "rm -rf \"${PACKAGES_PATH}/gcc-${OBJECT}_${GCC_VER}\""
+				fi
+				if [ "${OBJECT}" == "libstdc++-v3" ]
+				then
+					run_cmd "rm -fv \"${GDB_PY}\""
 				fi
 				run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" DESTDIR=\"${PACKAGES_PATH}/${PKG_NAME}\" prefix=${TARGET_PREFIX} install-strip-target-${OBJECT}"
 				run_cmd "rm -fv ${PACKAGES_PATH}/${PKG_NAME}${TARGET_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}/*.la"
