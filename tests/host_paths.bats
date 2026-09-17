@@ -2,7 +2,8 @@
 # host_paths.bats: strip_host_paths of build.functions, the rewrite of the files a target build
 # installs to record how it was built (compiler wrapper, toolchain programs, sysroot flags and paths),
 # host_path_maps, the source path maps of the compilers of a target build, gcc_host_path_specs, what
-# the specs file of the cross gcc adds, and find_host_paths, the files of a package naming the host
+# the specs file of the cross gcc adds, clang_host_path_config, the configuration file of the clang of
+# the platform toolchain, and find_host_paths, the files of a package naming the host
 # The tests set variables the sourced framework reads:
 # shellcheck disable=SC1091,SC2016,SC2034
 
@@ -96,6 +97,18 @@ setup () {
 		'+ -rpath-link %R/usr/lib/aarch64-linux-gnu -L/data/lfs/rpi/toolchain/lib/gcc/aarch64-linux-gnu/lib64'
 	run gcc_host_path_specs
 	assert_equal "$(tail -n 1 <<< "${output}")" '+ -rpath-link %R/usr/lib/aarch64-linux-gnu'
+}
+
+@test "clang_host_path_config gives the sysroot, the maps, the multiarch directory and the library directories" {
+	run clang_host_path_config /data/lfs/rpi/toolchain/lib/gcc/aarch64-linux-gnu/16 /data/lfs/rpi/toolchain/lib/gcc/aarch64-linux-gnu/lib64
+	assert_output_lines '--sysroot=/data/lfs/rpi/binaries' \
+		'-ffile-prefix-map=/data=/usr/src/bbxb' \
+		'-ffile-prefix-map=/data/lfs/rpi/binaries=' \
+		'-Wl,-rpath-link,/data/lfs/rpi/binaries/usr/lib/aarch64-linux-gnu' \
+		'-L/data/lfs/rpi/toolchain/lib/gcc/aarch64-linux-gnu/16' \
+		'-L/data/lfs/rpi/toolchain/lib/gcc/aarch64-linux-gnu/lib64'
+	run clang_host_path_config
+	assert_equal "$(tail -n 1 <<< "${output}")" '-Wl,-rpath-link,/data/lfs/rpi/binaries/usr/lib/aarch64-linux-gnu'
 }
 
 @test "find_host_paths lists the files naming the data directory or the checkout, and the links into them" {

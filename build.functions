@@ -14,7 +14,7 @@ function check_build_functions () {
 function setbuildenv () {
 	OPTS="" OPTS_WITH_VALUE="--target" param2value "${@}"
 	local TARGET_ENV=${_param_target:-target}
-	GCC_HOST_PATH_SPECS=0
+	CC_HOST_PATH_CONFIG=0
 	case ${TARGET_ENV} in
 		native)
 			unset QEMU_LD_PREFIX COMMON_CPPFLAGS SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH
@@ -111,21 +111,31 @@ function setbuildenv () {
 				fi
 			else
 				SYSROOT="${BIN_PATH}"
-				### GCC_HOST_PATH_SPECS=1: the cross gcc has this sysroot as its default and the specs file of
-				### setup_gcc_specs, so it finds by itself what the flags of a target build would name (the
-				### sysroot, the -rpath-link and -L below, the source path maps): the command lines, which
-				### configure scripts and build systems copy into binaries (openssl, vim, lsof, icu), carry no
-				### host path. settcenv leaves those flags out
-				if [ "${PKG_TOOLCHAIN:-${TOOLCHAIN}}" == gnu ] && \
-					[ "$( "${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" -print-sysroot 2>/dev/null || true )" == "${SYSROOT}" ] && \
-					gcc_specs_installed
-				then
-					GCC_HOST_PATH_SPECS=1
-				fi
+				### CC_HOST_PATH_CONFIG=1: the compiler of the build has a configuration of its own with this
+				### sysroot, the -rpath-link and -L below and the source path maps: the cross gcc has this
+				### sysroot as its default and the specs file of setup_gcc_specs, the clang of the platform
+				### toolchain (setup_clang_config) takes the target from its name and the rest from its
+				### configuration file. The command lines, which configure scripts and build systems copy
+				### into binaries (openssl, vim, lsof, icu), carry no host path: settcenv leaves those flags out
+				case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
+					gnu)
+						if [ "$( "${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" -print-sysroot 2>/dev/null || true )" == "${SYSROOT}" ] && \
+							gcc_specs_installed
+						then
+							CC_HOST_PATH_CONFIG=1
+						fi
+					;;
+					llvm)
+						if clang_config_installed
+						then
+							CC_HOST_PATH_CONFIG=1
+						fi
+					;;
+				esac
 				### ld.bfd resolves the DT_NEEDED entries of a library only in the -rpath-link dirs and in
 				### <sysroot>/lib and <sysroot>/usr/lib: the multiarch directory needs the hint (gold and
 				### lld also searched the -L dirs, so libX11 -> libxcb resolved without it)
-				if [ "${GCC_HOST_PATH_SPECS}" -eq 0 ]
+				if [ "${CC_HOST_PATH_CONFIG}" -eq 0 ]
 				then
 					COMMON_LDFLAGS+=" -Wl,-rpath-link,${BIN_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}"
 				fi
@@ -146,7 +156,7 @@ function setbuildenv () {
 					#fi			
 					case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
 						gnu)
-							if [ "${GCC_HOST_PATH_SPECS}" -eq 0 ] && [ -n "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ] && [ -d "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ]
+							if [ "${CC_HOST_PATH_CONFIG}" -eq 0 ] && [ -n "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ] && [ -d "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ]
 							then
 								COMMON_LDFLAGS+=" -L${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}"
 							fi
@@ -154,7 +164,10 @@ function setbuildenv () {
 						llvm)
 							#COMMON_CFLAGS+=" $(gcc_toolchain_libraries_compilerflags)"
 							#COMMON_CXXFLAGS+=" $(gcc_toolchain_libraries_compilerflags) $(gcc_toolchain_libraries_compilerflags)/c++ $(gcc_toolchain_libraries_compilerflags)/c++/${HARCH}"
-							COMMON_LDFLAGS+=" $(gcc_toolchain_libraries_linkerflags)"
+							if [ "${CC_HOST_PATH_CONFIG}" -eq 0 ]
+							then
+								COMMON_LDFLAGS+=" $(gcc_toolchain_libraries_linkerflags)"
+							fi
 						;;
 					esac
 				fi
@@ -297,15 +310,15 @@ function settcenv () {
 		TOOLCHAIN_CARGO_PROFILE_RELEASE_LTO \
 		TOOLCHAIN_CARGO_TARGET
 
-	local TARGET_ENV CC_SYSROOT_FLAGS
+	local TARGET_ENV CC_SYSROOT_FLAGS CC_TARGET_FLAGS
 
 	OPTS="" OPTS_WITH_VALUE="--target" param2value "${@}"
 	TARGET_ENV="${_param_target:-target}"
 	setbuildenv --target "${TARGET_ENV}"
-	### The sysroot flags of the compiler command lines: none for a cross gcc that has the sysroot as its
-	### default (GCC_HOST_PATH_SPECS, see setbuildenv)
+	### The sysroot flags of the compiler command lines: none for a compiler that has the sysroot in its
+	### own configuration (CC_HOST_PATH_CONFIG, see setbuildenv)
 	CC_SYSROOT_FLAGS=${SYSROOT_FLAGS}
-	if [ "${GCC_HOST_PATH_SPECS}" -eq 1 ]
+	if [ "${CC_HOST_PATH_CONFIG}" -eq 1 ]
 	then
 		CC_SYSROOT_FLAGS=
 	fi
@@ -480,14 +493,25 @@ function settcenv () {
 					TOOLCHAIN_LINKERFLAGS="-fuse-ld=${TOOLCHAIN_LINKER} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
 				;;
 				target)
-					### By name, as for gnu
-					TOOLCHAIN_CC=clang
-					TOOLCHAIN_CPP="clang -E"
-					TOOLCHAIN_CXX=clang++
-					if flang --version > /dev/null 2>&1
+					### By name, as for gnu. The clang of the platform toolchain when it has the configuration
+					### file of setup_clang_config (CC_HOST_PATH_CONFIG): its name gives the target, the file
+					### the sysroot. It has no Fortran driver (setup_llvm builds no flang)
+					if [ "${CC_HOST_PATH_CONFIG}" -eq 1 ]
 					then
-						TOOLCHAIN_FC=flang
-						TOOLCHAIN_F90=flang
+						TOOLCHAIN_CC="${HARCH}-clang"
+						TOOLCHAIN_CPP="${HARCH}-clang -E"
+						TOOLCHAIN_CXX="${HARCH}-clang++"
+						CC_TARGET_FLAGS=
+					else
+						TOOLCHAIN_CC=clang
+						TOOLCHAIN_CPP="clang -E"
+						TOOLCHAIN_CXX=clang++
+						if flang --version > /dev/null 2>&1
+						then
+							TOOLCHAIN_FC=flang
+							TOOLCHAIN_F90=flang
+						fi
+						CC_TARGET_FLAGS="--target=${HARCH} ${CC_SYSROOT_FLAGS}"
 					fi
 					TOOLCHAIN_AR=llvm-ar
 					TOOLCHAIN_AS=llvm-as
@@ -502,21 +526,21 @@ function settcenv () {
 					if [ "${PKG_FAULTYCFLAGS:-0}" -eq 1 ]
 					then
 						TOOLCHAIN_COMPFLAGS+=" ${LLVM_EXTRACLANGFLAGS}"
-						TOOLCHAIN_EXTRA_C_CMD="--target=${HARCH} ${SYSROOT_FLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
+						TOOLCHAIN_EXTRA_C_CMD="${CC_TARGET_FLAGS:+${CC_TARGET_FLAGS} }${LLVM_EXTRAPOLLYFLAGS}"
 					else
-						TOOLCHAIN_COMPFLAGS+=" --target=${HARCH} ${SYSROOT_FLAGS} ${LLVM_EXTRACLANGFLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
+						TOOLCHAIN_COMPFLAGS+=" ${CC_TARGET_FLAGS:+${CC_TARGET_FLAGS} }${LLVM_EXTRACLANGFLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
 						TOOLCHAIN_EXTRA_C_CMD=""
 					fi
 					### --target also at link time: meson links without the c_args, and clang would link
 					### for the build machine (no crti.o, no -lc in the sysroot of another architecture)
-					TOOLCHAIN_LINKERFLAGS="--target=${HARCH} ${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LINKER} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
+					TOOLCHAIN_LINKERFLAGS="${CC_TARGET_FLAGS:+${CC_TARGET_FLAGS} }-fuse-ld=${TOOLCHAIN_LINKER} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
 				;;
 			esac
 			;;
 	esac
 	### The source paths a target build records in its binaries (__FILE__ of the assert and log messages,
-	### the debug information, the panic locations of Rust) are not the ones of the build host. A cross
-	### gcc with GCC_HOST_PATH_SPECS applies the maps itself
+	### the debug information, the panic locations of Rust) are not the ones of the build host. A compiler
+	### with CC_HOST_PATH_CONFIG applies the maps itself
 	local PREFIX_MAP RUST_PREFIX_MAPS
 	RUST_PREFIX_MAPS=
 	if [ "${TARGET_ENV}" == target ]
@@ -524,7 +548,7 @@ function settcenv () {
 		RUST_PREFIX_MAPS="--remap-path-scope=object"
 		while read -r PREFIX_MAP
 		do
-			if [ "${GCC_HOST_PATH_SPECS}" -eq 0 ]
+			if [ "${CC_HOST_PATH_CONFIG}" -eq 0 ]
 			then
 				TOOLCHAIN_COMPFLAGS+=" -ffile-prefix-map=${PREFIX_MAP}"
 			fi
@@ -564,9 +588,10 @@ function settcenv () {
 		TOOLCHAIN_RUSTFLAGS+="-C link-arg=${param} "
 	done
 	TOOLCHAIN_RUSTFLAGS+="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}${RUST_PREFIX_MAPS:+ ${RUST_PREFIX_MAPS}}"
-	### libclang reads no gcc specs: bindgen gets the sysroot the gcc command lines leave out
+	### libclang reads neither the gcc specs nor the configuration file of clang: bindgen gets the sysroot
+	### the command lines leave out (the target comes from bindgen)
 	TOOLCHAIN_BINDGENFLAGS=${TOOLCHAIN_COMPFLAGS}
-	if [ "${GCC_HOST_PATH_SPECS}" -eq 1 ]
+	if [ "${CC_HOST_PATH_CONFIG}" -eq 1 ]
 	then
 		TOOLCHAIN_BINDGENFLAGS="${SYSROOT_FLAGS} ${TOOLCHAIN_COMPFLAGS}"
 	fi
@@ -942,6 +967,27 @@ function gcc_host_path_specs () {
 	done < <( host_path_maps )
 	printf '*cc1:\n+%s\n\n*asm:\n+%s\n\n' "${CC1_SPEC}" "${ASM_SPEC}"
 	printf '*link:\n+ -rpath-link %%R%s%s\n\n' "${TARGET_LIBDIR}${TARGET_LIBSUFFIX}" "${1:+ -L${1}}"
+}
+
+function clang_host_path_config () {
+	### clang_host_path_config [<library dir>...]: the configuration file setup_clang_config
+	### (toolchain.functions) puts next to the clang of the platform toolchain, with what the command lines
+	### of a target build would otherwise name: the sysroot, the source path maps of host_path_maps, the
+	### multiarch directory of the sysroot, where ld.bfd resolves the libraries a library needs only
+	### through -rpath-link, and the library directories of the cross gcc. clang reports none of these
+	### options as unused when they come from a configuration file, so they apply to every command:
+	### compile, preprocess and link
+	local PREFIX_MAP DIR
+	echo "--sysroot=${SYSROOT}"
+	while read -r PREFIX_MAP
+	do
+		echo "-ffile-prefix-map=${PREFIX_MAP}"
+	done < <( host_path_maps )
+	echo "-Wl,-rpath-link,${SYSROOT}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}"
+	for DIR in "${@}"
+	do
+		echo "-L${DIR}"
+	done
 }
 
 function find_host_paths () {
@@ -1375,11 +1421,16 @@ function configmake () {
 			target)
 				### Without a value libtool asks the compiler for the sysroot (--print-sysroot): a cross gcc that
 				### has BIN_PATH as its default needs none, and the configure options some packages keep (sudo -V)
-				### name no host path
+				### name no host path. The clang of setup_clang_config does not answer and needs no sysroot
+				### from libtool either, whose command lines then carry none: no option at all
 				if [ "${PKG_TOOLCHAIN:-${TOOLCHAIN}}" == gnu ] && \
 					[ "$( "${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" -print-sysroot 2>/dev/null || true )" == "${BIN_PATH}" ]
 				then
 					CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot ${CONF_FLAGS}"
+				elif [ "${PKG_TOOLCHAIN:-${TOOLCHAIN}}" == llvm ] && [ ! -d "${DISTOS_PATH}${TARGET_INCLUDEDIR}" ] && \
+					clang_config_installed
+				then
+					CONF_FLAGS="--build=${BARCH} --host=${HARCH} ${CONF_FLAGS}"
 				else
 					CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH} ${CONF_FLAGS}"
 				fi
@@ -1468,6 +1519,22 @@ function cmakebuild () {
 	echo "CCWRAPPER=\"\" create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	CCWRAPPER="" create_environment_source --target "${PKG_TARGET_ENV}"
 
+	### CMake adds --sysroot=CMAKE_SYSROOT to every command line, and CMAKE_SYSROOT has to stay: the find
+	### commands search the sysroot through it and the exported targets of the sysroot name their files
+	### with it (strip_host_paths --cmake). A compiler with the sysroot in its own configuration
+	### (CC_HOST_PATH_CONFIG) needs no such option: the file CMake reads after the module of each
+	### compiler (CMAKE_USER_MAKE_RULES_OVERRIDE, also passed to try_compile) empties it
+	local SYSROOT_OPTION_OVERRIDE=
+	if [ "${CC_HOST_PATH_CONFIG}" -eq 1 ]
+	then
+		SYSROOT_OPTION_OVERRIDE="${PKG_BLDPATH}/bbxb-no-sysroot-option.cmake"
+		cat > "${SYSROOT_OPTION_OVERRIDE}" <<-'EOF'
+			foreach(lang C CXX ASM Fortran OBJC OBJCXX)
+			  set(CMAKE_${lang}_COMPILE_OPTIONS_SYSROOT "")
+			endforeach()
+		EOF
+	fi
+
 	### AR, RANLIB and STRIP of a target build are program names (settcenv): CMake would take a name for
 	### a path into the build directory, so the cache gets the program PATH finds
 	cat >runconfig.sh <<-EOF
@@ -1481,6 +1548,7 @@ function cmakebuild () {
 		   -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \\
 		   -DTOOLCHAIN_PREFIX=${HARCH}- \\
 		   -DCMAKE_SYSROOT=${SYSROOT} \\
+		   ${SYSROOT_OPTION_OVERRIDE:+-DCMAKE_USER_MAKE_RULES_OVERRIDE=${SYSROOT_OPTION_OVERRIDE}} \\
 		   -DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \\
 		   -DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \\
 		   -DCMAKE_AR=\$(command -v \${AR}) \\

@@ -1031,7 +1031,7 @@ function setup_gcc_specs () {
 	### setup_gcc_specs: writes the specs file of the cross gcc (gcc_specs) when it is missing or differs
 	### from the expected one (a new gcc, another data directory). With it the gcc of a target build
 	### applies the source path maps and finds the multiarch and libgcc_s directories by itself, and
-	### settcenv leaves them and the sysroot out of the command lines (GCC_HOST_PATH_SPECS, setbuildenv).
+	### settcenv leaves them and the sysroot out of the command lines (CC_HOST_PATH_CONFIG, setbuildenv).
 	### The target libraries of gcc are built with the specs of the gcc build tree, not with this file.
 	### Only for the sysroot of the framework: a gcc for the image of a distribution (DISTOS_PATH) keeps
 	### its builtin specs and the flags
@@ -1074,6 +1074,78 @@ function setup_toolchain_wrapper () {
 		run_cmd "ln -sfv toolchain_wrapper \"${TOOLCHAIN_PATH}/bin/toolchain_${tool}\""
 	}  >> "${LOG_PATH}/toolchain_wrapper.log"
 	done
+}
+
+function clang_config_file () {
+	### clang_config_file: the configuration file of the clang of a target build. clang reads
+	### <triple>.cfg, the triple in its normalized form (aarch64-unknown-linux-gnu, not the one of HARCH),
+	### from the directory of its executable, the real one: a link to the clang of the global llvm, shared
+	### by every platform and project, would read the file there. setup_clang_config gives the platform
+	### toolchain a clang of its own
+	local TRIPLE
+	TRIPLE=$( "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang" --target="${HARCH}" -dumpmachine 2>/dev/null || true )
+	echo "${TRIPLE:+${TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/${TRIPLE}.cfg}"
+}
+
+function clang_config () {
+	### clang_config: the content of that file, clang_host_path_config for the sysroot of the framework
+	### and the library directories of the cross gcc, the ones a target build named in LDFLAGS
+	local GCC_LIBDIR
+	local -a GCC_LIBDIRS=()
+	GCC_LIBDIR=$( gcc_toolchain_print_searchdirs cross 1 )
+	if [ -n "${GCC_LIBDIR}" ] && [ -d "${GCC_LIBDIR}" ]
+	then
+		mapfile -t GCC_LIBDIRS < <( find "$( realpath -m "${GCC_LIBDIR}/.." )" -mindepth 1 -maxdepth 1 -type d | LC_ALL=C sort )
+	fi
+	SYSROOT=${BIN_PATH} clang_host_path_config "${GCC_LIBDIRS[@]}"
+}
+
+function clang_config_installed () {
+	### clang_config_installed: true when the PATH finds the clang of the platform toolchain, a copy of the
+	### clang of the global llvm, with its lib link and the configuration file clang_config describes for
+	### the current data directory, sysroot and cross gcc
+	local LLVM_PATH CLANG_EXE CONFIG_FILE
+	LLVM_PATH=${TOOLCHAIN_PATH}/llvm-${LLVM_VER}
+	CLANG_EXE=$( readlink -e "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang" || true )
+	CONFIG_FILE=$( clang_config_file )
+	[ -n "${CLANG_EXE}" ] && [ -n "${CONFIG_FILE}" ] && [ -f "${CONFIG_FILE}" ] && \
+		[ "$( command -v "${HARCH}-clang" || true )" == "${LLVM_PATH}/bin/${HARCH}-clang" ] && \
+		cmp -s "${CLANG_EXE}" "${LLVM_PATH}/bin/${HARCH}-clang" && \
+		cmp -s "${CLANG_EXE}" "${LLVM_PATH}/bin/${HARCH}-clang++" && \
+		[ "$( readlink "${LLVM_PATH}/lib" || true )" == "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib" ] && \
+		[ "$( < "${CONFIG_FILE}" )" == "$( clang_config )" ]
+}
+
+function setup_clang_config () {
+	### setup_clang_config: the clang of the target builds for the sysroot of the framework, which names no
+	### host path on the command lines. ${TOOLCHAIN_PATH}/llvm-${LLVM_VER} gets a copy of the clang of the
+	### global llvm as <HARCH>-clang and <HARCH>-clang++ (the name gives the target and the C++ driver;
+	### the executable is small, the code is in libLLVM and libclang-cpp), lib, a link to the lib
+	### directory of the global llvm (the shared libraries through RUNPATH $ORIGIN/../lib, the resource
+	### directory), and the configuration file of clang_config. Written when missing or different (a new
+	### llvm, another data directory), and put in the PATH; settcenv then uses it (CC_HOST_PATH_CONFIG,
+	### setbuildenv). Like setup_gcc_specs, nothing for the image of a distribution (DISTOS_PATH)
+	local LLVM_PATH CLANG_EXE CONFIG_FILE NAME
+	LLVM_PATH=${TOOLCHAIN_PATH}/llvm-${LLVM_VER}
+	CLANG_EXE=$( readlink -e "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang" || true )
+	CONFIG_FILE=$( clang_config_file )
+	if [ -z "${CLANG_EXE}" ] || [ -z "${CONFIG_FILE}" ] || [ "$(gcc_sysroot)" != "${BIN_PATH}" ]
+	then
+		return 0
+	fi
+	pathadd PATH "${LLVM_PATH}/bin"
+	if ! clang_config_installed
+	then
+		run_cmd "mkdir -pv \"${LLVM_PATH}/bin\""
+		for NAME in clang clang++
+		do
+			run_cmd "cp -fv \"${CLANG_EXE}\" \"${LLVM_PATH}/bin/${HARCH}-${NAME}\""
+		done
+		run_cmd "ln -sfnv \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib\" \"${LLVM_PATH}/lib\""
+		echo "Writing ${CONFIG_FILE}:" | log_buffer info
+		clang_config > "${CONFIG_FILE}"
+		run_cmd "cat \"${CONFIG_FILE}\""
+	fi
 }
 
 function setup_llvm () {
@@ -1391,6 +1463,7 @@ function setup_llvm () {
 	then
 		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}\"" >> "${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
 	fi
+	setup_clang_config >> "${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
 	echo "done."
 
 }

@@ -197,7 +197,7 @@ BBCrossBuild provides various functions for use in project files. These are orga
   - `--target <env>`: Target environment (native, cross, target)
   - A target build gets the source path maps of `host_path_maps`: `-ffile-prefix-map` in the C, C++ and preprocessor flags, `--remap-path-scope=object` and `--remap-path-prefix` in `RUSTFLAGS`
   - The programs of a target build (`CC`, `CXX`, `AR`..., the compiler wrapper) go by name, found through the `PATH` of `environment.source`
-  - When the cross gcc has `BIN_PATH` as its default sysroot and the specs file of `setup_gcc_specs` (`GCC_HOST_PATH_SPECS=1`, computed by `setbuildenv`), a gnu target build leaves out of `CFLAGS`, `CPPFLAGS` and `LDFLAGS` what gcc finds by itself: `--sysroot`, `-Wl,--sysroot`, the source path maps, the `-Wl,-rpath-link` of the multiarch directory and the `-L` of the libgcc_s directory. The command lines, which configure scripts and build systems copy into binaries (`openssl version -a`, vim `:version`, `lsof -v`, icu), name no host path; `BINDGEN_EXTRA_CLANG_ARGS` keeps `--sysroot` (libclang reads no gcc specs)
+  - When the compiler of a target build has the sysroot in a configuration of its own (`CC_HOST_PATH_CONFIG=1`, computed by `setbuildenv`), the build leaves out of `CFLAGS`, `CPPFLAGS` and `LDFLAGS` what the compiler finds by itself: `--sysroot`, `-Wl,--sysroot`, the source path maps, the `-Wl,-rpath-link` of the multiarch directory and the `-L` of the gcc library directories. For gnu that is a cross gcc with `BIN_PATH` as its default sysroot and the specs file of `setup_gcc_specs`; for llvm the `<triple>-clang` and `<triple>-clang++` of `setup_clang_config`, which also take the target from their name (no `--target`). The command lines, which configure scripts and build systems copy into binaries (`openssl version -a`, vim `:version`, `lsof -v`, icu, `sudo -V`), name no host path; `BINDGEN_EXTRA_CLANG_ARGS` keeps `--sysroot` (libclang reads neither file). With such a compiler `configmake` passes a bare `--with-sysroot` to gcc builds (libtool asks gcc) and none to clang builds, and `cmakebuild` keeps `CMAKE_SYSROOT` (the find commands, the exported targets of the sysroot) but empties the `--sysroot` option CMake would add (`CMAKE_USER_MAKE_RULES_OVERRIDE`)
 
 - **create_environment_source**: Create environment source file
   ```
@@ -225,6 +225,13 @@ BBCrossBuild provides various functions for use in project files. These are orga
   ```
   - `*cc1`: the maps of `host_path_maps` as `-ffile-prefix-map` (the spec also reaches C++, Fortran, the preprocessor and LTO); `*asm`: the same maps as `--debug-prefix-map`; `*link`: `-rpath-link %R<multiarch directory>` and `-L<libgcc_s dir>` when given
   - A map given on the command line comes after the spec ones and wins
+
+- **clang_host_path_config**: Print the configuration file `setup_clang_config` puts next to the clang of the platform toolchain
+  ```
+  clang_host_path_config [<library dir>...]
+  ```
+  - One option per line: `--sysroot=${SYSROOT}`, the maps of `host_path_maps` as `-ffile-prefix-map`, `-Wl,-rpath-link` of the multiarch directory of the sysroot, then `-L<library dir>` for each argument
+  - clang reports no option of a configuration file as unused, so all of them apply to compiling, preprocessing and linking; a map given on the command line wins when it is longer
 
 - **find_host_paths**: Print the files under a directory that name the data directory or the framework checkout (regular files by content, symbolic links by target), relative to it and sorted
   ```
@@ -398,6 +405,13 @@ BBCrossBuild provides various functions for use in project files. These are orga
   setup_llvm [--targets <targets>]
   ```
   - `--targets <targets>`: Target architecture
+  - Ends with `setup_clang_config`
+
+- **setup_clang_config**: Give the platform toolchain the clang of the target builds, when the sysroot is `BIN_PATH`: in `${TOOLCHAIN_PATH}/llvm-<version>/bin` a copy of the clang of the global llvm as `<HARCH>-clang` and `<HARCH>-clang++` (the name sets the target and the driver), `lib` as a link to the lib directory of the global llvm (shared libraries, resource directory), and the configuration file `<triple>.cfg` with the output of `clang_host_path_config` for the library directories of the cross gcc. The directory goes into the `PATH`; everything is rewritten when missing or different (`clang_config_installed`)
+  ```
+  setup_clang_config
+  ```
+  - clang reads a configuration file only from the directory of its real executable, and only under the normalized triple (`aarch64-unknown-linux-gnu.cfg`, `clang_config_file`): a link to the global clang would read the one of the global llvm, shared by every platform and project. The copy is small, the code of clang is in `libLLVM` and `libclang-cpp`
 
 - **setup_python**: Set up Python
   ```
