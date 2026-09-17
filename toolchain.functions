@@ -1168,32 +1168,32 @@ function setup_llvm () {
 		unset CFLAGS CXXFLAGS CPPFLAGS PKG_CONFIG PKG_CONFIG_LIBDIR PKG_CONFIG_SYSROOT_DIR PKG_CONFIG_ALLOW_CROSS
 
 		local PLATFORM_CFLAGS="-march=native"
-		case $(clang -v > /dev/null 2>&1; echo ${?}) in
-			0)
-				C="$(which clang)"
-				CXX="$(which clang++)"
-				AR="$(which llvm-ar)"
-				NM="$(which llvm-nm)"
-				RANLIB="$(which llvm-ranlib)"
-				LINKER=lld
-				LINKER_FLAGS="-fuse-ld=lld -Wl,--threads=${NPROCS}"
-				LTO=ON
-				echo "Clang for build and lto active."
-			;;
-			*)
-				C="${CC_FOR_BUILD}"
-				CXX="${CXX_FOR_BUILD}"
-				AR="${AR_FOR_BUILD}"
-				NM="${NM_FOR_BUILD}"
-				RANLIB="${RANLIB_FOR_BUILD}"
-				LINKER=bfd
-				LINKER_FLAGS="-fuse-ld=bfd"
-				LTO=OFF
-				echo "GNU gcc for build and lto not active."
-				run_cmd "sed -i 's/-flto\"/-flto=${LTOPROCS}\"/g' \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/AddLLVM.cmake\""
-				run_cmd "sed -i 's/-flto\"/-flto=${LTOPROCS}\"/g' \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/HandleLLVMOptions.cmake\""
-			;;
-		esac
+		### The probe is an if condition: in a command substitution (set -E) a missing clang runs the
+		### ERR trap, which reports a failure and leaves the error flag behind for the whole run
+		if clang -v > /dev/null 2>&1
+		then
+			C="$(which clang)"
+			CXX="$(which clang++)"
+			AR="$(which llvm-ar)"
+			NM="$(which llvm-nm)"
+			RANLIB="$(which llvm-ranlib)"
+			LINKER=lld
+			LINKER_FLAGS="-fuse-ld=lld -Wl,--threads=${NPROCS}"
+			LTO=ON
+			echo "Clang for build and lto active."
+		else
+			C="${CC_FOR_BUILD}"
+			CXX="${CXX_FOR_BUILD}"
+			AR="${AR_FOR_BUILD}"
+			NM="${NM_FOR_BUILD}"
+			RANLIB="${RANLIB_FOR_BUILD}"
+			LINKER=bfd
+			LINKER_FLAGS="-fuse-ld=bfd"
+			LTO=OFF
+			echo "GNU gcc for build and lto not active."
+			run_cmd "sed -i 's/-flto\"/-flto=${LTOPROCS}\"/g' \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/AddLLVM.cmake\""
+			run_cmd "sed -i 's/-flto\"/-flto=${LTOPROCS}\"/g' \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/HandleLLVMOptions.cmake\""
+		fi
 
 		export LDFLAGS="${LINKER_FLAGS}"
 		
