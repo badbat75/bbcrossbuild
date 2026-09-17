@@ -52,8 +52,9 @@ utilities/pkg_show [-p rpi3-aarch64] [-t llvm] [-d] lfs/systemd:bootstrap lfs/gl
 # project builds in build order; -a: rewrite PKG_VER when the new archive answers; <recipe>=<ver> forces a version
 utilities/pkg_upstream [-p rpi3-aarch64] [-P lfs] [-a] [-o report.tsv] [lfs/curl lfs/expat=2.7.1 ...]
 
-# Lint: the sources carry `# shellcheck disable=` directives, so shellcheck is the expected linter. The CI
-# workflow .github/workflows/checks.yml gates exactly these three commands plus pkg_lint per package group.
+# Lint: the sources carry `# shellcheck disable=` directives, so shellcheck is the expected linter. There
+# is no CI for now (the GitHub Actions were removed, September 2026): these three commands, bats and pkg_lint
+# per package group are run by hand.
 shellcheck -x bbxb seterr setenv core.functions build.functions toolchain.functions images.functions project.functions data.functions
 shellcheck -x utilities/pkgtools.functions utilities/pkg_lint utilities/pkg_show utilities/update_patches
 shellcheck -x tests/test_helper.bash tests/*.bats
@@ -128,5 +129,5 @@ The script runs with `set -E -o pipefail` and an ERR trap (`on_error` in `core.f
 - Bash is indented with tabs; functions are declared `function name () {`; nested helper functions are defined inside their parent. Keep `# shellcheck disable=SCxxxx` / `# shellcheck source=/dev/null` directives on lines that need them.
 - Every external command inside a library function goes through `run_cmd` (with `-s` for sudo) so it is logged via `log_buffer` into the package log; do not print progress with bare `echo` inside build steps, the console line is written by `build` itself.
 - New optional recipe variables must also be added to the `unset` list at the top of `build` in `build.functions`, otherwise they leak from one package into the next.
-- A change to the pure logic of `build.functions` (variant selection, patch lists, checksum, prefixes) or of `core.functions` comes with a bats test in `tests/`; run `bats tests` and the shellcheck commands above before committing, they are what CI gates.
-- Branching: work happens on `development`; `master` holds releases tagged `X.Y.Z`. Two GitHub Actions: `docker-build.yml` builds and pushes the Docker image on pushes to `development` and on version tags; `checks.yml` runs shellcheck, the bats suite and `pkg_lint` (one job per package group, with the submodules checked out) on every push and pull request to `development` and `master`.
+- A change to the pure logic of `build.functions` (variant selection, patch lists, checksum, prefixes) or of `core.functions` comes with a bats test in `tests/`; run `bats tests` and the shellcheck commands above before committing: nothing else gates them.
+- Branching: work happens on `development`; `master` holds releases tagged `X.Y.Z`. The two GitHub Actions (`docker-build.yml`, which built and pushed the Docker image, and `checks.yml`, which ran shellcheck, the bats suite and `pkg_lint`) were removed in September 2026 because they kept failing; they are in the git history for when CI comes back, and the image is built with `utilities/container/build.sh`.

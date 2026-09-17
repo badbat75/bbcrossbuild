@@ -829,4 +829,4 @@ bats tests/variants.bats   # one file
 
 `tests/test_helper.bash` provides `load_framework` (platform from `PLATFORM_NAME`, default `generic-x64`), `make_recipe`, `put`, `select_target`, `assert_output_lines` and `assert_equal`; a new test for a pure function is a fixture recipe plus a `run` of the function.
 
-The GitHub Action `checks.yml` runs on every push and pull request to `development` and `master`: `shellcheck` on the framework and on the recipe utilities, the bats suite, and `pkg_lint` on every package group (one job per group, submodules included). A change to `build.functions` or `core.functions` should keep the three green; `utilities/bbxb_test` remains the build smoke test.
+There is no CI for now (the GitHub Actions were removed): run `shellcheck` on the framework and on the recipe utilities, the bats suite, and `pkg_lint` on the package groups by hand before committing. A change to `build.functions` or `core.functions` should keep the three green; `utilities/bbxb_test` remains the build smoke test.
