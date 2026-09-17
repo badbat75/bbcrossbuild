@@ -196,6 +196,8 @@ BBCrossBuild provides various functions for use in project files. These are orga
   ```
   - `--target <env>`: Target environment (native, cross, target)
   - A target build gets the source path maps of `host_path_maps`: `-ffile-prefix-map` in the C, C++ and preprocessor flags, `--remap-path-scope=object` and `--remap-path-prefix` in `RUSTFLAGS`
+  - The programs of a target build (`CC`, `CXX`, `AR`..., the compiler wrapper) go by name, found through the `PATH` of `environment.source`
+  - When the cross gcc has `BIN_PATH` as its default sysroot and the specs file of `setup_gcc_specs` (`GCC_HOST_PATH_SPECS=1`, computed by `setbuildenv`), a gnu target build leaves out of `CFLAGS`, `CPPFLAGS` and `LDFLAGS` what gcc finds by itself: `--sysroot`, `-Wl,--sysroot`, the source path maps, the `-Wl,-rpath-link` of the multiarch directory and the `-L` of the libgcc_s directory. The command lines, which configure scripts and build systems copy into binaries (`openssl version -a`, vim `:version`, `lsof -v`, icu), name no host path; `BINDGEN_EXTRA_CLANG_ARGS` keeps `--sysroot` (libclang reads no gcc specs)
 
 - **create_environment_source**: Create environment source file
   ```
@@ -207,7 +209,7 @@ BBCrossBuild provides various functions for use in project files. These are orga
   ```
   strip_host_paths [--cmake] <file>...
   ```
-  - The compiler wrapper goes; `--sysroot` and `-Wl,--sysroot` of the sysroot, `-Wl,-rpath-link` into it, the `-I`/`-L` of its system directories and every `-I`/`-L` into a toolchain go; the source path maps (`-f*-prefix-map`, `--remap-path-prefix`, `--remap-path-scope`) go; a program of a toolchain keeps its name only; the sysroot in front of any other path goes
+  - The compiler wrapper goes, by path or by name; `--sysroot` and `-Wl,--sysroot` of the sysroot, `-Wl,-rpath-link` into it, the `-I`/`-L` of its system directories and every `-I`/`-L` into a toolchain go; the source path maps (`-f*-prefix-map`, `--remap-path-prefix`, `--remap-path-scope`) go; a program of a toolchain keeps its name only; the sysroot in front of any other path goes
   - `--cmake`: the sysroot becomes `${CMAKE_SYSROOT}` instead (cmake config and export files), set by a cross build and empty in the image
   - The source and build trees of the package are left to the recipe; nothing happens in native and cross builds. Available to the recipe scripts through `recipe.source`
 
@@ -216,6 +218,19 @@ BBCrossBuild provides various functions for use in project files. These are orga
   host_path_maps
   ```
   - `DATA_PATH` (sources, build trees, toolchains, cargo registry) becomes `/usr/src/bbxb`, then `BIN_PATH` and `SYSROOT` become the path in the image; gcc and rustc apply the last matching map, clang the longest
+
+- **gcc_host_path_specs**: Print the specs `setup_gcc_specs` appends to the builtin specs of the cross gcc
+  ```
+  gcc_host_path_specs [<libgcc_s dir>]
+  ```
+  - `*cc1`: the maps of `host_path_maps` as `-ffile-prefix-map` (the spec also reaches C++, Fortran, the preprocessor and LTO); `*asm`: the same maps as `--debug-prefix-map`; `*link`: `-rpath-link %R<multiarch directory>` and `-L<libgcc_s dir>` when given
+  - A map given on the command line comes after the spec ones and wins
+
+- **find_host_paths**: Print the files under a directory that name the data directory or the framework checkout (regular files by content, symbolic links by target), relative to it and sorted
+  ```
+  find_host_paths <dir>
+  ```
+  - `build` runs it on the staging directory of every target build and logs `WARNING: host paths in <n> files of <package>:` followed by the list: after a build, `grep "host paths in" <platform>/logs/*.log` names the packages that still leak host paths into the image, and each log lists their files
 
 #### Project Functions (project.functions)
 
@@ -371,6 +386,12 @@ BBCrossBuild provides various functions for use in project files. These are orga
   - `--install`: Install GCC libraries
   - `--main_gcc`: Link GCC target libraries
   - `--targets <targets>`: Target libraries to build (all, comma-separated list)
+  - Ends the host compiler setup with `setup_gcc_specs`
+
+- **setup_gcc_specs**: Write the specs file of the cross gcc (`lib/gcc/<triple>/<version>/specs`, which replaces the builtin specs) when it is missing or differs: the output of `-dumpspecs` followed by `gcc_host_path_specs`. Only for a gcc whose sysroot is `BIN_PATH`; the target libraries of gcc are built with the specs of the gcc build tree
+  ```
+  setup_gcc_specs
+  ```
 
 - **setup_llvm**: Set up LLVM compiler
   ```

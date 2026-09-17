@@ -78,6 +78,37 @@ function set_gnu_buildenv () {
 		find "$(realpath -m "$(gcc_toolchain_print_searchdirs "${1}" 1)/..")" -mindepth 1 -maxdepth 1 -type d -printf ' -B%p' 2>/dev/null
 	}
 
+	function gcc_specs_file () {
+		### gcc_specs_file: the specs file of the cross gcc, in its version directory, where it replaces
+		### the builtin specs
+		local GCC_INSTALL_DIR
+		GCC_INSTALL_DIR=$( "${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" -print-search-dirs 2>/dev/null | sed -n 's/^install: //p' || true )
+		echo "${GCC_INSTALL_DIR:+${GCC_INSTALL_DIR%/}/specs}"
+	}
+
+	function gcc_specs () {
+		### gcc_specs: the content of the specs file setup_gcc_specs writes, the builtin specs of the cross
+		### gcc (-dumpspecs never reads the specs file) followed by gcc_host_path_specs for its sysroot
+		### and, when gcc has one, the version specific directory of libgcc_s
+		local GCC_LIBDIR LIBGCC_S_DIR
+		"${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" -dumpspecs 2>/dev/null || true
+		GCC_LIBDIR=$(gcc_toolchain_print_searchdirs cross 1)
+		LIBGCC_S_DIR=
+		if [ -n "${GCC_LIBDIR}" ] && [ -d "${GCC_LIBDIR}/../lib64" ]
+		then
+			LIBGCC_S_DIR=$(realpath -m "${GCC_LIBDIR}/../lib64")
+		fi
+		SYSROOT=$(gcc_sysroot) gcc_host_path_specs "${LIBGCC_S_DIR}"
+	}
+
+	function gcc_specs_installed () {
+		### gcc_specs_installed: true when the specs file of the cross gcc is the one gcc_specs describes
+		### for the current data directory and sysroot
+		local SPECS_FILE
+		SPECS_FILE=$(gcc_specs_file)
+		[ -n "${SPECS_FILE}" ] && [ -f "${SPECS_FILE}" ] && [ "$(< "${SPECS_FILE}")" == "$(gcc_specs)" ]
+	}
+
 	# Check the toolchains
 	
 	if ! gcc -v > /dev/null 2>&1
@@ -965,6 +996,7 @@ function setup_gcc () {
 		gcc_make_host >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
 	echo -e "done.\n"
 	fi
+	setup_gcc_specs >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
 	if [ ! -f "${STATUS_PATH}/gcc-libgcc_${GCC_VER}" ]
 	then
 		echo -n "${SPACES}Building target libraries... "
@@ -993,6 +1025,28 @@ function setup_gcc () {
 	echo -e "done.\n"
 
 	setup_ldd "$(gcc_sysroot)"
+}
+
+function setup_gcc_specs () {
+	### setup_gcc_specs: writes the specs file of the cross gcc (gcc_specs) when it is missing or differs
+	### from the expected one (a new gcc, another data directory). With it the gcc of a target build
+	### applies the source path maps and finds the multiarch and libgcc_s directories by itself, and
+	### settcenv leaves them and the sysroot out of the command lines (GCC_HOST_PATH_SPECS, setbuildenv).
+	### The target libraries of gcc are built with the specs of the gcc build tree, not with this file.
+	### Only for the sysroot of the framework: a gcc for the image of a distribution (DISTOS_PATH) keeps
+	### its builtin specs and the flags
+	local SPECS_FILE
+	if [ ! -x "${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" ] || [ "$(gcc_sysroot)" != "${BIN_PATH}" ]
+	then
+		return 0
+	fi
+	SPECS_FILE=$(gcc_specs_file)
+	if [ -n "${SPECS_FILE}" ] && ! gcc_specs_installed
+	then
+		echo "Writing ${SPECS_FILE}, the builtin specs and:" | log_buffer info
+		gcc_specs > "${SPECS_FILE}"
+		run_cmd "tail -n 9 \"${SPECS_FILE}\""
+	fi
 }
 
 function setup_toolchain_wrapper () {

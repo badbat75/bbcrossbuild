@@ -14,6 +14,7 @@ function check_build_functions () {
 function setbuildenv () {
 	OPTS="" OPTS_WITH_VALUE="--target" param2value "${@}"
 	local TARGET_ENV=${_param_target:-target}
+	GCC_HOST_PATH_SPECS=0
 	case ${TARGET_ENV} in
 		native)
 			unset QEMU_LD_PREFIX COMMON_CPPFLAGS SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH
@@ -110,10 +111,24 @@ function setbuildenv () {
 				fi
 			else
 				SYSROOT="${BIN_PATH}"
+				### GCC_HOST_PATH_SPECS=1: the cross gcc has this sysroot as its default and the specs file of
+				### setup_gcc_specs, so it finds by itself what the flags of a target build would name (the
+				### sysroot, the -rpath-link and -L below, the source path maps): the command lines, which
+				### configure scripts and build systems copy into binaries (openssl, vim, lsof, icu), carry no
+				### host path. settcenv leaves those flags out
+				if [ "${PKG_TOOLCHAIN:-${TOOLCHAIN}}" == gnu ] && \
+					[ "$( "${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" -print-sysroot 2>/dev/null || true )" == "${SYSROOT}" ] && \
+					gcc_specs_installed
+				then
+					GCC_HOST_PATH_SPECS=1
+				fi
 				### ld.bfd resolves the DT_NEEDED entries of a library only in the -rpath-link dirs and in
 				### <sysroot>/lib and <sysroot>/usr/lib: the multiarch directory needs the hint (gold and
 				### lld also searched the -L dirs, so libX11 -> libxcb resolved without it)
-				COMMON_LDFLAGS+=" -Wl,-rpath-link,${BIN_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}"
+				if [ "${GCC_HOST_PATH_SPECS}" -eq 0 ]
+				then
+					COMMON_LDFLAGS+=" -Wl,-rpath-link,${BIN_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}"
+				fi
 				if "${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" -dumpversion >/dev/null 2>&1
 				then
 					SYSROOT_GCCVER=$("${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" -dumpversion 2>/dev/null)
@@ -131,7 +146,7 @@ function setbuildenv () {
 					#fi			
 					case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
 						gnu)
-							if [ -n "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ] && [ -d "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ]
+							if [ "${GCC_HOST_PATH_SPECS}" -eq 0 ] && [ -n "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ] && [ -d "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ]
 							then
 								COMMON_LDFLAGS+=" -L${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}"
 							fi
@@ -276,16 +291,24 @@ function settcenv () {
 		TOOLCHAIN_CPPFLAGS_FOR_BUILD \
 		TOOLCHAIN_LDFLAGS_FOR_BUILD \
 		TOOLCHAIN_EXTRA_C_CMD \
+		TOOLCHAIN_BINDGENFLAGS \
 		OPTCOMP_FLAGS \
 		OPTLINK_FLAGS \
 		TOOLCHAIN_CARGO_PROFILE_RELEASE_LTO \
 		TOOLCHAIN_CARGO_TARGET
 
-	local TARGET_ENV
+	local TARGET_ENV CC_SYSROOT_FLAGS
 
 	OPTS="" OPTS_WITH_VALUE="--target" param2value "${@}"
 	TARGET_ENV="${_param_target:-target}"
 	setbuildenv --target "${TARGET_ENV}"
+	### The sysroot flags of the compiler command lines: none for a cross gcc that has the sysroot as its
+	### default (GCC_HOST_PATH_SPECS, see setbuildenv)
+	CC_SYSROOT_FLAGS=${SYSROOT_FLAGS}
+	if [ "${GCC_HOST_PATH_SPECS}" -eq 1 ]
+	then
+		CC_SYSROOT_FLAGS=
+	fi
 
 	local TOOLCHAIN="${PKG_TOOLCHAIN:-${TOOLCHAIN}}"
 	echo "Toolchain: ${TOOLCHAIN}"
@@ -358,40 +381,42 @@ function settcenv () {
 					TOOLCHAIN_LINKERFLAGS="-fuse-ld=${TOOLCHAIN_LINKER} ${GNU_EXTRALDFLAGS}"
 				;;
 				target)
+					### The programs of a target build go by name, found through the PATH of environment.source:
+					### the build systems that copy CC, AR... into the image copy no toolchain directory
 					if "${HARCH}-gcc" --version > /dev/null 2>&1
 					then
-						TOOLCHAIN_CC=$(which "${HARCH}-gcc")
-						TOOLCHAIN_CPP="$(which "${HARCH}-gcc") -E"
+						TOOLCHAIN_CC="${HARCH}-gcc"
+						TOOLCHAIN_CPP="${HARCH}-gcc -E"
 						if "${HARCH}-g++" --version > /dev/null 2>&1
 						then
-							TOOLCHAIN_CXX=$(which "${HARCH}-g++")
+							TOOLCHAIN_CXX="${HARCH}-g++"
 						fi
 						if "${HARCH}-gfortran" --version > /dev/null 2>&1
 						then
-							TOOLCHAIN_FC=$(which "${HARCH}-gfortran")
-							TOOLCHAIN_F90=$(which "${HARCH}-gfortran")
+							TOOLCHAIN_FC="${HARCH}-gfortran"
+							TOOLCHAIN_F90="${HARCH}-gfortran"
 						fi
-						TOOLCHAIN_AR=$(which "${HARCH}-gcc-ar")
-						TOOLCHAIN_AS=$(which "${HARCH}-as")
-						TOOLCHAIN_NM=$(which "${HARCH}-gcc-nm")
-						TOOLCHAIN_RANLIB=$(which "${HARCH}-gcc-ranlib")
-						TOOLCHAIN_STRIP=$(which "${HARCH}-strip")
-						TOOLCHAIN_OBJCOPY=$(which "${HARCH}-objcopy")
-						TOOLCHAIN_OBJDUMP=$(which "${HARCH}-objdump")
-						TOOLCHAIN_READELF=$(which "${HARCH}-readelf")
+						TOOLCHAIN_AR="${HARCH}-gcc-ar"
+						TOOLCHAIN_AS="${HARCH}-as"
+						TOOLCHAIN_NM="${HARCH}-gcc-nm"
+						TOOLCHAIN_RANLIB="${HARCH}-gcc-ranlib"
+						TOOLCHAIN_STRIP="${HARCH}-strip"
+						TOOLCHAIN_OBJCOPY="${HARCH}-objcopy"
+						TOOLCHAIN_OBJDUMP="${HARCH}-objdump"
+						TOOLCHAIN_READELF="${HARCH}-readelf"
 						TOOLCHAIN_LINKER=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-bfd}}
-						TOOLCHAIN_LINKER_EXE=$(which "${HARCH}-ld.${TOOLCHAIN_LINKER}")
+						TOOLCHAIN_LINKER_EXE="${HARCH}-ld.${TOOLCHAIN_LINKER}"
 					fi
 					if [ "${PKG_FAULTYCFLAGS:-0}" -eq 1 ]
 					then
 						TOOLCHAIN_COMPFLAGS="${GNU_EXTRAGCCFLAGS}"
-						TOOLCHAIN_EXTRA_C_CMD="${SYSROOT_FLAGS}"
-				
+						TOOLCHAIN_EXTRA_C_CMD="${CC_SYSROOT_FLAGS}"
+
 					else
-						TOOLCHAIN_COMPFLAGS="${SYSROOT_FLAGS} ${GNU_EXTRAGCCFLAGS}"
+						TOOLCHAIN_COMPFLAGS="${CC_SYSROOT_FLAGS} ${GNU_EXTRAGCCFLAGS}"
 						TOOLCHAIN_EXTRA_C_CMD=""
 					fi
-					TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LINKER} ${GNU_EXTRALDFLAGS}"
+					TOOLCHAIN_LINKERFLAGS="${CC_SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LINKER} ${GNU_EXTRALDFLAGS}"
 				;;
 			esac
 			;;
@@ -455,24 +480,25 @@ function settcenv () {
 					TOOLCHAIN_LINKERFLAGS="-fuse-ld=${TOOLCHAIN_LINKER} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
 				;;
 				target)
-					TOOLCHAIN_CC=$(which clang)
-					TOOLCHAIN_CPP="$(which clang) -E"
-					TOOLCHAIN_CXX=$(which clang++)
+					### By name, as for gnu
+					TOOLCHAIN_CC=clang
+					TOOLCHAIN_CPP="clang -E"
+					TOOLCHAIN_CXX=clang++
 					if flang --version > /dev/null 2>&1
 					then
-						TOOLCHAIN_FC=$(which flang)
-						TOOLCHAIN_F90=$(which flang)
+						TOOLCHAIN_FC=flang
+						TOOLCHAIN_F90=flang
 					fi
-					TOOLCHAIN_AR=$(which llvm-ar)
-					TOOLCHAIN_AS=$(which llvm-as)
-					TOOLCHAIN_NM=$(which llvm-nm)
-					TOOLCHAIN_RANLIB=$(which llvm-ranlib)
-					TOOLCHAIN_STRIP=$(which llvm-strip)
-					TOOLCHAIN_OBJCOPY=$(which llvm-objcopy)
-					TOOLCHAIN_OBJDUMP=$(which llvm-objdump)
-					TOOLCHAIN_READELF=$(which llvm-readelf)
+					TOOLCHAIN_AR=llvm-ar
+					TOOLCHAIN_AS=llvm-as
+					TOOLCHAIN_NM=llvm-nm
+					TOOLCHAIN_RANLIB=llvm-ranlib
+					TOOLCHAIN_STRIP=llvm-strip
+					TOOLCHAIN_OBJCOPY=llvm-objcopy
+					TOOLCHAIN_OBJDUMP=llvm-objdump
+					TOOLCHAIN_READELF=llvm-readelf
 					TOOLCHAIN_LINKER=${PKG_OVERRIDELD:-${LLVM_DEFAULT_LD:-lld}}
-					TOOLCHAIN_LINKER_EXE=$(which "ld.${TOOLCHAIN_LINKER}")
+					TOOLCHAIN_LINKER_EXE="ld.${TOOLCHAIN_LINKER}"
 					if [ "${PKG_FAULTYCFLAGS:-0}" -eq 1 ]
 					then
 						TOOLCHAIN_COMPFLAGS+=" ${LLVM_EXTRACLANGFLAGS}"
@@ -489,7 +515,8 @@ function settcenv () {
 			;;
 	esac
 	### The source paths a target build records in its binaries (__FILE__ of the assert and log messages,
-	### the debug information, the panic locations of Rust) are not the ones of the build host
+	### the debug information, the panic locations of Rust) are not the ones of the build host. A cross
+	### gcc with GCC_HOST_PATH_SPECS applies the maps itself
 	local PREFIX_MAP RUST_PREFIX_MAPS
 	RUST_PREFIX_MAPS=
 	if [ "${TARGET_ENV}" == target ]
@@ -497,22 +524,25 @@ function settcenv () {
 		RUST_PREFIX_MAPS="--remap-path-scope=object"
 		while read -r PREFIX_MAP
 		do
-			TOOLCHAIN_COMPFLAGS+=" -ffile-prefix-map=${PREFIX_MAP}"
+			if [ "${GCC_HOST_PATH_SPECS}" -eq 0 ]
+			then
+				TOOLCHAIN_COMPFLAGS+=" -ffile-prefix-map=${PREFIX_MAP}"
+			fi
 			RUST_PREFIX_MAPS+=" --remap-path-prefix=${PREFIX_MAP}"
 		done < <( host_path_maps )
 	fi
 	case ${TOOLCHAIN_LINKER} in
 		bfd)
-			if [ -n "${SYSROOT_FLAGS}" ]
+			if [ -n "${CC_SYSROOT_FLAGS}" ]
 			then
-				TOOLCHAIN_LINKERFLAGS+=" -Wl,${SYSROOT_FLAGS}"
+				TOOLCHAIN_LINKERFLAGS+=" -Wl,${CC_SYSROOT_FLAGS}"
 			fi
 			;;
 		gold)
 			### gold is gone since binutils 2.45: only usable with an older BINUTILS_VER
-			if [ -n "${SYSROOT_FLAGS}" ]
+			if [ -n "${CC_SYSROOT_FLAGS}" ]
 			then
-				TOOLCHAIN_LINKERFLAGS+=" -Wl,${SYSROOT_FLAGS}"
+				TOOLCHAIN_LINKERFLAGS+=" -Wl,${CC_SYSROOT_FLAGS}"
 			fi
 			TOOLCHAIN_LINKERFLAGS+=" -Wl,--threads -Wl,--thread-count,${NPROCS}"
 			TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--threads -Wl,--thread-count,${NPROCS}"
@@ -534,7 +564,13 @@ function settcenv () {
 		TOOLCHAIN_RUSTFLAGS+="-C link-arg=${param} "
 	done
 	TOOLCHAIN_RUSTFLAGS+="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}${RUST_PREFIX_MAPS:+ ${RUST_PREFIX_MAPS}}"
-	
+	### libclang reads no gcc specs: bindgen gets the sysroot the gcc command lines leave out
+	TOOLCHAIN_BINDGENFLAGS=${TOOLCHAIN_COMPFLAGS}
+	if [ "${GCC_HOST_PATH_SPECS}" -eq 1 ]
+	then
+		TOOLCHAIN_BINDGENFLAGS="${SYSROOT_FLAGS} ${TOOLCHAIN_COMPFLAGS}"
+	fi
+
 	TOOLCHAIN_CFLAGS_FOR_BUILD="${HOST_CSTD} -I${GLOBAL_TOOLCHAIN_PATH}/include"
 	TOOLCHAIN_CFLAGS_FOR_BUILD+=" -I${TOOLCHAIN_PATH}/include"
 	TOOLCHAIN_CXXFLAGS_FOR_BUILD="-I${GLOBAL_TOOLCHAIN_PATH}/include"
@@ -577,6 +613,13 @@ function create_environment_source () {
 		0) local ENV_CCWRAPPER=${CCWRAPPER} ;;
 		1) local ENV_CCWRAPPER= ;;
 	esac
+	### The compiler wrapper of a target build by name, like the compilers (settcenv), when the PATH of
+	### the build finds that same program
+	if [ "${TARGET_ENV}" == target ] && [ -n "${ENV_CCWRAPPER}" ] && \
+		[ "$( command -v "${ENV_CCWRAPPER##*/}" || true )" == "${ENV_CCWRAPPER}" ]
+	then
+		ENV_CCWRAPPER=${ENV_CCWRAPPER##*/}
+	fi
 	cat <<-EOF > "${PKG_BLDPATH}/environment.source"
 		#################################################################################
 		###### ${PKG_FULLNAME}
@@ -718,7 +761,7 @@ function create_environment_source () {
 		export CARGO_PROFILE_RELEASE_LTO=${TOOLCHAIN_CARGO_PROFILE_RELEASE_LTO}
 		export CARGO_TARGET='${TOOLCHAIN_CARGO_TARGET}'
 		export RUSTUP_HOME='${RUSTUP_HOME}'
-		export BINDGEN_EXTRA_CLANG_ARGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}'
+		export BINDGEN_EXTRA_CLANG_ARGS='${TOOLCHAIN_BINDGENFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}'
 
 		export QEMU_LD_PREFIX='${SYSROOT}'
 		export QEMU_LD_LIBRARY_PATH='${QEMU_LD_LIBRARY_PATH}'
@@ -797,7 +840,7 @@ function strip_host_paths () {
 	### that record how a package was built (*-config scripts, Makefile.inc, Config.pm, the
 	### sysconfigdata of Python...) name the build host; they are rewritten in place into what the
 	### image has:
-	### - the compiler wrapper (CCWRAPPER) goes;
+	### - the compiler wrapper (CCWRAPPER) goes, by path or by name;
 	### - --sysroot and -Wl,--sysroot of the sysroot, -Wl,-rpath-link into it, the -I and -L of its
 	###   system directories and every -I and -L into a toolchain go;
 	### - the source path maps of the build go (-ffile-prefix-map and the other -f*-prefix-map,
@@ -834,6 +877,7 @@ function strip_host_paths () {
 	if [ -n "${CCWRAPPER}" ]
 	then
 		EXPRS+=(-e "s#$(strip_host_paths_regex "${CCWRAPPER}")[[:space:]]+##g")
+		EXPRS+=(-e "s#${START}$(strip_host_paths_regex "${CCWRAPPER##*/}")[[:space:]]+#\1#g")
 	fi
 	### One token per substitution and a new pass while any matched: two tokens in a row share the
 	### blank between them
@@ -878,6 +922,47 @@ function host_path_maps () {
 	### that matches, clang the longest: the sysroots, inside the data directory, come after it
 	echo "${DATA_PATH}=/usr/src/bbxb"
 	printf '%s=\n' "${BIN_PATH}" "${SYSROOT}" | sed '/^=$/d' | LC_ALL=C sort -u
+}
+
+function gcc_host_path_specs () {
+	### gcc_host_path_specs [<libgcc_s dir>]: the specs setup_gcc_specs (toolchain.functions) appends to
+	### the builtin ones of the cross gcc, for what the command lines of a target build would otherwise
+	### name: the source path maps of host_path_maps for the compilers (the cc1 spec also reaches C++,
+	### Fortran, the preprocessor and LTO) and for the assembler (the debug information of .S files);
+	### for the linker the multiarch directory of the sysroot (%R), where ld.bfd resolves the libraries
+	### a library needs only through -rpath-link, and the directory libgcc_s is in when gcc puts its run
+	### time libraries in version specific directories
+	local PREFIX_MAP CC1_SPEC ASM_SPEC
+	CC1_SPEC=
+	ASM_SPEC=
+	while read -r PREFIX_MAP
+	do
+		CC1_SPEC+=" -ffile-prefix-map=${PREFIX_MAP}"
+		ASM_SPEC+=" --debug-prefix-map ${PREFIX_MAP}"
+	done < <( host_path_maps )
+	printf '*cc1:\n+%s\n\n*asm:\n+%s\n\n' "${CC1_SPEC}" "${ASM_SPEC}"
+	printf '*link:\n+ -rpath-link %%R%s%s\n\n' "${TARGET_LIBDIR}${TARGET_LIBSUFFIX}" "${1:+ -L${1}}"
+}
+
+function find_host_paths () {
+	### find_host_paths <dir>: the files under <dir> that name a directory of the build host, the data
+	### directory (sources, build trees, toolchains, sysroots) or the framework checkout, as paths
+	### relative to <dir> in byte order: the regular files by their content, the symbolic links by their
+	### target (never followed). build logs them for the staging directory of every target build, whose
+	### files go into the image
+	local DIR FILE
+	DIR=${1%/}
+	if [ -z "${DATA_PATH}" ] || [ -z "${BB_HOME}" ] || [ ! -d "${DIR}" ]
+	then
+		return 0
+	fi
+	{
+		grep -r -l -F -D skip -e "${DATA_PATH}" -e "${BB_HOME}" -- "${DIR}" 2>/dev/null || true
+		find "${DIR}" -type l \( -lname "*${DATA_PATH}*" -o -lname "*${BB_HOME}*" \) 2>/dev/null || true
+	} | while IFS= read -r FILE
+	do
+		echo "${FILE#"${DIR}/"}"
+	done | LC_ALL=C sort -u
 }
 
 function recipe_path () {
@@ -1288,7 +1373,16 @@ function configmake () {
 				CONF_FLAGS="--build=${BARCH} --host=${BARCH} ${CONF_FLAGS}"
 			;;
 			target)
-				CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH} ${CONF_FLAGS}"
+				### Without a value libtool asks the compiler for the sysroot (--print-sysroot): a cross gcc that
+				### has BIN_PATH as its default needs none, and the configure options some packages keep (sudo -V)
+				### name no host path
+				if [ "${PKG_TOOLCHAIN:-${TOOLCHAIN}}" == gnu ] && \
+					[ "$( "${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" -print-sysroot 2>/dev/null || true )" == "${BIN_PATH}" ]
+				then
+					CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot ${CONF_FLAGS}"
+				else
+					CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH} ${CONF_FLAGS}"
+				fi
 			;;
 		esac
 	fi
@@ -1373,7 +1467,9 @@ function cmakebuild () {
 
 	echo "CCWRAPPER=\"\" create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	CCWRAPPER="" create_environment_source --target "${PKG_TARGET_ENV}"
-	
+
+	### AR, RANLIB and STRIP of a target build are program names (settcenv): CMake would take a name for
+	### a path into the build directory, so the cache gets the program PATH finds
 	cat >runconfig.sh <<-EOF
 		#!/bin/bash
 		source "${PKG_BLDPATH}/recipe.source"
@@ -1387,9 +1483,9 @@ function cmakebuild () {
 		   -DCMAKE_SYSROOT=${SYSROOT} \\
 		   -DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \\
 		   -DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \\
-		   -DCMAKE_AR=\${AR} \\
-		   -DCMAKE_RANLIB=\${RANLIB} \\
-		   -DCMAKE_STRIP=\${STRIP} \\
+		   -DCMAKE_AR=\$(command -v \${AR}) \\
+		   -DCMAKE_RANLIB=\$(command -v \${RANLIB}) \\
+		   -DCMAKE_STRIP=\$(command -v \${STRIP}) \\
 		   -DCMAKE_CROSSCOMPILING:BOOL=ON \\
 		   -DCMAKE_SKIP_RPATH:BOOL=ON \\
 		   -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" \\
@@ -2359,6 +2455,16 @@ function build () {(
 				then
 				run_cmd "find \"${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}\" -name \"*.la\" -print0 | xargs -0 -I{} rm -fv \"{}\""
 				fi
+			fi
+			### The image should name no directory of the build host: the files of the package that still
+			### do go to the log, one warning per package (grep the logs for "host paths in")
+			HOST_PATH_FILES=$( find_host_paths "${PKG_PKGPATH}" )
+			if [ -n "${HOST_PATH_FILES}" ]
+			then
+				{
+					echo "WARNING: host paths in $(wc -l <<< "${HOST_PATH_FILES}") files of ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}:"
+					echo "${HOST_PATH_FILES}"
+				} | log_buffer info
 			fi
 			if [ "${NOSAVESTATUS}" -eq 0 ] && [ -z "${TEMPORARY_STATUS}" ]
 			then
