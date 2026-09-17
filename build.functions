@@ -538,6 +538,16 @@ function settcenv () {
 			esac
 			;;
 	esac
+	### The static libraries of a target build with LTO are made of fat objects: build keeps only their
+	### machine code (strip_lto_objects), because the LTO bytecode names the build host
+	if [ "${TARGET_ENV}" == target ] && [ "${PKG_OVERRIDESTATIC:-${BUILD_LIBSTATIC}}" -eq 1 ]
+	then
+		case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
+			1|2|fat|thin)
+				OPTCOMP_FLAGS+=" -ffat-lto-objects"
+				;;
+		esac
+	fi
 	### The source paths a target build records in its binaries (__FILE__ of the assert and log messages,
 	### the debug information, the panic locations of Rust) are not the ones of the build host. A compiler
 	### with CC_HOST_PATH_CONFIG applies the maps itself
@@ -994,8 +1004,9 @@ function find_host_paths () {
 	### find_host_paths <dir>: the files under <dir> that name a directory of the build host, the data
 	### directory (sources, build trees, toolchains, sysroots) or the framework checkout, as paths
 	### relative to <dir> in byte order: the regular files by their content, the symbolic links by their
-	### target (never followed). build logs them for the staging directory of every target build, whose
-	### files go into the image
+	### target (never followed), and the objects and static libraries with the LTO bytecode of gcc, whose
+	### compressed streams always hold one (see strip_lto_objects). build logs them for the staging
+	### directory of every target build, whose files go into the image
 	local DIR FILE
 	DIR=${1%/}
 	if [ -z "${DATA_PATH}" ] || [ -z "${BB_HOME}" ] || [ ! -d "${DIR}" ]
@@ -1004,11 +1015,68 @@ function find_host_paths () {
 	fi
 	{
 		grep -r -l -F -D skip -e "${DATA_PATH}" -e "${BB_HOME}" -- "${DIR}" 2>/dev/null || true
+		grep -r -l -a -F -D skip --include='*.a' --include='*.o' -e .gnu.lto_ -- "${DIR}" 2>/dev/null || true
 		find "${DIR}" -type l \( -lname "*${DATA_PATH}*" -o -lname "*${BB_HOME}*" \) 2>/dev/null || true
 	} | while IFS= read -r FILE
 	do
 		echo "${FILE#"${DIR}/"}"
 	done | LC_ALL=C sort -u
+}
+
+function lto_object_files () {
+	### lto_object_files <dir>: the objects and static libraries under <dir> that hold LTO bytecode, one
+	### "<kind> <path>" per line in byte order, <kind> fat when they also hold machine code, slim when
+	### they hold nothing else. gcc puts the bytecode in .gnu.lto_* sections and marks a slim object
+	### with the __gnu_lto_slim symbol; clang puts it in the .llvm.lto section of a fat object and
+	### writes a slim one as a bitcode file, which the readelf of the target does not take for ELF
+	local DIR FILE
+	DIR=${1%/}
+	if [ ! -d "${DIR}" ]
+	then
+		return 0
+	fi
+	find "${DIR}" -type f \( -name '*.a' -o -name '*.o' \) -print0 | LC_ALL=C sort -z |
+	while IFS= read -r -d '' FILE
+	do
+		if LC_ALL=C grep -q -a -F -e __gnu_lto_slim -- "${FILE}" || \
+			{ "${HARCH}-readelf" -h -- "${FILE}" 2>&1 > /dev/null | grep -q -F 'LLVM bitcode'; }
+		then
+			echo "slim ${FILE}"
+		elif LC_ALL=C grep -q -a -F -e .gnu.lto_ -e .llvm.lto -- "${FILE}"
+		then
+			echo "fat ${FILE}"
+		fi
+	done
+}
+
+function strip_lto_objects () {
+	### strip_lto_objects <dir>: the LTO objects of the staging directory of a target build keep only
+	### their machine code. Their bytecode names the build host whatever the source path maps: gcc
+	### streams the working directory unmapped for a source file named by a relative path and the name
+	### of one named by an absolute path (GCC PR 108534, open for gcc 16), clang the name of an absolute
+	### source file (source_filename). The maps only reach the machine code and the debug information.
+	### - when the build makes no static libraries (PKG_OVERRIDESTATIC, BUILD_LIBSTATIC), a lib<name>.a
+	###   next to its lib<name>.so goes, as the --disable-static a build system ignores would have done
+	### - a fat object (settcenv compiles with -ffat-lto-objects when the build makes static libraries)
+	###   loses the bytecode: an ordinary object, which any compiler links
+	### - a slim object has nothing else and stays: build stops on it (lto_object_files)
+	### Remove the bytecode part once the compilers map those paths
+	local KIND FILE
+	while read -r KIND FILE
+	do
+		if [ "${PKG_OVERRIDESTATIC:-${BUILD_LIBSTATIC}}" -eq 0 ] && [[ ${FILE} == */lib*.a ]] && \
+			{ [ -e "${FILE%.a}.so" ] || [ -L "${FILE%.a}.so" ]; }
+		then
+			run_cmd "rm -v \"${FILE}\""
+		elif [ "${KIND}" == fat ]
+		then
+			run_cmd "\"${HARCH}-objcopy\" --wildcard -R '.gnu.lto_*' -R '.gnu.debuglto_*' -R .llvm.lto \"${FILE}\""
+			if [[ ${FILE} == *.a ]]
+			then
+				run_cmd "\"${HARCH}-ranlib\" \"${FILE}\""
+			fi
+		fi
+	done < <( lto_object_files "${1}" )
 }
 
 function recipe_path () {
@@ -2524,8 +2592,19 @@ function build () {(
 				run_cmd "find \"${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}\" -name \"*.la\" -print0 | xargs -0 -I{} rm -fv \"{}\""
 				fi
 			fi
-			### The image should name no directory of the build host: the files of the package that still
-			### do go to the log, one warning per package (grep the logs for "host paths in")
+			### The image should name no directory of the build host. The LTO bytecode always does: the
+			### static libraries keep their machine code, and bytecode without it stops the build
+			strip_lto_objects "${PKG_PKGPATH}"
+			SLIM_LTO_FILES=$( lto_object_files "${PKG_PKGPATH}" | while read -r _ LTO_FILE
+				do
+					echo "${LTO_FILE#"${PKG_PKGPATH}/"}"
+				done )
+			if [ -n "${SLIM_LTO_FILES}" ]
+			then
+				trow_error "${ERROR_GENERIC}" "LTO bytecode without machine code in $(tr '\n' ' ' <<< "${SLIM_LTO_FILES}")of ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}: remove the static libraries in postbuild.sh, or build them as fat objects with PKG_OVERRIDESTATIC=1"
+			fi
+			### The files of the package that still name it go to the log, one warning per package (grep
+			### the logs for "host paths in")
 			HOST_PATH_FILES=$( find_host_paths "${PKG_PKGPATH}" )
 			if [ -n "${HOST_PATH_FILES}" ]
 			then

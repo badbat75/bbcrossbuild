@@ -197,6 +197,7 @@ BBCrossBuild provides various functions for use in project files. These are orga
   - `--target <env>`: Target environment (native, cross, target)
   - A target build gets the source path maps of `host_path_maps`: `-ffile-prefix-map` in the C, C++ and preprocessor flags, `--remap-path-scope=object` and `--remap-path-prefix` in `RUSTFLAGS`
   - The programs of a target build (`CC`, `CXX`, `AR`..., the compiler wrapper) go by name, found through the `PATH` of `environment.source`
+  - A target build with LTO that makes static libraries (`PKG_OVERRIDESTATIC`, `BUILD_LIBSTATIC`) compiles with `-ffat-lto-objects`: `build` keeps only the machine code of its objects (`strip_lto_objects`)
   - When the compiler of a target build has the sysroot in a configuration of its own (`CC_HOST_PATH_CONFIG=1`, computed by `setbuildenv`), the build leaves out of `CFLAGS`, `CPPFLAGS` and `LDFLAGS` what the compiler finds by itself: `--sysroot`, `-Wl,--sysroot`, the source path maps, the `-Wl,-rpath-link` of the multiarch directory and the `-L` of the gcc library directories. For gnu that is a cross gcc with `BIN_PATH` as its default sysroot and the specs file of `setup_gcc_specs`; for llvm the `<triple>-clang` and `<triple>-clang++` of `setup_clang_config`, which also take the target from their name (no `--target`). The command lines, which configure scripts and build systems copy into binaries (`openssl version -a`, vim `:version`, `lsof -v`, icu, `sudo -V`), name no host path; `BINDGEN_EXTRA_CLANG_ARGS` keeps `--sysroot` (libclang reads neither file). With such a compiler `configmake` passes a bare `--with-sysroot` to gcc builds (libtool asks gcc) and none to clang builds, and `cmakebuild` keeps `CMAKE_SYSROOT` (the find commands, the exported targets of the sysroot) but empties the `--sysroot` option CMake would add (`CMAKE_USER_MAKE_RULES_OVERRIDE`)
 
 - **create_environment_source**: Create environment source file
@@ -238,6 +239,23 @@ BBCrossBuild provides various functions for use in project files. These are orga
   find_host_paths <dir>
   ```
   - `build` runs it on the staging directory of every target build and logs `WARNING: host paths in <n> files of <package>:` followed by the list: after a build, `grep "host paths in" <platform>/logs/*.log` names the packages that still leak host paths into the image, and each log lists their files
+  - The objects and static libraries (`*.o`, `*.a`) with gcc LTO bytecode (`.gnu.lto_` sections) are listed too: their compressed streams always name a host path, which no search of the content finds
+
+- **lto_object_files**: Print the objects and static libraries under a directory that hold LTO bytecode, as `<kind> <path>` lines in byte order
+  ```
+  lto_object_files <dir>
+  ```
+  - `fat`: machine code and bytecode (gcc `.gnu.lto_*` sections, clang `.llvm.lto`); `slim`: bytecode only (gcc `__gnu_lto_slim`, a clang bitcode file, which `${HARCH}-readelf` does not read as ELF)
+
+- **strip_lto_objects**: Keep only the machine code of the LTO objects of the staging directory of a target build
+  ```
+  strip_lto_objects <dir>
+  ```
+  - The LTO bytecode names the build host whatever the source path maps: gcc streams the working directory unmapped for a source file named by a relative path and the name of one named by an absolute path ([GCC PR 108534](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108534), open for gcc 16), clang the name of an absolute source file (`source_filename`)
+  - When the build makes no static libraries (`PKG_OVERRIDESTATIC`, `BUILD_LIBSTATIC`) a `lib<name>.a` with LTO bytecode next to its `lib<name>.so` is removed, as a `--disable-static` the build system ignores would have done
+  - The fat objects lose the bytecode (`${HARCH}-objcopy --wildcard -R '.gnu.lto_*' -R '.gnu.debuglto_*' -R .llvm.lto`, then `${HARCH}-ranlib` on archives): ordinary objects any compiler links
+  - `build` runs it before `find_host_paths` and stops on the slim objects left (`lto_object_files`): a recipe removes them in `postbuild.sh` or builds them as fat objects with `PKG_OVERRIDESTATIC=1` (the stub libraries of lfs/Tcl)
+  - The bytecode part can go once the compilers map those paths
 
 #### Project Functions (project.functions)
 
@@ -747,7 +765,8 @@ Override BUILD_SHARED environment variable.
 
 **PKG_OVERRIDESTATIC:**  
 Override BUILD_STATIC environment variable.  
-`PKG_OVERRIDESTATIC=0|1`
+`PKG_OVERRIDESTATIC=0|1`  
+With LTO, `1` also builds the objects of the package as fat LTO objects, whose bytecode `build` removes (`strip_lto_objects`): the setting of a package that installs static libraries in any case, such as stub libraries.
 
 **PKG_RUSTFLAGS:**  
 Rust compiler flags.  

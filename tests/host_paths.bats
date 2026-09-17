@@ -3,7 +3,8 @@
 # installs to record how it was built (compiler wrapper, toolchain programs, sysroot flags and paths),
 # host_path_maps, the source path maps of the compilers of a target build, gcc_host_path_specs, what
 # the specs file of the cross gcc adds, clang_host_path_config, the configuration file of the clang of
-# the platform toolchain, and find_host_paths, the files of a package naming the host
+# the platform toolchain, find_host_paths, the files of a package naming the host, lto_object_files
+# and strip_lto_objects, the LTO objects of a package and what build keeps of them
 # The tests set variables the sourced framework reads:
 # shellcheck disable=SC1091,SC2016,SC2034
 
@@ -129,6 +130,84 @@ setup () {
 	assert_output_lines
 	run find_host_paths "${BATS_TEST_TMPDIR}/missing"
 	assert_output_lines
+}
+
+@test "find_host_paths lists the objects and static libraries with gcc LTO bytecode" {
+	local STAGE="${BATS_TEST_TMPDIR}/stage"
+	printf '!<arch>\n.shstrtab\0.gnu.lto_.decls.1\0' > "${STAGE:?}.tmp"
+	put "${STAGE}/usr/lib/libfoo.a"
+	cp "${STAGE}.tmp" "${STAGE}/usr/lib/libfoo.a"
+	cp "${STAGE}.tmp" "${STAGE}/usr/lib/crt.o"
+	### The section name in another file is only text
+	cp "${STAGE}.tmp" "${STAGE}/usr/lib/notes.txt"
+	printf '!<arch>\n.shstrtab\0.text\0' > "${STAGE}/usr/lib/libbar.a"
+	run find_host_paths "${STAGE}"
+	assert_output_lines 'usr/lib/crt.o' \
+		'usr/lib/libfoo.a'
+}
+
+@test "lto_object_files tells the fat LTO objects from the slim ones and skips the others" {
+	local STAGE="${BATS_TEST_TMPDIR}/stage"
+	HARCH=bats-none-linux-gnu
+	put "${STAGE}/usr/lib/libgccslim.a"
+	printf '!<arch>\n.gnu.lto_.decls.1\0__gnu_lto_slim\0' > "${STAGE}/usr/lib/libgccslim.a"
+	printf '!<arch>\n.text\0.gnu.lto_.decls.1\0' > "${STAGE}/usr/lib/libgccfat.a"
+	printf '\177ELF.text\0.llvm.lto\0' > "${STAGE}/usr/lib/clangfat.o"
+	printf '\177ELF.text\0' > "${STAGE}/usr/lib/plain.o"
+	printf '.gnu.lto_\0' > "${STAGE}/usr/lib/notes.txt"
+	run lto_object_files "${STAGE}/"
+	assert_output_lines "fat ${STAGE}/usr/lib/clangfat.o" \
+		"fat ${STAGE}/usr/lib/libgccfat.a" \
+		"slim ${STAGE}/usr/lib/libgccslim.a"
+	### A bitcode file of clang is what the readelf of the target does not read as ELF
+	# shellcheck disable=SC2329
+	function bats-none-linux-gnu-readelf () {
+		if [[ ${*} == *bitcode.o ]]
+		then
+			echo "readelf: Error: This is a LLVM bitcode file - try using llvm-bcanalyzer" >&2
+			return 1
+		fi
+	}
+	printf 'BC\300\336' > "${STAGE}/usr/lib/bitcode.o"
+	run lto_object_files "${STAGE}"
+	assert_equal "$(head -n 1 <<< "${output}")" "slim ${STAGE}/usr/lib/bitcode.o"
+	run lto_object_files "${BATS_TEST_TMPDIR}/missing"
+	assert_output_lines
+}
+
+@test "strip_lto_objects removes the static variant of a shared library, strips the fat objects, keeps the slim ones" {
+	local STAGE="${BATS_TEST_TMPDIR}/stage" CALLS="${BATS_TEST_TMPDIR}/calls"
+	HARCH=bats-none-linux-gnu
+	# shellcheck disable=SC2329
+	function bats-none-linux-gnu-objcopy () { echo "objcopy ${*}" >> "${CALLS}"; }
+	# shellcheck disable=SC2329
+	function bats-none-linux-gnu-ranlib () { echo "ranlib ${*}" >> "${CALLS}"; }
+	function stage () {
+		rm -rf "${STAGE}" "${CALLS}"
+		put "${STAGE}/usr/lib/libz.so.1"
+		ln -s libz.so.1 "${STAGE}/usr/lib/libz.so"
+		printf '!<arch>\n.text\0.gnu.lto_.decls.1\0' > "${STAGE}/usr/lib/libz.a"
+		printf '!<arch>\n.text\0.gnu.lto_.decls.1\0' > "${STAGE}/usr/lib/libtclstub.a"
+		printf '!<arch>\n.gnu.lto_.decls.1\0__gnu_lto_slim\0' > "${STAGE}/usr/lib/libslim.a"
+		printf '\177ELF.text\0.llvm.lto\0' > "${STAGE}/usr/lib/python.o"
+	}
+	BUILD_LIBSTATIC=0
+	stage
+	strip_lto_objects "${STAGE}" > /dev/null
+	run ls "${STAGE}/usr/lib"
+	assert_output_lines libslim.a libtclstub.a libz.so libz.so.1 python.o
+	run cat "${CALLS}"
+	assert_output_lines "objcopy --wildcard -R .gnu.lto_* -R .gnu.debuglto_* -R .llvm.lto ${STAGE}/usr/lib/libtclstub.a" \
+		"ranlib ${STAGE}/usr/lib/libtclstub.a" \
+		"objcopy --wildcard -R .gnu.lto_* -R .gnu.debuglto_* -R .llvm.lto ${STAGE}/usr/lib/python.o"
+	### Static libraries wanted: the one next to its shared library is stripped too
+	BUILD_LIBSTATIC=0 PKG_OVERRIDESTATIC=1
+	stage
+	strip_lto_objects "${STAGE}" > /dev/null
+	run grep -c '^objcopy' "${CALLS}"
+	assert_equal "${output}" 3
+	run ls "${STAGE}/usr/lib"
+	assert_output_lines libslim.a libtclstub.a libz.a libz.so libz.so.1 python.o
 }
 
 @test "strip_host_paths removes the sysroot in front of a path, CMAKE_SYSROOT takes its place with --cmake" {
