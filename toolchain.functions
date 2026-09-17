@@ -1018,6 +1018,10 @@ function setup_gcc () {
 		gcc_make_target_libs libgcc
 		echo -e "done.\n"
 	fi
+	### Again: the target libraries can add the version specific directory of libgcc_s, which the specs
+	### name. The file written before them no longer matches, and in a new data directory every
+	### following target build would lose CC_HOST_PATH_CONFIG
+	setup_gcc_specs >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
 	if [ -d "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}" ]
 	then
 		run_cmd "rm -rf \"${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}\"" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
