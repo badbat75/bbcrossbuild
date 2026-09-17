@@ -27,3 +27,30 @@ workaround is part of closing the item.
    - go through the remaining lines one by one (docbook-utils, docbook2X, asciidoc, texinfo,
      gtk-doc, help2man, swig, gperf, flex, pandoc, intltool, the `*-devel` packages) and either
      give the tool a native recipe or drop the feature that needs it.
+
+2. **mold as the default linker of every build.** Today `setbuildenv` (`build.functions`) links
+   with `GCC_DEFAULT_LD` (`bfd`) for gnu and `LLVM_DEFAULT_LD` (`lld`) for llvm, and a recipe
+   changes it with `PKG_OVERRIDELD`. The goal is `mold` for the native, cross and target builds
+   of both toolchains, built by the framework rather than taken from the host. Known steps:
+   - an `lfs/mold:native` recipe (CMake, C++20) in `setup_full_toolchain`, right after
+     `lfs/cmake:native`: the native builds before it (sccache, make, the autotools, pkgconf,
+     bison, cmake) keep linking with bfd. One mold binary links every target architecture, so
+     the platform toolchain only needs the `${HARCH}-ld.mold` name that `TOOLCHAIN_LINKER_EXE`
+     already gives for gnu;
+   - `setbuildenv`: the defaults become `mold`, and the `case ${TOOLCHAIN_LINKER}` gets a `mold`
+     branch (thread count, and `-Wl,--sysroot` as for bfd when the compiler has no
+     `CC_HOST_PATH_CONFIG`). The native linker of the llvm branch reads `GCC_DEFAULT_LD` instead
+     of `LLVM_DEFAULT_LD`: fix it on the way. Update the defaults in `configurations/bbxb.conf`
+     and the `PKG_OVERRIDELD` entry of the README;
+   - LTO: gcc hands mold its linker plugin as it does for bfd. clang links through `LLVMgold.so`
+     (`setup_llvm` already builds it) instead of the LTO built into lld, so the
+     `--thinlto-jobs` of the lld branch becomes a plugin option, and ThinLTO needs a check;
+   - the linkers chosen outside `setbuildenv`: `LDFLAGS_FOR_BUILD` of the gcc bootstrap
+     (`-fuse-ld=bfd` in `toolchain.functions`), `LLVM_USE_LINKER` of `setup_llvm`, the
+     `LDFLAGS` of the native Python in `setup_python`, and the Rust link arguments of
+     `lfs/dracut/build.sh`;
+   - the recipes that force `PKG_OVERRIDELD=bfd` stay on bfd until each one is tried: glibc,
+     binutils, GRUB, GRUB-EFI and efivar, plus the kernels, systemd and lvm2 with gnu. The Linux
+     build accepts only GNU ld and lld;
+   - validation: full `lfs rpi3-aarch64` builds with gnu and llvm from an empty data directory;
+     `readelf -p .comment` shows which binaries mold linked.
