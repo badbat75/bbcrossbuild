@@ -481,7 +481,9 @@ function settcenv () {
 						TOOLCHAIN_COMPFLAGS+=" --target=${HARCH} ${SYSROOT_FLAGS} ${LLVM_EXTRACLANGFLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
 						TOOLCHAIN_EXTRA_C_CMD=""
 					fi
-					TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LINKER} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
+					### --target also at link time: meson links without the c_args, and clang would link
+					### for the build machine (no crti.o, no -lc in the sysroot of another architecture)
+					TOOLCHAIN_LINKERFLAGS="--target=${HARCH} ${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LINKER} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
 				;;
 			esac
 			;;
