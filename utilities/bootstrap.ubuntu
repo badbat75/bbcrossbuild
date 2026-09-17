@@ -20,8 +20,11 @@ sudo apt install -y python2
 # for libid3tag
 sudo apt-get install -y gperf
 
-# for lxml
+# for lxml and the ical-glib-src-generator of lfs/libical:cross
 sudo apt-get install -y libxml2-dev
+
+# for the wayland documentation (dot)
+sudo apt-get install -y graphviz
 
 # for udevil
 sudo apt-get install -y intltool

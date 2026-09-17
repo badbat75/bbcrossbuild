@@ -9,8 +9,8 @@ PACKAGES+=" libedit-devel lua-devel ocaml-findlib ocaml-ctypes ocaml-ocamldoc"
 # For Image emulation
 PACKAGES+=" qemu-*-static qemu-kvm-tools qemu-kvm qemu-system-*"
 
-# for autoconf runtime, and Time::Piece for the openssl 4 Makefile
-PACKAGES+=" perl-FindBin perl-IPC-Cmd perl-Pod-Html perl-Time-Piece"
+# for autoconf runtime (the openssl 4 Makefile runs the perl of lfs/perl5:native)
+PACKAGES+=" perl-FindBin perl-IPC-Cmd perl-Pod-Html"
 
 # for Python3
 PACKAGES+=" openssl-devel libffi-devel libuuid-devel tcl-devel"
@@ -24,8 +24,11 @@ PACKAGES+=" docbook-utils-pdf"
 # for libid3tag
 PACKAGES+=" gperf"
 
-# for lxml
+# for lxml and the ical-glib-src-generator of lfs/libical:cross
 PACKAGES+=" libxml2-devel"
+
+# for the wayland documentation (dot)
+PACKAGES+=" graphviz"
 
 # for udevil
 PACKAGES+=" intltool"
