@@ -1260,6 +1260,69 @@ function setup_llvm () {
 			#-DCMAKE_EXE_LINKER_FLAGS=\"${LINKER_FLAGS} -Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib\" \\
 	}
 
+	function compiler_rt_profile_library () {
+		### compiler_rt_profile_library: the library clang links for --coverage and -fprofile-*, in the
+		### resource directory of clang under the normalized triple of the target, empty when clang
+		### cannot say where they are
+		local CLANG RESOURCE_DIR TRIPLE
+		CLANG=${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang
+		RESOURCE_DIR=$( "${CLANG}" -print-resource-dir 2>/dev/null || true )
+		TRIPLE=$( "${CLANG}" --target="${HARCH}" -dumpmachine 2>/dev/null || true )
+		echo "${RESOURCE_DIR:+${TRIPLE:+${RESOURCE_DIR}/lib/${TRIPLE}/libclang_rt.profile.a}}"
+	}
+
+	function configure_compiler_rt () {
+		### Only the profile part, built for the target with the clang of the platform toolchain, whose
+		### configuration file carries the sysroot, the source path maps and the directories of the cross
+		### gcc: the runtime library of every build is libgcc (CLANG_DEFAULT_RTLIB), and clang asks for
+		### the builtins, the sanitizers and the rest of compiler-rt only when a build names them
+		local CLANG RESOURCE_DIR TRIPLE
+		CLANG=${TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/${HARCH}-clang
+		RESOURCE_DIR=$( "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang" -print-resource-dir )
+		### The normalized triple, the name of the directory clang looks the runtime up in, and the
+		### target compiler-rt asks for when it builds one target only
+		TRIPLE=$( "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang" --target="${HARCH}" -dumpmachine )
+		if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/compiler-rt-${HARCH}-${LLVM_VER}" ]
+		then
+			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/compiler-rt-${HARCH}-${LLVM_VER}\""
+		fi
+		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/cmake\" -S \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/compiler-rt\" -B \"${GLOBAL_TOOLCHAIN_BLDPATH}/compiler-rt-${HARCH}-${LLVM_VER}\" -G Ninja \\
+			-W no-dev \\
+			-DCMAKE_BUILD_TYPE=Release \\
+			-DCMAKE_SYSTEM_NAME=Linux \\
+			-DCMAKE_SYSTEM_PROCESSOR=${HM} \\
+			-DCMAKE_C_COMPILER=\"${CLANG}\" \\
+			-DCMAKE_CXX_COMPILER=\"${CLANG}++\" \\
+			-DCMAKE_ASM_COMPILER=\"${CLANG}\" \\
+			-DCMAKE_C_COMPILER_TARGET=${TRIPLE} \\
+			-DCMAKE_CXX_COMPILER_TARGET=${TRIPLE} \\
+			-DCMAKE_ASM_COMPILER_TARGET=${TRIPLE} \\
+			-DCMAKE_EXE_LINKER_FLAGS=\"-fuse-ld=lld\" \\
+			-DCMAKE_SHARED_LINKER_FLAGS=\"-fuse-ld=lld\" \\
+			-DCMAKE_MODULE_LINKER_FLAGS=\"-fuse-ld=lld\" \\
+			-DCMAKE_AR=\"${TOOLCHAIN_PATH}/bin/${HARCH}-ar\" \\
+			-DCMAKE_NM=\"${TOOLCHAIN_PATH}/bin/${HARCH}-nm\" \\
+			-DCMAKE_RANLIB=\"${TOOLCHAIN_PATH}/bin/${HARCH}-ranlib\" \\
+			-DLLVM_CMAKE_DIR=\"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules\" \\
+			-DCOMPILER_RT_INSTALL_PATH=\"${RESOURCE_DIR}\" \\
+			-DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR:BOOL=ON \\
+			-DCOMPILER_RT_DEFAULT_TARGET_ONLY:BOOL=ON \\
+			-DCOMPILER_RT_BUILD_BUILTINS:BOOL=OFF \\
+			-DCOMPILER_RT_BUILD_PROFILE:BOOL=ON \\
+			-DCOMPILER_RT_BUILD_SANITIZERS:BOOL=OFF \\
+			-DCOMPILER_RT_BUILD_MEMPROF:BOOL=OFF \\
+			-DCOMPILER_RT_BUILD_LIBFUZZER:BOOL=OFF \\
+			-DCOMPILER_RT_BUILD_XRAY:BOOL=OFF \\
+			-DCOMPILER_RT_BUILD_ORC:BOOL=OFF \\
+			-DCOMPILER_RT_BUILD_CTX_PROFILE:BOOL=OFF \\
+			-DCOMPILER_RT_INCLUDE_TESTS:BOOL=OFF"
+	}
+
+	function build_compiler_rt () {
+		run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/ninja $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -v; fi ) -C \"${GLOBAL_TOOLCHAIN_BLDPATH}/compiler-rt-${HARCH}-${LLVM_VER}\" install"
+		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/compiler-rt-${HARCH}-${LLVM_VER}\""
+	}
+
 	function build_llvm () {
 		### Set LD_LBRARY_PATH to find llvm-${VER}.so in ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/lib
 		# pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/lib"
@@ -1459,6 +1522,26 @@ function setup_llvm () {
 	#	echo -n "building target libraries... "
 	#	build_llvm_builtins "${HARCH}" >> "${LOG_PATH}/toolchain_llvm-builtins-${LLVM_VER}.log" 2>&1
 	#fi
+	setup_clang_config >> "${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
+	### The profile runtime of the target: clang links libclang_rt.profile.a for --coverage and
+	### -fprofile-*, whatever the runtime library is (gcc has libgcov of its own). It is built with the
+	### clang of the platform toolchain, which setup_clang_config has just written, and installed in the
+	### resource directory of the global clang, which every platform reaches through the lib link of its
+	### own directory: the normalized triple keeps the platforms apart
+	local PROFILE_LIBRARY
+	PROFILE_LIBRARY=$( compiler_rt_profile_library )
+	if [ -n "${PROFILE_LIBRARY}" ] && [ ! -f "${PROFILE_LIBRARY}" ] && \
+		[ -x "${TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/${HARCH}-clang" ]
+	then
+		if [ ! -d "${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}" ]
+		then
+			echo -n "downloading... "
+			download_llvm >> "${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log" 2>&1
+		fi
+		echo -n "target profile runtime... "
+		configure_compiler_rt >> "${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log" 2>&1
+		build_compiler_rt >> "${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log" 2>&1
+	fi
 	if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}" ]
 	then
 		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}\"" >> "${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
@@ -1467,7 +1550,6 @@ function setup_llvm () {
 	then
 		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}\"" >> "${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
 	fi
-	setup_clang_config >> "${LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
 	echo "done."
 
 }

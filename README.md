@@ -246,7 +246,9 @@ BBCrossBuild provides various functions for use in project files. These are orga
   lto_object_files <dir>
   ```
   - `fat`: machine code and bytecode (gcc `.gnu.lto_*` sections, clang `.llvm.lto`); `slim`: bytecode only (gcc `__gnu_lto_slim`, a clang bitcode file, which `${HARCH}-readelf` does not read as ELF)
-  - The slim marker of gcc is a symbol, confirmed with `${HARCH}-nm`: a file that names it, or names a section of LTO, in its own data is not one (the sources of a compiler do, `libLLVMipo.a`)
+  - The slim marker of gcc is a symbol, confirmed in the symbol table readelf prints: a file that names it, or names a section of LTO, in its own data is not one (the sources of a compiler do, `libLLVMipo.a`)
+  - `readelf_prints` reads the output of readelf instead of piping it: readelf fails on a bitcode file, which is the answer itself, and a build runs with `pipefail`
+  - `target_tool <name>` gives the program of the target by path when the platform toolchain holds it: the `PATH` of a build with llvm names the llvm programs, and `<HARCH>-readelf` is not always on it
 
 - **strip_lto_objects**: Keep only the machine code of the LTO objects of the staging directory of a target build
   ```
@@ -424,7 +426,7 @@ BBCrossBuild provides various functions for use in project files. These are orga
   setup_llvm [--targets <targets>]
   ```
   - `--targets <targets>`: Target architecture
-  - Ends with `setup_clang_config`
+  - Runs `setup_clang_config`, then builds the profile runtime of compiler-rt for the target with that clang (`libclang_rt.profile.a`, which clang links for `--coverage` and `-fprofile-*` whatever the runtime library is) into the resource directory of the global clang, under the normalized triple: nothing else of compiler-rt is built, the runtime library of every build is libgcc
 
 - **setup_clang_config**: Give the platform toolchain the clang of the target builds, when the sysroot is `BIN_PATH`: in `${TOOLCHAIN_PATH}/llvm-<version>/bin` a copy of the clang of the global llvm as `<HARCH>-clang` and `<HARCH>-clang++` (the name sets the target and the driver), `lib` as a link to the lib directory of the global llvm (shared libraries, resource directory), and the configuration file `<triple>.cfg` with the output of `clang_host_path_config` for the library directories of the cross gcc. The directory goes into the `PATH`; everything is rewritten when missing or different (`clang_config_installed`)
   ```
