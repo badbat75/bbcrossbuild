@@ -202,6 +202,14 @@ BBCrossBuild provides various functions for use in project files. These are orga
   ```
   - `--target <env>`: Target environment (native, cross, target)
 
+- **strip_host_paths**: Rewrite, in the post-build script of a target build, the installed files that record how the package was built (`*-config` scripts, `Makefile.inc`, `Config.pm`, the sysconfigdata of Python...) into what the image has
+  ```
+  strip_host_paths [--cmake] <file>...
+  ```
+  - The compiler wrapper goes; `--sysroot` and `-Wl,--sysroot` of the sysroot, `-Wl,-rpath-link` into it, the `-I`/`-L` of its system directories and every `-I`/`-L` into a toolchain go; a program of a toolchain keeps its name only; the sysroot in front of any other path goes
+  - `--cmake`: the sysroot becomes `${CMAKE_SYSROOT}` instead (cmake config and export files), set by a cross build and empty in the image
+  - The source and build trees of the package are left to the recipe; nothing happens in native and cross builds. Available to the recipe scripts through `recipe.source`
+
 #### Project Functions (project.functions)
 
 - **clean_project**: Clean up project directories

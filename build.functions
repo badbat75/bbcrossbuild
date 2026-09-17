@@ -774,9 +774,83 @@ function create_recipe_source () {
 		done < <( compgen -v | LC_ALL=C sort -u )
 		echo
 		echo "### Framework helpers available to the recipe scripts"
-		declare -f run_cmd log_run log_wait log_buffer stdout_log trow_error test_version download_uncompress tab || true
+		declare -f run_cmd log_run log_wait log_buffer stdout_log trow_error test_version download_uncompress tab strip_host_paths || true
 	} > "${RECIPE_SOURCE}"
 	echo "Recipe variables snapshot written to ${RECIPE_SOURCE}"
+}
+
+function strip_host_paths () {
+	### strip_host_paths [--cmake] <file>...: for the post-build script of a target build. The files
+	### that record how a package was built (*-config scripts, Makefile.inc, Config.pm, the
+	### sysconfigdata of Python...) name the build host; they are rewritten in place into what the
+	### image has:
+	### - the compiler wrapper (CCWRAPPER) goes;
+	### - --sysroot and -Wl,--sysroot of the sysroot, -Wl,-rpath-link into it, the -I and -L of its
+	###   system directories and every -I and -L into a toolchain go;
+	### - a program of a toolchain keeps its name only (aarch64-linux-gnu-gcc, clang, python3);
+	### - the sysroot in front of any other path goes; with --cmake it becomes ${CMAKE_SYSROOT}, which a
+	###   cross build sets and the image leaves empty.
+	### The source and build trees of the package are left to the recipe. Native and cross builds
+	### install into the toolchains, where the host paths are right: nothing happens there.
+	function strip_host_paths_regex () {
+		### strip_host_paths_regex <text>: <text> as a literal in a sed extended regular expression
+		# shellcheck disable=SC2001
+		sed 's/[][\.*^$+?(){}|#]/\\&/g' <<< "${1}"
+	}
+	local ROOT_TO ROOT TOOLCHAIN RE START END TOKEN SYSINC SYSLIB
+	local -a EXPRS=()
+	ROOT_TO=
+	if [ "${1}" == "--cmake" ]
+	then
+		# shellcheck disable=SC2016
+		ROOT_TO='${CMAKE_SYSROOT}'
+		shift
+	fi
+	if [ "${PKG_TARGET_ENV}" != "target" ]
+	then
+		return 0
+	fi
+	### A token starts after a blank, a quote, =, ; or ( and ends before a blank, a quote, ; or )
+	START="(^|[[:space:]'\"=;(])"
+	END="([[:space:]'\";)]|$)"
+	TOKEN="[^[:space:]'\";)]*"
+	SYSINC=$(strip_host_paths_regex "${TARGET_INCLUDEDIR}")
+	SYSLIB=$(strip_host_paths_regex "${TARGET_LIBDIR}${TARGET_LIBSUFFIX}")
+	if [ -n "${CCWRAPPER}" ]
+	then
+		EXPRS+=(-e "s#$(strip_host_paths_regex "${CCWRAPPER}")[[:space:]]+##g")
+	fi
+	### One token per substitution and a new pass while any matched: two tokens in a row share the
+	### blank between them
+	EXPRS+=(-e ":token")
+	for ROOT in $(printf '%s\n' "${SYSROOT}" "${BIN_PATH}" | LC_ALL=C sort -u)
+	do
+		RE=$(strip_host_paths_regex "${ROOT}")
+		EXPRS+=(-e "s#${START}(-Wl,)?--sysroot=${RE}${END}#\1\3#")
+		EXPRS+=(-e "s#${START}-Wl,-rpath-link,${RE}${TOKEN}${END}#\1\2#")
+		EXPRS+=(-e "s#${START}-I${RE}${SYSINC}/?${END}#\1\2#")
+		EXPRS+=(-e "s#${START}-L${RE}${SYSLIB}/?${END}#\1\2#")
+	done
+	for TOOLCHAIN in "${TOOLCHAIN_PATH}" "${GLOBAL_TOOLCHAIN_PATH}"
+	do
+		if [ -n "${TOOLCHAIN}" ]
+		then
+			EXPRS+=(-e "s#${START}-[IL]$(strip_host_paths_regex "${TOOLCHAIN}")${TOKEN}${END}#\1\2#")
+		fi
+	done
+	EXPRS+=(-e "t token")
+	for TOOLCHAIN in "${TOOLCHAIN_PATH}" "${GLOBAL_TOOLCHAIN_PATH}"
+	do
+		if [ -n "${TOOLCHAIN}" ]
+		then
+			EXPRS+=(-e "s#$(strip_host_paths_regex "${TOOLCHAIN}")(/[^/[:space:]'\";)]+)*/bin/##g")
+		fi
+	done
+	for ROOT in $(printf '%s\n' "${SYSROOT}" "${BIN_PATH}" | LC_ALL=C sort -u)
+	do
+		EXPRS+=(-e "s#$(strip_host_paths_regex "${ROOT}")(/|${END})#${ROOT_TO}\1#g")
+	done
+	run_cmd "sed -E -i $(printf '%q ' "${EXPRS[@]}" "${@}")"
 }
 
 function recipe_path () {

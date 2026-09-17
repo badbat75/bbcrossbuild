@@ -131,7 +131,6 @@ function create_image() {
 	then
 		echo "Active mounts:" "${MOUNTED_IMAGES[@]}"
 	fi
-	return "${UNMOUNT_FAILED}"
 }
 
 function mount_tag () {
@@ -379,6 +378,8 @@ function unmount_tag () {
 	then
 		echo "Active mounts:" "${MOUNTED_IMAGES[@]}"
 	fi
+	### Not zero when a mount is still busy after UNMOUNT_MAX_TRIES (the error handler ignores it)
+	return "${UNMOUNT_FAILED}"
 }
 
 function mount_from () {
