@@ -1027,8 +1027,11 @@ function lto_object_files () {
 	### lto_object_files <dir>: the objects and static libraries under <dir> that hold LTO bytecode, one
 	### "<kind> <path>" per line in byte order, <kind> fat when they also hold machine code, slim when
 	### they hold nothing else. gcc puts the bytecode in .gnu.lto_* sections and marks a slim object
-	### with the __gnu_lto_slim symbol; clang puts it in the .llvm.lto section of a fat object and
-	### writes a slim one as a bitcode file, which the readelf of the target does not take for ELF
+	### with the __gnu_lto_slim symbol, which readelf confirms in the symbol table: a file that names it,
+	### or names a section of LTO, in its own data is not one (the sources of a compiler do). nm answers
+	### for the bytecode of an archive of gcc-ar, through the LTO plugin, and never shows the marker.
+	### clang puts the bytecode in the .llvm.lto section of a fat object and writes a slim one as a
+	### bitcode file, which the readelf of the target does not take for ELF
 	local DIR FILE
 	DIR=${1%/}
 	if [ ! -d "${DIR}" ]
@@ -1038,7 +1041,8 @@ function lto_object_files () {
 	find "${DIR}" -type f \( -name '*.a' -o -name '*.o' \) -print0 | LC_ALL=C sort -z |
 	while IFS= read -r -d '' FILE
 	do
-		if LC_ALL=C grep -q -a -F -e __gnu_lto_slim -- "${FILE}" || \
+		if { LC_ALL=C grep -q -a -F -e __gnu_lto_slim -- "${FILE}" && \
+			"${HARCH}-readelf" --wide --syms -- "${FILE}" 2>/dev/null | grep -q -E ' __gnu_lto_slim$'; } || \
 			{ "${HARCH}-readelf" -h -- "${FILE}" 2>&1 > /dev/null | grep -q -F 'LLVM bitcode'; }
 		then
 			echo "slim ${FILE}"
@@ -2136,10 +2140,18 @@ function pythonbuild () {
 		;;
 		*)
 			run_cmd "cross-python -m site"
-			run_cmd "PIP_CACHE_DIR=${DOWNLOAD_PATH}/pip cross-python -m pip ${VERBOSE} install --compile --force-reinstall --no-deps ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${INSTALL_PREFIX} ${PIPPKG}"
+			### --no-compile: pip byte-compiles where it installs, so the pyc would name the staging
+			### directory of the host in co_filename (and in every traceback of the image). compileall
+			### writes the path the image has (-s strips the staging directory, -p makes it absolute);
+			### a module that does not compile is left to the target, as pip leaves it
+			run_cmd "PIP_CACHE_DIR=${DOWNLOAD_PATH}/pip cross-python -m pip ${VERBOSE} install --no-compile --force-reinstall --no-deps ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${INSTALL_PREFIX} ${PIPPKG}"
 			if [ "${PYTHON_PKGDIR}" == dist-packages ]
 			then
 				run_cmd "mv \"${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/site-packages\" \"${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/dist-packages\""
+			fi
+			if [ -d "${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}" ]
+			then
+				run_cmd "cross-python -m compileall -q -s \"${PKG_PKGPATH}\" -p / \"${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}\" || true"
 			fi
 		;;
 	esac
@@ -2595,9 +2607,14 @@ function build () {(
 			### The image should name no directory of the build host. The LTO bytecode always does: the
 			### static libraries keep their machine code, and bytecode without it stops the build
 			strip_lto_objects "${PKG_PKGPATH}"
-			SLIM_LTO_FILES=$( lto_object_files "${PKG_PKGPATH}" | while read -r _ LTO_FILE
+			SLIM_LTO_FILES=$( lto_object_files "${PKG_PKGPATH}" | while read -r LTO_KIND LTO_FILE
 				do
-					echo "${LTO_FILE#"${PKG_PKGPATH}/"}"
+					### only the slim ones: strip_lto_objects has just taken the bytecode out of the fat
+					### ones, which stay listed when they name a section of their own in their data
+					if [ "${LTO_KIND}" == slim ]
+					then
+						echo "${LTO_FILE#"${PKG_PKGPATH}/"}"
+					fi
 				done )
 			if [ -n "${SLIM_LTO_FILES}" ]
 			then

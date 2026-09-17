@@ -149,25 +149,39 @@ setup () {
 @test "lto_object_files tells the fat LTO objects from the slim ones and skips the others" {
 	local STAGE="${BATS_TEST_TMPDIR}/stage"
 	HARCH=bats-none-linux-gnu
+	### The marker of a slim object is a symbol of its table, which readelf reads. A bitcode file of
+	### clang is what the readelf of the target does not read as ELF
+	# shellcheck disable=SC2329
+	function bats-none-linux-gnu-readelf () {
+		case ${1} in
+			--wide)
+				if [[ ${*} == *slim* ]]
+				then
+					echo "     5: 0000000000000001     1 OBJECT  GLOBAL DEFAULT  COM __gnu_lto_slim"
+				fi
+				;;
+			-h)
+				if [[ ${*} == *bitcode.o ]]
+				then
+					echo "readelf: Error: This is a LLVM bitcode file - try using llvm-bcanalyzer" >&2
+					return 1
+				fi
+				;;
+		esac
+	}
 	put "${STAGE}/usr/lib/libgccslim.a"
 	printf '!<arch>\n.gnu.lto_.decls.1\0__gnu_lto_slim\0' > "${STAGE}/usr/lib/libgccslim.a"
 	printf '!<arch>\n.text\0.gnu.lto_.decls.1\0' > "${STAGE}/usr/lib/libgccfat.a"
 	printf '\177ELF.text\0.llvm.lto\0' > "${STAGE}/usr/lib/clangfat.o"
 	printf '\177ELF.text\0' > "${STAGE}/usr/lib/plain.o"
 	printf '.gnu.lto_\0' > "${STAGE}/usr/lib/notes.txt"
+	### A compiler names the marker and the sections of LTO in its own data: it holds neither
+	printf '!<arch>\n.text\0.llvm.lto\0__gnu_lto_slim\0' > "${STAGE}/usr/lib/libltotool.a"
 	run lto_object_files "${STAGE}/"
 	assert_output_lines "fat ${STAGE}/usr/lib/clangfat.o" \
 		"fat ${STAGE}/usr/lib/libgccfat.a" \
-		"slim ${STAGE}/usr/lib/libgccslim.a"
-	### A bitcode file of clang is what the readelf of the target does not read as ELF
-	# shellcheck disable=SC2329
-	function bats-none-linux-gnu-readelf () {
-		if [[ ${*} == *bitcode.o ]]
-		then
-			echo "readelf: Error: This is a LLVM bitcode file - try using llvm-bcanalyzer" >&2
-			return 1
-		fi
-	}
+		"slim ${STAGE}/usr/lib/libgccslim.a" \
+		"fat ${STAGE}/usr/lib/libltotool.a"
 	printf 'BC\300\336' > "${STAGE}/usr/lib/bitcode.o"
 	run lto_object_files "${STAGE}"
 	assert_equal "$(head -n 1 <<< "${output}")" "slim ${STAGE}/usr/lib/bitcode.o"
@@ -182,6 +196,13 @@ setup () {
 	function bats-none-linux-gnu-objcopy () { echo "objcopy ${*}" >> "${CALLS}"; }
 	# shellcheck disable=SC2329
 	function bats-none-linux-gnu-ranlib () { echo "ranlib ${*}" >> "${CALLS}"; }
+	# shellcheck disable=SC2329
+	function bats-none-linux-gnu-readelf () {
+		if [[ ${1} == --wide && ${*} == *slim* ]]
+		then
+			echo "     5: 0000000000000001     1 OBJECT  GLOBAL DEFAULT  COM __gnu_lto_slim"
+		fi
+	}
 	function stage () {
 		rm -rf "${STAGE}" "${CALLS}"
 		put "${STAGE}/usr/lib/libz.so.1"

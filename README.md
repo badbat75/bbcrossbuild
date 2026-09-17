@@ -246,6 +246,7 @@ BBCrossBuild provides various functions for use in project files. These are orga
   lto_object_files <dir>
   ```
   - `fat`: machine code and bytecode (gcc `.gnu.lto_*` sections, clang `.llvm.lto`); `slim`: bytecode only (gcc `__gnu_lto_slim`, a clang bitcode file, which `${HARCH}-readelf` does not read as ELF)
+  - The slim marker of gcc is a symbol, confirmed with `${HARCH}-nm`: a file that names it, or names a section of LTO, in its own data is not one (the sources of a compiler do, `libLLVMipo.a`)
 
 - **strip_lto_objects**: Keep only the machine code of the LTO objects of the staging directory of a target build
   ```
@@ -610,7 +611,7 @@ Available build processes:
 - `mesonninja`: Downloads, creates source directory and runs a standard meson/ninja build process
 - `cargobuild`: Downloads, creates source directory and runs a standard Rust cargo build process
 - `simplemake`: Downloads, creates source directory, copies to build directory and runs a standard make process
-- `pythonbuild`: Downloads, creates source directory and runs a standard python module build
+- `pythonbuild`: Downloads, creates source directory and runs a standard python module build. A target build installs with `--no-compile` and byte-compiles afterwards (`compileall -s <staging dir> -p /`), so the `pyc` name the path of the image and not the staging directory of the host
 - `kernelbuild`: Downloads, creates source directory and runs a standard kernel build process using platform configuration
 - `kernelmodbuild`: Builds an out of tree kernel module against the kernel built by `kernelbuild`
 - `custom`: Downloads, creates source directory and runs the `build.sh` script of the package
