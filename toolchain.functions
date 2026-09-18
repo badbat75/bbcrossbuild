@@ -1573,7 +1573,7 @@ function setup_python () {
 			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}\""
 		fi
 		run_cmd "mkdir -p \"${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}\""
-		pushd "${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}"
+		pushd "${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}" > /dev/null
 		case ${TOOLCHAIN} in
 			gnu)
 				local HOST_AR="${AR_FOR_BUILD}"
@@ -1609,7 +1609,7 @@ function setup_python () {
 		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/make\""
 		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/make\" install"
 		run_cmd "${PYTHON_FOR_BUILD} \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py\""
-		popd
+		popd > /dev/null
 		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}\""
 		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip\" -v install --upgrade setuptools pip jinja2 docutils"
 	}
@@ -1639,13 +1639,13 @@ function setup_python () {
 			### metadata (PEP 639 licence strings need setuptools >= 77)
 			run_cmd "build-python -m pip install --upgrade cython setuptools wheel"
 			run_cmd "mkdir -p \"${TOOLCHAIN_BLDPATH}/build_python_crossenv\""
-			pushd "${TOOLCHAIN_BLDPATH}/build_python_crossenv"
+			pushd "${TOOLCHAIN_BLDPATH}/build_python_crossenv" > /dev/null
 			TOOLCHAIN=gnu PKG_BLDPATH=${PWD} create_environment_source
 			#shellcheck source=/dev/null
 			source environment.source
 			run_cmd "cross-pip -v install --upgrade setuptools cython Mako"
 			run_cmd "build-pip -v install --upgrade setuptools jinja2"
-			popd
+			popd > /dev/null
 			run_cmd "rm -rf \"${TOOLCHAIN_BLDPATH}/build_python_crossenv\""
 			run_cmd "sed -i '1 a PYTHONPATH=\"\${SYSROOT}/usr/lib/python${PYTHONBIN_VER}/site-packages\"' ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/cross-python3"
 			set +e
@@ -1695,12 +1695,20 @@ function setup_python () {
 
 	if [ ! -x "${PYTHON_FOR_BUILD}" ] || [ ! -x "${PIP_FOR_BUILD}" ]
 	then
+		### run_cmd writes its lines already prefixed: the log is the stdout of the steps, not a
+		### log_buffer, which would prefix them twice and hide the log from on_error. The log is
+		### emptied first and then always opened with >>: the log_buffer writers reopen it in
+		### append mode, and a line written straight to a descriptor opened with > would land at
+		### its offset, over the head of the log. build_python exports the compiler of the host:
+		### a subshell keeps it out of the builds that follow
+		local PYTHON_LOG=${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log
+		true > "${PYTHON_LOG}"
 		echo -n "downloading... "
-		download_pyton | log_buffer > "${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log" 2>&1
+		download_pyton >> "${PYTHON_LOG}" 2>&1
 		echo -n "building... "
-		build_python | log_buffer >> "${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log" 2>&1
+		( build_python ) >> "${PYTHON_LOG}" 2>&1
 		echo "done."
-		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}\""
+		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}\"" >> "${PYTHON_LOG}"
 	else
 		echo "already there."
 	fi
@@ -1731,7 +1739,9 @@ function setup_python () {
 		echo -n "Creating virtual cross environment... "
 		if [ ! -d "${TOOLCHAIN_PATH}/venv-${HARCH}" ]
 		then
-			build_python_crossenv > "${LOG_PATH}/toolchain_python-crossenv.log" 2>&1
+			### Emptied, then opened with >> like the log of the build python above
+			true > "${LOG_PATH}/toolchain_python-crossenv.log"
+			build_python_crossenv >> "${LOG_PATH}/toolchain_python-crossenv.log" 2>&1
 			echo "done."
 			echo
 		else
