@@ -47,10 +47,12 @@ Find your package at: `.bbxb/<project>/<platform>/<project>.tar.xz`
 The project includes Docker support for containerized builds:
 
 ```bash
-# Build the container
+# Build the container (with `base` it also exports the build cache to
+# /var/cache/bbcrossbuild-docker, which the plain build imports back)
 $ utilities/container/build.sh
 
-# Run the container
+# Run the container (extra arguments are docker run options, e.g.
+# -e PROJECT_NAME=<project> -e TARGET_PLATFORM=<platform> -e TOOLCHAIN=gnu)
 $ utilities/container/run.sh
 ```
 

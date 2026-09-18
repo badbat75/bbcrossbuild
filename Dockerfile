@@ -1,5 +1,5 @@
 # Base image with all dependencies pre-installed
-FROM amd64/fedora:latest as base
+FROM amd64/fedora:latest AS base
 
 # Install all dependencies in a single layer
 RUN dnf -y upgrade && \
@@ -15,7 +15,7 @@ RUN dnf -y upgrade && \
     tcl-devel tk-devel glibc-devel glibc-gconv-extra
 
 # Development image that uses the base
-FROM base as dev
+FROM base AS dev
 
 # Accept build arguments with defaults matching original values
 ARG DATA_PATH=/mnt/bbcrossbuild/datadir
@@ -32,4 +32,4 @@ WORKDIR /mnt/bbcrossbuild
 # Add source code last to leverage Docker layer caching
 ADD . .
 
-CMD ./bbxb "${PROJECT_NAME}" "${TARGET_PLATFORM}"
+CMD ["bash", "-c", "exec ./bbxb \"${PROJECT_NAME}\" \"${TARGET_PLATFORM}\""]
