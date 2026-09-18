@@ -17,7 +17,7 @@ function setbuildenv () {
 	CC_HOST_PATH_CONFIG=0
 	case ${TARGET_ENV} in
 		native)
-			unset QEMU_LD_PREFIX COMMON_CPPFLAGS SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH
+			unset QEMU_LD_PREFIX COMMON_CPPFLAGS SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH PLATFORM_LDFLAGS
 			PLATFORM_CFLAGS="-march=native"
 			PLATFORM_RUSTFLAGS="-C target-cpu=native"
 			COMMON_CFLAGS="-I${GLOBAL_TOOLCHAIN_PATH}/include"
@@ -32,7 +32,7 @@ function setbuildenv () {
 			COMMON_PKG_CONFIG_LIBDIR+=":${GLOBAL_TOOLCHAIN_PATH}/share/pkgconfig"
 		;;
 		cross)
-			unset QEMU_LD_PREFIX COMMON_CPPFLAGS SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH
+			unset QEMU_LD_PREFIX COMMON_CPPFLAGS SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH PLATFORM_LDFLAGS
 			PLATFORM_CFLAGS="-march=native"
 			PLATFORM_RUSTFLAGS="-C target-cpu=native"
 			COMMON_CFLAGS="-I${GLOBAL_TOOLCHAIN_PATH}/include"
@@ -593,7 +593,8 @@ function settcenv () {
 		OPTCOMP_FLAGS+="-g"
 	fi
 
-	for param in ${TOOLCHAIN_EXTRA_C_CMD} ${SYSROOT_FLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS} ${TOOLCHAIN_LINKERFLAGS} ${PKG_LDFLAGS}
+	# shellcheck disable=SC2153
+	for param in ${TOOLCHAIN_EXTRA_C_CMD} ${SYSROOT_FLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS} ${PLATFORM_LDFLAGS} ${TOOLCHAIN_LINKERFLAGS} ${PKG_LDFLAGS}
 	do
 		TOOLCHAIN_RUSTFLAGS+="-C link-arg=${param} "
 	done
@@ -671,6 +672,7 @@ function create_environment_source () {
 		PKG_PKGPATH=${PKG_PKGPATH}
 		###
 		PLATFORM_CFLAGS='${PLATFORM_CFLAGS}'
+		PLATFORM_LDFLAGS='${PLATFORM_LDFLAGS}'
 		OPTCOMP_FLAGS='${OPTCOMP_FLAGS}'
 		OPTLINK_FLAGS='${OPTLINK_FLAGS}'
 		#################################################################################
@@ -743,7 +745,7 @@ function create_environment_source () {
 	cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 		export RUSTFLAGS='${TOOLCHAIN_RUSTFLAGS}'
 		export LINKER_EXE='${TOOLCHAIN_LINKER_EXE}'
-		export LDFLAGS='${TOOLCHAIN_LINKERFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}'
+		export LDFLAGS='${TOOLCHAIN_LINKERFLAGS} ${COMMON_LDFLAGS} ${PLATFORM_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}'
 
 		export AR='${TOOLCHAIN_AR}'
 		export AS='${TOOLCHAIN_AS}'
@@ -831,7 +833,7 @@ function create_recipe_source () {
 	RECIPE_SOURCE="${PKG_BLDPATH}/recipe.source"
 	RESERVED=" $( sed -n 's/^[[:space:]]*export[[:space:]]\{1,\}\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' \
 		"${PKG_BLDPATH}/environment.source" 2>/dev/null | tr '\n' ' ' ) \
-		DISTOS_PATH BIN_PATH PKG_SRCPATH PKG_BLDPATH PKG_PKGPATH PLATFORM_CFLAGS OPTCOMP_FLAGS OPTLINK_FLAGS "
+		DISTOS_PATH BIN_PATH PKG_SRCPATH PKG_BLDPATH PKG_PKGPATH PLATFORM_CFLAGS PLATFORM_LDFLAGS OPTCOMP_FLAGS OPTLINK_FLAGS "
 	{
 		echo "#################################################################################"
 		echo "###### ${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}"

@@ -142,6 +142,10 @@ function set_gnu_buildenv () {
 	GCCURL=https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz
 
 	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
+	### What the links of the target need from the platform (an erratum the linker works around, as
+	### --fix-cortex-a53-843419): LDFLAGS of every target build, and a -C link-arg of rustc
+	# shellcheck disable=SC2034
+	PLATFORM_LDFLAGS="${HMLDPARAMS}"
 	# shellcheck disable=SC2034
 	PLATFORM_RUSTFLAGS="${HMCPU:+-C target-cpu=${HMCPU}}${HMARCH_RUST:+ -C target-feature=${HMARCH_RUST} }"
 }
