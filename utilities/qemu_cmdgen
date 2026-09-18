@@ -182,7 +182,29 @@ done
 source "${STATUS_PATH}/system_config"
 SPECS_KERNEL="-kernel \"${SYSTEM_PREFIX}${BIN_PATH}/boot/${KERNEL_NAME:-vmlinuz-${KERNEL_RELEASE}}\""
 SPECS_KERNEL+=" -initrd \"${SYSTEM_PREFIX}${BIN_PATH}/boot/${INITRAMFS_NAME:-initramfs-${KERNEL_RELEASE}.img}\""
-SPECS_KERNEL+=" ${QEMU_DTB:+"-dtb \"${SYSTEM_PREFIX}${BIN_PATH}/boot/${QEMU_DTB}\""}"
+### QEMU_DTBO lists the overlays of the device tree that the firmware of the board would apply
+### (dtoverlay= of config.txt) and QEMU does not: fdtoverlay of lfs/dtc:native merges them into
+### <project>.dtb next to the image
+if [ -n "${QEMU_DTB}" ]
+then
+	QEMU_DTB_PATH=${BIN_PATH}/boot/${QEMU_DTB}
+	if [ -n "${QEMU_DTBO}" ]
+	then
+		DTB_OVERLAYS=()
+		for DTBO in ${QEMU_DTBO}
+		do
+			DTB_OVERLAYS+=( "${BIN_PATH}/boot/overlays/${DTBO}.dtbo" )
+		done
+		QEMU_DTB_PATH=${DATA_PATH}/${PROJECT_NAME}/${PLATFORM_NAME}/${PROJECT_NAME}.dtb
+		if ! "${GLOBAL_TOOLCHAIN_PATH}/bin/fdtoverlay" -i "${BIN_PATH}/boot/${QEMU_DTB}" -o "${QEMU_DTB_PATH}" "${DTB_OVERLAYS[@]}"
+		then
+			ERROR_STRING="fdtoverlay could not apply ${QEMU_DTBO} to ${QEMU_DTB} (it comes from build lfs/dtc:native)"
+			ERROR_CODE=5
+			program_exit
+		fi
+	fi
+	SPECS_KERNEL+=" -dtb \"${SYSTEM_PREFIX}${QEMU_DTB_PATH}\""
+fi
 KERN_APPEND="-append \"${KERN_CONSOLE}${KERN_ROOT} rootwait cgroup_enable=memory systemd.gpt_auto=no ${QEMU_KERNCONFIG}\""
 
 ### KERNEL_NAME of a platform names the kernel through ${KERNEL_VER}, which the script expands when it

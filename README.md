@@ -834,6 +834,7 @@ QEMU_STORAGE=sd-card
 QEMU_NETWORK=usb-net
 QEMU_CONSOLE=ttyAMA0
 QEMU_DTB=bcm2710-rpi-3-b.dtb
+QEMU_DTBO=disable-bt # Overlays qemu_cmdgen applies to QEMU_DTB (fdtoverlay of lfs/dtc:native), as dtoverlay= on the board
 ```
 
 ## Utilities
