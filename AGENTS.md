@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to coding agents (Claude Code, opencode, ...) when working with code in this repository.
 
 ## What this is
 
@@ -39,8 +39,14 @@ EOF
 # With --keep_builddir the build dir keeps recipe.source, environment.source, runprebuild.sh, runpostbuild.sh: re-runnable by hand
 
 # Containers (image name derives from the git branch: development -> bbcrossbuild-devel, master -> bbcrossbuild-latest)
-utilities/container/build.sh [base]
-utilities/container/run.sh            # privileged, mounts HOST_DATA_PATH at /mnt/bbcrossbuild/datadir
+utilities/container/build.sh [base]   # base also exports the build cache to /var/cache/bbcrossbuild-docker
+                                      # (group docker, override with BBBXB_CACHE_DIR): the plain build imports
+                                      # it back, so the dnf layer survives the "docker system prune" that closes
+                                      # every build.sh run
+utilities/container/run.sh            # privileged, mounts HOST_DATA_PATH at /mnt/bbcrossbuild/datadir; extra
+                                      # arguments are docker run options: the image CMD is
+                                      # ./bbxb ${PROJECT_NAME} ${TARGET_PLATFORM}, overridden with
+                                      # -e PROJECT_NAME=... -e TARGET_PLATFORM=... -e TOOLCHAIN=...
 
 # Regenerate the branch-tracking patches for gcc/binutils/glibc/gdb under packages/lfs/<pkg>/variants/version/<ver>/patches/
 utilities/update_patches gcc 14.2.0
