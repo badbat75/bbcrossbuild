@@ -487,7 +487,7 @@ function inject_into_mount_tag () {
 
 	OPTS="--remove_devfiles" OPTS_WITH_VALUE="" param2value "${@}"
 
-	local ROOT_DIR OBJECT TARGET_DIR TARGET_OWNER TARGET_PATH SOURCE_PATH TARGET_FILE REMOVE_DEVFILES
+	local ROOT_DIR OBJECT TARGET_DIR TARGET_OWNER TARGET_PATH SOURCE_PATH TARGET_FILE REMOVE_DEVFILES DEV_BIND
 
 	ROOT_DIR=${_param_1}
 	OBJECT=${_param_2}
@@ -524,10 +524,24 @@ function inject_into_mount_tag () {
 			run_cmd -s "mkdir -p ${TARGET_PATH}"
 			run_cmd -s "chown -h ${TARGET_OWNER} ${TARGET_PATH}"
 		fi
+		### mount_tag binds the /dev of the host on the /dev of the image for the chroot, and rsync
+		### would write the device files of the sysroot (dev/console and dev/null of create-base-fs)
+		### into the /dev of the host: the bind is lifted while they are copied into the image
+		DEV_BIND=${PLATFORM_PATH}/${ROOT_DIR}/dev
+		if mountpoint -q "${DEV_BIND}"
+		then
+			run_cmd -s "umount \"${DEV_BIND}\""
+		else
+			DEV_BIND=
+		fi
 		echo -n "Syncing ${SOURCE_PATH} to ${TARGET_PATH}... " | log_buffer info
 		pushd "${SOURCE_PATH}" || return "${ERROR_PATH_NOT_FOUND}"
 		run_cmd -s "rsync -K -a ${RSYNC_EXCLUDE} --devices --specials --no-owner --no-group ${TARGET_FILE} \"${TARGET_PATH}\""
 		popd > /dev/null || return "${ERROR_PATH_NOT_FOUND}"
+		if [ -n "${DEV_BIND}" ]
+		then
+			run_cmd -s "mount --bind /dev \"${DEV_BIND}\""
+		fi
 		echo -e "Done.\n" | log_buffer info
 	} >> "${LOG_PATH}/images_${ROOT_DIR}.log"
 	echo -n "Setting ownership... "
