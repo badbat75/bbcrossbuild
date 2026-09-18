@@ -185,6 +185,13 @@ SPECS_KERNEL+=" -initrd \"${SYSTEM_PREFIX}${BIN_PATH}/boot/${INITRAMFS_NAME:-ini
 SPECS_KERNEL+=" ${QEMU_DTB:+"-dtb \"${SYSTEM_PREFIX}${BIN_PATH}/boot/${QEMU_DTB}\""}"
 KERN_APPEND="-append \"${KERN_CONSOLE}${KERN_ROOT} rootwait cgroup_enable=memory systemd.gpt_auto=no ${QEMU_KERNCONFIG}\""
 
+### KERNEL_NAME of a platform names the kernel through ${KERNEL_VER}, which the script expands when it
+### runs: the batch sets the same value a few lines above the command, where cmd reads it as %KERNEL_VER%
+if [ "${BATCH_TYPE}" == "win" ]
+then
+	SPECS_KERNEL=${SPECS_KERNEL//\$\{KERNEL_VER\}/%KERNEL_VER%}
+fi
+
 CMDLINE="\"${QEMU_EXE_PREFIX}${QEMU_EXE}\""
 CMDLINE+=" ${SPECS_HW}"
 CMDLINE+=" ${SPECS_STORAGE}"
