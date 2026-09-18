@@ -458,7 +458,9 @@ function run_on_root_dir () {
 
 function set_ownership () {
 	### set_ownership <owner:group> <target_directory> <copy_ownership_from_directory> <file>
-	if [ -e "${2}/${3}" ]
+	### A link is owned as a link (chown -h): an absolute one names a file of the image, which -e looks
+	### for on the host and reported as missing
+	if [ -e "${2}/${3}" ] || [ -L "${2}/${3}" ]
 	then
 		chown -h "${1}" "${2}/${3}"	
 		# Check SUID from source path to change it on destination path
