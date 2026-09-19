@@ -851,6 +851,7 @@ function create_recipe_source () {
 				PROMPT_COMMAND|LS_COLORS|MAIL*|EDITOR|VISUAL|TMPDIR|COLUMNS|LINES) continue ;;
 				SPACES|NUMSPACES|LOG_FILE|STATUS_FILE*|STATUS_CHK_FILE|PKG_CHKSUM|RECIPE_SCRIPT|RECIPE_SOURCE) continue ;;
 				ERROR_LOG|ERROR_MSG|BBXB_CONSOLE_FD) continue ;;
+				ALREADY_BUILT|BUILD_CHECKED_FILE|BUILD_CHECKED_KEY|BUILD_CHECKED_NAME|BUILD_DEPS_QUIET|BUILD_REQUIRED_BY) continue ;;
 			esac
 			case ${RESERVED} in *" ${NAME} "*) continue ;; esac
 			DEF=$( declare -p "${NAME}" 2>/dev/null ) || continue
@@ -1418,6 +1419,39 @@ function recipe_checksum () {
 			fi
 		done | md5sum | cut -d' ' -f1
 	)
+}
+
+function checked_package_key () {
+	### checked_package_key <group>/<name>[:<target>] [<status suffix>]: the key of a build in the
+	### list of the packages checked in this run (BUILD_CHECKED_FILE). The suffix is the one of the
+	### status file (.tmp for build --temporary).
+	local TARGET=
+	if [[ ${1} == *:* ]]
+	then
+		TARGET=${1#*:}
+		TARGET=${TARGET%%:*}
+	fi
+	echo "${1%%:*}:${TARGET}${2}"
+}
+
+function checked_package () {
+	### checked_package <key>: print the name of the package when build has built it, or found it
+	### built, earlier in this run; fail otherwise. bbxb sets BUILD_CHECKED_FILE, a file of its
+	### own for every run: without it every build call checks its package.
+	if [ -z "${BUILD_CHECKED_FILE}" ] || [ ! -f "${BUILD_CHECKED_FILE}" ]
+	then
+		return 1
+	fi
+	awk -F '\t' -v key="${1}" '$1 == key { print $2; found = 1; exit } END { exit ! found }' "${BUILD_CHECKED_FILE}"
+}
+
+function add_checked_package () {
+	### add_checked_package <key> <name>: record in BUILD_CHECKED_FILE that the package is built
+	if [ -n "${BUILD_CHECKED_FILE}" ]
+	then
+		printf '%s\t%s\n' "${1}" "${2}" >> "${BUILD_CHECKED_FILE}"
+	fi
+	return 0
 }
 
 function preparesources () {
@@ -2344,6 +2378,9 @@ function build () {(
 	# Split dependency in Package name and its Target separated by ':'
 
 	local \
+		ALREADY_BUILT \
+		BUILD_CHECKED_KEY \
+		BUILD_CHECKED_NAME \
 		FORCE \
 		GCC_CHECK \
 		INSTALL_PREFIX \
@@ -2396,12 +2433,24 @@ function build () {(
 	then
 		NUMSPACES=0
 	fi
+	SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
 
 	if [ ! -f "$(recipe_file "${PKG_FILE}")" ]
 	then
 		trow_error "${ERROR_FILE_NOT_FOUND}" "Package ${PKG_FILE} does not exists."
 	fi
-	
+
+	### A library is a dependency of many packages, and every package walks its dependencies: what
+	### this run has already built or found built is not checked again
+	BUILD_CHECKED_KEY=$( checked_package_key "${PKG_FILE}${PKG_TARGET:+:${PKG_TARGET}}" "${TEMPORARY_STATUS}" )
+	if [ "${FORCE}" -eq 0 ] && BUILD_CHECKED_NAME=$( checked_package "${BUILD_CHECKED_KEY}" )
+	then
+		if [ "${BUILD_DEPS_QUIET:-0}" -eq 0 ]
+		then
+			echo -e "${SPACES}Package ${BUILD_CHECKED_NAME} already built.\n"
+		fi
+		return 0
+	fi
 
 	PKG_NAME=$(basename "${PKG_FILE}")
 	PKG_RECIPEPATH=$(recipe_path "${PKG_FILE}")
@@ -2431,11 +2480,43 @@ function build () {(
 	STATUS_FILE_DEFAULT_TARGET=${STATUS_PATH}/${PKG_FULLNAME}
 	LOG_FILE=${LOG_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}.log
 
-	SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
-	echo -n "${SPACES}Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}"
+	function build_deps () {
+		### build_deps: build the dependencies (PKG_DEPS) that are not built or whose recipe changed.
+		### A native or cross package passes its target on to them. With BUILD_DEPS_QUIET=1 the
+		### console only gets the packages that are built.
+		local dep
+		### Read by a dependency that has to be built, when it prints its first line
+		BUILD_REQUIRED_BY="${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}"
+		for dep in ${PKG_DEPS}
+		do
+			if [ ! -f "$(recipe_file "${dep/:*/}")" ]
+			then
+				trow_error "${ERROR_FILE_NOT_FOUND}" "Dependency package ${dep/:*/} does not exists."
+			fi
+			NUMSPACES=$((NUMSPACES+1))
+			SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
+			if [ "${BUILD_DEPS_QUIET:-0}" -eq 0 ]
+			then
+				echo "${SPACES}Requires ${dep}"
+			fi
+			# shellcheck disable=SC2046
+			build $( if [ "${NOSAVESTATUS}" -eq 1 ] || [ "${TEMPORARY_STATUS}" == .tmp ]; then echo "--temporary"; fi ) \
+				$( if [ "${GCC_CHECK}" -eq 1 ]; then echo "--no_gcc_check"; fi ) \
+				"${dep}$( if [ "${PKG_TARGET_ENV}" == native ] || [ "${PKG_TARGET_ENV}" == cross ]; then echo ":${PKG_TARGET_ENV}"; fi )"
+			NUMSPACES=$((NUMSPACES-1))
+			SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
+		done
+		return 0
+	}
+
+	if [ "${BUILD_DEPS_QUIET:-0}" -eq 0 ]
+	then
+		echo -n "${SPACES}Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}"
+	fi
 
 	### Status is the checksum of the whole recipe directory (recipe, scripts, files/, patches/)
 	PKG_CHKSUM="$( recipe_checksum "${PKG_RECIPEPATH}" )"
+	ALREADY_BUILT=0
 	if [ -z "${PKG_CHECK}" ]
 	then
 		if [ "${PKG_TARGET}" == "native" ]
@@ -2454,38 +2535,42 @@ function build () {(
 		then
 			if [ "${PKG_CHKSUM}" == "$( cat "${STATUS_CHK_FILE}" )" ]
 			then
-				echo -e " already built.\n"
-				return 0
+				ALREADY_BUILT=1
 			else
 				rm -f "${STATUS_FILE}"
 			fi
 		fi
-	else
-		#echo -e "Check command: ${PKG_CHECK}"
-		if eval "${PKG_CHECK}" > /dev/null 2>&1
+	elif eval "${PKG_CHECK}" > /dev/null 2>&1
+	then
+		ALREADY_BUILT=1
+	fi
+	if [ "${ALREADY_BUILT}" -eq 1 ]
+	then
+		if [ "${BUILD_DEPS_QUIET:-0}" -eq 0 ]
 		then
 			echo -e " already built.\n"
-			return 0
 		fi
-	fi
-	echo
-	for dep in ${PKG_DEPS}
-	do
-		if [ ! -f "$(recipe_file "${dep/:*/}")" ]
+		add_checked_package "${BUILD_CHECKED_KEY}" "${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}"
+		### The status is the checksum of this recipe alone: the dependencies are walked all the same,
+		### so that a dependency whose recipe changed is rebuilt. The packages already built on top
+		### of it are not: that is build --force. A probe (PKG_CHECK) looks at what is installed,
+		### which the host may provide: the dependencies of its recipe are left alone.
+		if [ -z "${PKG_CHECK}" ]
 		then
-			trow_error "${ERROR_FILE_NOT_FOUND}" "Dependency package ${dep/:*/} does not exists."
+			BUILD_DEPS_QUIET=1
+			build_deps
 		fi
-		NUMSPACES=$((NUMSPACES+1))
-		SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
-		echo "${SPACES}Requires ${dep}"
-		#echo "Called from ${PKG_FILE}"
-		# shellcheck disable=SC2046
-		build $( if [ "${NOSAVESTATUS}" -eq 1 ] || [ "${TEMPORARY_STATUS}" == .tmp ]; then echo "--temporary"; fi ) \
-			$( if [ "${GCC_CHECK}" -eq 1 ]; then echo "--no_gcc_check"; fi ) \
-			"${dep}$( if [ "${PKG_TARGET_ENV}" == native ] || [ "${PKG_TARGET_ENV}" == cross ]; then echo ":${PKG_TARGET_ENV}"; fi )"
-		NUMSPACES=$((NUMSPACES-1))
-		SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
-	done
+		return 0
+	fi
+	if [ "${BUILD_DEPS_QUIET:-0}" -eq 1 ]
+	then
+		### Reached by walking the dependencies of a package already built: nothing printed so far
+		echo "${SPACES}Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}, required by ${BUILD_REQUIRED_BY}"
+		BUILD_DEPS_QUIET=0
+	else
+		echo
+	fi
+	build_deps
 
 	truncate -s0 "${LOG_FILE}"
 	
@@ -2683,6 +2768,7 @@ function build () {(
 	if [ "${NOSAVESTATUS}" -eq 0 ]
 	then
 		run_cmd "echo \"${PKG_CHKSUM}\" > \"${STATUS_FILE}\"" >> "${LOG_FILE}"
+		add_checked_package "${BUILD_CHECKED_KEY}" "${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}"
 	else
 		run_cmd "rm -f \"${STATUS_PATH}/*.tmp\"" >> "${LOG_FILE}"
 	fi

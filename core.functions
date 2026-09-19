@@ -567,6 +567,10 @@ on_exit () {
 		echo
 	} 2>&1 | error_console
 	rm -f "${TMPDIR:-/tmp}/bbxb_error.${$}"
+	if [ -n "${BUILD_CHECKED_FILE}" ]
+	then
+		rm -f "${BUILD_CHECKED_FILE}"
+	fi
 	return 0
 }
 

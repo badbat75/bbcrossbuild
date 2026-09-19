@@ -21,6 +21,10 @@ check_core_functions
 ### From here on the handlers of core.functions: one report from the innermost shell, the
 ### images unmounted by the main shell only (unmount_tag is looked up when the error happens)
 rm -f "${TMPDIR:-/tmp}/bbxb_error.${$}"
+### The packages build has built or found built in this run (build.functions): a restarted container
+### can give the new run the pid of the old one
+BUILD_CHECKED_FILE="${TMPDIR:-/tmp}/bbxb_checked.${$}"
+rm -f "${BUILD_CHECKED_FILE}"
 # shellcheck disable=SC2034
 exec {BBXB_CONSOLE_FD}>&2
 trap 'on_error ${?}' ERR
@@ -127,4 +131,4 @@ echo -e "Build completed!\n"
 
 set +E +o pipefail
 trap - ERR SIGINT
-rm -f "${TMPDIR:-/tmp}/bbxb_error.${$}"
+rm -f "${TMPDIR:-/tmp}/bbxb_error.${$}" "${BUILD_CHECKED_FILE}"

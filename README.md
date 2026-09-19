@@ -185,6 +185,7 @@ BBCrossBuild provides various functions for use in project files. These are orga
   - `--toolchain <toolchain>`: Specify toolchain (gnu, llvm)
   - `--with_extra_modules <modules>`: Add kernel modules
   - `<package_name>`: Name of package to build (can include target: package:target)
+  - The dependencies (`PKG_DEPS`) are walked for a package already built too: one whose recipe changed since its build is rebuilt, and the console shows it as `Package <name>, required by <package>`. The status is the checksum of the recipe alone, so the packages built on top of a rebuilt dependency are not rebuilt: that is `--force`. A package found by its probe (`PKG_CHECK`) leaves its dependencies alone, since the host may provide what the probe looks for. A package is checked once per `bbxb` run (the list of the checked ones is `/tmp/bbxb_checked.<pid>`), whatever the number of packages that depend on it
 
 - **setbuildenv**: Set up build environment
   ```
@@ -547,7 +548,7 @@ Tag or commit hash.
 `GIT_COMMIT="tags/v.1.5"`
 
 **PKG_DEPS:**  
-Define dependencies to build and install before building this.  
+Define dependencies to build and install before building this. They are checked on every run, also when this package is already built: a dependency whose recipe changed is rebuilt.  
 `PKG_DEPS="dir1/package1 dir1/package2 dir2/package3"`
 
 **PKG_SRCDIR:**  
@@ -563,7 +564,7 @@ Specify package version.
 `PKG_VER="1.0"`
 
 **PKG_CHECK:**  
-Command to check if package is already installed.  
+Command to check if package is already installed. It replaces the status file, and native builds need one. Try it on the installed program: a probe that never succeeds (a version option printing something else, a version with a `+build` suffix) rebuilds the package every time a package depending on it is checked.  
 `PKG_CHECK="command arg1 arg2"`
 
 #### Prebuild Process
