@@ -85,21 +85,32 @@ function create_sfx_package () {
 
 	OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
 
-	local PKG_OBJ
+	local PKG_OBJ PKG_POSTINST=0
 	# shellcheck disable=SC2154
 	PKG_OBJ="${_param_1}"
 
+	if [ -d "${PKG_OBJ}/postinst_scripts" ]
+	then
+		PKG_POSTINST=1
+	fi
 	if [ -d "${PKG_OBJ}" ]
 	then
 		run_cmd "tar cfp - --owner=0 --group=0 -C \"${PKG_OBJ}\" . | xz -T\"${NPROCS}\" - > \"${PKG_OBJ}.tar.xz\""
 	fi
-	
+
+	### The post install scripts of an image are run and removed by run_postinstall_scripts. The
+	### installer does the same when it installs on /, the running system: the scripts would stay
+	### in /postinst_scripts otherwise. In any other destination (a sysroot, a mounted image) they
+	### stay in <dest>/postinst_scripts for run_postinstall_scripts.
 	cat >"${PKG_OBJ}.sfx" <<-EOF
 		#!/usr/bin/env bash
 		set -e
 		DEV_FILES="--exclude=.${TARGET_INCLUDEDIR} --exclude=.${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/*.a --exclude=.${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/*.la --exclude=.${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/cmake --exclude=.${TARGET_LIBDIR}${TARGET_LIBSUFFIX}/pkgconfig"
 		CONF_FILES="--exclude=.${TARGET_SYSCONFDIR}"
 		DEST=
+		POSTINST=${PKG_POSTINST}
+		POSTINST_FILES=
+		POSTINST_STATUS=0
 
 		echo ""
 		echo "Self Extracting Installer"
@@ -118,6 +129,10 @@ function create_sfx_package () {
 					DEST=\${2}
 					shift
 					;;
+				--no-postinst)
+					POSTINST=0
+					POSTINST_FILES=--exclude=./postinst_scripts
+					;;
 				--test)
 					X=t
 					;;
@@ -132,6 +147,8 @@ function create_sfx_package () {
 					echo "--with-dev:		Extract also development files"
 					echo "--with-conf:		Extract also configuration files (overwrite)"
 					echo "--dest <dir>:		Specify destination directory (default:/)"
+					echo "			The post install scripts are run on /, kept in <dir>/postinst_scripts elsewhere"
+					echo "--no-postinst:		Skip the post install scripts"
 					echo "--test:			Does not extract, only test archive"
 					echo "-v:			Verbose output"
 					echo "-d:			Debug output"
@@ -143,9 +160,32 @@ function create_sfx_package () {
 		done
 
 		ARCHIVE=\`awk '/^__ARCHIVE_BELOW__/ {print NR + 1; exit 0; }' \$0\`
-		tail -n+\$ARCHIVE \$0 | tar \${X:-x}\${V}Jf - --keep-directory-symlink \${DEV_FILES} \${CONF_FILES} -C \${DEST:-/}
+		if [ -z "\${X}" ] && [ "\${POSTINST}" -eq 1 ] && [ "\$(realpath -m "\${DEST:-/}")" = / ]
+		then
+			POSTINST_FILES=--exclude=./postinst_scripts
+		else
+			POSTINST=0
+		fi
+		tail -n+\$ARCHIVE \$0 | tar \${X:-x}\${V}Jf - --keep-directory-symlink \${DEV_FILES} \${CONF_FILES} \${POSTINST_FILES} -C \${DEST:-/}
+		if [ "\${POSTINST}" -eq 1 ]
+		then
+			POSTINST_PATH=\$(mktemp -d)
+			trap 'rm -rf "\${POSTINST_PATH}"' EXIT
+			tail -n+\$ARCHIVE \$0 | tar xJf - -C "\${POSTINST_PATH}" ./postinst_scripts
+			mapfile -t POSTINST_SCRIPTS < <(find "\${POSTINST_PATH}/postinst_scripts" -type f -printf '%P\n' | sort -n)
+			for POSTINST_SCRIPT in "\${POSTINST_SCRIPTS[@]}"
+			do
+				echo "Running post install script \${POSTINST_SCRIPT}"
+				### As in an image, a failing script does not stop the next ones: the exit status tells
+				if ! ( cd / && bash \${V:+-x} "\${POSTINST_PATH}/postinst_scripts/\${POSTINST_SCRIPT}" )
+				then
+					echo "Post install script \${POSTINST_SCRIPT} failed"
+					POSTINST_STATUS=1
+				fi
+			done
+		fi
 		set +ex
-		exit 0
+		exit \${POSTINST_STATUS}
 
 		__ARCHIVE_BELOW__
 	EOF

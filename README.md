@@ -292,6 +292,7 @@ BBCrossBuild provides various functions for use in project files. These are orga
   create_sfx_package <package_directory>
   ```
   - `<package_directory>`: Directory containing package files
+  - The installer `<package_directory>.sfx` extracts into `/` without the development files and `/etc` (`--with-dev`, `--with-conf`, `--dest <dir>`, `--test`, `-v`, `-d`, `-h`). On `/` it runs the `postinst_scripts/` of the package in numeric order from a temporary directory, as `run_postinstall_scripts` does in an image, and exits 1 when one of them fails; with `--dest` they are extracted into `<dir>/postinst_scripts` for `run_postinstall_scripts`; `--no-postinst` skips them.
 
 - **add_system_config_variable**: Add a variable to system configuration
   ```
@@ -784,7 +785,7 @@ Rust compiler flags.
 Script sourced in the build directory after the build process, with the package staged in `${PKG_PKGPATH}` (replaces the former `PKG_POSTBUILD` string).
 
 **postinstall.sh:**  
-Script copied into the sysroot as `postinst_scripts/<prio>_<name>` and sourced as root inside the target image by `run_postinstall_scripts` (replaces the former `PKG_POSTINSTALL` string).
+Script copied into the sysroot as `postinst_scripts/<prio>_<name>` and sourced as root inside the target image by `run_postinstall_scripts` (replaces the former `PKG_POSTINSTALL` string). The `.sfx` installer of the package runs it too when it installs on `/`, so it may run again on a live system: keep it idempotent.
 
 **PKG_POSTINSTALL_PRIO:**  
 Define the priority of postinstall.sh among the post install scripts.  
