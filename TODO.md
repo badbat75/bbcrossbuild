@@ -54,3 +54,20 @@ workaround is part of closing the item.
      build accepts only GNU ld and lld;
    - validation: full `lfs rpi3-aarch64` builds with gnu and llvm from an empty data directory;
      `readelf -p .comment` shows which binaries mold linked.
+
+3. **`build` does not visit the dependencies of a package already built.** When the checksum of
+   a recipe matches its status file (or its `PKG_CHECK` succeeds), `build` returns "already
+   built" before the `PKG_DEPS` loop (`build.functions`). A recipe the project reaches only as a
+   dependency of packages already built is therefore never checked again: in September 2026 the
+   edits of `lfs/libaudit` and `raspberrypi/raspberrypi-sys-mods` were not rebuilt on an existing
+   data directory until a throwaway project called `build` on them directly. The status is the
+   checksum of the recipe alone, so a rebuilt dependency does not rebuild its dependents either.
+   Today the workaround is an empty `<project>` data directory, or deleting the status file of
+   the changed recipe. Known steps:
+   - walk `PKG_DEPS` before the early return too, so that a changed dependency is rebuilt; it
+     costs one "already built" console line and one recipe sourcing per dependency visited, on
+     every run;
+   - decide whether a rebuilt dependency invalidates its dependents (a status that also records
+     the checksums of the dependencies), or whether that stays a manual `--force`;
+   - a bats test in `tests/` for the order: a changed dependency of an unchanged package is
+     rebuilt.
