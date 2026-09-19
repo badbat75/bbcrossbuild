@@ -54,14 +54,3 @@ workaround is part of closing the item.
      build accepts only GNU ld and lld;
    - validation: full `lfs rpi3-aarch64` builds with gnu and llvm from an empty data directory;
      `readelf -p .comment` shows which binaries mold linked.
-
-## Packages
-
-1. **bthelper fails on a real Raspberry Pi 3.** The `lfs rpi3-aarch64` image boots on the board
-   (September 2026), with one error: the Bluetooth helper `bthelper@.service` of
-   `raspberrypi/pi-bluetooth_0`. The bluez tools it runs are in the image (`lfs/bluez` installs
-   `hciconfig`, `hcitool` and `bluetoothctl`, and `/bin` links to `usr/bin`), so the cause is
-   elsewhere: the script runs under `set -e` and first needs `hciuart.service` to attach the
-   UART modem with the firmware of `raspberrypi/rpi-bluez-firmware`. QEMU emulates no Bluetooth,
-   so only the board can tell: `journalctl -b -u hciuart -u 'bthelper@*'` and
-   `dmesg | grep -i -e hci -e blue`.
