@@ -63,11 +63,17 @@ utilities/pkg_upstream [-p rpi3-aarch64] [-P lfs] [-a] [-o report.tsv] [lfs/curl
 # per package group are run by hand.
 shellcheck -x bbxb seterr setenv core.functions build.functions toolchain.functions images.functions project.functions data.functions
 shellcheck -x utilities/pkgtools.functions utilities/pkg_lint utilities/pkg_show utilities/update_patches
-shellcheck -x tests/test_helper.bash tests/*.bats
+shellcheck -x tests/test_helper.bash tests/*.bats tests/board_check
 # Unit tests (bats-core, seconds): variant selection, patch lists, recipe scripts, recipe checksum, target
 # prefixes, recipe resolution, core helpers, the dependency walk of build, the sfx installer. tests/test_helper.bash sources the framework through
 # utilities/pkgtools.functions and builds fixture recipes under the per-test temporary directory.
 bats tests                    # dnf install bats / apt install bats; bats tests/variants.bats for one file
+
+# Checks on a system the framework built, while it runs: run it after every flash and after every
+# installer tried on a running board, and in QEMU too (what the emulator lacks is skipped). It prints
+# ok, FAIL, warn or skip per check and exits with the number of failures; it prints no secret.
+scp tests/board_check <host>:/tmp/ && ssh <host> sudo /tmp/board_check
+BOARD_CHECK_SLOW=1 BOARD_CHECK_EXTERNAL=example.com sudo /tmp/board_check   # adds the timeout checks
 ```
 
 Where things land (`DATA_PATH` defaults to `/mnt/bbcrossbuild/datadir`; the config template switches it to `~/.bbxb`):
@@ -128,7 +134,11 @@ The script runs with `set -E -o pipefail` and an ERR trap (`on_error` in `core.f
 - `packages/<group>/<name>/`: `lfs/` (BLFS-style recipes, the bulk), `raspberrypi/`, `moode/`, `python/`, `perl/`, `firmwares/`, `fonts/`, `microsoft/` (WSL kernel). Every group is a git submodule of its own repository `packages-<group>` (`.gitmodules`); `bbxb` stops with an error when a group directory is empty. `packages/template/` is the annotated starting point for a new recipe and lives in this repository.
 - `configurations/`: templates for `bbxb.conf` and `lfs.conf`.
 - `utilities/`: host helpers (`deptool`, `crossgdb`, `crossldd`, `qemu_cmdgen`, `fs_manager`, `aws_create_infrastructure`, bootstrap scripts, container scripts); `pkg_lint` and `pkg_show` share `utilities/pkgtools.functions`, which sources the framework with the build steps stubbed out and resolves a recipe through `set_target_prefixes` and `apply_recipe_variants`, the same code `build` uses.
-- `tests/*.bats`: the bats suite; `tests/test_helper.bash` loads the framework the same way (`load_framework`, platform from `PLATFORM_NAME`) and offers `make_recipe`, `put`, `select_target`, `assert_output_lines`, `assert_equal` to build and check fixture recipes under `BATS_TEST_TMPDIR`. One file per area: `variants`, `recipe_files` (patches, scripts), `checksum`, `prefixes`, `pkgtools` (`recipe_resolve`), `core`, `build` (the order of `build` on recipes that build nothing: the real `build` and `run_cmd` over the stubs, cross target), `host_paths` (`strip_host_paths`, `host_path_maps`, `gcc_host_path_specs`, `clang_host_path_config`, `find_host_paths`, `lto_object_files`, `strip_lto_objects`), `sfx` (the installer of `create_sfx_package` and its post install scripts).
+- `tests/*.bats`: the bats suite; `tests/test_helper.bash` loads the framework the same way (`load_framework`, platform from `PLATFORM_NAME`) and offers `make_recipe`, `put`, `select_target`, `assert_output_lines`, `assert_equal` to build and check fixture recipes under `BATS_TEST_TMPDIR`. One file per area: `variants`, `recipe_files` (patches, scripts), `checksum`, `prefixes`, `pkgtools` (`recipe_resolve`), `core`, `build` (the order of `build` on recipes that build nothing: the real `build` and `run_cmd` over the stubs, cross target), `host_paths` (`strip_host_paths`, `host_path_maps`, `gcc_host_path_specs`, `clang_host_path_config`, `find_host_paths`, `lto_object_files`, `strip_lto_objects`), `sfx` (the installer of `create_sfx_package` and its post install scripts). `tests/board_check` is the
+  other kind of test: a plain script copied to a system the framework built and run there as root, which
+  checks the state of that system (units and presets, the mode of `/` and the leftovers in it, machine-id and
+  clock-epoch, the lines of `nsswitch.conf` and what each one resolves with timings, the domain of the DHCP
+  lease, WiFi, Bluetooth, undervoltage, the errors of the journal minus the known noise).
 
 ## Conventions
 
