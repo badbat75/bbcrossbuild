@@ -113,6 +113,18 @@ function new_run () {
 	assert_output_lines "Package lib_1.0:cross" "Done."
 }
 
+@test "build --no_save_status saves no status and removes the temporary ones of its dependencies" {
+	build --temporary fix/lib:cross > /dev/null
+	[ -f "${STATUS_PATH}/lib_1.0-cross.tmp" ]
+
+	new_run
+	run build --no_save_status fix/app:cross
+	[ "${status}" -eq 0 ]
+	[ ! -e "${STATUS_PATH}/app_2.0-cross" ]
+	[ ! -e "${STATUS_PATH}/lib_1.0-cross" ]
+	[ ! -e "${STATUS_PATH}/lib_1.0-cross.tmp" ]
+}
+
 @test "the dependencies of a package its probe (PKG_CHECK) finds are left alone" {
 	make_recipe fix/tool <<-'EOF'
 		PKG_VER=1.0

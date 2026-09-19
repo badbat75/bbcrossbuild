@@ -2770,7 +2770,9 @@ function build () {(
 		run_cmd "echo \"${PKG_CHKSUM}\" > \"${STATUS_FILE}\"" >> "${LOG_FILE}"
 		add_checked_package "${BUILD_CHECKED_KEY}" "${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}"
 	else
-		run_cmd "rm -f \"${STATUS_PATH}/*.tmp\"" >> "${LOG_FILE}"
+		### The dependencies of a build that saves no status were built --temporary: their status
+		### files go with it (the glob outside the quotes, or rm got the literal name)
+		run_cmd "rm -f \"${STATUS_PATH}\"/*.tmp" >> "${LOG_FILE}"
 	fi
 	echo "Done."
 	echo
