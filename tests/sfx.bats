@@ -39,6 +39,19 @@ function fake_root () {
 	PATH="${BATS_TEST_TMPDIR}/fakebin:${PATH}"
 }
 
+@test "sfx: the directories of the destination keep their mode" {
+	### the archive has 755 directories, an existing directory does not take their mode
+	mkdir -p "${DEST}${TARGET_PREFIX}"
+	chmod 700 "${DEST}"
+	chmod 750 "${DEST}${TARGET_PREFIX}"
+	make_sfx
+	run "${PKG}.sfx" --dest "${DEST}"
+	[ "${status}" -eq 0 ]
+	[ -f "${DEST}${TARGET_PREFIX}/bin/fixture" ]
+	assert_equal "$(stat -c %a "${DEST}")" 700
+	assert_equal "$(stat -c %a "${DEST}${TARGET_PREFIX}")" 750
+}
+
 @test "sfx in another destination: the scripts stay in postinst_scripts, none runs" {
 	make_sfx
 	run "${PKG}.sfx" --dest "${DEST}"

@@ -102,6 +102,10 @@ function create_sfx_package () {
 	### installer does the same when it installs on /, the running system: the scripts would stay
 	### in /postinst_scripts otherwise. In any other destination (a sysroot, a mounted image) they
 	### stay in <dest>/postinst_scripts for run_postinstall_scripts.
+	### tar gives the directories that exist already the mode (as root the owner too) of the
+	### archive: installed on the running board, a package turned / from 555 (tmpfiles.d/root.conf
+	### of systemd) into 755. --no-overwrite-dir keeps mode and owner; the time still comes from
+	### the archive.
 	cat >"${PKG_OBJ}.sfx" <<-EOF
 		#!/usr/bin/env bash
 		set -e
@@ -166,7 +170,7 @@ function create_sfx_package () {
 		else
 			POSTINST=0
 		fi
-		tail -n+\$ARCHIVE \$0 | tar \${X:-x}\${V}Jf - --keep-directory-symlink \${DEV_FILES} \${CONF_FILES} \${POSTINST_FILES} -C \${DEST:-/}
+		tail -n+\$ARCHIVE \$0 | tar \${X:-x}\${V}Jf - --keep-directory-symlink --no-overwrite-dir \${DEV_FILES} \${CONF_FILES} \${POSTINST_FILES} -C \${DEST:-/}
 		if [ "\${POSTINST}" -eq 1 ]
 		then
 			POSTINST_PATH=\$(mktemp -d)
