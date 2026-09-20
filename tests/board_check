@@ -6,8 +6,9 @@
 #	scp tests/board_check <host>:/tmp/ && ssh <host> sudo /tmp/board_check
 #
 # Every check prints ok, FAIL, warn or skip; the exit status is the number of failures. What the
-# hardware of the emulator does not have (WiFi, Bluetooth, the Raspberry Pi voltage monitor) is
-# skipped, so the same run serves the board and QEMU.
+# hardware of the emulator does not have (WiFi, Bluetooth, a network device with a carrier, the
+# firmware drivers whose failed probe taints the kernel) is skipped, so the same run serves the board
+# and QEMU, and a board is always held to the strict check.
 #
 # It prints no secret: it never reads /etc/wpa_supplicant, and the journal lines naming a psk or a
 # passphrase are filtered out of every excerpt.
@@ -33,6 +34,12 @@ PASSWD_LINE="passwd: files systemd"
 ### Errors known to be noise: the Bluetooth controller of the Pi rejects the privacy command and
 ### BlueZ logs a null monitor at power down, and the emulator has none of the videocore devices
 KNOWN_ERRORS="Failed to set privacy|adv_monitor.c|bcm2835|vc4|v3d|dwc2|mmal|wlan0: Failed to|Failed to start Wireless"
+### Noise of the emulator only: the drivers of the firmware interface fail to probe, the SDIO slot of
+### the WiFi chip times out, the wlan0 device never appears, the usb network device of QEMU matches no
+### driver, and the camera regulator finds no GPIO because the virtual gpio driver is one of the two
+### that did not probe. On a board each of these is a real complaint, so they join the list above only
+### when the card says the machine is emulated
+EMULATED_ERRORS="vc_sm_connected_init|virtgpio|expgpio|mmc1: Timeout|/sys/subsystem/net/devices/wlan0|cdc_ether|cdc_subset|cam1_regulator"
 
 function section () { printf '\n== %s\n' "${*}"; }
 function ok () { PASSED=$((PASSED+1)); printf '  ok    %s\n' "${*}"; }
@@ -85,6 +92,18 @@ then
 	else
 		PRIVILEGED=0
 	fi
+fi
+
+### QEMU calls the card it emulates QEMU!, which is the one unambiguous sign of the emulator, and it
+### does not depend on the board model or on the outcome of a driver probe: the firmware devices are no
+### use for this, since /dev/vchiq, /dev/vcio and /dev/vc-mem are created under QEMU as well and the
+### gpio expander probes there too, only logging errors as it goes. A board that boots from anything
+### but an SD card has no mmcblk0 either, and is held to the strict check, which is the right default.
+EMULATED=0
+if [ "$(cat /sys/block/mmcblk0/device/name 2>/dev/null)" == 'QEMU!' ]
+then
+	EMULATED=1
+	KNOWN_ERRORS="${KNOWN_ERRORS}|${EMULATED_ERRORS}"
 fi
 
 section "system"
@@ -160,19 +179,25 @@ then
 else
 	warn "journal is volatile: nothing survives a reboot"
 fi
-### Bit 10 of the taint mask is a module out of drivers/staging, which the bcm2835 video drivers of
-### the Raspberry Pi kernel are: expected here. Any other bit is a real complaint of the kernel.
+### Bit 10 (1024) of the taint mask is a module out of drivers/staging, which the bcm2835 video drivers
+### of the Raspberry Pi kernel are: expected here. On the emulator bit 9 (512) comes on top, the warning
+### the kernel takes when the firmware drivers it does not implement fail to probe. Any other bit, and
+### bit 9 on a board, is a real complaint of the kernel.
 TAINT=$(cat /proc/sys/kernel/tainted)
-if [ $(( TAINT & ~1024 )) -eq 0 ]
+TAINT_ALLOWED=1024
+if [ "${EMULATED}" -eq 1 ]
 then
-	if [ "${TAINT}" -eq 0 ]
-	then
-		ok "kernel not tainted"
-	else
-		ok "kernel tainted only by a staging module (${TAINT}, the bcm2835 video drivers)"
-	fi
+	TAINT_ALLOWED=$(( 1024 | 512 ))
+fi
+if [ $(( TAINT & ~TAINT_ALLOWED )) -eq 0 ]
+then
+	case ${TAINT} in
+		0) ok "kernel not tainted" ;;
+		1024) ok "kernel tainted only by a staging module (1024, the bcm2835 video drivers)" ;;
+		*) ok "kernel tainted by a staging module and the warning of a probe the emulator fails (${TAINT})" ;;
+	esac
 else
-	bad "kernel taint mask ${TAINT}, more than the staging modules: see /proc/sys/kernel/tainted"
+	bad "kernel taint mask ${TAINT}, more than the staging modules (1024): see /proc/sys/kernel/tainted"
 fi
 if [ "$(findmnt -no OPTIONS / | cut -d, -f1)" == rw ]
 then
@@ -220,32 +245,52 @@ else
 fi
 
 section "network"
-ROUTABLE=$(networkctl --no-pager 2>/dev/null | grep -c ' routable ')
-if [ "${ROUTABLE}" -ge 1 ]
-then
-	ok "${ROUTABLE} routable link"
-	networkctl --no-pager 2>/dev/null | sed -n '2,6p' | grep -v '^$' | while read -r link
-	do
-		note "${link}"
-	done
-else
-	bad "no routable link"
-fi
 RESOLV_TARGET=$(readlink /etc/resolv.conf)
 expect "resolv.conf" "../run/systemd/resolve/stub-resolv.conf" "${RESOLV_TARGET}"
-NAMESERVERS=$(resolvectl status 2>/dev/null | grep -c 'DNS Servers:')
-if [ "${NAMESERVERS}" -ge 1 ]
+### What follows needs an uplink, and the emulator has none: its usb-net never gets a carrier, so there
+### the lease, the DNS servers and the domain are skipped instead of counted as failures. lo always
+### reports a carrier and is left out; on a board a cable or WiFi that carries nothing still fails.
+SEARCH_DOMAIN=""
+UPLINK=0
+for carrier in /sys/class/net/*/carrier
+do
+	case ${carrier} in
+		/sys/class/net/lo/carrier) continue ;;
+	esac
+	if [ "$(cat "${carrier}" 2>/dev/null)" == 1 ]
+	then
+		UPLINK=1
+	fi
+done
+if [ "${UPLINK}" -eq 0 ] && [ "${EMULATED}" -eq 1 ]
 then
-	ok "DNS servers from the lease: $(resolvectl status 2>/dev/null | sed -n 's/.*DNS Servers: //p' | head -n 1)"
+	skip "the link, the DNS servers and the domain of the lease: the emulator has no network device"
 else
-	bad "no DNS server known to resolved"
-fi
-SEARCH_DOMAIN=$(resolvectl domain 2>/dev/null | sed -n 's/^Link [0-9]* ([^)]*): //p' | grep -v '^$' | head -n 1)
-if [ -n "${SEARCH_DOMAIN}" ]
-then
-	ok "domain of the lease: ${SEARCH_DOMAIN} (UseDomains, what makes a .local domain of the LAN resolve)"
-else
-	warn "no domain on any link: the DHCP server advertises none, or UseDomains is off"
+	ROUTABLE=$(networkctl --no-pager 2>/dev/null | grep -c ' routable ')
+	if [ "${ROUTABLE}" -ge 1 ]
+	then
+		ok "${ROUTABLE} routable link"
+		networkctl --no-pager 2>/dev/null | sed -n '2,6p' | grep -v '^$' | while read -r link
+		do
+			note "${link}"
+		done
+	else
+		bad "no routable link"
+	fi
+	NAMESERVERS=$(resolvectl status 2>/dev/null | grep -c 'DNS Servers:')
+	if [ "${NAMESERVERS}" -ge 1 ]
+	then
+		ok "DNS servers from the lease: $(resolvectl status 2>/dev/null | sed -n 's/.*DNS Servers: //p' | head -n 1)"
+	else
+		bad "no DNS server known to resolved"
+	fi
+	SEARCH_DOMAIN=$(resolvectl domain 2>/dev/null | sed -n 's/^Link [0-9]* ([^)]*): //p' | grep -v '^$' | head -n 1)
+	if [ -n "${SEARCH_DOMAIN}" ]
+	then
+		ok "domain of the lease: ${SEARCH_DOMAIN} (UseDomains, what makes a .local domain of the LAN resolve)"
+	else
+		warn "no domain on any link: the DHCP server advertises none, or UseDomains is off"
+	fi
 fi
 expect "nsswitch hosts line" "${HOSTS_LINE}" "$(grep '^hosts:' /etc/nsswitch.conf | tr -s ' ')"
 expect "nsswitch passwd line" "${PASSWD_LINE}" "$(grep '^passwd:' /etc/nsswitch.conf | tr -s ' ')"
@@ -264,7 +309,12 @@ then
 	check_name "own name in the domain of the LAN" "$(hostname).${SEARCH_DOMAIN}" 500
 	check_name "the gateway" _gateway 200
 fi
-check_name "a name of the internet" "${EXTERNAL_NAME}" 2000
+if [ "${UPLINK}" -eq 1 ]
+then
+	check_name "a name of the internet" "${EXTERNAL_NAME}" 2000
+else
+	skip "a name of the internet (${EXTERNAL_NAME}): nothing to reach it through"
+fi
 ### Any host of the link that announces itself over mDNS proves the multicast path end to end. Up to
 ### three are tried, because a device that has just gone to sleep answers only after the timeout.
 OTHER_MDNS=""
