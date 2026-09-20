@@ -79,19 +79,3 @@ workaround is part of closing the item.
      NetworkManager;
    - validation: a full build, the QEMU boot check, then the board: wired and WiFi up after a
      reboot, `lfs.local` resolved, `nmcli` working, no failed units.
-
-2. **The project builds the userspace tools of the Raspberry Pi.** The recipe
-   `packages/raspberrypi/rpi-utils` is written (`github.com/raspberrypi/utils`, the sources of what
-   Raspberry Pi OS ships as `raspi-utils`: `vcgencmd`, `vcmailbox`, `vclog`, `pinctrl`, `raspinfo`,
-   `eeptools`, plus the device tree tools behind `WITH_DT_TOOLS=1`), but nothing builds it yet:
-   - `projects/lfs.prj` gets a `build raspberrypi/rpi-utils` next to `rpi-firmware_1` and
-     `pi-bluetooth_0`, inside the Raspberry Pi platform branch;
-   - before that, a single package build to see it cross-compile
-     (`build --force --keep_builddir raspberrypi/rpi-utils` in a throwaway project): the sources
-     have never been built by this framework. The `install(TARGETS ...)` rules of the internal
-     libraries name the `ARCHIVE` artifact only, which is why the recipe forces
-     `PKG_OVERRIDESHARED=0` and `PKG_OVERRIDESTATIC=1`; `WITH_DT_TOOLS=1` also needs a target
-     build of `lfs/dtc`, which so far is only built `:native`;
-   - `tests/board_check` then reads the throttling and the temperature with
-     `vcgencmd get_throttled` and `vcgencmd measure_temp` instead of the `rpi_volt` hwmon files,
-     and checks that `/dev/vcio` belongs to the `video` group (the rule the recipe installs).

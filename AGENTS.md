@@ -138,7 +138,8 @@ The script runs with `set -E -o pipefail` and an ERR trap (`on_error` in `core.f
   other kind of test: a plain script copied to a system the framework built and run there as root, which
   checks the state of that system (units and presets, the mode of `/` and the leftovers in it, machine-id and
   clock-epoch, the lines of `nsswitch.conf` and what each one resolves with timings, the domain of the DHCP
-  lease, WiFi, Bluetooth, undervoltage, the errors of the journal minus the known noise).
+  lease, WiFi, Bluetooth, the throttling word of the firmware read with `vcgencmd`, the errors of
+  the journal minus the known noise).
 
 ## Conventions
 

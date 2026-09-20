@@ -398,13 +398,54 @@ else
 fi
 
 section "power and resources"
-if [ -r /sys/class/hwmon/hwmon1/in0_lcrit_alarm ]
+### The rule packages/raspberrypi/rpi-utils installs: the devices of the firmware mailbox belong to
+### the video group, so a program that asks the firmware something does not have to run as root.
+### Without the rule /dev/vcio is crw------- root root and only root sees the throttling word.
+for device in /dev/vcio /dev/vc-mem /dev/vchiq
+do
+	if [ -e "${device}" ]
+	then
+		expect "group of ${device}" video "$(stat -c %G "${device}")"
+	else
+		skip "group of ${device}: no such device"
+	fi
+done
+### vcgencmd reads the whole throttling word from the firmware: bits 0, 1 and 2 are the undervoltage,
+### the frequency cap and the throttling of this instant, bits 16, 17 and 18 the same three at any
+### moment since boot. The rpi_volt hwmon file carries bit 0 only, and answers for an image built
+### before rpi-utils existed.
+THROTTLED=""
+if command -v vcgencmd > /dev/null
+then
+	THROTTLED=$(${SUDO} vcgencmd get_throttled 2>/dev/null | sed -n 's/^throttled=0x//p')
+fi
+if [ -n "${THROTTLED}" ]
+then
+	note "throttling word: 0x${THROTTLED}"
+	THROTTLED_WORD=$(( 16#${THROTTLED} ))
+	expect "undervoltage now" 0 $(( THROTTLED_WORD & 1 ))
+	expect "arm frequency capped now" 0 $(( (THROTTLED_WORD >> 1) & 1 ))
+	expect "throttled now" 0 $(( (THROTTLED_WORD >> 2) & 1 ))
+	for bit in "16:undervoltage" "17:arm frequency cap" "18:throttling"
+	do
+		if [ $(( (THROTTLED_WORD >> ${bit%%:*}) & 1 )) -eq 1 ]
+		then
+			warn "${bit#*:} happened earlier in this boot (bit ${bit%%:*} of the throttling word)"
+		else
+			ok "no ${bit#*:} since boot"
+		fi
+	done
+elif [ -r /sys/class/hwmon/hwmon1/in0_lcrit_alarm ]
 then
 	expect "undervoltage alarm" 0 "$(cat /sys/class/hwmon/hwmon1/in0_lcrit_alarm)"
 else
-	skip "no voltage monitor (the emulator has none)"
+	skip "the throttling word and the undervoltage alarm: no vcgencmd and no voltage monitor"
 fi
-if [ -r /sys/class/thermal/thermal_zone0/temp ]
+if [ -n "${THROTTLED}" ]
+then
+	note "SoC temperature: $(${SUDO} vcgencmd measure_temp | sed 's/temp=//')"
+	note "core voltage: $(${SUDO} vcgencmd measure_volts core | sed 's/volt=//')"
+elif [ -r /sys/class/thermal/thermal_zone0/temp ]
 then
 	note "SoC temperature: $(awk '{printf "%.1f C", $1/1000}' /sys/class/thermal/thermal_zone0/temp)"
 fi
