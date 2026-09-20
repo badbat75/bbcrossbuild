@@ -157,6 +157,26 @@ then
 else
 	bad "ssh host key modes: ${KEY_MODES:-none}"
 fi
+### The interactive user projects/lfs.prj creates: wheel to become root, video for the devices of the
+### firmware mailbox and of the GPU, audio for the sound cards
+if id lfs > /dev/null 2>&1
+then
+	USER_GROUPS="$(id -nG lfs | tr ' ' '\n' | sort | tr '\n' ' ')"
+	MISSING=""
+	for group in audio video wheel
+	do
+		case " ${USER_GROUPS}" in
+			*" ${group} "*) continue ;;
+		esac
+		MISSING="${MISSING}${group} "
+	done
+	if [ -z "${MISSING}" ]
+	then
+		ok "the lfs user is in ${USER_GROUPS% }"
+	else
+		bad "the lfs user is not in ${MISSING% }, only in ${USER_GROUPS% }"
+	fi
+fi
 LEFTOVERS=""
 for entry in /* /.[!.]*
 do
