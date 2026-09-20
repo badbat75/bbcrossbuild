@@ -37,6 +37,15 @@ build --force --keep_builddir lfs/zlib
 EOF
 ./bbxb test-zlib generic-x64
 # With --keep_builddir the build dir keeps recipe.source, environment.source, runprebuild.sh, runpostbuild.sh: re-runnable by hand
+# A new project name means a new <project> directory, hence a whole cross toolchain of its own. To build one
+# package into the datadir a project already has (and get its .sfx next to the others), keep the project name
+# and move the project file instead: bbxb resolves <PRJ_PATH>/<project>.prj before setenv, setenv rebuilds the
+# absolute path from PRJ_DIR, so both name the same directory next to projects/ (remove it when done)
+mkdir -p projects-tmp && cat > projects-tmp/lfs.prj <<'EOF'
+setup_full_toolchain --with-gnu-install --with-main-gcc --with-llvm --with-python
+build --force --keep_builddir raspberrypi/rpi-utils
+EOF
+PRJ_PATH=projects-tmp PRJ_DIR=projects-tmp ./bbxb lfs rpi3-aarch64   # the toolchain steps are checks, so it starts in a minute
 
 # Containers (image name derives from the git branch: development -> bbcrossbuild-devel, master -> bbcrossbuild-latest)
 utilities/container/build.sh [base]   # base also exports the build cache to /var/cache/bbcrossbuild-docker
