@@ -57,6 +57,26 @@ param2value () {
 	done
 }
 
+param_list () {
+
+	### param_list [<first index>]: print the positional parameters of the last param2value call,
+	### one per line, from <first index> (default 1) on. For a function that takes a list of them
+	### (the units of enable_service): mapfile -t UNITS < <(param_list). param2value unsets the
+	### _param_ variables at every call, so the list ends at the first index it did not set.
+
+	local PARAM_INDEX PARAM_NAME
+
+	PARAM_INDEX=${1:-1}
+	PARAM_NAME=_param_${PARAM_INDEX}
+
+	while [ -n "${!PARAM_NAME}" ]
+	do
+		echo "${!PARAM_NAME}"
+		PARAM_INDEX=$((PARAM_INDEX+1))
+		PARAM_NAME=_param_${PARAM_INDEX}
+	done
+}
+
 download_uncompress () {
 	## download_uncompress <URLs> <destination> [files_to_extract]
 	## STRIPCOMPONENTS=<num>: Add strip --strip-components=<n> to tar command

@@ -1,0 +1,623 @@
+#!/bin/bash
+
+check_core_functions
+
+### osconfig.functions: the configuration of the operating system the framework builds. A project
+### file calls these instead of writing the files of systemd, of wpa_supplicant and the post
+### install scripts by hand.
+###
+### There are two kinds of directive here, and one rule tells them apart. What is a file goes into
+### the target sysroot (${BIN_PATH}), where the image, the chroot and the packages built from it
+### all find it. What has to run inside the target, because only the target has the databases and
+### the tools it touches (systemctl, useradd, chpasswd), becomes a command in the post install
+### script of the project, which run_postinstall_scripts runs as root inside the image; the same
+### functions take --tag <mount tag> and then run the command at once in the chroot of a mounted
+### image through run_on_root_dir, which is what a project needs after inject_into_mount_tag, when
+### the post install scripts have already run.
+###
+### Every function copies what param2value parsed into its own variables before it calls anything
+### else: the _param_ variables are global and the next param2value of any function unsets them.
+
+### The post install script of the project, under ${BIN_PATH}/postinst_scripts. The name carries
+### the priority run_postinstall_scripts sorts on (sort -n), 99 so it runs after the packages.
+OSCONFIG_POSTINST_NAME=${OSCONFIG_POSTINST_NAME:-99_osconfig}
+### The preset file of the project, under ${BIN_PATH}/etc/systemd/system-preset: systemctl preset
+### and preset-all read the directories of /etc before the ones of /usr/lib, where the packages
+### install theirs, and apply the first rule that matches a unit, in the name order of the files.
+### 00- therefore makes the project the last word on every unit it names.
+OSCONFIG_PRESET_NAME=${OSCONFIG_PRESET_NAME:-00-${PROJECT_NAME}.preset}
+### Both are rewritten at every run, and this is the only moment the run is known to start: bbxb
+### sources this file once, while the sysroot survives from one build to the next and a directive
+### that is no longer in the project file must not stay in it.
+if [ -n "${BIN_PATH}" ]
+then
+	rm -f "${BIN_PATH}/postinst_scripts/${OSCONFIG_POSTINST_NAME}" \
+		"${BIN_PATH}${TARGET_SYSCONFDIR}/systemd/system-preset/${OSCONFIG_PRESET_NAME}" 2> /dev/null || true
+fi
+
+function osconfig_log () {
+	### osconfig_log [<log type>]: put stdin into ${LOG_PATH}/osconfig.log, the record of what the
+	### project configured, file by file. No secret comes through here: the key of the wireless
+	### network is written into the sysroot and nowhere else.
+	log_buffer "${1:-info}" "${LOG_PATH}/osconfig.log"
+}
+
+function osconfig_file () {
+	### osconfig_file <path under the sysroot>: create the directory of the file, record it in the
+	### log and print its full path in the sysroot, which the caller writes
+	local OSCONFIG_PATH
+	OSCONFIG_PATH=${BIN_PATH}${1}
+	if [ ! -d "$(dirname "${OSCONFIG_PATH}")" ]
+	then
+		mkdir -p "$(dirname "${OSCONFIG_PATH}")"
+	fi
+	echo "Writing ${1}" | osconfig_log
+	echo "${OSCONFIG_PATH}"
+}
+
+function add_postinstall_command () {
+	### add_postinstall_command "<command>"...: append commands to the post install script of the
+	### project, run as root inside the target by run_postinstall_scripts when the image is made
+	local POSTINST_FILE OSCONFIG_COMMAND
+	POSTINST_FILE=${BIN_PATH}/postinst_scripts/${OSCONFIG_POSTINST_NAME}
+
+	if [ ! -d "${BIN_PATH}/postinst_scripts" ]
+	then
+		mkdir -p "${BIN_PATH}/postinst_scripts"
+	fi
+	if [ ! -f "${POSTINST_FILE}" ]
+	then
+		{
+			echo "# shellcheck shell=bash"
+			echo "### ${PROJECT_NAME}: what the project file configured, sourced as root inside the"
+			echo "### target. Written by osconfig.functions, one line per project directive."
+		} > "${POSTINST_FILE}"
+	fi
+	for OSCONFIG_COMMAND in "${@}"
+	do
+		printf '%s\n' "${OSCONFIG_COMMAND}" >> "${POSTINST_FILE}"
+		echo "${OSCONFIG_POSTINST_NAME}: ${OSCONFIG_COMMAND}" | osconfig_log
+	done
+}
+
+function run_on_target () {
+	### run_on_target <mount tag> "<command>"...: run the commands as root inside the chroot of a
+	### mounted image, or, with an empty tag, add them to the post install script of the project
+	local TARGET_TAG OSCONFIG_COMMAND
+	TARGET_TAG=${1}
+	shift
+
+	if [ -z "${TARGET_TAG}" ]
+	then
+		add_postinstall_command "${@}"
+		return 0
+	fi
+	for OSCONFIG_COMMAND in "${@}"
+	do
+		run_on_root_dir "${TARGET_TAG}" root "${OSCONFIG_COMMAND}"
+	done
+}
+
+function systemctl_on_target () {
+	### systemctl_on_target <mount tag> <verb> <unit>...: the shared part of enable_service,
+	### disable_service, mask_service and preset_service
+	local TARGET_TAG SYSTEMCTL_VERB OSCONFIG_UNIT
+	TARGET_TAG=${1}
+	SYSTEMCTL_VERB=${2}
+	shift 2
+
+	if [ "${#}" -eq 0 ]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "systemctl ${SYSTEMCTL_VERB}: no unit given."
+		return "${?}"
+	fi
+	echo "Units to ${SYSTEMCTL_VERB}: ${*}"
+	for OSCONFIG_UNIT in "${@}"
+	do
+		run_on_target "${TARGET_TAG}" "systemctl ${SYSTEMCTL_VERB} ${OSCONFIG_UNIT}"
+	done
+}
+
+function enable_service () {
+	### enable_service [--tag <mount tag>] <unit>...: start the units at the next boot of the
+	### target (systemctl enable: the .wants links of their [Install] section)
+	local TARGET_TAG OSCONFIG_UNITS
+	OPTS="" OPTS_WITH_VALUE="--tag" param2value "${@}"
+
+	# shellcheck disable=SC2154
+	TARGET_TAG=${_param_tag}
+	mapfile -t OSCONFIG_UNITS < <(param_list)
+
+	systemctl_on_target "${TARGET_TAG}" enable "${OSCONFIG_UNITS[@]}"
+}
+
+function disable_service () {
+	### disable_service [--tag <mount tag>] <unit>...: the units a package enables by itself and
+	### this system does not want (systemctl disable)
+	local TARGET_TAG OSCONFIG_UNITS
+	OPTS="" OPTS_WITH_VALUE="--tag" param2value "${@}"
+
+	TARGET_TAG=${_param_tag}
+	mapfile -t OSCONFIG_UNITS < <(param_list)
+
+	systemctl_on_target "${TARGET_TAG}" disable "${OSCONFIG_UNITS[@]}"
+}
+
+function mask_service () {
+	### mask_service [--tag <mount tag>] <unit>...: the units nothing may pull in, not even a
+	### dependency of another unit (systemctl mask: the link to /dev/null)
+	local TARGET_TAG OSCONFIG_UNITS
+	OPTS="" OPTS_WITH_VALUE="--tag" param2value "${@}"
+
+	TARGET_TAG=${_param_tag}
+	mapfile -t OSCONFIG_UNITS < <(param_list)
+
+	systemctl_on_target "${TARGET_TAG}" mask "${OSCONFIG_UNITS[@]}"
+}
+
+function preset_service () {
+	### preset_service [--tag <mount tag>] <unit>...: apply to the units the policy of the preset
+	### files, the one of the project included (systemctl preset)
+	local TARGET_TAG OSCONFIG_UNITS
+	OPTS="" OPTS_WITH_VALUE="--tag" param2value "${@}"
+
+	TARGET_TAG=${_param_tag}
+	mapfile -t OSCONFIG_UNITS < <(param_list)
+
+	systemctl_on_target "${TARGET_TAG}" preset "${OSCONFIG_UNITS[@]}"
+}
+
+function set_service_preset () {
+	### set_service_preset <enable|disable|mask> <unit pattern>...: add rules to the preset file of
+	### the project. A preset is the policy, not the state: it decides what a unit becomes when
+	### systemctl preset names it, and what preset-all does to every unit while the image is made
+	### (the post install script of systemd runs preset-all as long as the system has no machine
+	### id). enable_service is the way to enable one unit here and now; this is the way to answer
+	### for units that are not installed yet, for a whole family of them (the rules of
+	### systemd.preset(5) take globs) and for the ones a later preset-all would turn back on.
+	local PRESET_VERB PRESET_FILE OSCONFIG_UNITS OSCONFIG_UNIT
+	OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
+
+	# shellcheck disable=SC2154
+	PRESET_VERB=${_param_1}
+	mapfile -t OSCONFIG_UNITS < <(param_list 2)
+
+	case ${PRESET_VERB} in
+		enable|disable|mask)
+		;;
+		*)
+			trow_error "${ERROR_NOT_VALID_OPTION}" "set_service_preset: ${PRESET_VERB:-no verb given} is not enable, disable or mask."
+			return "${?}"
+		;;
+	esac
+	if [ "${#OSCONFIG_UNITS[@]}" -eq 0 ]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "set_service_preset ${PRESET_VERB}: no unit given."
+		return "${?}"
+	fi
+
+	echo "Units to ${PRESET_VERB} by preset: ${OSCONFIG_UNITS[*]}"
+	PRESET_FILE=$(osconfig_file "${TARGET_SYSCONFDIR}/systemd/system-preset/${OSCONFIG_PRESET_NAME}")
+	for OSCONFIG_UNIT in "${OSCONFIG_UNITS[@]}"
+	do
+		printf '%s %s\n' "${PRESET_VERB}" "${OSCONFIG_UNIT}" >> "${PRESET_FILE}"
+	done
+}
+
+function set_default_target () {
+	### set_default_target [--tag <mount tag>] <target>: what the target boots into, multi-user,
+	### graphical or any other target (systemctl set-default)
+	local TARGET_TAG DEFAULT_TARGET
+	OPTS="" OPTS_WITH_VALUE="--tag" param2value "${@}"
+
+	TARGET_TAG=${_param_tag}
+	DEFAULT_TARGET=${_param_1}
+
+	if [ -z "${DEFAULT_TARGET}" ]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "set_default_target: no target given."
+		return "${?}"
+	fi
+
+	echo "Default target: ${DEFAULT_TARGET}"
+	run_on_target "${TARGET_TAG}" "systemctl set-default ${DEFAULT_TARGET}"
+}
+
+function add_unit_dropin () {
+	### add_unit_dropin <unit> <name>: write the drop-in read from stdin as
+	### /etc/systemd/system/<unit>.d/<name>.conf, which systemd merges on top of the unit the
+	### package installs, so the unit file itself stays the one of the package. A unit named
+	### without a type is a .service.
+	local OSCONFIG_UNIT DROPIN_NAME
+	OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
+
+	OSCONFIG_UNIT=${_param_1}
+	# shellcheck disable=SC2154
+	DROPIN_NAME=${_param_2}
+
+	if [ -z "${OSCONFIG_UNIT}" ] || [ -z "${DROPIN_NAME}" ]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "add_unit_dropin: a unit and a name for the drop-in are needed."
+		return "${?}"
+	fi
+	case ${OSCONFIG_UNIT} in
+		*.*) ;;
+		*) OSCONFIG_UNIT=${OSCONFIG_UNIT}.service ;;
+	esac
+
+	echo "Drop-in of ${OSCONFIG_UNIT}: ${DROPIN_NAME}.conf"
+	cat > "$(osconfig_file "${TARGET_SYSCONFDIR}/systemd/system/${OSCONFIG_UNIT}.d/${DROPIN_NAME}.conf")"
+}
+
+function set_hostname () {
+	### set_hostname <hostname> [--domain <domain>]: /etc/hostname and the 127.0.1.1 line of
+	### /etc/hosts, the address a system answers for its own name while no DNS record names it
+	local HOST_NAME HOST_DOMAIN HOSTS_FILE
+	OPTS="" OPTS_WITH_VALUE="--domain" param2value "${@}"
+
+	HOST_NAME=${_param_1}
+	# shellcheck disable=SC2154
+	HOST_DOMAIN=${_param_domain}
+
+	if [ -z "${HOST_NAME}" ]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "set_hostname: no host name given."
+		return "${?}"
+	fi
+
+	echo "Host name: ${HOST_NAME}${HOST_DOMAIN:+ in ${HOST_DOMAIN}}"
+	printf '%s\n' "${HOST_NAME}" > "$(osconfig_file "${TARGET_SYSCONFDIR}/hostname")"
+	HOSTS_FILE=$(osconfig_file "${TARGET_SYSCONFDIR}/hosts")
+	if [ -f "${HOSTS_FILE}" ]
+	then
+		### The line of a previous run goes: the host name is a setting of the project and changes
+		grep -v '^127\.0\.1\.1[[:space:]]' "${HOSTS_FILE}" > "${HOSTS_FILE}.osconfig" || true
+		mv "${HOSTS_FILE}.osconfig" "${HOSTS_FILE}"
+	fi
+	printf '127.0.1.1%s %s\n' "${HOST_DOMAIN:+ ${HOST_NAME}.${HOST_DOMAIN}}" "${HOST_NAME}" >> "${HOSTS_FILE}"
+}
+
+function set_locale () {
+	### set_locale <locale> [--keymap <keymap>]: /etc/locale.conf, the locale of every session of
+	### the target, and with a keymap /etc/vconsole.conf, the keymap of its text consoles
+	local OSCONFIG_LOCALE OSCONFIG_KEYMAP
+	OPTS="" OPTS_WITH_VALUE="--keymap" param2value "${@}"
+
+	OSCONFIG_LOCALE=${_param_1}
+	# shellcheck disable=SC2154
+	OSCONFIG_KEYMAP=${_param_keymap}
+
+	if [ -z "${OSCONFIG_LOCALE}" ]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "set_locale: no locale given."
+		return "${?}"
+	fi
+
+	echo "Locale: ${OSCONFIG_LOCALE}"
+	printf 'LANG=%s\n' "${OSCONFIG_LOCALE}" > "$(osconfig_file "${TARGET_SYSCONFDIR}/locale.conf")"
+	if [ -n "${OSCONFIG_KEYMAP}" ]
+	then
+		echo "Console keymap: ${OSCONFIG_KEYMAP}"
+		printf 'KEYMAP=%s\n' "${OSCONFIG_KEYMAP}" > "$(osconfig_file "${TARGET_SYSCONFDIR}/vconsole.conf")"
+	fi
+}
+
+function configure_network () {
+	### configure_network <device> [--address <address/prefix>] [--gateway <address>]
+	###	[--dns <address>[,<address>]] [--domains <list>] [--nodomains] [--file <name>]
+	### The .network file of systemd-networkd for one link. Without --address the link asks DHCP
+	### for everything; with it, it is configured statically and DHCP is off.
+	###
+	### UseDomains takes the domain name of the DHCP lease (option 15, and the search list of the
+	### router advertisements) as the search domain of the link, which is what every other client
+	### of the LAN does with it. systemd-networkd ignores it by default, and systemd-resolved needs
+	### it for more than the short names: it reserves .local for mDNS and refuses to ask a DNS
+	### server anything under it unless the name falls in a domain of the link
+	### (dns_scope_good_domain in resolved-dns-scope.c), so a router that serves a domain of its own
+	### under .local, as home routers commonly do, had none of its hosts resolvable. With the lease
+	### domain there, they answer in about 20 ms through the stub of resolved, its cache included,
+	### and nothing has to be configured by hand. The mDNS names keep coming from avahi, which the
+	### hosts line of nsswitch asks after DNS through nss-mdns. --nodomains leaves the lease domain
+	### out, for a link that must not name the search domain of the system.
+	local NETWORK_DEVICE NETWORK_FILE NETWORK_ADDRESS NETWORK_GATEWAY NETWORK_DNS NETWORK_DOMAINS \
+		NETWORK_NODOMAINS OSCONFIG_ADDRESS
+	OPTS="--nodomains" OPTS_WITH_VALUE="--address --gateway --dns --domains --file" param2value "${@}"
+
+	NETWORK_DEVICE=${_param_1}
+	# shellcheck disable=SC2154
+	NETWORK_ADDRESS=${_param_address}
+	# shellcheck disable=SC2154
+	NETWORK_GATEWAY=${_param_gateway}
+	# shellcheck disable=SC2154
+	NETWORK_DNS=${_param_dns}
+	# shellcheck disable=SC2154
+	NETWORK_DOMAINS=${_param_domains}
+	# shellcheck disable=SC2154
+	NETWORK_NODOMAINS=${_param_nodomains:-0}
+	# shellcheck disable=SC2154
+	NETWORK_FILE=${_param_file:-${NETWORK_DEVICE}}
+
+	if [ -z "${NETWORK_DEVICE}" ]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "configure_network: no device given."
+		return "${?}"
+	fi
+
+	echo "Network link: ${NETWORK_DEVICE} (${NETWORK_ADDRESS:-DHCP})"
+	NETWORK_FILE=$(osconfig_file "${TARGET_SYSCONFDIR}/systemd/network/${NETWORK_FILE}.network")
+	{
+		### No SSID= match for a wireless link: the SSID is a list of globs there, and a name with
+		### a space would not match
+		echo "[Match]"
+		echo "Name=${NETWORK_DEVICE}"
+		echo
+		echo "[Network]"
+		if [ -n "${NETWORK_ADDRESS}" ]
+		then
+			echo "Address=${NETWORK_ADDRESS}"
+			if [ -n "${NETWORK_GATEWAY}" ]
+			then
+				echo "Gateway=${NETWORK_GATEWAY}"
+			fi
+		else
+			echo "DHCP=yes"
+		fi
+		for OSCONFIG_ADDRESS in ${NETWORK_DNS//,/ }
+		do
+			echo "DNS=${OSCONFIG_ADDRESS}"
+		done
+		if [ -n "${NETWORK_DOMAINS}" ]
+		then
+			echo "Domains=${NETWORK_DOMAINS}"
+		fi
+		if [ -z "${NETWORK_ADDRESS}" ] && [ "${NETWORK_NODOMAINS}" -eq 0 ]
+		then
+			echo
+			echo "[DHCPv4]"
+			echo "UseDomains=yes"
+			echo
+			echo "[IPv6AcceptRA]"
+			echo "UseDomains=yes"
+		fi
+	} > "${NETWORK_FILE}"
+}
+
+function set_network_wait_online () {
+	### set_network_wait_online [--any|--all] [--interface <device>] [--timeout <seconds>]
+	### systemd-networkd-wait-online waits for every link networkd manages, and network-online.target
+	### waits for it (update-pki.service wants that target): with the cable out, or the WiFi out of
+	### reach, it failed after two minutes. --any, the default, waits for one link only;
+	### --interface waits for that link and for no other.
+	local WAIT_ONLINE_ARGS WAIT_ONLINE_ALL WAIT_ONLINE_INTERFACE WAIT_ONLINE_TIMEOUT
+	OPTS="--any --all" OPTS_WITH_VALUE="--interface --timeout" param2value "${@}"
+
+	# shellcheck disable=SC2154
+	WAIT_ONLINE_ALL=${_param_all:-0}
+	# shellcheck disable=SC2154
+	WAIT_ONLINE_INTERFACE=${_param_interface}
+	# shellcheck disable=SC2154
+	WAIT_ONLINE_TIMEOUT=${_param_timeout}
+
+	WAIT_ONLINE_ARGS=
+	if [ -n "${WAIT_ONLINE_INTERFACE}" ]
+	then
+		WAIT_ONLINE_ARGS="--interface=${WAIT_ONLINE_INTERFACE}"
+	elif [ "${WAIT_ONLINE_ALL}" -eq 0 ]
+	then
+		WAIT_ONLINE_ARGS="--any"
+	fi
+	if [ -n "${WAIT_ONLINE_TIMEOUT}" ]
+	then
+		WAIT_ONLINE_ARGS="${WAIT_ONLINE_ARGS}${WAIT_ONLINE_ARGS:+ }--timeout=${WAIT_ONLINE_TIMEOUT}"
+	fi
+
+	echo "Waiting for the network at boot: ${WAIT_ONLINE_ARGS:---all}"
+	add_unit_dropin systemd-networkd-wait-online.service osconfig <<-EOF
+		[Service]
+		ExecStart=
+		ExecStart=${TARGET_PREFIX}/lib/systemd/systemd-networkd-wait-online ${WAIT_ONLINE_ARGS}
+	EOF
+}
+
+function configure_wireless () {
+	### configure_wireless <device> --ssid <name> [--country <code>] [--passphrase-file <file>]
+	###	[--noservice]
+	### The wpa_supplicant configuration of one wireless link, plus the wpa_supplicant@<device>
+	### unit that reads it (--noservice leaves the unit alone). The passphrase is read from stdin,
+	### or from the file --passphrase-file names: it stays out of every command line, of every log
+	### and of the image, which gets only the key wpa_passphrase derives from it (the commented
+	### copy of the passphrase wpa_passphrase prints is dropped). --country is the ISO 3166 code of
+	### the regulatory domain: without it the world domain leaves out the channels some countries
+	### add (12 and 13 in Europe).
+	local WLAN_DEVICE WLAN_SSID WLAN_COUNTRY WLAN_PASSPHRASE_FILE WLAN_NOSERVICE WPA_CONF
+	OPTS="--noservice" OPTS_WITH_VALUE="--ssid --country --passphrase-file" param2value "${@}"
+
+	WLAN_DEVICE=${_param_1}
+	# shellcheck disable=SC2154
+	WLAN_SSID=${_param_ssid}
+	# shellcheck disable=SC2154
+	WLAN_COUNTRY=${_param_country}
+	# shellcheck disable=SC2154
+	WLAN_PASSPHRASE_FILE=${_param_passphrase_file}
+	# shellcheck disable=SC2154
+	WLAN_NOSERVICE=${_param_noservice:-0}
+
+	if [ -z "${WLAN_DEVICE}" ] || [ -z "${WLAN_SSID}" ]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "configure_wireless: a device and --ssid are needed."
+		return "${?}"
+	fi
+	if [ -z "${WLAN_PASSPHRASE_FILE}" ] && [ -t 0 ]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "configure_wireless: the passphrase is read from stdin or from --passphrase-file."
+		return "${?}"
+	fi
+
+	### wpa_passphrase derives the key of the network from the passphrase: the build host has no
+	### wpa_supplicant of its own, the global toolchain gets one
+	build lfs/wpa_supplicant:native
+
+	echo "Wireless link: ${WLAN_DEVICE} (SSID ${WLAN_SSID})"
+	WPA_CONF=$(osconfig_file "${TARGET_SYSCONFDIR}/wpa_supplicant/wpa_supplicant-${WLAN_DEVICE}.conf")
+	### Not through run_cmd: the passphrase reaches wpa_passphrase on its stdin and no log sees it
+	{
+		echo "ctrl_interface=/run/wpa_supplicant"
+		if [ -n "${WLAN_COUNTRY}" ]
+		then
+			echo "country=${WLAN_COUNTRY}"
+		fi
+		echo
+		if [ -n "${WLAN_PASSPHRASE_FILE}" ]
+		then
+			"${GLOBAL_TOOLCHAIN_PATH}/bin/wpa_passphrase" "${WLAN_SSID}" < "${WLAN_PASSPHRASE_FILE}" \
+				| grep -v '^[[:space:]]*#psk='
+		else
+			"${GLOBAL_TOOLCHAIN_PATH}/bin/wpa_passphrase" "${WLAN_SSID}" | grep -v '^[[:space:]]*#psk='
+		fi
+	} > "${WPA_CONF}"
+	chmod 600 "${WPA_CONF}"
+
+	if [ "${WLAN_NOSERVICE}" -eq 0 ]
+	then
+		enable_service "wpa_supplicant@${WLAN_DEVICE}"
+	fi
+}
+
+function configure_ssh () {
+	### configure_ssh [--unit <unit>] [--nokeys]: enable the ssh daemon of the target and give it
+	### the host keys of the data directory of the project, kept across builds so a reflashed board
+	### keeps its ssh identity (generate_ssh_keys writes them there and copies them into the sysroot)
+	local SSH_UNIT SSH_NOKEYS
+	OPTS="--nokeys" OPTS_WITH_VALUE="--unit" param2value "${@}"
+
+	# shellcheck disable=SC2154
+	SSH_UNIT=${_param_unit:-sshd}
+	# shellcheck disable=SC2154
+	SSH_NOKEYS=${_param_nokeys:-0}
+
+	echo "Enabling the ssh daemon"
+	enable_service "${SSH_UNIT}"
+	if [ "${SSH_NOKEYS}" -eq 0 ]
+	then
+		generate_ssh_keys --install "${BIN_DIR}"
+	fi
+}
+
+function generate_ssh_keys () {
+	### generate_ssh_keys [--install <directory under the platform>]: the host keys of the target,
+	### generated once in the data directory of the project and copied into the sysroot from there,
+	### so every image of the project carries the same ssh identity
+	(
+	local IS_SUDO
+	OPTS="" OPTS_WITH_VALUE="--install" param2value "${@}"
+
+	echo "Generating SSH Keys in ${USERDATA_PATH}..."
+	if [ ! -d "${USERDATA_PATH}/etc/ssh" ]
+	then
+		run_cmd "mkdir -pv \"${USERDATA_PATH}/etc/ssh\""
+	fi
+	run_cmd "ssh-keygen -A -v -f \"${USERDATA_PATH}\""
+	run_cmd "find \"${USERDATA_PATH}/etc/ssh\" -name \"ssh_host_*.pub\" -print0 | xargs -0 sed -i \"s/\$(id -un)@\$(uname -n)/${PROJECT_NAME}/\""
+	# shellcheck disable=SC2154
+	if [ -n "${_param_install}" ]
+	then
+		if [ -d "${PLATFORM_PATH}/${_param_install}" ]
+		then
+			if [ ! "$(stat -c '%u' "${PLATFORM_PATH}/${_param_install}")" -eq "$(id -u)" ]
+			then
+				IS_SUDO='-s'
+			fi
+		fi
+		echo -e "Done.\n"
+		echo "Installing SSH keys in ${PLATFORM_PATH}/${_param_install}"
+		run_cmd ${IS_SUDO} "mkdir -pv \"${PLATFORM_PATH}/${_param_install}/etc/ssh\""
+		run_cmd ${IS_SUDO} "cp -fpv \"${USERDATA_PATH}/etc/ssh/\"* \"${PLATFORM_PATH}/${_param_install}/etc/ssh/\""
+		echo -e "Done.\n"
+	fi
+	) >> "${LOG_PATH}/sshkeys.log" 2>&1
+}
+
+function add_user () {
+	### add_user [--tag <mount tag>] <name> [--groups <group>[,<group>]] [--password <password>]
+	###	[--shell <shell>] [--uid <uid>] [--home <directory>] [--nohome] [--system]
+	### The user is created inside the target, where the databases of the users and of the groups
+	### are: the useradd and the chpasswd of the target, not the ones of the build host.
+	local TARGET_TAG USER_NAME USER_GROUPS USER_PASSWORD USERADD_CMD
+	OPTS="--nohome --system" OPTS_WITH_VALUE="--tag --groups --password --shell --uid --home" param2value "${@}"
+
+	TARGET_TAG=${_param_tag}
+	USER_NAME=${_param_1}
+	# shellcheck disable=SC2154
+	USER_GROUPS=${_param_groups}
+	# shellcheck disable=SC2154
+	USER_PASSWORD=${_param_password}
+
+	if [ -z "${USER_NAME}" ]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "add_user: no user name given."
+		return "${?}"
+	fi
+
+	USERADD_CMD="useradd"
+	# shellcheck disable=SC2154
+	if [ "${_param_system:-0}" -eq 1 ]
+	then
+		USERADD_CMD="${USERADD_CMD} --system"
+	fi
+	# shellcheck disable=SC2154
+	if [ -n "${_param_uid}" ]
+	then
+		USERADD_CMD="${USERADD_CMD} -u ${_param_uid}"
+	fi
+	if [ -n "${USER_GROUPS}" ]
+	then
+		USERADD_CMD="${USERADD_CMD} -G ${USER_GROUPS}"
+	fi
+	# shellcheck disable=SC2154
+	if [ -n "${_param_shell}" ]
+	then
+		USERADD_CMD="${USERADD_CMD} -s ${_param_shell}"
+	fi
+	# shellcheck disable=SC2154
+	if [ -n "${_param_home}" ]
+	then
+		USERADD_CMD="${USERADD_CMD} -d ${_param_home}"
+	fi
+	# shellcheck disable=SC2154
+	if [ "${_param_nohome:-0}" -eq 0 ]
+	then
+		USERADD_CMD="${USERADD_CMD} -m"
+	fi
+
+	echo "User: ${USER_NAME}${USER_GROUPS:+ in ${USER_GROUPS}}"
+	run_on_target "${TARGET_TAG}" "${USERADD_CMD} ${USER_NAME}"
+	if [ -n "${USER_PASSWORD}" ]
+	then
+		set_password ${TARGET_TAG:+--tag ${TARGET_TAG}} "${USER_NAME}" "${USER_PASSWORD}"
+	fi
+}
+
+function set_password () {
+	### set_password [--tag <mount tag>] <user> <password>: the password of a user of the target,
+	### set with the chpasswd of the target. A password written here is in the project file and in
+	### the log of the image: it is the first password of a system that is being made, not a secret.
+	local TARGET_TAG USER_NAME USER_PASSWORD
+	OPTS="" OPTS_WITH_VALUE="--tag" param2value "${@}"
+
+	TARGET_TAG=${_param_tag}
+	USER_NAME=${_param_1}
+	USER_PASSWORD=${_param_2}
+
+	if [ -z "${USER_NAME}" ] || [ -z "${USER_PASSWORD}" ]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "set_password: a user and a password are needed."
+		return "${?}"
+	fi
+
+	echo "Password of ${USER_NAME}: set"
+	run_on_target "${TARGET_TAG}" "echo ${USER_NAME}:${USER_PASSWORD} | chpasswd"
+}
+
+is_osconfig_functions () {
+	return 0
+}

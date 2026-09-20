@@ -89,6 +89,8 @@ source "${BB_HOME}/toolchain.functions"
 source "${BB_HOME}/images.functions"
 # shellcheck source=/dev/null
 source "${BB_HOME}/data.functions"
+# shellcheck source=/dev/null
+source "${BB_HOME}/osconfig.functions"
 
 if [ ! -f "${PROJECT}" ]
 then

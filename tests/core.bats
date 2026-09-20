@@ -70,6 +70,19 @@ setup () {
 	[ -z "${_param_force:-}" ]
 }
 
+@test "param_list prints the positional parameters of the last param2value call" {
+	OPTS="" OPTS_WITH_VALUE="--tag" param2value --tag lfs systemd-networkd systemd-resolved
+	run param_list
+	assert_output_lines "systemd-networkd" "systemd-resolved"
+	run param_list 2
+	assert_output_lines "systemd-resolved"
+	run param_list 3
+	assert_output_lines
+	OPTS="" OPTS_WITH_VALUE="" param2value
+	run param_list
+	assert_output_lines
+}
+
 @test "param2value reports an unknown option and a valued option without value" {
 	run env OPTS="--force" OPTS_WITH_VALUE="--toolchain" bash -c '
 		source "${BB_HOME}/seterr"; source "${BB_HOME}/core.functions"

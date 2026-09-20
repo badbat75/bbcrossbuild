@@ -95,6 +95,12 @@ BBCrossBuild provides various functions for use in project files. These are orga
   - `OPTS_WITH_VALUE`: Space-separated list of options that require values
   - `"${@}"`: Pass all command-line arguments
 
+- **param_list**: Print the positional parameters of the last `param2value` call, one per line
+  ```
+  mapfile -t UNITS < <(param_list [<first index>])
+  ```
+  - `<first index>`: Index to start from (default 1); the list ends at the first index `param2value` did not set
+
 - **download_uncompress**: Download and extract archives
   ```
   download_uncompress <URL> <destination> [files_to_extract]
@@ -464,11 +470,118 @@ BBCrossBuild provides various functions for use in project files. These are orga
   create_key_sscertificate
   ```
 
-- **generate_ssh_keys**: Generate SSH keys
+#### OS Configuration Functions (osconfig.functions)
+
+What the project decides about the system it builds. A file is written into the target sysroot (`${BIN_PATH}`), where the image, the chroot and the packages built from it find it; a command that only the target can run (`systemctl`, `useradd`, `chpasswd`) is written into the post install script of the project, `${BIN_PATH}/postinst_scripts/99_osconfig`, which `run_postinstall_scripts` runs as root inside the image after the ones of the packages. The functions that write a command take `--tag <mount tag>` and then run it at once in the chroot of a mounted image (`run_on_root_dir`): that is what a project needs after `inject_into_mount_tag`, when the post install scripts have already run. The post install script and the preset file of the project are rewritten at every run of `bbxb`.
+
+- **set_hostname**: Host name of the system, in `/etc/hostname` and in the `127.0.1.1` line of `/etc/hosts`
+  ```
+  set_hostname <hostname> [--domain <domain>]
+  ```
+  - `<hostname>`: Name of the system
+  - `--domain <domain>`: Domain that completes it into a fully qualified name
+
+- **set_locale**: Locale of every session, and the keymap of the text consoles
+  ```
+  set_locale <locale> [--keymap <keymap>]
+  ```
+  - `<locale>`: Value of `LANG` in `/etc/locale.conf`
+  - `--keymap <keymap>`: Value of `KEYMAP` in `/etc/vconsole.conf`
+
+- **configure_network**: The `.network` file of systemd-networkd for one link
+  ```
+  configure_network <device> [--address <address/prefix>] [--gateway <address>] [--dns <address>[,<address>]] [--domains <list>] [--nodomains] [--file <name>]
+  ```
+  - `<device>`: Name of the link (the `Name=` of the `[Match]` section)
+  - `--address <address/prefix>`: Static address; without it the link asks DHCP for everything
+  - `--gateway <address>`: Default route of a static link
+  - `--dns <address>[,<address>]`: One `DNS=` line per address
+  - `--domains <list>`: `Domains=` of the link
+  - `--nodomains`: Do not take the search domain from the DHCP lease (`UseDomains=yes` is the default)
+  - `--file <name>`: Name of the file, when it must differ from the device
+
+- **set_network_wait_online**: What `systemd-networkd-wait-online` waits for, as a drop-in of its unit
+  ```
+  set_network_wait_online [--any|--all] [--interface <device>] [--timeout <seconds>]
+  ```
+  - `--any`: One link online is enough (default)
+  - `--all`: Every link networkd manages
+  - `--interface <device>`: That link and no other
+  - `--timeout <seconds>`: How long it waits
+
+- **configure_wireless**: The wpa_supplicant configuration of one wireless link, and its `wpa_supplicant@<device>` unit
+  ```
+  <passphrase source> | configure_wireless <device> --ssid <name> [--country <code>] [--passphrase-file <file>] [--noservice]
+  ```
+  - `<device>`: Wireless interface
+  - `--ssid <name>`: Name of the network
+  - `--country <code>`: ISO 3166 code of the regulatory domain
+  - `--passphrase-file <file>`: File holding the passphrase; without it the passphrase is read from stdin
+  - `--noservice`: Do not enable the unit
+  - The image gets only the key `wpa_passphrase` derives: the passphrase never reaches a command line or a log
+
+- **configure_ssh**: Enable the ssh daemon and install the host keys of the project
+  ```
+  configure_ssh [--unit <unit>] [--nokeys]
+  ```
+  - `--unit <unit>`: Name of the unit (default `sshd`)
+  - `--nokeys`: Leave the host keys alone
+
+- **generate_ssh_keys**: Generate the ssh host keys in the data directory of the project, once, and install them
   ```
   generate_ssh_keys [--install <destination>]
   ```
-  - `--install <destination>`: Install keys to destination
+  - `--install <destination>`: Directory under the platform to copy them into (`binaries` for the sysroot)
+
+- **add_unit_dropin**: A drop-in of a systemd unit, read from stdin
+  ```
+  add_unit_dropin <unit> <name>
+  ```
+  - `<unit>`: Unit to extend (a name without a type is a `.service`)
+  - `<name>`: Name of the file, `/etc/systemd/system/<unit>.d/<name>.conf`
+
+- **enable_service**, **disable_service**, **mask_service**, **preset_service**: The state of units in the target
+  ```
+  enable_service [--tag <mount tag>] <unit>...
+  ```
+  - `<unit>...`: Units to enable, disable, mask or preset
+  - `--tag <mount tag>`: Run it now in the chroot of that image instead of at install time
+
+- **set_service_preset**: Rules of the preset file of the project, `/etc/systemd/system-preset/00-<project>.preset`
+  ```
+  set_service_preset <enable|disable|mask> <unit pattern>...
+  ```
+  - `<unit pattern>...`: Units or globs the rule answers for, what `systemctl preset` and `preset-all` apply
+
+- **set_default_target**: What the system boots into
+  ```
+  set_default_target [--tag <mount tag>] <target>
+  ```
+  - `<target>`: Default target (`multi-user.target`, `graphical.target`...)
+
+- **add_user**: Create a user inside the target
+  ```
+  add_user [--tag <mount tag>] <name> [--groups <group>[,<group>]] [--password <password>] [--shell <shell>] [--uid <uid>] [--home <directory>] [--nohome] [--system]
+  ```
+  - `<name>`: User name
+  - `--groups <list>`: Supplementary groups
+  - `--password <password>`: First password of the account
+  - `--system`, `--uid`, `--shell`, `--home`, `--nohome`: The matching options of `useradd`
+
+- **set_password**: Password of a user of the target
+  ```
+  set_password [--tag <mount tag>] <user> <password>
+  ```
+
+- **add_postinstall_command**: Any other command that has to run as root inside the target
+  ```
+  add_postinstall_command "<command>"...
+  ```
+
+- **run_on_target**: The dispatch the functions above use: the chroot of a mounted image, or the post install script when the tag is empty
+  ```
+  run_on_target <mount tag> "<command>"...
+  ```
 
 Here's a simple example of how to create a project file:
 
@@ -496,8 +609,12 @@ mount_tag myimage --mountlist "2:/ 1:/boot"
 build package1
 build package2
 
+## Configure the system being built
+set_hostname myboard
+configure_network eth0
+enable_service service1
+
 ## Run post-installation commands
-run_on_root_dir myimage root "systemctl enable service1"
 run_on_root_dir myimage root "echo 'custom config' > /etc/config"
 
 ## Unmount the image
