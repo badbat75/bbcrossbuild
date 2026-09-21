@@ -26,7 +26,7 @@ SLOW=${BOARD_CHECK_SLOW:-0}
 
 ### The presets of the image, as projects/lfs.prj and the postinstall scripts of the packages leave
 ### them: a unit that starts by itself and one that must not
-UNITS_ENABLED="avahi-daemon.service sshd.service systemd-networkd.service systemd-resolved.service systemd-timesyncd.service bluetooth.service"
+UNITS_ENABLED="avahi-daemon.service sshd.service systemd-networkd.service systemd-resolved.service systemd-timesyncd.service bluetooth.service fstrim.timer zram-swap.service fake-hwclock.service fake-hwclock-save.timer"
 UNITS_DISABLED="avahi-dnsconfd.service hostapd.service regenerate_ssh_host_keys.service rsyncd.service systemd-sysupdate.timer"
 ### The nsswitch.conf the recipes of glibc, systemd and nss-mdns compose
 HOSTS_LINE="hosts: files dns mdns_minimal"
@@ -475,6 +475,25 @@ if command -v coredumpctl > /dev/null
 then
 	COREDUMPS=$(${SUDO} coredumpctl list --no-legend 2>/dev/null | wc -l)
 	expect "coredumps" 0 "${COREDUMPS}"
+fi
+
+section "python"
+if command -v python3 > /dev/null
+then
+	### The binary starts and prints its version even with a gutted or misplaced standard library:
+	### only an import of the core modules says the interpreter really runs
+	if python3 -c 'import encodings, io, ssl, json, sqlite3' > /dev/null 2>&1
+	then
+		ok "python3 imports its standard library ($(python3 -c 'import sys; print(sys.version.split()[0])'))"
+	else
+		bad "python3 cannot import its standard library: $(python3 -c 'import encodings, ssl' 2>&1 | tail -n 1)"
+	fi
+	if python3 -c 'import ssl' > /dev/null 2>&1
+	then
+		note "ssl: $(python3 -c 'import ssl; print(ssl.OPENSSL_VERSION)')"
+	fi
+else
+	skip "python3: no python on this system"
 fi
 
 section "journal of this boot"
