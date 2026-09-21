@@ -92,6 +92,8 @@ GCC_VER=${GCC_VER:-16.2.0}
 LLVM_VER=${LLVM_VER:-23.1.1}
 ### Python version
 PYTHON_VER=${PYTHON_VER:-3.14.7}
+### Perl version (the perl5 recipe builds it, recipes that reference its module paths read it)
+PERL_VER=${PERL_VER:-5.44.0}
 #### Tools version
 AUTOCONF_VER=${AUTOCONF_VER:-2.73}
 AUTOCONFARCHIVE_VER=${AUTOCONFARCHIVE_VER:-2024.10.16}
