@@ -492,8 +492,29 @@ then
 	then
 		note "ssl: $(python3 -c 'import ssl; print(ssl.OPENSSL_VERSION)')"
 	fi
+	if python3 -c 'import json, ssl; json.dumps({"check": [1, 2, 3]}); ssl.create_default_context()' > /dev/null 2>&1
+	then
+		ok "python3 runs a functional check (json round-trip and TLS context)"
+	else
+		bad "python3 fails a functional check: $(python3 -c 'import json, ssl; ssl.create_default_context()' 2>&1 | tail -n 1)"
+	fi
 else
 	skip "python3: no python on this system"
+fi
+
+section "perl"
+if command -v perl > /dev/null
+then
+	### The binary starts even without its architecture-dependent modules: only the core XS
+	### modules say the installation is complete (Storable bakes the paths of the build in it)
+	if perl -e 'use strict; use warnings; use POSIX (); use Cwd (); use File::Basename (); use Encode (); use Scalar::Util (); use Storable ();' > /dev/null 2>&1
+	then
+		ok "perl loads its core modules ($(perl -e 'printf "%vd", $^V'))"
+	else
+		bad "perl cannot load its core modules: $(perl -e 'use Storable' 2>&1 | tail -n 1)"
+	fi
+else
+	skip "perl: no perl on this system"
 fi
 
 section "journal of this boot"
