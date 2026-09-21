@@ -101,6 +101,26 @@ workaround is part of closing the item.
      directory has the same owners after a container run as after a host run, and a host run
      continues where a container run stopped.
 
+4. **A mode to reuse the build directory.** Today every build removes its build directory at the
+   start (unconditionally, before the download) and again on success (unless `--keep_builddir`),
+   and the name carries the target (`${PKG_FULLNAME}-${PKG_TARGET}` in `build.functions`):
+   recompiling the same package, or the same package as a second target that keeps the flags of
+   the recipe (`lfs/llvm` and `lfs/llvm:libllvm` today, the second one only filters the install
+   in `postbuild.sh`), means a full recompile, and the only reuse is the sccache cache, which the
+   container does not carry between runs. The goal is a mode in which the build tree survives and
+   the build system decides what changed. Known steps:
+   - share the build directory of targets that keep the recipe's flags (a variant may already
+     override `PKG_BLDPATH`, it is `eval`ed after the variant is sourced: point the second target
+     at the first one's tree);
+   - gate the removal at the start on the mode (a `PKG_KEEPBUILDDIR` recipe variable, the
+     `--keep_builddir` flag for a run): cmake/ninja/make reconfigure and rebuild only the diff;
+   - gate the removal on success the same way, so the tree is there for the next run;
+   - disk: the trees under `<platform>/builds/` then accumulate; decide the policy (per recipe,
+     per run, a cleanup of the stale ones);
+   - validation: stop a full `lfs rpi3-aarch64` build before the Development section and resume:
+     `lfs/llvm` and `lfs/llvm:libllvm` compile once; a recipe edit recompiles only what changed;
+     the data directory shows the kept trees.
+
 ## Packages
 
 1. **NetworkManager manages the network of the lfs image.** Today `projects/lfs.prj` configures
