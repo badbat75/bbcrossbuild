@@ -2308,6 +2308,81 @@ function downloadsources () {
 	fi
 }
 
+function sources_key () {
+	### sources_key: md5 of what the prepared sources of the package are made of, the content of the
+	### marker of PKG_KEEPBUILDDIR: the archives or the repository, the Debian patches and the patch
+	### files of the recipe and of the selected variants (names and contents). Another target or
+	### platform with other patches gets another key; a change of the recipe elsewhere does not
+	local PATCH_FILE
+	{
+		printf '%s\n' "PKG_URL=${PKG_URL}" "GIT_URL=${GIT_URL}" "GIT_COMMIT=${GIT_COMMIT}" \
+			"PATCHDEB=${PATCHDEB}" "MAKEDIR=${MAKEDIR}"
+		recipe_patches | while read -r PATCH_FILE
+		do
+			printf '%s %s\n' "$( basename "${PATCH_FILE}" )" "$( md5sum < "${PATCH_FILE}" | cut -d' ' -f1 )"
+		done
+	} | md5sum | cut -d' ' -f1
+	return 0
+}
+
+function builddir_key () {
+	### builddir_key <environment.source>: md5 of what the configuration of a kept build directory
+	### (PKG_KEEPBUILDDIR) depends on. CMake and meson read the compilers and the flags of the
+	### environment only when they configure an empty directory, and a cache variable dropped from
+	### the command line stays in the cache: the exported environment of the build (not the
+	### directory it was written from, nor the PATH of the shell that started bbxb), the
+	### configuration variables of the recipe, the function of BUILD_PROCESS (it writes
+	### runconfig.sh) and size and time of the compilers of the environment: a build system does not
+	### see a compiler rebuilt with the same version
+	local VAR EXE
+	{
+		sed -n -e '/^export ENVIRONMENT_SOURCE_PATH=/d' -e '/^export PATH=/d' -e '/^export /p' "${1}" 2>/dev/null || true
+		for VAR in CONF_CMD CONF_ENV CONF_FLAGS CONF_PATH CONF_VARS CMAKE_GENERATOR STD_CONF_FLAGS \
+			PKG_AUTOCONF PKG_AUTOMAKE PKG_LIBTOOL PKG_GETTEXT PKG_COPYSRC PKG_TOOLCHAIN \
+			PKG_OVERRIDELD PKG_OVERRIDELTO PKG_OVERRIDESHARED PKG_OVERRIDESTATIC \
+			BUILD_LIBSHARED BUILD_LIBSTATIC LTOENABLE \
+			INSTALL_PREFIX INSTALL_EXECPREFIX INSTALL_LIBDIR INSTALL_LIBSUFFIX INSTALL_INCLUDEDIR \
+			INSTALL_SYSCONFDIR INSTALL_LOCALSTATEDIR INSTALL_SHAREDIR
+		do
+			printf '%s=%s\n' "${VAR}" "${!VAR}"
+		done
+		declare -f "${BUILD_PROCESS:-none}" 2>/dev/null || true
+		(
+			# shellcheck source=/dev/null
+			source "${1}"
+			for EXE in "${CC_EXE}" "${CXX_EXE}"
+			do
+				if [ -n "${EXE}" ]
+				then
+					stat -L -c '%n %s %Y' "$( command -v "${EXE%% *}" )"
+				fi
+			done
+		) 2>/dev/null || true
+	} | md5sum | cut -d' ' -f1
+	return 0
+}
+
+function stale_builddirs () {
+	### stale_builddirs: the build directories kept (PKG_KEEPBUILDDIR, recognized by their stamp) for
+	### another version of the package, <name><suffix>_<other version>[-<target>] under BLD_PATH:
+	### a version bump leaves the tree of the previous one, several GB for lfs/llvm
+	local DIR BASE
+	if [ -z "${PKG_VER}" ]
+	then
+		return 0
+	fi
+	for DIR in "${BLD_PATH}/${PKG_NAME}${PKG_SUFFIX}_"*
+	do
+		BASE=${DIR##*/}
+		if [ -f "${DIR}/.bbxb-environment" ] && [ "${DIR}" != "${PKG_BLDPATH}" ] && \
+			[ "${BASE}" != "${PKG_FULLNAME}" ] && [[ "${BASE}" != "${PKG_FULLNAME}"-* ]]
+		then
+			echo "${DIR}"
+		fi
+	done
+	return 0
+}
+
 function build () {(
 
 	unset \
@@ -2340,6 +2415,7 @@ function build () {(
 		PKG_FAULTYCFLAGS \
 		PKG_FCFLAGS \
 		PKG_GETTEXT \
+		PKG_KEEPBUILDDIR \
 		PKG_KERNEL_BUILD_MODULES \
 		PKG_KERNEL_INITRAMFS \
 		PKG_KERNEL_INITRAMFS_DRIVERS \
@@ -2373,7 +2449,7 @@ function build () {(
 		VAR_INSTALL_INCDIR \
 		VAR_INSTALL_CONFDIR \
 
-	OPTS="--force --no_gcc_check --no_save_status --temporary --keep_builddir" OPTS_WITH_VALUE="--toolchain --with_extra_modules" param2value "${@}"
+	OPTS="--force --no_gcc_check --no_save_status --temporary --keep_builddir --clean_builddir" OPTS_WITH_VALUE="--toolchain --with_extra_modules" param2value "${@}"
 
 	# Split dependency in Package name and its Target separated by ':'
 
@@ -2381,6 +2457,9 @@ function build () {(
 		ALREADY_BUILT \
 		BUILD_CHECKED_KEY \
 		BUILD_CHECKED_NAME \
+		BUILDDIR_KEY \
+		BUILDDIR_STAMP \
+		CLEANBUILDDIR \
 		FORCE \
 		GCC_CHECK \
 		INSTALL_PREFIX \
@@ -2410,6 +2489,9 @@ function build () {(
 		POSTINST_VAR \
 		RECIPE_SCRIPT \
 		RECIPE_SCRIPT_FILE \
+		SOURCES_KEY \
+		SOURCES_MARKER \
+		STALE_BUILDDIR \
 		STATUS_CHK_FILE \
 		STATUS_FILE \
 		STATUS_FILE_DEFAULT_TARGET \
@@ -2422,6 +2504,7 @@ function build () {(
 	FORCE=${_param_force:-0}
 	NOSAVESTATUS=${_param_no_save_status:-0}
 	KEEPBUILDDIR=${_param_keep_builddir:-0}
+	CLEANBUILDDIR=${_param_clean_builddir:-0}
 	TEMPORARY_STATUS=
 
 	if [ "${_param_temporary:-0}" -eq 1 ]
@@ -2612,12 +2695,44 @@ function build () {(
 	done
 	if [ -n "${PKG_URL}" ] || [ -n "${GIT_URL}" ]
 	then
-		echo -n "Downloading ${PKG_FULLNAME}..."
-		downloadsources >> "${LOG_FILE}"
-		echo "Done."
-		preparesources >> "${LOG_FILE}"
+		### PKG_KEEPBUILDDIR: the sources are extracted and patched only once. The marker is written in
+		### the sources directory once they are ready and carries their key (sources_key): a build that
+		### extracts them again (another target, lfs/llvm:native) removes it with them, other patches
+		### (another target, another platform of the project) prepare them again, an interrupted
+		### preparation leaves none. prebuild.sh runs all the same: it has to be idempotent
+		SOURCES_MARKER="${PKG_SRCPATH}/.bbxb-sources"
+		SOURCES_KEY=$( sources_key )
+		if [ "${PKG_KEEPBUILDDIR:-0}" -eq 1 ] && [ "${CLEANBUILDDIR}" -eq 0 ] && [ -f "${SOURCES_MARKER}" ] && \
+			[ "$( cat "${SOURCES_MARKER}" )" == "${SOURCES_KEY}" ]
+		then
+			echo "Sources of ${PKG_FULLNAME} already prepared."
+		else
+			echo -n "Downloading ${PKG_FULLNAME}..."
+			downloadsources >> "${LOG_FILE}"
+			echo "Done."
+			{
+				### A git clone is not removed by downloadsources: neither is its marker
+				if [ -f "${SOURCES_MARKER}" ]
+				then
+					run_cmd "rm -f \"${SOURCES_MARKER}\""
+				fi
+				preparesources
+				if [ "${PKG_KEEPBUILDDIR:-0}" -eq 1 ]
+				then
+					run_cmd "echo \"${SOURCES_KEY}\" > \"${SOURCES_MARKER}\""
+				fi
+			} >> "${LOG_FILE}"
+		fi
 	fi
-	if [ -d "${PKG_BLDPATH}" ]
+	if [ "${PKG_KEEPBUILDDIR:-0}" -eq 1 ]
+	then
+		### The kept trees of the other versions of the package go (stale_builddirs)
+		for STALE_BUILDDIR in $( stale_builddirs )
+		do
+			run_cmd "rm -rf \"${STALE_BUILDDIR}\"" >> "${LOG_FILE}"
+		done
+	fi
+	if [ -d "${PKG_BLDPATH}" ] && { [ "${PKG_KEEPBUILDDIR:-0}" -ne 1 ] || [ "${CLEANBUILDDIR}" -eq 1 ]; }
 	then
 		run_cmd "rm -rf \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
 	fi
@@ -2630,6 +2745,24 @@ function build () {(
 		run_cmd "mkdir -p \"${PKG_PKGPATH}\"" >> "${LOG_FILE}"
 	fi
 	( create_environment_source --target "${PKG_TARGET_ENV}" ) | log_buffer info >> "${LOG_FILE}"
+	if [ "${PKG_KEEPBUILDDIR:-0}" -eq 1 ] && [ "${BUILD_PROCESS:-none}" != none ] && [ "${BUILD_PROCESS}" != downloadonly ]
+	then
+		### A kept build directory configured with another environment is emptied (builddir_key): CMake
+		### and meson would keep the compilers and the flags of their cache. A directory without the
+		### stamp (left by --keep_builddir, or by a build before PKG_KEEPBUILDDIR) has an unknown
+		### environment: emptied too. A flavor that configures nothing (lfs/llvm:sources, none) leaves
+		### the tree and the stamp to the ones that do: its key, with another BUILD_PROCESS, would
+		### empty the tree at every build of the other flavors
+		BUILDDIR_STAMP="${PKG_BLDPATH}/.bbxb-environment"
+		BUILDDIR_KEY=$( builddir_key "${PKG_BLDPATH}/environment.source" )
+		if [ "$( cat "${BUILDDIR_STAMP}" 2>/dev/null || true )" != "${BUILDDIR_KEY}" ] && \
+			[ -n "$( find "${PKG_BLDPATH}" -mindepth 1 -maxdepth 1 ! -name environment.source -print -quit 2>/dev/null || true )" ]
+		then
+			echo "${SPACES}Build directory of ${PKG_FULLNAME} emptied: the build environment changed."
+			run_cmd "find \"${PKG_BLDPATH}\" -mindepth 1 -maxdepth 1 ! -name environment.source -exec rm -rf {} +" >> "${LOG_FILE}"
+		fi
+		run_cmd "echo \"${BUILDDIR_KEY}\" > \"${BUILDDIR_STAMP}\"" >> "${LOG_FILE}"
+	fi
 	create_recipe_source | log_buffer info >> "${LOG_FILE}"
 	#### Pre-Build
 	RECIPE_SCRIPT_FILE=$( recipe_script prebuild.sh )
@@ -2756,7 +2889,7 @@ function build () {(
 			set +e
 		) >> "${LOG_FILE}" 2>&1
 	fi
-	if [ "${KEEPBUILDDIR}" -eq 0 ]
+	if [ "${KEEPBUILDDIR}" -eq 0 ] && [ "${PKG_KEEPBUILDDIR:-0}" -ne 1 ]
 	then
 		run_cmd "rm -rf \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
 	fi

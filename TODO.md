@@ -101,25 +101,15 @@ workaround is part of closing the item.
      directory has the same owners after a container run as after a host run, and a host run
      continues where a container run stopped.
 
-4. **A mode to reuse the build directory.** Today every build removes its build directory at the
-   start (unconditionally, before the download) and again on success (unless `--keep_builddir`),
-   and the name carries the target (`${PKG_FULLNAME}-${PKG_TARGET}` in `build.functions`):
-   recompiling the same package, or the same package as a second target that keeps the flags of
-   the recipe (`lfs/llvm` and `lfs/llvm:libllvm` today, the second one only filters the install
-   in `postbuild.sh`), means a full recompile, and the only reuse is the sccache cache, which the
-   container does not carry between runs. The goal is a mode in which the build tree survives and
-   the build system decides what changed. Known steps:
-   - share the build directory of targets that keep the recipe's flags (a variant may already
-     override `PKG_BLDPATH`, it is `eval`ed after the variant is sourced: point the second target
-     at the first one's tree);
-   - gate the removal at the start on the mode (a `PKG_KEEPBUILDDIR` recipe variable, the
-     `--keep_builddir` flag for a run): cmake/ninja/make reconfigure and rebuild only the diff;
-   - gate the removal on success the same way, so the tree is there for the next run;
-   - disk: the trees under `<platform>/builds/` then accumulate; decide the policy (per recipe,
-     per run, a cleanup of the stale ones);
-   - validation: stop a full `lfs rpi3-aarch64` build before the Development section and resume:
-     `lfs/llvm` and `lfs/llvm:libllvm` compile once; a recipe edit recompiles only what changed;
-     the data directory shows the kept trees.
+4. **A mode to reuse the build directory.** `PKG_KEEPBUILDDIR=1` (`build.functions`, README)
+   keeps the prepared sources (marker `.bbxb-sources`, keyed on archives and patches) and the
+   build tree (stamp `.bbxb-environment`, keyed on the environment and the configuration: a
+   changed key empties the tree), removes the kept trees of other versions, and
+   `build --clean_builddir` starts from scratch; `lfs/llvm` shares one tree between its target
+   flavors (`variants/target/sysroot`). What is left is the validation: stop a full
+   `lfs rpi3-aarch64` build before the Development section and resume: `lfs/llvm` and
+   `lfs/llvm:libllvm` compile once; a recipe edit recompiles only what changed; a change of
+   `LTOENABLE` empties the tree; the data directory shows the kept trees.
 
 ## Packages
 

@@ -181,10 +181,11 @@ BBCrossBuild provides various functions for use in project files. These are orga
 
 - **build**: Build a package with given options
   ```
-  build [--force] [--keep_builddir] [--no_save_status] [--no_gcc_check] [--temporary] [--toolchain <toolchain>] [--with_extra_modules <modules>] <package_name>
+  build [--force] [--keep_builddir] [--clean_builddir] [--no_save_status] [--no_gcc_check] [--temporary] [--toolchain <toolchain>] [--with_extra_modules <modules>] <package_name>
   ```
   - `--force`: Force rebuild even if already built
   - `--keep_builddir`: Keep build directory after build
+  - `--clean_builddir`: With `PKG_KEEPBUILDDIR=1`, remove the kept build directory and prepare the sources again before the build
   - `--no_save_status`: Don't save build status
   - `--no_gcc_check`: Skip GCC toolchain check
   - `--temporary`: Create temporary status file
@@ -672,6 +673,10 @@ Define dependencies to build and install before building this. They are checked 
 **PKG_SRCDIR:**  
 Specify source directory name.  
 `PKG_SRCDIR="package-1.0"`
+
+**PKG_KEEPBUILDDIR:**  
+Keep the build directory and the prepared sources of the package between builds (1, default 0). The sources are extracted and patched only once: a marker in the sources directory (`.bbxb-sources`) carries their key (archives or repository, Debian patches, patch files of the recipe and of the selected variants), so other patches (another target or platform) or a new extraction (another target of the same sources) prepare them again, while a change of a script or of a variable does not. The build directory is not removed before or after the build, so an incremental build system (cmake/ninja) rebuilds only what changed: flavors of the same package that share the directory (a `PKG_BLDPATH` without the target suffix, as `lfs/llvm`) compile only once. A stamp in the build directory (`.bbxb-environment`) carries the key of its configuration (the exported environment, the `CONF_*` and install variables, the build process, size and time of the compilers): CMake and meson read the compilers and flags of the environment only when they configure an empty directory, so a kept directory with another key, or without the stamp, is emptied; a flavor that configures nothing (`BUILD_PROCESS` `none` or `downloadonly`, as `lfs/llvm:sources`) leaves the directory and its stamp alone. The kept directories of the other versions of the package are removed. `build --clean_builddir` starts from scratch. A `prebuild.sh` that runs on the kept sources has to be idempotent.  
+`PKG_KEEPBUILDDIR=0|1`
 
 **PKG_SUFFIX:**  
 Add a suffix to the package name.  
