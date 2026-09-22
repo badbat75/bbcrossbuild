@@ -108,7 +108,7 @@ workaround is part of closing the item.
    `build --clean_builddir` starts from scratch; `lfs/llvm` shares one tree between its target
    flavors (`variants/target/sysroot`). What is left is the validation: stop a full
    `lfs rpi3-aarch64` build before the Development section and resume: `lfs/llvm` and
-   `lfs/llvm:libllvm` compile once; a recipe edit recompiles only what changed; a change of
+   `lfs/llvm:libs` compile once; a recipe edit recompiles only what changed; a change of
    `LTOENABLE` empties the tree; the data directory shows the kept trees.
 
 ## Packages

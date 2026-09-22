@@ -1,0 +1,10 @@
+# The image gets the checkout (ADD . . in Dockerfile), not the files of the user that .gitignore
+# keeps out of the repository: the configurations carry passwords (LFS_WLANPSK of
+# projects/lfs.conf), and the container gets its settings from docker run (-e, -v)
+.vscode
+bbxb.conf
+images
+projects/*.conf
+projects/test*.prj
+projects-tmp
+utilities/container/*.conf
