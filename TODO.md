@@ -101,16 +101,6 @@ workaround is part of closing the item.
      directory has the same owners after a container run as after a host run, and a host run
      continues where a container run stopped.
 
-4. **A mode to reuse the build directory.** `PKG_KEEPBUILDDIR=1` (`build.functions`, README)
-   keeps the prepared sources (marker `.bbxb-sources`, keyed on archives and patches) and the
-   build tree (stamp `.bbxb-environment`, keyed on the environment and the configuration: a
-   changed key empties the tree), removes the kept trees of other versions, and
-   `build --clean_builddir` starts from scratch; `lfs/llvm` shares one tree between its target
-   flavors (`variants/target/sysroot`). What is left is the validation: stop a full
-   `lfs rpi3-aarch64` build before the Development section and resume: `lfs/llvm` and
-   `lfs/llvm:libs` compile once; a recipe edit recompiles only what changed; a change of
-   `LTOENABLE` empties the tree; the data directory shows the kept trees.
-
 ## Packages
 
 1. **NetworkManager manages the network of the lfs image.** Today `projects/lfs.prj` configures
