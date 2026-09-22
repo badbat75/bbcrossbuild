@@ -320,6 +320,39 @@ function calls () {
 	[ ! -e "${SRC_PATH}/plain_1.0/.bbxb-sources" ]
 }
 
+@test "a nested build indents every line: the sources line, Building and Done" {
+	make_recipe fix/src <<-'EOF'
+		PKG_VER=1.0
+		PKG_URL=https://example.com/src-1.0.tar.gz
+		BUILD_PROCESS=none
+	EOF
+	make_recipe fix/tool <<-'EOF'
+		PKG_VER=1.0
+		BUILD_PROCESS=custom
+	EOF
+	make_recipe fix/top <<-'EOF'
+		PKG_VER=1.0
+		PKG_DEPS="fix/src fix/tool"
+		BUILD_PROCESS=none
+	EOF
+	downloadsources () { mkdir -p "${PKG_SRCPATH}"; }
+	preparesources () { :; }
+
+	run build fix/top:cross
+	[ "${status}" -eq 0 ]
+	assert_output_lines "Package top_1.0:cross" \
+		"   Requires fix/src" \
+		"   Package src_1.0:cross" \
+		"   Downloading src_1.0...Done." \
+		"   Done." \
+		"" \
+		"   Requires fix/tool" \
+		"   Package tool_1.0:cross" \
+		"   Building tool_1.0:cross [custom]...Done." \
+		"" \
+		"Done."
+}
+
 @test "sources_key: the archives and the patches, not the rest of the recipe" {
 	make_recipe fix/key <<-'EOF'
 		PKG_VER=1.0

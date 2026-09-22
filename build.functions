@@ -2460,6 +2460,7 @@ function build () {(
 		BUILDDIR_KEY \
 		BUILDDIR_STAMP \
 		CLEANBUILDDIR \
+		CONSOLE_LINE_OPEN \
 		FORCE \
 		GCC_CHECK \
 		INSTALL_PREFIX \
@@ -2662,7 +2663,10 @@ function build () {(
 		"check_${PKG_TOOLCHAIN:-${TOOLCHAIN}}_c"
 	fi
 
-	echo -n "${SPACES}"
+	### Every console line of the build carries its own indentation: "Done." closes the line of
+	### "Building..." (CONSOLE_LINE_OPEN), or goes on a line of its own when nothing is built
+	### (BUILD_PROCESS none, after the line of the sources)
+	CONSOLE_LINE_OPEN=0
 	# Build defaults
 	### To manage source path removal at beginning or at the end...
 	#if [ -d ${PKG_SRCPATH} ]
@@ -2705,9 +2709,9 @@ function build () {(
 		if [ "${PKG_KEEPBUILDDIR:-0}" -eq 1 ] && [ "${CLEANBUILDDIR}" -eq 0 ] && [ -f "${SOURCES_MARKER}" ] && \
 			[ "$( cat "${SOURCES_MARKER}" )" == "${SOURCES_KEY}" ]
 		then
-			echo "Sources of ${PKG_FULLNAME} already prepared."
+			echo "${SPACES}Sources of ${PKG_FULLNAME} already prepared."
 		else
-			echo -n "Downloading ${PKG_FULLNAME}..."
+			echo -n "${SPACES}Downloading ${PKG_FULLNAME}..."
 			downloadsources >> "${LOG_FILE}"
 			echo "Done."
 			{
@@ -2788,6 +2792,7 @@ function build () {(
 	if [ ! "${BUILD_PROCESS:-none}" == none ]
 	then
 		echo -n "${SPACES}Building ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}} [${BUILD_PROCESS}]..."
+		CONSOLE_LINE_OPEN=1
 		${BUILD_PROCESS} >> "${LOG_FILE}" 2>&1
 	fi
 	#### Post-Build
@@ -2907,7 +2912,12 @@ function build () {(
 		### files go with it (the glob outside the quotes, or rm got the literal name)
 		run_cmd "rm -f \"${STATUS_PATH}\"/*.tmp" >> "${LOG_FILE}"
 	fi
-	echo "Done."
+	if [ "${CONSOLE_LINE_OPEN}" -eq 1 ]
+	then
+		echo "Done."
+	else
+		echo "${SPACES}Done."
+	fi
 	echo
 )}
 
