@@ -32,7 +32,7 @@ function loopdevmgr() {
 				eval "${line//MAJ:MIN/MAJMIN} bash -c '
 					if [ ! -e /dev/\${NAME} ];
 					then
-						run_cmd \"mknod -m 0660 /dev/\${NAME} b \$(echo \${MAJMIN} | cut -d: -f1) \$(echo \${MAJMIN} | cut -d: -f2)\" >> \"${LOG_PATH}/images_${MOUNT_NAME}.log\";
+						run_cmd -s \"mknod -m 0660 /dev/\${NAME} b \$(echo \${MAJMIN} | cut -d: -f1) \$(echo \${MAJMIN} | cut -d: -f2)\" >> \"${LOG_PATH}/images_${MOUNT_NAME}.log\";
 					fi'"
 			done <<< "$(lsblk -P "${LODEVICE}" -Q 'TYPE == "part"')"
 			echo "${LODEVICE}"

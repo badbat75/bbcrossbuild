@@ -1,20 +1,22 @@
 #!/bin/bash
-CONTAINERBUILD_PATH=$(realpath "$(dirname "${0}")")
-echo "Container build path: ${CONTAINERBUILD_PATH}"
+# Build the container image of this checkout and export the build cache of the dnf layer, which
+# survives the "docker system prune" below. "bbxb --container" builds the image by itself when it
+# is missing or out of date, importing this cache: this script is the way to refresh both.
 
-# shellcheck disable=SC1091
-source "${CONTAINERBUILD_PATH}"/getenv
+BB_HOME=$(realpath "$(dirname "${0}")/../..")
 
-# Build cache directory that survives the "docker system prune" at the end of every build.
+# shellcheck source=/dev/null
+source "${BB_HOME}/seterr"
+# shellcheck source=/dev/null
+source "${BB_HOME}/core.functions"
+# shellcheck source=/dev/null
+source "${BB_HOME}/container.functions"
+
 # Fixed path, group docker: the buildkit daemon (root) writes, any docker user reads and inspects
-CACHE_DIR=${BBXB_CACHE_DIR:-/var/cache/bbcrossbuild-docker}
-mkdir -pv "${CACHE_DIR}" 2>/dev/null || sudo mkdir -pv "${CACHE_DIR}"
-sudo chgrp docker "${CACHE_DIR}" 2>/dev/null || true
-sudo chmod 2775 "${CACHE_DIR}" 2>/dev/null || true
+mkdir -pv "${CONTAINER_CACHE_PATH}" 2>/dev/null || sudo mkdir -pv "${CONTAINER_CACHE_PATH}"
+sudo chgrp docker "${CONTAINER_CACHE_PATH}" 2>/dev/null || true
+sudo chmod 2775 "${CONTAINER_CACHE_PATH}" 2>/dev/null || true
 
-case "${1}" in
-	base) sudo docker build --target base --cache-to type=local,dest="${CACHE_DIR}" -t "${CONTAINER_NAME}-base" "${CONTAINERBUILD_PATH}/../.." ;;
-	*) sudo docker build --cache-from type=local,src="${CACHE_DIR}" -t "${CONTAINER_NAME}" "${CONTAINERBUILD_PATH}/../.." ;;
-esac
+container_image --force --cache-export || exit ${?}
 
-sudo docker system prune -f
+docker system prune -f

@@ -1,10 +1,5 @@
-# The image gets the checkout (ADD . . in Dockerfile), not the files of the user that .gitignore
-# keeps out of the repository: the configurations carry passwords (LFS_WLANPSK of
-# projects/lfs.conf), and the container gets its settings from docker run (-e, -v)
-.vscode
-bbxb.conf
-images
-projects/*.conf
-projects/test*.prj
-projects-tmp
-utilities/container/*.conf
+# The image carries the host dependencies only: the checkout is mounted into the container by
+# "bbxb --container" (container.functions), never copied. Nothing of it belongs to the build
+# context, and the files of the user that .gitignore keeps out of the repository (bbxb.conf,
+# projects/*.conf, which carry passwords such as LFS_WLANPSK) least of all.
+*

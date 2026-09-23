@@ -1,9 +1,12 @@
 #!/bin/bash
-CURRENT_BRANCH=$(git symbolic-ref --short HEAD)
+# The image of this checkout is named after its branch. Sourced by container.functions (bbxb) and
+# by the container utilities next to this file.
+# shellcheck shell=bash disable=SC2034
+CONTAINER_PATH=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
+CURRENT_BRANCH=$(git -C "${CONTAINER_PATH}" symbolic-ref --short HEAD 2> /dev/null || echo detached)
 
-# shellcheck disable=SC2034
 case ${CURRENT_BRANCH} in
 	development) CONTAINER_NAME=bbcrossbuild-devel ;;
 	master) CONTAINER_NAME=bbcrossbuild-latest ;;
-	*) CONTAINER_NAME=bbcrossbuild-${CURRENT_BRANCH} ;;
+	*) CONTAINER_NAME=bbcrossbuild-${CURRENT_BRANCH//\//-} ;;
 esac

@@ -17,6 +17,16 @@ source "${BB_HOME}/seterr"
 # shellcheck source=/dev/null
 source "${BB_HOME}/core.functions"
 check_core_functions
+# shellcheck source=/dev/null
+source "${BB_HOME}/container.functions"
+
+### Inside the container bbxb starts as root, whoever started the container: it creates the user
+### the build runs for (CONTAINER_USER, set by container_run on the host) and runs this command
+### line again as that user, so the data directory keeps the owners it has on the host
+if [ -n "${BBXB_IN_CONTAINER}" ] && [ "${EUID}" -eq 0 ] && [ -n "${CONTAINER_USER}" ]
+then
+	container_user "${@}"
+fi
 
 ### From here on the handlers of core.functions: one report from the innermost shell, the
 ### images unmounted by the main shell only (unmount_tag is looked up when the error happens)
@@ -30,7 +40,7 @@ exec {BBXB_CONSOLE_FD}>&2
 trap 'on_error ${?}' ERR
 trap 'on_interrupt' SIGINT
 
-OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
+OPTS="--container --no-container" OPTS_WITH_VALUE="" param2value "${@}"
 
 # shellcheck disable=SC2154
 PROJECT_NAME="${_param_1}"
@@ -69,6 +79,15 @@ source "${PLATFORM}"
 # shellcheck source=/dev/null
 source "${BB_HOME}/setenv"
 
+### The settings of the project: the user file next to its .prj (gitignored), sourced here so that
+### everything below, the parameters printed included, already has the values the build uses
+PROJECT_CONF=${PRJ_PATH}/${PROJECT_NAME}.conf
+if [ -f "${PROJECT_CONF}" ]
+then
+	# shellcheck source=/dev/null
+	source "${PROJECT_CONF}"
+fi
+
 ### The package groups are git submodules: an empty packages/<group> is a checkout without them
 for PKG_GROUP in "${PKG_PATH}"/*/
 do
@@ -78,6 +97,24 @@ do
 	fi
 done
 unset PKG_GROUP
+
+### --container (CONTAINER_BUILD of bbxb.conf, --no-container to turn it off): the same command
+### line runs inside the container of this checkout, which is built first when it is missing.
+### Inside it BBXB_IN_CONTAINER is set and the build runs here, as on the host
+# shellcheck disable=SC2154
+if [ -n "${_param_container}" ]
+then
+	CONTAINER_BUILD=1
+fi
+# shellcheck disable=SC2154
+if [ -n "${_param_no_container}" ]
+then
+	CONTAINER_BUILD=0
+fi
+if [ "${CONTAINER_BUILD:-0}" -eq 1 ] && [ -z "${BBXB_IN_CONTAINER}" ]
+then
+	container_run "${@}"
+fi
 
 # shellcheck source=/dev/null
 source "${BB_HOME}/build.functions"

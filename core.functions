@@ -331,7 +331,7 @@ log_buffer () {
 	(
 		local LOG_TYPE="${1:-log}"
 		local LOG_DEST="${2:-/dev/stdout}"
-		local LOG_CHAR LOG_DIR LOG_LINE
+		local LOG_CHAR LOG_DIR LOG_LINE LOG_FD
 		case ${LOG_TYPE} in
 			cmd)    LOG_CHAR='$';;
 			info)   LOG_CHAR='#';;
@@ -340,11 +340,19 @@ log_buffer () {
 			error)  LOG_CHAR='!';;
 			*)      LOG_CHAR="${LOG_TYPE}";;
 		esac
+		### The stdout of the shell, duplicated, never reopened through /dev/stdout: the pipe or
+		### the terminal a container gives the build belongs to root, and the build does not
+		if [ "${LOG_DEST}" == /dev/stdout ]
+		then
+			exec {LOG_FD}>&1
+		else
+			exec {LOG_FD}>> "${LOG_DEST}"
+		fi
 		LOG_DIR=${PWD##*/}
 		while IFS= read -r LOG_LINE || [ -n "${LOG_LINE}" ]
 		do
 			printf '%(%Y-%m-%d %H:%M:%S)T - [%s]%s %s\n' -1 "${LOG_DIR:-/}" "${LOG_CHAR}" "${LOG_LINE}"
-		done >> "${LOG_DEST}"
+		done >&"${LOG_FD}"
 	)
 }
 

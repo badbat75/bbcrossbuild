@@ -55,52 +55,6 @@ workaround is part of closing the item.
    - validation: full `lfs rpi3-aarch64` builds with gnu and llvm from an empty data directory;
      `readelf -p .comment` shows which binaries mold linked.
 
-3. **One command line: `bbxb` runs the container that holds it.** Today a build on the host is
-   `./bbxb <project> <platform>`, while a build in the container is `utilities/container/build.sh`
-   followed by `utilities/container/run.sh`, whose arguments are `docker run` options and whose
-   project and platform travel as `-e PROJECT_NAME=... -e TARGET_PLATFORM=...`: two command lines
-   to remember, to document and to keep in step. The goal is `./bbxb <project> <platform>` for both,
-   with `bbxb` starting its container and building the image first when it does not exist. Known
-   steps:
-   - the switch: an option of `bbxb` (`--container`) and a `bbxb.conf` variable for the default.
-     Inside the container `bbxb` runs the build as today, so it has to know where it is (a variable
-     the image sets, as it sets `DATA_PATH`) and never start a container from the container;
-   - the image: its name from `utilities/container/getenv` (the branch), `docker image inspect` to
-     see whether it exists, the `build.sh` steps when it does not. The image copies the checkout
-     (`ADD . .` in `Dockerfile`), so an image that exists would run the sources of the day it was
-     built: mount the checkout instead and make the image the `base` stage, the dependencies only.
-     A recipe edit is then one run away, and the image needs a rebuild only when `Dockerfile`
-     changes (a label with its checksum, compared by `bbxb`);
-   - `docker` without `sudo`: the user who runs `bbxb` is in the `docker` group, so `bbxb` builds
-     and starts the container as that user (`build.sh` and `run.sh` still call `sudo docker`, which
-     also asks for a password in the middle of a build);
-   - what `run.sh` does moves into `bbxb`: `--privileged`, `-it` only when stdin is a terminal,
-     the data directory and the checkout mounted at the same paths they have on the host (the log
-     paths the console prints stay valid there), the variables the environment can override
-     (`DATA_PATH`, `TOOLCHAIN`, `PRJ_PATH`, ...) passed with `-e` (`bbxb.conf` and `projects/*.conf`
-     come with the checkout), and the exit status of the build returned as the one of `bbxb`;
-   - ownership: the data directory belongs to the user the build runs for, in the container as on
-     the host. On the host `bbxb` runs as the user and goes through `sudo` for the root steps
-     (`run_cmd -s`); the processes of the container run as root even when the user started it,
-     so the container has to run the build as that user too, with the same `sudo` for the same
-     steps. `--user <uid>:<gid>` alone is not enough, `sudo` refuses a uid missing from
-     `/etc/passwd`: `bbxb` passes uid, gid and name, and in the container, started as root, it
-     creates that user (sudo without password) and runs the build again as it (`setpriv` or
-     `runuser`). `sudo` is in the image today only as a dependency of another package, the
-     `Dockerfile` does not list it: add it to the `dnf install` list. The data directories written
-     so far by the root container (`datadir/` of the checkout) need a `chown -R` once;
-   - the host keeps docker and the binfmt handlers of qemu-user-static (`host_binfmt_setup.sh`:
-     the kernel is shared with the container); together with item 1 this is what leaves the
-     `utilities/bootstrap.*` scripts almost empty;
-   - `build.sh` and `run.sh` go or shrink to what `bbxb` does not cover (`base` with the cache
-     export, `publish.sh` and `cleanup.sh` stay), and the Docker section of the README and the
-     container commands of `AGENTS.md` follow;
-   - validation: on a host without the image, `./bbxb --container lfs rpi3-aarch64` builds it and
-     then runs the build; a second run starts at once; a recipe edit is seen without rebuilding
-     the image; an error inside stops `bbxb` with the report and the images unmounted; the data
-     directory has the same owners after a container run as after a host run, and a host run
-     continues where a container run stopped.
-
 ## Packages
 
 1. **NetworkManager manages the network of the lfs image.** Today `projects/lfs.prj` configures

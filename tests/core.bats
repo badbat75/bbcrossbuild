@@ -108,6 +108,23 @@ setup () {
 	[[ ${lines[2]} == *"]! last" ]]
 }
 
+@test "log_buffer writes to the stdout it inherits, never reopening /dev/stdout" {
+	### The pipe or the terminal a container gives the build belongs to root, and the build
+	### does not: here the same refusal comes from a file the test takes the rights of once
+	### the shell has it open
+	export RUN_LOG="${BATS_TEST_TMPDIR}/closed.log"
+	: > "${RUN_LOG}"
+	run bash -c 'source "${BB_HOME}/core.functions"
+		exec 3>&1 > "${RUN_LOG}"
+		chmod 000 "${RUN_LOG}"
+		echo line | log_buffer log
+		STATUS=${?}
+		chmod 644 "${RUN_LOG}"
+		exec 1>&3
+		echo "status=${STATUS} log=$(cat "${RUN_LOG}")"'
+	[[ ${output} == "status=0 log="*"]- line" ]]
+}
+
 @test "run_cmd returns the status of the command once its whole output is in the log" {
 	export RUN_LOG="${BATS_TEST_TMPDIR}/run.log"
 	run bash -c 'source "${BB_HOME}/seterr"; source "${BB_HOME}/core.functions"

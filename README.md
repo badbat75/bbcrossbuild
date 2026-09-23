@@ -44,16 +44,30 @@ Find your package at: `.bbxb/<project>/<platform>/<project>.tar.xz`
 
 ### Docker
 
-The project includes Docker support for containerized builds:
+The same command line builds on the host and in a container:
 
 ```bash
-# Build the container (with `base` it also exports the build cache to
-# /var/cache/bbcrossbuild-docker, which the plain build imports back)
-$ utilities/container/build.sh
+$ ./bbxb --container <project> <platform>
+```
 
-# Run the container (extra arguments are docker run options, e.g.
-# -e PROJECT_NAME=<project> -e TARGET_PLATFORM=<platform> -e TOOLCHAIN=gnu)
-$ utilities/container/run.sh
+`bbxb` builds the image of the checkout (named after its branch) when docker does not have it or
+when the `Dockerfile` has changed since, then runs the build inside it. The image carries the host
+dependencies only: the checkout and the data directory are mounted at the paths they have on the
+host, so a recipe edit is one run away, the log files the console names are the ones of the host,
+and the data directory keeps its owner (the build runs inside as the user who started `bbxb`, with
+`sudo` for the steps that need root, as on the host). The environment overrides travel with it
+(`DATA_PATH=... TOOLCHAIN=llvm ./bbxb --container ...`), and `bbxb.conf` and `projects/*.conf` come
+with the checkout. `CONTAINER_BUILD=1` in `bbxb.conf` makes it the default, `--no-container` turns
+it off again for one run.
+
+The user who runs `bbxb` has to be in the `docker` group; the host keeps docker and the binfmt
+handlers of `qemu-user-static` (`utilities/container/host_binfmt_setup.sh`), which the container
+shares with it.
+
+```bash
+# Rebuild the image and export the build cache to /var/cache/bbcrossbuild-docker (BBXB_CACHE_DIR),
+# which survives the "docker system prune" that closes the run and which every later build imports
+$ utilities/container/build.sh
 ```
 
 ### AWS
@@ -80,6 +94,12 @@ Projects are defined in `.prj` files that specify build steps and package depend
 
 1. Create a new file in the `projects/` directory with a `.prj` extension
 2. Configure build options and specify packages to build
+
+Settings that belong to the machine rather than to the project (a toolchain, a WiFi passphrase) go
+into `projects/<project>.conf`, a user file that `.gitignore` keeps out of the repository:
+`bbxb` sources it right after `setenv`, before the project file, so it overrides `bbxb.conf`, the
+platform and the `setenv` defaults, and the parameters `bbxb` prints are the ones of the build.
+`configurations/lfs.conf` is the template of the one `projects/lfs.prj` expects.
 
 ### Project Directives
 

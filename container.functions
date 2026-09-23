@@ -1,0 +1,213 @@
+#!/bin/bash
+
+check_core_functions
+
+### container.functions: the container bbxb runs the build in. Sourced by bbxb right after
+### core.functions and by utilities/container/build.sh.
+###
+### "./bbxb --container <project> <platform>" is "./bbxb <project> <platform>" run inside the
+### image of this checkout: the image carries the host dependencies only, the checkout and the
+### data directory are mounted where they are on the host, and the build runs as the user who
+### started bbxb. A recipe edit is therefore one run away and the image needs a rebuild only when
+### the Dockerfile changes.
+
+### The variables container_env_names never passes: the ones bbxb sets itself or the image sets,
+### and the names of the shell and of the session, in case a configuration file ever assigns one
+CONTAINER_ENV_SKIP="DATA_PATH BB_HOME BBXB_IN_CONTAINER BBXB_CONSOLE_FD BUILD_CHECKED_FILE
+	CONTAINER_BUILD CONTAINER_NAME CONTAINER_USER PATH HOME USER LOGNAME SHELL TERM HOSTNAME
+	PWD OLDPWD TMPDIR"
+
+### The variables the environment carried when bbxb started: container.functions is sourced before
+### bbxb.conf, the platform file and setenv, so these are the ones the user set, as opposed to the
+### ones the framework computes from them (setenv exports several of its paths)
+CONTAINER_ENV_INITIAL=" $(compgen -e | tr '\n' ' ')"
+
+### The build cache of the image, exported by "utilities/container/build.sh" and imported by every
+### build that follows: it survives the "docker system prune" that closes a build.sh run
+CONTAINER_CACHE_PATH=${BBXB_CACHE_DIR:-/var/cache/bbcrossbuild-docker}
+
+container_name () {
+	### container_name: set CONTAINER_NAME, the image of this checkout, named after its branch
+	### (utilities/container/getenv, which the other container utilities source too)
+	if [ -z "${CONTAINER_NAME}" ]
+	then
+		# shellcheck source=/dev/null
+		source "${BB_HOME}/utilities/container/getenv"
+	fi
+	return 0
+}
+
+container_docker () {
+	### container_docker: refuse to start when docker is not usable by the user who runs bbxb.
+	### The root steps of a build go through sudo, which asks for a password: a docker that needs
+	### one too would ask for it in the middle of the build
+	if ! docker version > /dev/null 2>&1
+	then
+		trow_error "${ERROR_GENERIC}" "docker is not usable by $(id -un): install it and add the user to the docker group."
+	fi
+	return 0
+}
+
+# shellcheck disable=SC2120
+container_image () {
+	### container_image [--force] [--cache-export]: build the image when docker does not have it
+	### or when the label with the checksum of the Dockerfile does not match the Dockerfile of the
+	### checkout. Nothing of the checkout is copied into it, so this is the only reason to rebuild.
+	local DOCKERFILE_SUM IMAGE_SUM BUILD_OPTS
+
+	OPTS="--force --cache-export" OPTS_WITH_VALUE="" param2value "${@}"
+
+	container_name
+	container_docker
+
+	DOCKERFILE_SUM=$(md5sum "${BB_HOME}/Dockerfile" | awk '{print $1}')
+	IMAGE_SUM=$(docker image inspect --format '{{index .Config.Labels "bbxb.dockerfile"}}' "${CONTAINER_NAME}" 2> /dev/null || true)
+	# shellcheck disable=SC2154
+	if [ "${_param_force:-0}" -eq 0 ] && [ "${IMAGE_SUM}" == "${DOCKERFILE_SUM}" ]
+	then
+		return 0
+	fi
+
+	BUILD_OPTS="--build-arg BBXB_DOCKERFILE_SUM=${DOCKERFILE_SUM} --tag ${CONTAINER_NAME}"
+	# shellcheck disable=SC2154
+	if [ "${_param_cache_export:-0}" -eq 1 ]
+	then
+		BUILD_OPTS+=" --cache-to type=local,dest=${CONTAINER_CACHE_PATH}"
+	elif [ -f "${CONTAINER_CACHE_PATH}/index.json" ]
+	then
+		BUILD_OPTS+=" --cache-from type=local,src=${CONTAINER_CACHE_PATH}"
+	fi
+
+	echo "Building the container image ${CONTAINER_NAME}..."
+	run_cmd "docker build ${BUILD_OPTS} --file \"${BB_HOME}/Dockerfile\" \"${BB_HOME}\""
+}
+
+container_run () {
+	### container_run <argument>...: run the command line of bbxb inside the container. The image
+	### is built first when it is missing or out of date, the checkout and the data directory are
+	### mounted at the paths they have on the host (the logs the console names stay valid there),
+	### the variables the environment set travel with -e, and the exit status of the build becomes
+	### the one of bbxb: docker replaces this shell, there is nothing left to clean up here.
+	local RUN_OPTS ENV_NAME
+
+	# shellcheck disable=SC2119
+	container_image
+
+	if [ ! -d "${DATA_PATH}" ]
+	then
+		mkdir -p "${DATA_PATH}" 2> /dev/null || run_cmd -s "install -d -o \"$(id -u)\" -g \"$(id -g)\" \"${DATA_PATH}\""
+	fi
+
+	RUN_OPTS=(--rm --privileged)
+	### A terminal only when there is one: a build started by cron or by a script has none
+	if [ -t 0 ]
+	then
+		RUN_OPTS+=(--tty --interactive)
+	fi
+	### The clock of the host, so that the lines of a log written in the container and the ones of
+	### a log written here carry the same time
+	if [ -e /etc/localtime ]
+	then
+		RUN_OPTS+=(--volume "/etc/localtime:/etc/localtime:ro")
+	fi
+	RUN_OPTS+=(--volume "${BB_HOME}:${BB_HOME}:z"
+		--volume "${DATA_PATH}:${DATA_PATH}:z"
+		--workdir "${BB_HOME}"
+		--env "DATA_PATH=${DATA_PATH}"
+		### The user the build runs for inside the container: same name, uid and gid as here,
+		### so the data directory has the same owners as after a build on the host
+		--env "CONTAINER_USER=$(id -un):$(id -u):$(id -g):${HOME}")
+	for ENV_NAME in $(container_env_names)
+	do
+		RUN_OPTS+=(--env "${ENV_NAME}=${!ENV_NAME}")
+	done
+
+	echo "Running ${PROJECT_NAME} ${PLATFORM_NAME} in the container ${CONTAINER_NAME}."
+	echo
+	exec docker run "${RUN_OPTS[@]}" "${CONTAINER_NAME}" "${BB_HOME}/bbxb" "${@}"
+}
+
+container_env_names () {
+	### container_env_names: the names of the environment that travel to the container, one per
+	### line. A variable is one of them when bbxb was started with it in its environment
+	### (CONTAINER_ENV_INITIAL), when setenv, the configuration template or the platform file
+	### assigns it (every one of those can be overridden from the environment:
+	### "DATA_PATH=... TOOLCHAIN=llvm ./bbxb --container ..." works inside as it does outside) and
+	### when it is not one of CONTAINER_ENV_SKIP. The session of the user, and whatever it carries,
+	### stays outside; bbxb.conf and projects/*.conf come with the checkout.
+	local ENV_NAME FRAMEWORK_FILES FRAMEWORK_NAMES
+
+	FRAMEWORK_FILES=("${BB_HOME}/setenv" "${BB_HOME}/configurations/bbxb.conf")
+	if [ -f "${PLATFORM}" ]
+	then
+		FRAMEWORK_FILES+=("${PLATFORM}")
+	fi
+	FRAMEWORK_NAMES=" $(sed -n 's/^[[:blank:]]*#*[[:blank:]]*\([A-Z][A-Z0-9_]*\)=.*/\1/p' \
+		"${FRAMEWORK_FILES[@]}" | sort -u | tr '\n' ' ')"
+
+	for ENV_NAME in ${CONTAINER_ENV_INITIAL}
+	do
+		if [[ ${FRAMEWORK_NAMES} != *" ${ENV_NAME} "* ]]
+		then
+			continue
+		fi
+		if [[ " ${CONTAINER_ENV_SKIP//[$'\t\n ']/ } " == *" ${ENV_NAME} "* ]]
+		then
+			continue
+		fi
+		echo "${ENV_NAME}"
+	done
+	return 0
+}
+
+container_user () {
+	### container_user <argument>...: the container side. bbxb starts as root there (the processes
+	### of a container do, whoever started it): it creates the user of the host, gives it sudo
+	### without a password, which the root steps of the build (run_cmd -s) go through as they do
+	### on the host, and runs the command line again as that user. setpriv keeps the environment
+	### of the container, only the names of the user are set.
+	local USER_NAME USER_UID USER_GID USER_HOME
+
+	IFS=: read -r USER_NAME USER_UID USER_GID USER_HOME <<< "${CONTAINER_USER}"
+	if [ -z "${USER_NAME}" ] || [ -z "${USER_UID}" ] || [ -z "${USER_GID}" ]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "CONTAINER_USER=${CONTAINER_USER} is not <name>:<uid>:<gid>:<home>."
+	fi
+	USER_HOME=${USER_HOME:-/home/${USER_NAME}}
+	### bbxb started by root on the host: the build already runs as the user it runs for
+	if [ "${EUID}" -eq "${USER_UID}" ]
+	then
+		return 0
+	fi
+
+	if ! getent group "${USER_GID}" > /dev/null
+	then
+		groupadd --gid "${USER_GID}" "${USER_NAME}"
+	fi
+	if ! getent passwd "${USER_UID}" > /dev/null
+	then
+		useradd --no-create-home --uid "${USER_UID}" --gid "${USER_GID}" \
+			--home-dir "${USER_HOME}" --shell /bin/bash "${USER_NAME}"
+	fi
+	USER_NAME=$(getent passwd "${USER_UID}" | cut -d: -f1)
+	### The home is the one of the host: docker created it as the mount point of a data directory
+	### under it, or it is not there at all
+	if [ ! -d "${USER_HOME}" ]
+	then
+		mkdir -p "${USER_HOME}"
+	fi
+	if ! mountpoint -q "${USER_HOME}"
+	then
+		chown "${USER_UID}:${USER_GID}" "${USER_HOME}"
+	fi
+	echo "${USER_NAME} ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/bbxb
+	chmod 0440 /etc/sudoers.d/bbxb
+
+	exec setpriv --reuid "${USER_UID}" --regid "${USER_GID}" --init-groups \
+		env HOME="${USER_HOME}" USER="${USER_NAME}" LOGNAME="${USER_NAME}" \
+		"${BB_HOME}/bbxb" "${@}"
+}
+
+is_container_functions () {
+	return 0
+}

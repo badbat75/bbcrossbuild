@@ -47,15 +47,18 @@ build --force --keep_builddir raspberrypi/rpi-utils
 EOF
 PRJ_PATH=projects-tmp PRJ_DIR=projects-tmp ./bbxb lfs rpi3-aarch64   # the toolchain steps are checks, so it starts in a minute
 
-# Containers (image name derives from the git branch: development -> bbcrossbuild-devel, master -> bbcrossbuild-latest)
-utilities/container/build.sh [base]   # base also exports the build cache to /var/cache/bbcrossbuild-docker
-                                      # (group docker, override with BBBXB_CACHE_DIR): the plain build imports
-                                      # it back, so the dnf layer survives the "docker system prune" that closes
-                                      # every build.sh run
-utilities/container/run.sh            # privileged, mounts HOST_DATA_PATH at /mnt/bbcrossbuild/datadir; extra
-                                      # arguments are docker run options: the image CMD is
-                                      # ./bbxb ${PROJECT_NAME} ${TARGET_PLATFORM}, overridden with
-                                      # -e PROJECT_NAME=... -e TARGET_PLATFORM=... -e TOOLCHAIN=...
+# Containers: the same command line, in the image of this checkout (name from the git branch:
+# development -> bbcrossbuild-devel, master -> bbcrossbuild-latest). bbxb builds the image when
+# docker does not have it or when the Dockerfile changed (a label carries its checksum), mounts the
+# checkout and DATA_PATH at their host paths, passes the environment overrides of setenv/bbxb.conf
+# with -e, and runs the build as the user who started it (container_user creates it inside, with
+# sudo without password for the run_cmd -s steps). The user has to be in the docker group;
+# CONTAINER_BUILD=1 in bbxb.conf makes it the default, --no-container turns it off for one run.
+./bbxb --container lfs rpi3-aarch64
+utilities/container/build.sh          # rebuild the image and export the build cache to
+                                      # /var/cache/bbcrossbuild-docker (group docker, override with
+                                      # BBXB_CACHE_DIR), which every later build imports, so the dnf
+                                      # layer survives the "docker system prune" that closes the run
 
 # Regenerate the branch-tracking patches for gcc/binutils/glibc/gdb under packages/lfs/<pkg>/variants/version/<ver>/patches/
 utilities/update_patches gcc 14.2.0
@@ -70,8 +73,8 @@ utilities/pkg_upstream [-p rpi3-aarch64] [-P lfs] [-a] [-o report.tsv] [lfs/curl
 # Lint: the sources carry `# shellcheck disable=` directives, so shellcheck is the expected linter. There
 # is no CI for now (the GitHub Actions were removed, September 2026): these three commands, bats and pkg_lint
 # per package group are run by hand.
-shellcheck -x bbxb seterr setenv core.functions build.functions toolchain.functions images.functions project.functions data.functions osconfig.functions
-shellcheck -x utilities/pkgtools.functions utilities/pkg_lint utilities/pkg_show utilities/update_patches
+shellcheck -x bbxb seterr setenv core.functions build.functions toolchain.functions images.functions project.functions data.functions osconfig.functions container.functions
+shellcheck -x utilities/pkgtools.functions utilities/pkg_lint utilities/pkg_show utilities/update_patches utilities/container/build.sh utilities/container/getenv
 shellcheck -x tests/test_helper.bash tests/*.bats tests/board_check
 # Unit tests (bats-core, seconds): variant selection, patch lists, recipe scripts, recipe checksum, target
 # prefixes, recipe resolution, core helpers, the dependency walk of build, the sfx installer. tests/test_helper.bash sources the framework through
@@ -102,9 +105,9 @@ Where things land (`DATA_PATH` defaults to `/mnt/bbcrossbuild/datadir`; the conf
 
 ### Sourcing chain
 
-`bbxb <project> <platform>` sources, in order: `seterr` (error codes), `core.functions`, optional `bbxb.conf`, `platforms/<platform>.conf`, `setenv` (all path and version defaults, computed from what was set so far), then `build.functions`, `project.functions`, `toolchain.functions`, `images.functions`, `data.functions`, `osconfig.functions`, and finally `projects/<project>.prj` itself. A project file is therefore ordinary Bash executed with every library function and variable in scope: it sets policy variables (`TOOLCHAIN`, `LTOENABLE`, `BUILD_LIBSTATIC`, versions), calls `setup_full_toolchain`, then calls `build`, image and chroot functions in sequence.
+`bbxb <project> <platform>` sources, in order: `seterr` (error codes), `core.functions`, `container.functions` (the `--container` switch: on the host it builds the image and re-runs the command line inside it, in the container it creates the user of the host and runs the build as it), optional `bbxb.conf`, `platforms/<platform>.conf`, `setenv` (all path and version defaults, computed from what was set so far), optional `projects/<project>.conf`, then `build.functions`, `project.functions`, `toolchain.functions`, `images.functions`, `data.functions`, `osconfig.functions`, and finally `projects/<project>.prj` itself. A project file is therefore ordinary Bash executed with every library function and variable in scope: it sets policy variables (`TOOLCHAIN`, `LTOENABLE`, `BUILD_LIBSTATIC`, versions), calls `setup_full_toolchain`, then calls `build`, image and chroot functions in sequence.
 
-Precedence for a setting: environment variable > `bbxb.conf` > platform `.conf` > `setenv` default, and a `.prj` can overwrite any of them before the first `build`.
+Precedence for a setting: environment variable > `bbxb.conf` > platform `.conf` > `setenv` default, then `projects/<project>.conf` (the user file of the project, sourced by `bbxb` right after `setenv`, so the parameters it prints are the ones of the build) and the `.prj` itself can overwrite any of them before the first `build`.
 
 The script runs with `set -E -o pipefail` and an ERR trap (`on_error` in `core.functions`): any non-zero command aborts the whole run. Commands that may legitimately fail need `|| true`. A failure climbs the nested `build` subshells one level at a time: the innermost shell reports it once on the console (`BBXB_CONSOLE_FD`, the stderr `bbxb` started with) with the package, the call stack, the log file and its last error lines, the parents only pass the status on (flag file `/tmp/bbxb_error.<pid>`), and the main shell runs `unmount_tag --all`. SIGINT (`on_interrupt`) also unmounts everything. `run_cmd` never traps the failure itself: through `log_run` it waits for its two `log_buffer` writers and returns the status, so the log is complete before anything exits (a shell that exits with the writers behind loses the last lines, which are the error; as PID 1 of a container it also kills them, which used to show up as `fork: Cannot allocate memory`). A function passed to `log_run` runs in a `||` list, where the ERR trap is off: it has to return its own status.
 
@@ -145,11 +148,11 @@ One rule splits them in two. What is a file is written into the sysroot (`${BIN_
 
 ### Projects and packages layout
 
-- `projects/*.prj`: `lfs.prj` is the full reference project (toolchain, kernel, ~100 packages, image creation, QEMU command generation). `librespot.prj` and `rpi-kernel.prj` are minimal examples. `projects/*.conf` and `projects/test*.prj` are gitignored user files.
+- `projects/*.prj`: `lfs.prj` is the full reference project (toolchain, kernel, ~100 packages, image creation, QEMU command generation). `librespot.prj` and `rpi-kernel.prj` are minimal examples. `projects/*.conf` and `projects/test*.prj` are gitignored user files; `bbxb` sources `projects/<project>.conf` itself, a `.prj` does not have to.
 - `packages/<group>/<name>/`: `lfs/` (BLFS-style recipes, the bulk), `raspberrypi/`, `moode/`, `python/`, `perl/`, `firmwares/`, `fonts/`, `microsoft/` (WSL kernel). Every group is a git submodule of its own repository `packages-<group>` (`.gitmodules`); `bbxb` stops with an error when a group directory is empty. `packages/template/` is the annotated starting point for a new recipe and lives in this repository.
 - `configurations/`: templates for `bbxb.conf` and `lfs.conf`.
 - `utilities/`: host helpers (`deptool`, `crossgdb`, `crossldd`, `qemu_cmdgen`, `fs_manager`, `aws_create_infrastructure`, bootstrap scripts, container scripts); `pkg_lint` and `pkg_show` share `utilities/pkgtools.functions`, which sources the framework with the build steps stubbed out and resolves a recipe through `set_target_prefixes` and `apply_recipe_variants`, the same code `build` uses.
-- `tests/*.bats`: the bats suite; `tests/test_helper.bash` loads the framework the same way (`load_framework`, platform from `PLATFORM_NAME`) and offers `make_recipe`, `put`, `select_target`, `assert_output_lines`, `assert_equal` to build and check fixture recipes under `BATS_TEST_TMPDIR`. One file per area: `variants`, `recipe_files` (patches, scripts), `checksum`, `prefixes`, `pkgtools` (`recipe_resolve`), `core`, `build` (the order of `build` on recipes that build nothing: the real `build` and `run_cmd` over the stubs, cross target), `host_paths` (`strip_host_paths`, `host_path_maps`, `gcc_host_path_specs`, `clang_host_path_config`, `find_host_paths`, `lto_object_files`, `strip_lto_objects`), `sfx` (the installer of `create_sfx_package` and its post install scripts), `osconfig` (the directives of `osconfig.functions` over a sysroot in the temporary directory, with `run_on_root_dir` stubbed). `tests/board_check` is the
+- `tests/*.bats`: the bats suite; `tests/test_helper.bash` loads the framework the same way (`load_framework`, platform from `PLATFORM_NAME`) and offers `make_recipe`, `put`, `select_target`, `assert_output_lines`, `assert_equal` to build and check fixture recipes under `BATS_TEST_TMPDIR`. One file per area: `variants`, `recipe_files` (patches, scripts), `checksum`, `prefixes`, `pkgtools` (`recipe_resolve`), `core`, `build` (the order of `build` on recipes that build nothing: the real `build` and `run_cmd` over the stubs, cross target), `container` (the image name and the variables of the environment that travel to it, no docker), `host_paths` (`strip_host_paths`, `host_path_maps`, `gcc_host_path_specs`, `clang_host_path_config`, `find_host_paths`, `lto_object_files`, `strip_lto_objects`), `sfx` (the installer of `create_sfx_package` and its post install scripts), `osconfig` (the directives of `osconfig.functions` over a sysroot in the temporary directory, with `run_on_root_dir` stubbed). `tests/board_check` is the
   other kind of test: a plain script copied to a system the framework built and run there as root, which
   checks the state of that system (units and presets, the mode of `/` and the leftovers in it, machine-id and
   clock-epoch, the lines of `nsswitch.conf` and what each one resolves with timings, the domain of the DHCP
