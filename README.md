@@ -532,7 +532,7 @@ BBCrossBuild provides various functions for use in project files. These are orga
 
 #### OS Configuration Functions (osconfig.functions)
 
-What the project decides about the system it builds. A file is written into the target sysroot (`${BIN_PATH}`), where the image, the chroot and the packages built from it find it; a command that only the target can run (`systemctl`, `useradd`, `chpasswd`) is written into the post install script of the project, `${BIN_PATH}/postinst_scripts/99_osconfig`, which `run_postinstall_scripts` runs as root inside the image after the ones of the packages. The functions that write a command take `--tag <mount tag>` and then run it at once in the chroot of a mounted image (`run_on_root_dir`): that is what a project needs after `inject_into_mount_tag`, when the post install scripts have already run. The post install script and the preset file of the project are rewritten at every run of `bbxb`.
+What the project decides about the system it builds. A file is written into the target sysroot (`${BIN_PATH}`), where the image, the chroot and the packages built from it find it; a command that only the target can run (`systemctl`, `useradd`, `chpasswd`) is written into the post install script of the project, `${BIN_PATH}/postinst_scripts/99_osconfig`, which `run_postinstall_scripts` runs as root inside the image after the ones of the packages. The functions that write a command take `--tag <mount tag>` and then act at once on a mounted image: that is what a project needs after `inject_into_mount_tag`, when the post install scripts have already run. The command then runs on the build host, as root, against the root of the image (`systemctl --root`, `useradd --prefix`, `chpasswd --prefix`), with the programs of the global toolchain (`lfs/systemd:native`, `lfs/shadow:native`, built on first use), not in its chroot under emulation; without the tag the post install script runs the programs the system has installed. `generate_ssh_keys` runs the `ssh-keygen` of `lfs/openssh:native`. The post install script and the preset file of the project are rewritten at every run of `bbxb`.
 
 - **set_hostname**: Host name of the system, in `/etc/hostname` and in the `127.0.1.1` line of `/etc/hosts`
   ```
@@ -614,7 +614,7 @@ What the project decides about the system it builds. A file is written into the 
   enable_service [--tag <mount tag>] <unit>...
   ```
   - `<unit>...`: Units to enable, disable, mask or preset
-  - `--tag <mount tag>`: Run it now in the chroot of that image instead of at install time
+  - `--tag <mount tag>`: Run it now on that mounted image, from the host, instead of at install time
 
 - **set_service_preset**: Rules of the preset file of the project, `/etc/systemd/system-preset/00-<project>.preset`
   ```
@@ -647,9 +647,14 @@ What the project decides about the system it builds. A file is written into the 
   add_postinstall_command "<command>"...
   ```
 
-- **run_on_target**: The dispatch the functions above use: the chroot of a mounted image, or the post install script when the tag is empty
+- **run_on_target**: Any command as root in the chroot of a mounted image, or in the post install script when the tag is empty
   ```
   run_on_target <mount tag> "<command>"...
+  ```
+
+- **host_on_target**: The way the functions above act on a mounted image: the commands run on the build host as root, with the programs the native recipe installs into the global toolchain (built on first use); `target_root <mount tag>` names the root of the image in them
+  ```
+  host_on_target <mount tag> <native recipe> "<command>"...
   ```
 
 Here's a simple example of how to create a project file:

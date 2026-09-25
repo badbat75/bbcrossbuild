@@ -13,9 +13,16 @@ setup () {
 	load_framework
 	POSTINST="${BIN_PATH}/postinst_scripts/99_osconfig"
 	mkdir -p "${BIN_PATH}${TARGET_SYSCONFDIR}" "${LOG_PATH}"
-	### images.functions is not loaded here: --tag only has to reach the chroot function
+	### images.functions is not loaded here: --tag only has to reach the chroot function, or the
+	### host commands, whose native recipe build and run_cmd print what they were given
 	function run_on_root_dir () {
 		echo "chroot ${1} ${2}: ${3}"
+	}
+	function build () {
+		echo "build ${*}"
+	}
+	function run_cmd () {
+		echo "host ${*}"
 	}
 	source "${BB_HOME}/osconfig.functions"
 }
@@ -62,25 +69,52 @@ setup () {
 	assert_output_lines "1"
 }
 
-@test "--tag runs the command in the chroot of the image instead of the post install script" {
+@test "--tag runs the command on the host against the mounted image, with the native systemctl" {
 	run set_default_target --tag lfs multi-user.target
-	assert_output_lines "Default target: multi-user.target" \
-		"chroot lfs root: systemctl set-default multi-user.target"
+	assert_output_lines "Default target: multi-user.target" "build lfs/systemd:native"
+	run cat "${LOG_PATH}/images_lfs.log"
+	assert_output_lines "host -S ${GLOBAL_TOOLCHAIN_PATH}/bin/systemctl --root \"${PLATFORM_PATH}/lfs\" set-default multi-user.target"
 	[ ! -f "${POSTINST}" ]
 }
 
-@test "add_user builds the useradd command line of the target and sets the password" {
-	run add_user lfs --tag lfs --groups wheel,audio,video --password lfs
-	assert_output_lines "User: lfs in wheel,audio,video" \
-		"chroot lfs root: useradd -G wheel,audio,video -m lfs" \
-		"Password of lfs: set" \
-		"chroot lfs root: echo lfs:lfs | chpasswd"
+@test "enable_service --tag runs one native systemctl per unit" {
+	run enable_service --tag lfs systemd-resolved systemd-timesyncd
+	assert_output_lines "Units to enable: systemd-resolved systemd-timesyncd" \
+		"build lfs/systemd:native" "build lfs/systemd:native"
+	run cat "${LOG_PATH}/images_lfs.log"
+	assert_output_lines "host -S ${GLOBAL_TOOLCHAIN_PATH}/bin/systemctl --root \"${PLATFORM_PATH}/lfs\" enable systemd-resolved" \
+		"host -S ${GLOBAL_TOOLCHAIN_PATH}/bin/systemctl --root \"${PLATFORM_PATH}/lfs\" enable systemd-timesyncd"
 }
 
-@test "add_user takes the system account options and leaves the password alone" {
+@test "add_user without a tag writes the useradd and chpasswd of the target" {
+	add_user lfs --groups wheel,audio,video --password lfs
+	run grep -v '^#' "${POSTINST}"
+	assert_output_lines "useradd -G wheel,audio,video -m lfs" "echo lfs:lfs | chpasswd"
+}
+
+@test "add_user --tag runs the native useradd and chpasswd with the hash of the image" {
+	mkdir -p "${PLATFORM_PATH}/lfs${TARGET_SYSCONFDIR}/pam.d"
+	printf 'password  required    pam_unix.so        sha512 shadow use_authtok\n' \
+		> "${PLATFORM_PATH}/lfs${TARGET_SYSCONFDIR}/pam.d/system-password"
+	run add_user lfs --tag lfs --groups wheel,audio,video --password lfs
+	assert_output_lines "User: lfs in wheel,audio,video" "build lfs/shadow:native" \
+		"Password of lfs: set" "build lfs/shadow:native"
+	run cat "${LOG_PATH}/images_lfs.log"
+	assert_output_lines "host -S ${GLOBAL_TOOLCHAIN_PATH}/bin/useradd --prefix \"${PLATFORM_PATH}/lfs\" -G wheel,audio,video -m lfs" \
+		"host -S echo lfs:lfs | ${GLOBAL_TOOLCHAIN_PATH}/bin/chpasswd --prefix \"${PLATFORM_PATH}/lfs\" -c SHA512"
+}
+
+@test "add_user --tag takes the system account options and leaves the password alone" {
 	run add_user rsyncd --tag lfs --system --nohome --uid 48 --shell /sbin/nologin
-	assert_output_lines "User: rsyncd" \
-		"chroot lfs root: useradd --system -u 48 -s /sbin/nologin rsyncd"
+	assert_output_lines "User: rsyncd" "build lfs/shadow:native"
+	run cat "${LOG_PATH}/images_lfs.log"
+	assert_output_lines "host -S ${GLOBAL_TOOLCHAIN_PATH}/bin/useradd --prefix \"${PLATFORM_PATH}/lfs\" --system -u 48 -s /sbin/nologin rsyncd"
+}
+
+@test "set_password --tag without a pam_unix method leaves the hash to login.defs" {
+	run set_password --tag lfs root changeme
+	run cat "${LOG_PATH}/images_lfs.log"
+	assert_output_lines "host -S echo root:changeme | ${GLOBAL_TOOLCHAIN_PATH}/bin/chpasswd --prefix \"${PLATFORM_PATH}/lfs\""
 }
 
 @test "set_hostname writes the name and replaces the 127.0.1.1 line of a previous run" {

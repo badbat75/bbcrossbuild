@@ -10,10 +10,12 @@ check_core_functions
 ### the target sysroot (${BIN_PATH}), where the image, the chroot and the packages built from it
 ### all find it. What has to run inside the target, because only the target has the databases and
 ### the tools it touches (systemctl, useradd, chpasswd), becomes a command in the post install
-### script of the project, which run_postinstall_scripts runs as root inside the image; the same
-### functions take --tag <mount tag> and then run the command at once in the chroot of a mounted
-### image through run_on_root_dir, which is what a project needs after inject_into_mount_tag, when
-### the post install scripts have already run.
+### script of the project, which run_postinstall_scripts runs as root inside the image, with the
+### programs its system has installed; the same functions take --tag <mount tag> and then act at
+### once on a mounted image, which is what a project needs after inject_into_mount_tag, when the
+### post install scripts have already run: the command runs on the build host, as root, against the
+### root of the image (systemctl --root, useradd --prefix...), with the programs of the global
+### toolchain (host_on_target), not in its chroot under emulation.
 ###
 ### Every function copies what param2value parsed into its own variables before it calls anything
 ### else: the _param_ variables are global and the next param2value of any function unsets them.
@@ -98,6 +100,29 @@ function run_on_target () {
 	done
 }
 
+function host_on_target () {
+	### host_on_target <mount tag> <native recipe> "<command>"...: run the commands at once on the
+	### build host, as root, against the image mounted as <mount tag>, whose root they name through
+	### target_root. Their program is the one the native recipe installs into the global toolchain,
+	### built here on first use (its check makes it a test when it is there). The log is the one of
+	### the image, as for the commands run in its chroot
+	local TARGET_TAG NATIVE_RECIPE OSCONFIG_COMMAND
+	TARGET_TAG=${1}
+	NATIVE_RECIPE=${2}
+	shift 2
+
+	build "${NATIVE_RECIPE}"
+	for OSCONFIG_COMMAND in "${@}"
+	do
+		run_cmd -S "${OSCONFIG_COMMAND}" >> "${LOG_PATH}/images_${TARGET_TAG}.log"
+	done
+}
+
+function target_root () {
+	### target_root <mount tag>: the root directory of the image mounted as <mount tag>
+	echo "${PLATFORM_PATH}/${1}"
+}
+
 function systemctl_on_target () {
 	### systemctl_on_target <mount tag> <verb> <unit>...: the shared part of enable_service,
 	### disable_service, mask_service and preset_service
@@ -114,7 +139,13 @@ function systemctl_on_target () {
 	echo "Units to ${SYSTEMCTL_VERB}: ${*}"
 	for OSCONFIG_UNIT in "${@}"
 	do
-		run_on_target "${TARGET_TAG}" "systemctl ${SYSTEMCTL_VERB} ${OSCONFIG_UNIT}"
+		if [ -n "${TARGET_TAG}" ]
+		then
+			host_on_target "${TARGET_TAG}" lfs/systemd:native \
+				"${GLOBAL_TOOLCHAIN_PATH}/bin/systemctl --root \"$(target_root "${TARGET_TAG}")\" ${SYSTEMCTL_VERB} ${OSCONFIG_UNIT}"
+		else
+			add_postinstall_command "systemctl ${SYSTEMCTL_VERB} ${OSCONFIG_UNIT}"
+		fi
 	done
 }
 
@@ -220,7 +251,13 @@ function set_default_target () {
 	fi
 
 	echo "Default target: ${DEFAULT_TARGET}"
-	run_on_target "${TARGET_TAG}" "systemctl set-default ${DEFAULT_TARGET}"
+	if [ -n "${TARGET_TAG}" ]
+	then
+		host_on_target "${TARGET_TAG}" lfs/systemd:native \
+			"${GLOBAL_TOOLCHAIN_PATH}/bin/systemctl --root \"$(target_root "${TARGET_TAG}")\" set-default ${DEFAULT_TARGET}"
+	else
+		add_postinstall_command "systemctl set-default ${DEFAULT_TARGET}"
+	fi
 }
 
 function add_unit_dropin () {
@@ -608,7 +645,9 @@ function generate_ssh_keys () {
 	then
 		run_cmd "mkdir -pv \"${USERDATA_PATH}/etc/ssh\""
 	fi
-	run_cmd "ssh-keygen -A -v -f \"${USERDATA_PATH}\""
+	### The ssh-keygen of lfs/openssh:native, built on first use
+	build lfs/openssh:native
+	run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/ssh-keygen\" -A -v -f \"${USERDATA_PATH}\""
 	run_cmd "find \"${USERDATA_PATH}/etc/ssh\" -name \"ssh_host_*.pub\" -print0 | xargs -0 sed -i \"s/\$(id -un)@\$(uname -n)/${PROJECT_NAME}/\""
 	# shellcheck disable=SC2154
 	if [ -n "${_param_install}" ]
@@ -632,8 +671,9 @@ function generate_ssh_keys () {
 function add_user () {
 	### add_user [--tag <mount tag>] <name> [--groups <group>[,<group>]] [--password <password>]
 	###	[--shell <shell>] [--uid <uid>] [--home <directory>] [--nohome] [--system]
-	### The user is created inside the target, where the databases of the users and of the groups
-	### are: the useradd and the chpasswd of the target, not the ones of the build host.
+	### The databases of the users and of the groups are the ones of the target: the useradd of the
+	### target in its post install script, or with --tag the one of lfs/shadow:native with --prefix,
+	### which edits the files under the root of the image without a chroot.
 	local TARGET_TAG USER_NAME USER_GROUPS USER_PASSWORD USERADD_CMD
 	OPTS="--nohome --system" OPTS_WITH_VALUE="--tag --groups --password --shell --uid --home" param2value "${@}"
 
@@ -682,7 +722,13 @@ function add_user () {
 	fi
 
 	echo "User: ${USER_NAME}${USER_GROUPS:+ in ${USER_GROUPS}}"
-	run_on_target "${TARGET_TAG}" "${USERADD_CMD} ${USER_NAME}"
+	if [ -n "${TARGET_TAG}" ]
+	then
+		host_on_target "${TARGET_TAG}" lfs/shadow:native \
+			"${GLOBAL_TOOLCHAIN_PATH}/bin/${USERADD_CMD/#useradd/useradd --prefix \"$(target_root "${TARGET_TAG}")\"} ${USER_NAME}"
+	else
+		add_postinstall_command "${USERADD_CMD} ${USER_NAME}"
+	fi
 	if [ -n "${USER_PASSWORD}" ]
 	then
 		set_password ${TARGET_TAG:+--tag ${TARGET_TAG}} "${USER_NAME}" "${USER_PASSWORD}"
@@ -691,9 +737,12 @@ function add_user () {
 
 function set_password () {
 	### set_password [--tag <mount tag>] <user> <password>: the password of a user of the target,
-	### set with the chpasswd of the target. A password written here is in the project file and in
+	### set with the chpasswd of the target, or with --tag the one of lfs/shadow:native with --prefix.
+	### That one has no PAM: the hash is the one the pam_unix line of system-password of the image
+	### names (sha512 in lfs/Linux-PAM), where the chpasswd of the target takes it, and without one
+	### the ENCRYPT_METHOD of its login.defs. A password written here is in the project file and in
 	### the log of the image: it is the first password of a system that is being made, not a secret.
-	local TARGET_TAG USER_NAME USER_PASSWORD
+	local TARGET_TAG USER_NAME USER_PASSWORD PASSWORD_METHOD
 	OPTS="" OPTS_WITH_VALUE="--tag" param2value "${@}"
 
 	TARGET_TAG=${_param_tag}
@@ -707,7 +756,16 @@ function set_password () {
 	fi
 
 	echo "Password of ${USER_NAME}: set"
-	run_on_target "${TARGET_TAG}" "echo ${USER_NAME}:${USER_PASSWORD} | chpasswd"
+	if [ -n "${TARGET_TAG}" ]
+	then
+		PASSWORD_METHOD=$(sed -n '/^password.*pam_unix/ s/.*[[:space:]]\(yescrypt\|sha512\|sha256\|md5\|blowfish\)\([[:space:]].*\)\{0,1\}$/\1/p' \
+			"$(target_root "${TARGET_TAG}")${TARGET_SYSCONFDIR}/pam.d/system-password" 2> /dev/null | head -n 1 || true)
+		PASSWORD_METHOD=${PASSWORD_METHOD/blowfish/bcrypt}
+		host_on_target "${TARGET_TAG}" lfs/shadow:native \
+			"echo ${USER_NAME}:${USER_PASSWORD} | ${GLOBAL_TOOLCHAIN_PATH}/bin/chpasswd --prefix \"$(target_root "${TARGET_TAG}")\"${PASSWORD_METHOD:+ -c ${PASSWORD_METHOD^^}}"
+	else
+		add_postinstall_command "echo ${USER_NAME}:${USER_PASSWORD} | chpasswd"
+	fi
 }
 
 is_osconfig_functions () {
