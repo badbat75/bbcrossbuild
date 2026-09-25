@@ -44,3 +44,6 @@ sudo apt-get install -y asciidoc
 # for Tk 9, which packs its script library into a zip appended to the library (zipfs): its Makefile
 # has no rule for the minizip configure falls back to without zip
 sudo apt-get install -y zip
+
+# for bbxb logtail, which follows the logs through inotify events
+sudo apt-get install -y inotify-tools

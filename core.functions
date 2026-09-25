@@ -610,48 +610,177 @@ tab () {
 
 log_tail () {
 
-	### log_tail [--interval <seconds>] <directory>...: follow every *.log file of the directories,
+	### log_tail [--interval <seconds>] <directory>...: follow the *.log files of the directories,
 	### each line behind the name of its log ("[glibc_2.42-cross] ..."), until SIGINT or SIGTERM,
-	### which end the whole shell (bbxb logtail). The logs there when it starts are followed from
-	### their end, the ones that appear later from their first line: every <interval> seconds
-	### (default 2) it looks for new ones, in directories that may not exist yet. tail -F follows a
-	### log across the truncation of a new build of its package.
+	### which end the whole shell (bbxb logtail). One inotifywait watches the directories (one
+	### inotify instance: a tail -F per log exhausts the 128 of the user, after which every tail
+	### polls), and a modify event reads its log from the byte offset it was left at to its last
+	### complete line. The events of a burst are read together, each log once. The logs there when
+	### it starts are followed from their end, the ones that appear later from their first byte; a
+	### log shorter than its offset was truncated by a new build of its package and restarts from 0.
+	### The directories that do not exist yet are looked for every <interval> seconds (default 2).
 
-	local INTERVAL LOG_DIR LOG_FILE FIRST_LINE
-	local -a DIRS TAIL_PIDS=()
-	local -A FOLLOWED=()
+	local INTERVAL LOG_DIR LOG_FILE LOG_TAIL_INIT WATCH_FD="" WATCH_PID="" WATCH_STATUS REWATCH
+	local -a DIRS WATCHED=()
+	local -A OFFSET=() PENDING=()
 
 	OPTS="" OPTS_WITH_VALUE="--interval" param2value "${@}"
 	INTERVAL=${_param_interval:-2}
 	mapfile -t DIRS < <(param_list)
 
+	if ! command -v inotifywait > /dev/null
+	then
+		trow_error "${ERROR_FILE_NOT_FOUND}" "log_tail needs inotifywait: install inotify-tools" || return
+	fi
+
 	# shellcheck disable=SC2317,SC2329
 	function log_tail_stop () {
-		kill "${TAIL_PIDS[@]}" 2> /dev/null || true
+		if [ -n "${WATCH_PID}" ]
+		then
+			kill "${WATCH_PID}" 2> /dev/null || true
+		fi
 		trap - INT TERM
 		exit 0
 	}
-	trap 'log_tail_stop' INT TERM
-
-	FIRST_LINE=0
-	while true
-	do
+	# shellcheck disable=SC2317,SC2329
+	function log_tail_read () {
+		### log_tail_read <log>...: print what the logs gained since their offset
+		local LOG_SIZE LOG_FILE LOG_OFFSET LOG_LENGTH LOG_LAST
+		while read -r LOG_SIZE LOG_FILE
+		do
+			if [ -z "${OFFSET[${LOG_FILE}]}" ] && [ "${LOG_TAIL_INIT}" -eq 1 ]
+			then
+				OFFSET[${LOG_FILE}]=${LOG_SIZE}
+				continue
+			fi
+			LOG_OFFSET=${OFFSET[${LOG_FILE}]:-0}
+			if [ "${LOG_SIZE}" -lt "${LOG_OFFSET}" ]
+			then
+				LOG_OFFSET=0
+			fi
+			LOG_LENGTH=$(( LOG_SIZE - LOG_OFFSET ))
+			if [ "${LOG_LENGTH}" -gt 0 ]
+			then
+				### A last line still being written waits for its next event
+				LOG_LAST=$(tail -c "+${LOG_SIZE}" -- "${LOG_FILE}" 2> /dev/null | head -c 1 || true)
+				if [ -n "${LOG_LAST}" ]
+				then
+					LOG_LENGTH=$(( LOG_LENGTH - $(tail -c "+$(( LOG_OFFSET + 1 ))" -- "${LOG_FILE}" 2> /dev/null \
+						| head -c "${LOG_LENGTH}" | tail -n 1 | wc -c || true) ))
+				fi
+			fi
+			if [ "${LOG_LENGTH}" -gt 0 ]
+			then
+				tail -c "+$(( LOG_OFFSET + 1 ))" -- "${LOG_FILE}" 2> /dev/null | head -c "${LOG_LENGTH}" \
+					| awk -v prefix="[$(basename "${LOG_FILE}" .log)] " '{ print prefix $0; fflush() }' || true
+			fi
+			OFFSET[${LOG_FILE}]=$(( LOG_OFFSET + LOG_LENGTH ))
+		done < <(stat -c '%s %n' -- "${@}" 2> /dev/null || true)
+	}
+	# shellcheck disable=SC2317,SC2329
+	function log_tail_watch () {
+		### log_tail_watch: (re)start inotifywait on the directories that exist, then read what
+		### their logs gained before the watches were in place
+		local LINE
+		local -a LOGS=()
+		if [ -n "${WATCH_PID}" ]
+		then
+			kill "${WATCH_PID}" 2> /dev/null || true
+			exec {WATCH_FD}<&-
+			WATCH_FD=""
+			WATCH_PID=""
+		fi
+		WATCHED=()
 		for LOG_DIR in "${DIRS[@]}"
 		do
-			for LOG_FILE in "${LOG_DIR}"/*.log
-			do
-				if [ ! -f "${LOG_FILE}" ] || [ -n "${FOLLOWED[${LOG_FILE}]}" ]
-				then
-					continue
-				fi
-				FOLLOWED[${LOG_FILE}]=1
-				tail -n "${FIRST_LINE}" -F -- "${LOG_FILE}" 2> /dev/null \
-					> >(awk -v prefix="[$(basename "${LOG_FILE}" .log)] " '{ print prefix $0; fflush() }') &
-				TAIL_PIDS+=("${!}")
-			done
+			if [ -d "${LOG_DIR}" ]
+			then
+				WATCHED+=("${LOG_DIR}")
+			fi
 		done
-		FIRST_LINE=+1
-		sleep "${INTERVAL}"
+		if [ "${#WATCHED[@]}" -gt 0 ]
+		then
+			exec {WATCH_FD}< <(exec inotifywait -m -e modify -e delete_self -e move_self \
+				--format '%w%f' -- "${WATCHED[@]}" 2>&1)
+			WATCH_PID=${!}
+			### Its stderr says when the watches are in place
+			while read -r -u "${WATCH_FD}" LINE && [ "${LINE}" != "Watches established." ]
+			do
+				:
+			done
+			for LOG_DIR in "${WATCHED[@]}"
+			do
+				for LOG_FILE in "${LOG_DIR}"/*.log
+				do
+					if [ -f "${LOG_FILE}" ]
+					then
+						LOGS+=("${LOG_FILE}")
+					fi
+				done
+			done
+			if [ "${#LOGS[@]}" -gt 0 ]
+			then
+				log_tail_read "${LOGS[@]}"
+			fi
+		fi
+		LOG_TAIL_INIT=0
+	}
+	trap 'log_tail_stop' INT TERM
+
+	LOG_TAIL_INIT=1
+	log_tail_watch
+	while true
+	do
+		REWATCH=0
+		WATCH_STATUS=1
+		if [ -z "${WATCH_FD}" ]
+		then
+			sleep "${INTERVAL}"
+		elif read -r -t "${INTERVAL}" -u "${WATCH_FD}" LOG_FILE
+		then
+			WATCH_STATUS=0
+		else
+			WATCH_STATUS=${?}
+		fi
+		if [ "${WATCH_STATUS}" -eq 0 ]
+		then
+			### The burst goes on for a moment: each log once for all of its events
+			sleep 0.2
+			PENDING=()
+			while true
+			do
+				case ${LOG_FILE} in
+					*.log) PENDING[${LOG_FILE}]=1 ;;
+					### A directory moved or removed: its watch is gone
+					*/) REWATCH=1 ;;
+				esac
+				if ! read -r -t 0 -u "${WATCH_FD}" || ! read -r -u "${WATCH_FD}" LOG_FILE
+				then
+					break
+				fi
+			done
+			if [ "${#PENDING[@]}" -gt 0 ]
+			then
+				log_tail_read "${!PENDING[@]}"
+			fi
+		elif [ -n "${WATCH_FD}" ] && [ "${WATCH_STATUS}" -le 128 ]
+		then
+			### inotifywait ended (not a timeout): every directory it watched is gone
+			REWATCH=1
+			sleep "${INTERVAL}"
+		fi
+		### A directory that appeared since
+		for LOG_DIR in "${DIRS[@]}"
+		do
+			if [ -d "${LOG_DIR}" ] && [[ " ${WATCHED[*]} " != *" ${LOG_DIR} "* ]]
+			then
+				REWATCH=1
+			fi
+		done
+		if [ "${REWATCH}" -eq 1 ]
+		then
+			log_tail_watch
+		fi
 	done
 }
 

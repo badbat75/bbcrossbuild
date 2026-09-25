@@ -195,6 +195,10 @@ setup () {
 
 @test "log_tail follows the logs there, the new ones and new directories, each line behind its name" {
 	local DIR=${BATS_TEST_TMPDIR}/logs PID
+	if ! command -v inotifywait > /dev/null
+	then
+		skip "inotifywait (inotify-tools) not installed"
+	fi
 	mkdir -p "${DIR}/platform"
 	echo "before" > "${DIR}/platform/glibc_2.44-cross.log"
 	log_tail --interval 0.1 "${DIR}/platform" "${DIR}/global" > "${DIR}/out" 3>&- &
@@ -208,7 +212,11 @@ setup () {
 	### A new build of the package truncates its log
 	: > "${DIR}/platform/glibc_2.44-cross.log"
 	echo "rebuilt" >> "${DIR}/platform/glibc_2.44-cross.log"
-	sleep 1.5
+	### A line still being written comes out whole, once
+	printf 'half' >> "${DIR}/global/toolchain_rust.log"
+	sleep 0.5
+	printf ' line\n' >> "${DIR}/global/toolchain_rust.log"
+	sleep 1
 	kill -TERM "${PID}"
 	wait "${PID}"
 	sleep 0.2
@@ -216,9 +224,10 @@ setup () {
 	assert_output_lines \
 		"[glibc_2.44-cross] cross line" \
 		"[glibc_2.44-cross] rebuilt" \
+		"[toolchain_rust] half line" \
 		"[toolchain_rust] native line" \
 		"[zlib_1.3] first" \
 		"[zlib_1.3] second"
-	run pgrep -f -- "-F -- ${DIR}/"
+	run pgrep -f -- "inotifywait .*${DIR}/"
 	[ "${status}" -eq 1 ]
 }

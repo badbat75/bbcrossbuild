@@ -46,6 +46,9 @@ PACKAGES+=" asciidoc"
 # has no rule for the minizip configure falls back to without zip
 PACKAGES+=" zip"
 
+# for bbxb logtail, which follows the logs through inotify events
+PACKAGES+=" inotify-tools"
+
 if dnf > /dev/null 2>&1
 then
     sudo dnf -y install ${PACKAGES}
