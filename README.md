@@ -33,7 +33,15 @@ $ vi bbxb.conf
 Build using predefined projects:
 
 ```bash
-$ ./bbxb <project> <platform>
+$ ./bbxb build <project> <platform>
+```
+
+Follow the logs of the build from another terminal: every package log of the platform (native,
+cross and target builds) and the global ones of the native toolchain, each line behind the name of
+its log, the logs that appear during the build included (Ctrl-C to stop):
+
+```bash
+$ ./bbxb logtail <project> <platform>
 ```
 
 **Output**
@@ -47,7 +55,7 @@ Find your package at: `.bbxb/<project>/<platform>/<project>.tar.xz`
 The same command line builds on the host and in a container:
 
 ```bash
-$ ./bbxb --container <project> <platform>
+$ ./bbxb --container build <project> <platform>
 ```
 
 `bbxb` builds the image of the checkout (named after its branch) when docker does not have it or

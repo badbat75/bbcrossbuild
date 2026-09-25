@@ -22,8 +22,12 @@ cp configurations/bbxb.conf bbxb.conf # README mentions bbxb.conf.default; that 
 cp configurations/lfs.conf projects/lfs.conf   # optional per-project settings (gitignored)
 
 # Build a project for a platform (project = projects/<name>.prj, platform = platforms/<name>.conf)
-./bbxb lfs rpi3-aarch64
-DATA_PATH=~/.bbxb TOOLCHAIN=llvm ./bbxb lfs generic-x64   # any setenv/bbxb.conf variable can be overridden from the environment
+./bbxb build lfs rpi3-aarch64
+DATA_PATH=~/.bbxb TOOLCHAIN=llvm ./bbxb build lfs generic-x64   # any setenv/bbxb.conf variable can be overridden from the environment
+# From another terminal, while it builds: every log of <platform>/logs and of the global logs/, each line behind
+# the name of its log ([glibc_2.44-cross] ...), the new ones as they appear (log_tail in core.functions), on the host
+# also for a container build
+./bbxb logtail lfs rpi3-aarch64
 
 # Smoke test: bootstraps a toolchain and a handful of packages for gnu+llvm on generic-x64, rpi, rpi3-aarch64.
 # It writes projects/test.prj, uses ~/.bbxb_test as DATA_PATH and takes hours.
@@ -35,7 +39,7 @@ build lfs/create-base-fs_1.0
 setup_full_toolchain --with-gnu-install
 build --force --keep_builddir lfs/zlib
 EOF
-./bbxb test-zlib generic-x64
+./bbxb build test-zlib generic-x64
 # With --keep_builddir the build dir keeps recipe.source, environment.source, runprebuild.sh, runpostbuild.sh: re-runnable by hand
 # A new project name means a new <project> directory, hence a whole cross toolchain of its own. To build one
 # package into the datadir a project already has (and get its .sfx next to the others), keep the project name
@@ -45,7 +49,7 @@ mkdir -p projects-tmp && cat > projects-tmp/lfs.prj <<'EOF'
 setup_full_toolchain --with-gnu-install --with-main-gcc --with-llvm --with-python
 build --force --keep_builddir raspberrypi/rpi-utils
 EOF
-PRJ_PATH=projects-tmp PRJ_DIR=projects-tmp ./bbxb lfs rpi3-aarch64   # the toolchain steps are checks, so it starts in a minute
+PRJ_PATH=projects-tmp PRJ_DIR=projects-tmp ./bbxb build lfs rpi3-aarch64   # the toolchain steps are checks, so it starts in a minute
 
 # Containers: the same command line, in the image of this checkout (name from the git branch:
 # development -> bbcrossbuild-devel, master -> bbcrossbuild-latest). bbxb builds the image when
@@ -54,7 +58,7 @@ PRJ_PATH=projects-tmp PRJ_DIR=projects-tmp ./bbxb lfs rpi3-aarch64   # the toolc
 # with -e, and runs the build as the user who started it (container_user creates it inside, with
 # sudo without password for the run_cmd -s steps). The user has to be in the docker group;
 # CONTAINER_BUILD=1 in bbxb.conf makes it the default, --no-container turns it off for one run.
-./bbxb --container lfs rpi3-aarch64
+./bbxb --container build lfs rpi3-aarch64
 utilities/container/build.sh          # rebuild the image and export the build cache to
                                       # /var/cache/bbcrossbuild-docker (group docker, override with
                                       # BBXB_CACHE_DIR), which every later build imports, so the dnf
@@ -108,7 +112,7 @@ Where things land (`DATA_PATH` defaults to `/mnt/bbcrossbuild/datadir`; the conf
 
 ### Sourcing chain
 
-`bbxb <project> <platform>` sources, in order: `seterr` (error codes), `core.functions`, `container.functions` (the `--container` switch: on the host it builds the image and re-runs the command line inside it, in the container it creates the user of the host and runs the build as it), optional `bbxb.conf`, `platforms/<platform>.conf`, `setenv` (all path and version defaults, computed from what was set so far), optional `projects/<project>.conf`, then `build.functions`, `project.functions`, `toolchain.functions`, `images.functions`, `data.functions`, `osconfig.functions`, and finally `projects/<project>.prj` itself. A project file is therefore ordinary Bash executed with every library function and variable in scope: it sets policy variables (`TOOLCHAIN`, `LTOENABLE`, `BUILD_LIBSTATIC`, versions), calls `setup_full_toolchain`, then calls `build`, image and chroot functions in sequence.
+`bbxb build <project> <platform>` sources, in order: `seterr` (error codes), `core.functions`, `container.functions` (the `--container` switch: on the host it builds the image and re-runs the command line inside it, in the container it creates the user of the host and runs the build as it), optional `bbxb.conf`, `platforms/<platform>.conf`, `setenv` (all path and version defaults, computed from what was set so far), optional `projects/<project>.conf`, then `build.functions`, `project.functions`, `toolchain.functions`, `images.functions`, `data.functions`, `osconfig.functions`, and finally `projects/<project>.prj` itself. A project file is therefore ordinary Bash executed with every library function and variable in scope: it sets policy variables (`TOOLCHAIN`, `LTOENABLE`, `BUILD_LIBSTATIC`, versions), calls `setup_full_toolchain`, then calls `build`, image and chroot functions in sequence.
 
 Precedence for a setting: environment variable > `bbxb.conf` > platform `.conf` > `setenv` default, then `projects/<project>.conf` (the user file of the project, sourced by `bbxb` right after `setenv`, so the parameters it prints are the ones of the build) and the `.prj` itself can overwrite any of them before the first `build`.
 

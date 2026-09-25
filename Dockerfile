@@ -1,6 +1,6 @@
 # The build environment of bbxb: the host dependencies, nothing of the checkout.
 #
-# "./bbxb --container <project> <platform>" builds this image when docker does not have it or when
+# "./bbxb --container build <project> <platform>" builds this image when docker does not have it or when
 # the label below does not match the checksum of this file, then mounts the checkout and the data
 # directory into it and runs the build there (container.functions). A recipe edit needs no rebuild.
 FROM amd64/fedora:latest

@@ -5,7 +5,7 @@ check_core_functions
 ### container.functions: the container bbxb runs the build in. Sourced by bbxb right after
 ### core.functions and by utilities/container/build.sh.
 ###
-### "./bbxb --container <project> <platform>" is "./bbxb <project> <platform>" run inside the
+### "./bbxb --container build <project> <platform>" is "./bbxb build <project> <platform>" run inside the
 ### image of this checkout: the image carries the host dependencies only, the checkout and the
 ### data directory are mounted where they are on the host, and the build runs as the user who
 ### started bbxb. A recipe edit is therefore one run away and the image needs a rebuild only when

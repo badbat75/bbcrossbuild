@@ -59,7 +59,7 @@ do
     for PLATFORM in ${PLATFORMS}
     do
         echo "# Running test for ${PLATFORM}..."
-        DATA_PATH=${DATA_PATH} TOOLCHAIN=${TOOLCHAIN} ./bbxb test ${PLATFORM}
+        DATA_PATH=${DATA_PATH} TOOLCHAIN=${TOOLCHAIN} ./bbxb build test ${PLATFORM}
         echo "# Test ok!!!"
     done
     echo "### Toolchain test ok!!! ###"

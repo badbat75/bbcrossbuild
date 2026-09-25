@@ -42,10 +42,27 @@ trap 'on_interrupt' SIGINT
 
 OPTS="--container --no-container" OPTS_WITH_VALUE="" param2value "${@}"
 
+### bbxb [--container|--no-container] <command> <project> <platform>: build runs the project file,
+### logtail follows the logs of the project on the platform (the native, cross and target builds,
+### the new ones as they appear) while a build runs, from another terminal
 # shellcheck disable=SC2154
-PROJECT_NAME="${_param_1}"
+BBXB_COMMAND="${_param_1}"
 # shellcheck disable=SC2154
-PLATFORM_NAME="${_param_2}"
+PROJECT_NAME="${_param_2}"
+# shellcheck disable=SC2154
+PLATFORM_NAME="${_param_3}"
+
+BBXB_USAGE="bbxb [--container|--no-container] build|logtail <project> <platform>"
+case "${BBXB_COMMAND}" in
+	build|logtail)
+		;;
+	"")
+		trow_error "${ERROR_NOT_VALID_OPTION}" "No command specified: ${BBXB_USAGE}."
+		;;
+	*)
+		trow_error "${ERROR_NOT_VALID_OPTION}" "Unknown command ${BBXB_COMMAND}: ${BBXB_USAGE}."
+		;;
+esac
 
 if [ -z "${PROJECT_NAME}" ]
 then
@@ -86,6 +103,15 @@ if [ -f "${PROJECT_CONF}" ]
 then
 	# shellcheck source=/dev/null
 	source "${PROJECT_CONF}"
+fi
+
+### The logs of the project: the platform ones (every package build, native and cross included)
+### and the global ones of the native toolchain steps. On the host, container build or not: the
+### data directory is the same
+if [ "${BBXB_COMMAND}" = logtail ]
+then
+	echo "Following the logs of ${LOG_PATH} and ${GLOBAL_LOG_PATH} (Ctrl-C to stop)"
+	log_tail "${LOG_PATH}" "${GLOBAL_LOG_PATH}"
 fi
 
 ### The package groups are git submodules: an empty packages/<group> is a checkout without them

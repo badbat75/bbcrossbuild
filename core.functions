@@ -608,6 +608,53 @@ tab () {
 	echo -en '\t'
 }
 
+log_tail () {
+
+	### log_tail [--interval <seconds>] <directory>...: follow every *.log file of the directories,
+	### each line behind the name of its log ("[glibc_2.42-cross] ..."), until SIGINT or SIGTERM,
+	### which end the whole shell (bbxb logtail). The logs there when it starts are followed from
+	### their end, the ones that appear later from their first line: every <interval> seconds
+	### (default 2) it looks for new ones, in directories that may not exist yet. tail -F follows a
+	### log across the truncation of a new build of its package.
+
+	local INTERVAL LOG_DIR LOG_FILE FIRST_LINE
+	local -a DIRS TAIL_PIDS=()
+	local -A FOLLOWED=()
+
+	OPTS="" OPTS_WITH_VALUE="--interval" param2value "${@}"
+	INTERVAL=${_param_interval:-2}
+	mapfile -t DIRS < <(param_list)
+
+	# shellcheck disable=SC2317,SC2329
+	function log_tail_stop () {
+		kill "${TAIL_PIDS[@]}" 2> /dev/null || true
+		trap - INT TERM
+		exit 0
+	}
+	trap 'log_tail_stop' INT TERM
+
+	FIRST_LINE=0
+	while true
+	do
+		for LOG_DIR in "${DIRS[@]}"
+		do
+			for LOG_FILE in "${LOG_DIR}"/*.log
+			do
+				if [ ! -f "${LOG_FILE}" ] || [ -n "${FOLLOWED[${LOG_FILE}]}" ]
+				then
+					continue
+				fi
+				FOLLOWED[${LOG_FILE}]=1
+				tail -n "${FIRST_LINE}" -F -- "${LOG_FILE}" 2> /dev/null \
+					> >(awk -v prefix="[$(basename "${LOG_FILE}" .log)] " '{ print prefix $0; fflush() }') &
+				TAIL_PIDS+=("${!}")
+			done
+		done
+		FIRST_LINE=+1
+		sleep "${INTERVAL}"
+	done
+}
+
 is_core_functions () {
 	return 0
 }

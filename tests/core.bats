@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# core.bats: the pure helpers of core.functions (test_version, pathadd, pathremove,
+# core.bats: the pure helpers of core.functions (test_version, pathadd, pathremove, log_tail,
 # param2value, trow_error) and its logging and error handling (log_buffer, run_cmd, on_error)
 # The tests set variables the sourced framework reads and read the ones it sets:
 # shellcheck disable=SC1091,SC2016,SC2030,SC2031,SC2034,SC2154
@@ -191,4 +191,34 @@ setup () {
 	[ "${status}" -eq 10 ]
 	[ "$(grep -c "Platform does not exist." <<< "${output}")" -eq 1 ]
 	[[ ${output} == *"ERROR: Platform does not exist. [status 10]"* ]]
+}
+
+@test "log_tail follows the logs there, the new ones and new directories, each line behind its name" {
+	local DIR=${BATS_TEST_TMPDIR}/logs PID
+	mkdir -p "${DIR}/platform"
+	echo "before" > "${DIR}/platform/glibc_2.44-cross.log"
+	log_tail --interval 0.1 "${DIR}/platform" "${DIR}/global" > "${DIR}/out" 3>&- &
+	PID=${!}
+	sleep 0.5
+	echo "cross line" >> "${DIR}/platform/glibc_2.44-cross.log"
+	printf 'first\nsecond\n' > "${DIR}/platform/zlib_1.3.log"
+	mkdir "${DIR}/global"
+	echo "native line" > "${DIR}/global/toolchain_rust.log"
+	sleep 1
+	### A new build of the package truncates its log
+	: > "${DIR}/platform/glibc_2.44-cross.log"
+	echo "rebuilt" >> "${DIR}/platform/glibc_2.44-cross.log"
+	sleep 1.5
+	kill -TERM "${PID}"
+	wait "${PID}"
+	sleep 0.2
+	run sort "${DIR}/out"
+	assert_output_lines \
+		"[glibc_2.44-cross] cross line" \
+		"[glibc_2.44-cross] rebuilt" \
+		"[toolchain_rust] native line" \
+		"[zlib_1.3] first" \
+		"[zlib_1.3] second"
+	run pgrep -f -- "-F -- ${DIR}/"
+	[ "${status}" -eq 1 ]
 }
