@@ -1753,9 +1753,17 @@ function mesonninja () {
 			done
 			echo
 		}
-		local C C_ARGS C_LINK_ARGS CPP CPP_ARGS CPP_LINK_ARGS FORTRAN FORTRAN_ARGS FORTRAN_LINK_ARGS
+		local C C_ARGS C_LINK_ARGS CPP CPP_ARGS CPP_LINK_ARGS FORTRAN FORTRAN_ARGS FORTRAN_LINK_ARGS PYTHON
 		# shellcheck source=/dev/null
 		source "${PKG_BLDPATH}/environment.source"
+		### The python of the host machine is the crossenv when environment.source activates it; a
+		### build without it (PKG_DISABLECROSSPYTHON, or before setup_python creates it: the
+		### dependencies of lfs/python3, systemd:bootstrap) leaves meson the python3 of PATH, the
+		### native one, which has jinja2
+		if command -v cross-python3 > /dev/null
+		then
+			PYTHON="python = 'cross-python3'"
+		fi
 		C=$(buildmesonargs "${CC}")
 		C_ARGS=$(buildmesonargs "${CFLAGS}")
 		C_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
@@ -1780,7 +1788,7 @@ function mesonninja () {
 			nm = '${NM}'
 			ranlib = '${RANLIB}'
 			pkgconfig = '${PKG_CONFIG}'
-			python = 'cross-python3'
+			${PYTHON}
 			exe_wrapper = 'qemu-${HM}-static'
 
 			[host_machine]
