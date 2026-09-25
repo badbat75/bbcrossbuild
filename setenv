@@ -89,7 +89,7 @@ TOOLCHAIN=${TOOLCHAIN:-gnu}
 BINUTILS_VER=${BINUTILS_VER:-2.47}
 GCC_VER=${GCC_VER:-16.2.0}
 ### LLVM version
-LLVM_VER=${LLVM_VER:-23.1.1}
+LLVM_VER=${LLVM_VER:-23.1.2}
 ### Python version
 PYTHON_VER=${PYTHON_VER:-3.14.7}
 ### Perl version (the perl5 recipe builds it, recipes that reference its module paths read it)
@@ -102,5 +102,5 @@ LIBTOOL_VER=${LIBTOOL_VER:-2.6.2}
 GETTEXT_VER=${GETTEXT_VER:-1.0}
 export AUTOMAKE_VER
 ### Bootstrap libraries and headers versions
-KERNEL_VER=${KERNEL_VER:-7.2.6}
+KERNEL_VER=${KERNEL_VER:-7.2.7}
 GLIBC_VER=${GLIBC_VER:-2.44}

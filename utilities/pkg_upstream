@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # pkg_upstream: find the latest upstream version of the package recipes and optionally apply it.
 #
-# Usage: utilities/pkg_upstream [-p <platform>] [-P <project>] [-g <group>[,<group>]] [-a] [-A] [-f]
+# Usage: utilities/pkg_upstream [-p <platform>] [-P <project>] [-g <group>[,<group>]] [-a] [-S] [-A] [-f] [-v]
 #                               [-o <report.tsv>] [<group>/<name>[=<version>] ...]
 #
 #   -p <platform>   platform the recipes are resolved for (default generic-x64)
@@ -12,33 +12,65 @@
 #   -a              apply: rewrite the PKG_VER line of package.env with the latest version when the
 #                   archive URL of the new version answers; <group>/<name>=<version> forces a version
 #                   (the current version pins the recipe: lfs/BerkeleyDB=5.3.28)
+#   -S              apply (-a) also to the versions of setenv: the VAR=${VAR:-<version>} line of the
+#                   recipe package.env (GDB_VER) or of setenv (LLVM_VER, KERNEL_VER...), kept when
+#                   the archive of the new version answers; a version with release branch patches
+#                   (variants/version/<version>/) is reported with the update_patches command it needs
 #   -A              do not query release-monitoring.org (Anitya) for a second opinion
 #   -f              refresh: ignore the cached answers (default cache: one day, under ~/.cache/bbxb)
-#   -o <file>       write the tab separated report to a file instead of standard output
+#   -o <file>       write the tab separated report of every recipe to a file
+#   -v              print every recipe and the failed downloads, not only the updates
 #   without recipes and without -P: every recipe of every group
+#
+# The output only carries the recipes with an update (outdated, a newer branch series, applied),
+# -v every recipe; on a terminal the recipe being surveyed is shown on a line that is cleared
+# afterwards, and a summary closes the run on standard error.
 #
 # The latest version is derived from PKG_URL alone, no per-recipe configuration: the version string
 # of the recipe is located inside the archive name (2.6.4, 2_6_4 or 2-6-4) and the same pattern is
 # matched against the tags of the GitHub or GitLab repository or against the links of the parent
-# directory of the archive (and of the newest sibling directories when the parent is named after
-# the version, python/3.10.15/, glib/2.83/, kernel/v6.x/). Pre-release names (rc, alpha, beta, a1,
-# b2, dev, pre) are skipped. A pythonbuild recipe without PKG_URL is looked up on PyPI. Anitya is
-# looked up by recipe name (language ecosystems excluded, the project whose homepage matches the
-# URL host preferred).
+# directory of the archive (and of the newest sibling directories when the parent is named after the
+# version, python/3.10.15/, glib/2.83/, kernel/v6.x/), of the RSS feed of a SourceForge project or
+# of the tags of a GIT_URL checked out at a tag (GIT_COMMIT=tags/v1.3.5). A URL that names no tag (a
+# GitHub attachment) is compared with the tags that are a plain version, when the current one is
+# among them. The Debian revision or commit suffix of a version (1.0.5-1, 2.0.2.3+af2dd23) is left
+# out when the URL does not carry it. Pre-release names (rc, alpha, beta, a1, b2, dev, pre) and
+# versions of another shape (lame-398 next to 3.100, the m4 beta 1.9a next to 1.4.21: a letter
+# suffix only when the current version has one) are skipped, and so is a GNOME minor version from 90
+# on that jumps over the current series (pango 1.90 after 1.58, the preview of Pango 2). A
+# pythonbuild recipe without PKG_URL, and an sdist of packages/source/ on files.pythonhosted.org (a
+# directory without listing), are looked up on the JSON API of PyPI. Anitya is looked up by recipe
+# name (language ecosystems excluded but for the one of the URL, PyPI for files.pythonhosted.org;
+# the project whose homepage matches the URL host preferred).
+# A recipe without PKG_VER has the version of its name and suffix: rpi-firmware_1 with PKG_SUFFIX
+# .20260915 is 1.20260915, raspberrypi-sys-mods with .20260914 is 20260914; -a rewrites PKG_SUFFIX.
+# A GitHub archive of a commit (archive/<sha>.tar.gz), or a GIT_URL checked out at a commit, is
+# compared with the head of its branch (git ls-remote; the date and the distance come from the
+# commits feed of the branch): the default branch, or the branch of the series of the recipe name
+# (rpi-kernel_7.2: rpi-7.2.y, found among the branches named like the default one); a kernel tree
+# reports the version of its Makefile, anything else the short commit and its date. A newer series
+# than every recipe of the same name has (rpi-7.3.y) is reported as "/series:<branch>". -a replaces
+# the commit and, when they follow it, a date suffix (.20260914) or the kernel sublevel (.6). A
+# GitHub archive of a branch (archive/refs/heads/master) follows it and is reported as tracking,
+# unless the branch is named after the version (v5.6.4.2: the newest such branch).
 # Recipes whose PKG_VER comes from setenv (${GCC_VER}...) are reported with the variable name and
-# never rewritten. GITHUB_TOKEN (or the token of the gh command) raises the GitHub rate limit.
+# rewritten only with -S. The GitHub tags and branches come from git ls-remote, which has no rate limit.
 #
 # Report columns: recipe, current, latest, backend, anitya, status, url. The status is current,
 # outdated, ahead (the recipe is newer than what the backend sees: a commit pin, a development
-# series), unknown (no version in the URL, no listing, no tags), noversion (no PKG_VER), with a
+# series), tracking:<branch> (the archive of a branch), local (no PKG_URL nor GIT_URL: the recipe
+# carries its files), unpinned (pip installs the latest PyPI version), unversioned (a PKG_URL
+# without a version), unknown (no version in the URL, no listing, no tags), noversion, with a
 # "/disagree" suffix when Anitya names another latest version, "/setenv:<VAR>" for the framework
-# versions and, in apply mode, "applied" or "url-missing" (the new archive URL does not answer).
+# versions and, in apply mode, "applied" or "url-missing" (the new archive URL does not answer; for
+# a GitHub release without the archive, the archive of its tag is suggested when it answers).
 
 import hashlib
 import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -57,12 +89,32 @@ PRERELEASE = re.compile(r"(^|[._-])(rc|alpha|beta|pre|dev|snapshot|nightly|test)
 ALIASES = {
     "D-Bus": "dbus", "Linux-PAM": "pam", "GRUB": "grub", "kernel": "linux", "python3": "python",
     "perl5": "perl", "BerkeleyDB": "db", "libgmp": "gmp", "libmpfr": "mpfr", "libmpc": "mpc",
-    "libisl": "isl", "libmpdec": "mpdecimal", "LibTIFF": "tiff", "LittleCMS": "lcms2",
+    "libisl": "isl", "libmpdec": "mpdecimal", "libwavpack": "wavpack", "LibTIFF": "tiff", "LittleCMS": "lcms2",
     "Vulkan-SPIRV-Tools": "spirv-tools", "Vulkan-SPIRV-Headers": "spirv-headers",
 }
 
-OPTIONS = {"platform": "generic-x64", "project": None, "groups": None, "apply": False, "anitya": True, "refresh": False, "output": None}
-GH_TOKEN = ""
+OPTIONS = {"platform": "generic-x64", "project": None, "groups": None, "apply": False, "anitya": True, "refresh": False, "output": None, "verbose": False, "setenv": False}
+PROGRESS = sys.stderr.isatty()
+ERRORS = {"count": 0}
+
+
+def clear_progress():
+    if PROGRESS:
+        sys.stderr.write("\r\033[K")
+        sys.stderr.flush()
+
+
+def progress(text):
+    """the transient line of the recipe being surveyed"""
+    if PROGRESS:
+        width = shutil.get_terminal_size().columns - 1
+        sys.stderr.write("\r\033[K" + (text[:width] if width > 0 else text))
+        sys.stderr.flush()
+
+
+def note(message):
+    clear_progress()
+    sys.stderr.write(message + "\n")
 
 
 def usage(status):
@@ -161,7 +213,8 @@ def all_recipes():
     return out
 
 
-def fetch(url, headers=None):
+def fetch(url, headers=None, quiet=False):
+    """the body of url (cached), None on failure: quiet does not count the failure (a probe)"""
     os.makedirs(CACHE_DIR, exist_ok=True)
     key = os.path.join(CACHE_DIR, hashlib.md5(url.encode()).hexdigest())
     if not OPTIONS["refresh"] and os.path.exists(key) and time.time() - os.path.getmtime(key) < CACHE_TTL:
@@ -172,11 +225,37 @@ def fetch(url, headers=None):
         with urllib.request.urlopen(req, timeout=30) as r:
             data = r.read()
     except (urllib.error.URLError, TimeoutError, OSError) as e:
-        sys.stderr.write(f"pkg_upstream: {url}: {e}\n")
+        if quiet:
+            return None
+        ERRORS["count"] += 1
+        if OPTIONS["verbose"]:
+            note(f"pkg_upstream: {url}: {e}")
         return None
     with open(key, "wb") as f:
         f.write(data)
     return data.decode("utf-8", "replace")
+
+
+def ls_remote(repo_url, *args, refs=()):
+    """git ls-remote [args] repo_url [refs] (cached like fetch): list of (sha, ref), None on failure"""
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    key = os.path.join(CACHE_DIR, hashlib.md5((" ".join(("git", repo_url) + args + tuple(refs))).encode()).hexdigest())
+    if OPTIONS["refresh"] or not os.path.exists(key) or time.time() - os.path.getmtime(key) >= CACHE_TTL:
+        env = dict(os.environ, GIT_TERMINAL_PROMPT="0")
+        try:
+            out = subprocess.run(["git", "ls-remote"] + list(args) + [repo_url] + list(refs), capture_output=True, text=True, timeout=120, env=env)
+        except (OSError, subprocess.TimeoutExpired) as e:
+            out = None
+            error = str(e)
+        if out is None or out.returncode != 0:
+            ERRORS["count"] += 1
+            if OPTIONS["verbose"]:
+                note(f"pkg_upstream: git ls-remote {repo_url}: " + (out.stderr.strip() if out else error))
+            return None
+        with open(key, "w") as f:
+            f.write(out.stdout)
+    with open(key) as f:
+        return [tuple(line.split("\t", 1)) for line in f.read().splitlines() if "\t" in line]
 
 
 def url_answers(url):
@@ -228,16 +307,27 @@ def version_pattern(text, version):
     return None
 
 
-def newest(names, pattern, style, current):
+def odd_development(version, pattern):
+    """Perl: an odd minor version is a development release (5.45.3)"""
+    return "perl" in pattern.pattern and bool(re.match(r"^5\.\d*[13579]\.", version))
+
+
+def newest(names, pattern, style, current, skip=None):
     """the newest version among the names matching the pattern: pre-releases and versions of
-    another magnitude (a 20001016 date tag next to a 4.16.0 version) are ignored"""
+    another magnitude or shape (a 20001016 date tag next to a 4.16.0 version, the 1.9a beta of m4
+    next to 1.4.21: a letter suffix counts only when the current version has one) are ignored,
+    and so are the versions skip returns true for"""
     found = set()
     digits = len(current.split(".")[0])
+    dotted = "." in current
+    lettered = re.search(r"\d[A-Za-z]$", current) is not None
     for name in names:
         m = pattern.match(name)
         if m:
             version = unspell(m.group(1), style)
-            if not PRERELEASE.search(version) and abs(len(version.split(".")[0]) - digits) <= 2:
+            # lame-398 next to lame-3.100: a dotted version is not compared with a bare number
+            if not PRERELEASE.search(version) and not odd_development(version, pattern) and abs(len(version.split(".")[0]) - digits) <= 2 and ("." in version) == dotted \
+                    and (re.search(r"\d[A-Za-z]$", version) is not None) == lettered and not (skip and skip(version)):
                 found.add(version)
     return max(found, key=vkey) if found else None
 
@@ -253,6 +343,40 @@ def prefix_pattern(text, version):
     return None
 
 
+def git_tags(repo_url):
+    return [ref[len("refs/tags/"):] for _, ref in ls_remote(repo_url, "--tags", "--refs") or []]
+
+
+def git_heads(repo_url):
+    """({branch: sha}, default branch) of a repository, ({}, None) on failure"""
+    refs = ls_remote(repo_url, "--symref", refs=("HEAD", "refs/heads/*"))
+    heads = {ref[len("refs/heads/"):]: sha for sha, ref in refs or [] if ref.startswith("refs/heads/")}
+    default = next((sha[len("ref: refs/heads/"):] for sha, ref in refs or [] if ref == "HEAD" and sha.startswith("ref: ")), None)
+    return heads, default
+
+
+def github_repo(url):
+    """(owner, repo) of a github.com URL, None otherwise"""
+    m = re.match(r"https?://github\.com/([^/]+)/([^/]+?)(?:\.git)?/?$", url)
+    return m.groups() if m else None
+
+
+def github_feed(owner, repo, branch):
+    """(sha, date) of the last 20 commits of a branch, from its atom feed"""
+    feed = fetch(f"https://github.com/{owner}/{repo}/commits/{urllib.parse.quote(branch)}.atom")
+    return re.findall(r"Grit::Commit/([0-9a-f]{40})</id>.*?<updated>([0-9-]{10})", feed or "", re.S)
+
+
+def bare_tags(names, repo, version):
+    """the tags that are a plain version (2.1.5, v2.1.5, <repo>-2.1.5): the pattern of a URL that
+    names no tag (a GitHub attachment, files/<id>/<archive>), trusted only when the current version
+    is one of them (ghostscript tags gs10080, its old 9.27 tags are another scheme)"""
+    rx = re.compile(r"^(?:v|V|release[-_]?|" + re.escape(repo) + r"[-_])?" + VERSION_RX + "$")
+    if not any((m := rx.match(n)) and m.group(1) == version for n in names):
+        return None
+    return newest(names, rx, ".", version)
+
+
 def github_latest(url, version):
     m = re.match(r"https://github\.com/([^/]+)/([^/]+)/(.*)$", url)
     if not m:
@@ -266,24 +390,141 @@ def github_latest(url, version):
             tag = mm.group(1)
             break
     pat = version_pattern(tag, version) if tag else None
+    names = git_tags(f"https://github.com/{owner}/{repo}.git")
+    if pat is None:
+        latest = bare_tags(names, repo, version)
+        return ("github", latest) if latest else ("unknown", None)
+    return "github", newest(names, pat[0], pat[1], version)
+
+
+def git_tag_latest(repo_url, tag, version):
+    """a GIT_URL checked out at a tag (GIT_COMMIT=tags/v1.3.5 or v1.3.5): the newest tag of the same form"""
+    tag = tag[len("tags/"):] if tag.startswith("tags/") else tag
+    pat = version_pattern(tag, version)
+    names = git_tags(repo_url)
+    if pat is None:
+        latest = bare_tags(names, repo_url.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git"), version)
+        return ("git", latest) if latest else ("unknown", None)
+    return "git", newest(names, pat[0], pat[1], version)
+
+
+def recipe_series(recipe):
+    """the version in the recipe name: 7.2 for rpi-kernel_7.2, 0.112 for dbus-glib-0.112, None for rpi-utils"""
+    m = re.match(r"^.+?[_-](\d[\w.+-]*)$", recipe.split("/")[-1])
+    return m.group(1) if m else None
+
+
+def sibling_series(recipe):
+    """the series of every recipe of the group with the same name: 6.12 and 7.2 for rpi-kernel"""
+    group, name = recipe.split("/")
+    base = re.sub(r"[_-]\d[\w.+-]*$", "", name)
+    out = []
+    for d in os.listdir(os.path.join(BB_HOME, "packages", group)):
+        m = re.match("^" + re.escape(base) + r"[_-](\d[\w.+-]*)$", d)
+        if m:
+            out.append(m.group(1))
+    return out
+
+
+def commit_pin(url, git_url, git_commit):
+    """(repository, commit as written) of a recipe pinned to a commit: a GitHub archive of a commit
+    (archive/<sha>.tar.gz) or a GIT_URL checked out at a hexadecimal GIT_COMMIT; None otherwise"""
+    m = re.match(r"(https://github\.com/[^/]+/[^/]+)/archive/([0-9a-f]{40})\.(?:tar\.gz|tar\.xz|zip)$", url)
+    if m:
+        return m.group(1) + ".git", m.group(2)
+    if git_url and re.match(r"^[0-9a-f]{7,40}$", git_commit):
+        return git_url, git_commit
+    return None
+
+
+def git_commit(repo_url, pin, recipe):
+    """a commit pin against the head of its branch: dict"""
+    heads, default = git_heads(repo_url)
+    if default not in heads:
+        return {"pin": pin, "status": "unknown"}
+    branch = default
+    series = recipe_series(recipe)
+    newer = None
+    # the branches named like the default one (rpi-6.18.y: rpi-<series>.y) carry the series
+    mv = re.search(r"\d+(?:\.\d+)+", default)
+    family = version_pattern(default, mv.group(0)) if mv else None
+    if family and series:
+        found = {}
+        for name in heads:
+            mm = family[0].match(name)
+            if mm and not PRERELEASE.search(mm.group(1)):
+                found[mm.group(1)] = name
+        if series in found:
+            branch = found[series]
+        top = max(found, key=vkey)
+        if vkey(top) > max(vkey(s) for s in sibling_series(recipe)):
+            newer = found[top]
+    head = heads[branch]
+    date = ""
+    behind = None
+    version = None
+    gh = github_repo(repo_url)
+    if gh:
+        # the date of the head and the commits since the pin, from the feed of the branch (20 commits)
+        commits = github_feed(gh[0], gh[1], branch)
+        if commits and commits[0][0] == head:
+            date = commits[0][1]
+        shas = [c for c, _ in commits]
+        at = [i for i, c in enumerate(shas) if c.startswith(pin)]
+        if at:
+            behind = at[0]
+        # a kernel tree: the version of its Makefile
+        makefile = fetch(f"https://raw.githubusercontent.com/{gh[0]}/{gh[1]}/{head}/Makefile", quiet=True)
+        mk = re.match(r"(?:#.*\n)*VERSION = (\d+)\nPATCHLEVEL = (\d+)\nSUBLEVEL = (\d+)\n", makefile or "")
+        if mk:
+            version = ".".join(mk.groups())
+    return {"pin": pin, "head": head, "date": date, "branch": branch, "status": "current" if head.startswith(pin) else "outdated",
+            "behind": behind, "version": version, "newer": newer}
+
+
+def github_branch(url, version):
+    """a GitHub archive of a branch (archive/refs/heads/<branch>, or archive/<branch> when no tag has
+    that name): dict with the branch, its head and, for a branch named after the version
+    (v5.6.4.2), the newest version among the branch names; None for any other URL"""
+    m = re.match(r"https://github\.com/([^/]+)/([^/]+)/archive/(refs/heads/)?(.+?)\.(?:tar\.gz|tar\.xz|zip)$", url)
+    if not m:
+        return None
+    owner, repo, explicit, branch = m.groups()
+    if re.match(r"^[0-9a-f]{40}$", branch) or branch.startswith("refs/"):
+        return None
+    repo_url = f"https://github.com/{owner}/{repo}.git"
+    heads, _ = git_heads(repo_url)
+    if branch not in heads or (not explicit and branch in git_tags(repo_url)):
+        return None
+    pat = version_pattern(branch, version) if version else None
+    latest = newest(heads, pat[0], pat[1], version) if pat else None
+    commits = github_feed(owner, repo, branch)
+    date = commits[0][1] if commits and commits[0][0] == heads[branch] else ""
+    return {"branch": branch, "head": heads[branch], "date": date, "latest": latest, "versioned": pat is not None}
+
+
+def sourceforge_latest(url, version):
+    """the files of a SourceForge project, from the RSS feed of the directory above the archive (the
+    parent of a directory named after the version: pcre/8.45/, e2fsprogs/v1.47.1/): SourceForge
+    lists no directory to a plain download client"""
+    u = url.split("?")[0]
+    m = (re.match(r"https?://(?:downloads?\.sourceforge\.net|[a-z0-9-]+\.dl\.sourceforge\.net)/project/([^/]+)/(.+)$", u)
+         or re.match(r"https?://sourceforge\.net/projects/([^/]+)/files/(.+?)(?:/download)?$", u)
+         or re.match(r"https?://downloads?\.sourceforge\.net/([^/]+)/(.+)$", u))
+    if not m:
+        return "unknown", None
+    project, rest = m.groups()
+    path, _, base = rest.rpartition("/")
+    pat = version_pattern(base, version)
     if pat is None:
         return "unknown", None
-    headers = {"Accept": "application/vnd.github+json"}
-    if GH_TOKEN:
-        headers["Authorization"] = "Bearer " + GH_TOKEN
-    names = []
-    for page in range(1, 11):
-        data = fetch(f"https://api.github.com/repos/{owner}/{repo}/tags?per_page=100&page={page}", headers)
-        try:
-            items = json.loads(data) if data else []
-        except ValueError:
-            items = []
-        if not isinstance(items, list) or not items:
-            break
-        names += [t.get("name", "") for t in items]
-        if len(items) < 100:
-            break
-    return "github", newest(names, pat[0], pat[1], version)
+    if path:
+        parent, _, pdir = path.rpartition("/")
+        if version_pattern(pdir, version) or prefix_pattern(pdir, version):
+            path = parent
+    data = fetch(f"https://sourceforge.net/projects/{project}/rss?path=/{urllib.parse.quote(path)}")
+    names = [urllib.parse.unquote(link.removesuffix("/download").rstrip("/").rsplit("/", 1)[-1]) for link in re.findall(r"<link>([^<]+)</link>", data or "")]
+    return "sourceforge", newest(names, pat[0], pat[1], version)
 
 
 def gitlab_latest(url, version):
@@ -326,6 +567,19 @@ def links(listing):
     return [urllib.parse.unquote(h.rstrip("/").rsplit("/", 1)[-1]) for h in re.findall(r'href="([^"?#]+)"', listing)]
 
 
+def gnome_preview(current):
+    """GNOME: a minor version from 90 on that jumps over the series of the current one previews the
+    next major (pango 1.90 after 1.58, for Pango 2); one that follows it is a release (GLib 2.90
+    after 2.88)"""
+    cur = current.split(".")
+    base = int(cur[1]) if len(cur) > 1 and cur[1].isdigit() else 0
+
+    def skip(version):
+        parts = version.split(".")
+        return len(parts) > 1 and parts[1].isdigit() and int(parts[1]) >= 90 and int(parts[1]) - base > 10
+    return skip
+
+
 def listing_latest(url, version):
     parent, base = url.rsplit("/", 1)
     pat = version_pattern(base, version)
@@ -348,7 +602,7 @@ def listing_latest(url, version):
                 data = fetch(grand + "/" + d + "/")
                 if data:
                     names += links(data)
-    return "listing", newest(names, pat[0], pat[1], version)
+    return "listing", newest(names, pat[0], pat[1], version, gnome_preview(version) if "download.gnome.org" in url else None)
 
 
 def pypi_latest(recipe):
@@ -361,9 +615,28 @@ def pypi_latest(recipe):
         return "pypi", None
 
 
+def pypi_source_latest(url, version):
+    """an sdist of packages/source/<letter>/<name>/ (files.pythonhosted.org, pypi.io): the source
+    directory has no listing, the releases come from the JSON API of PyPI; None for another URL"""
+    m = re.match(r"https?://(?:files\.pythonhosted\.org|pypi\.io|pypi\.python\.org|pypi\.org)/packages/source/[^/]/([^/]+)/[^/]+$", url)
+    if not m:
+        return None
+    data = fetch("https://pypi.org/pypi/" + urllib.parse.quote(m.group(1)) + "/json")
+    try:
+        releases = json.loads(data)["releases"] if data else {}
+    except (ValueError, KeyError):
+        releases = {}
+    # a release every file of which was yanked does not count
+    names = [v for v, files in releases.items() if files and not all(f.get("yanked") for f in files)]
+    return "pypi", newest(names, re.compile("^" + VERSION_RX + "$"), ".", version)
+
+
 def anitya_latest(recipe, url):
     name = re.sub(r"_[0-9].*$", "", recipe.split("/")[-1])
     host = urllib.parse.urlparse(url).netloc.replace("www.", "") if url else ""
+    # an sdist of PyPI: the project of the pypi ecosystem, not a namesake (Mako, emersion/mako)
+    if host in ("files.pythonhosted.org", "pypi.io", "pypi.python.org", "pypi.org"):
+        host = "pypi.org"
     tries = []
     for n in (ALIASES.get(name), name, name.lower()):
         if n and n not in tries:
@@ -379,7 +652,7 @@ def anitya_latest(recipe, url):
         items = [i for i in items if i.get("ecosystem") not in LANG_ECOSYSTEMS or i.get("ecosystem", "") in host]
         if not items:
             continue
-        preferred = [i for i in items if host and urllib.parse.urlparse(i.get("homepage", "")).netloc.replace("www.", "") in host]
+        preferred = [i for i in items if host and (urllib.parse.urlparse(i.get("homepage", "")).netloc.replace("www.", "") in host or i.get("ecosystem", "") in host)]
         item = (preferred or items)[0]
         stable = item.get("stable_versions") or []
         return stable[0] if stable else item.get("version")
@@ -395,15 +668,30 @@ def new_url(url, old, new):
     return url
 
 
-def apply_version(recipe, old, new, platform):
-    """rewrite the PKG_VER line, resolve the recipe again and keep the change only when the URL
-    of the new version answers: ("applied", url), ("url-missing", url) or ("not-rewritten", "")"""
+def rewrite_var(text, var, old, new):
+    """the assignment var=old of package.env (quoted or not) turned into var=new: (text, done)"""
+    rx = r"^([ \t]*)" + var + r"=(['\"]?)" + re.escape(old) + r"\2[ \t]*$"
+    text, count = re.subn(rx, lambda m: m.group(1) + var + "=" + m.group(2) + new + m.group(2), text, count=1, flags=re.M)
+    return text, count == 1
+
+
+def apply_version(recipe, edits, platform):
+    """apply the edits (variable, old, new; variable None: a plain replacement), resolve the recipe
+    again and keep the change only when the URL of the new version answers: ("applied", url),
+    ("url-missing", url) or ("not-rewritten", "")"""
     path = os.path.join(BB_HOME, "packages", recipe, "package.env")
     with open(path) as f:
         text = f.read()
-    new_text, count = re.subn(r"^([ \t]*)PKG_VER=(['\"]?)" + re.escape(old) + r"\2[ \t]*$", lambda m: m.group(1) + "PKG_VER=" + m.group(2) + new + m.group(2), text, count=1, flags=re.M)
-    if count != 1:
-        return "not-rewritten", ""
+    new_text = text
+    for var, old, new in edits:
+        if var:
+            new_text, done = rewrite_var(new_text, var, old, new)
+        else:
+            # a commit: on the PKG_URL or GIT_COMMIT line
+            new_text, count = re.subn(r"^([ \t]*(?:PKG_URL|GIT_COMMIT)=.*?)" + re.escape(old), lambda m: m.group(1) + new, new_text, count=1, flags=re.M)
+            done = count == 1
+        if not done:
+            return "not-rewritten", ""
     with open(path, "w") as f:
         f.write(new_text)
     url = resolve(recipe, platform).get("PKG_URL", "").split()
@@ -416,30 +704,165 @@ def apply_version(recipe, old, new, platform):
     return "url-missing", url
 
 
+def apply_setenv(recipe, var, old, new, platform):
+    """rewrite VAR=${VAR:-old} (the recipe package.env first, then setenv), resolve the recipe again
+    and keep the change only when its URL answers: (outcome, url)"""
+    rx = r"^([ \t]*" + var + r"=\$\{" + var + r":-)" + re.escape(old) + r"(\})"
+    for path in (os.path.join(BB_HOME, "packages", recipe, "package.env"), os.path.join(BB_HOME, "setenv")):
+        with open(path) as f:
+            text = f.read()
+        new_text, count = re.subn(rx, lambda m: m.group(1) + new + m.group(2), text, count=1, flags=re.M)
+        if count == 1:
+            break
+    else:
+        return "not-rewritten", ""
+    with open(path, "w") as f:
+        f.write(new_text)
+    url = resolve(recipe, platform).get("PKG_URL", "").split()
+    url = url[0] if url else ""
+    if url and not url_answers(url):
+        with open(path, "w") as f:
+            f.write(text)
+        return "url-missing", url
+    where = "setenv" if path.endswith("setenv") else "package.env"
+    # the release branch patches of gcc, binutils, glibc, gdb are per version
+    versions = os.path.join(BB_HOME, "packages", recipe, "variants", "version")
+    if os.path.isdir(versions) and not os.path.isdir(os.path.join(versions, new)):
+        note(f"pkg_upstream: {recipe}: {var}={new}: no variants/version/{new}, run utilities/update_patches {recipe.split('/')[-1]} {new}")
+    return "applied:" + where, url
+
+
+def release_without_asset(recipe, url):
+    """a GitHub release of the new version without the archive of the recipe (efivar 39): the
+    archive of its tag, when it answers, is the URL to write in the recipe by hand"""
+    m = re.match(r"(https://github\.com/[^/]+/[^/]+)/releases/download/([^/]+)/", url)
+    if not m:
+        return
+    alternative = f"{m.group(1)}/archive/refs/tags/{m.group(2)}.tar.gz"
+    if url_answers(alternative):
+        note(f"pkg_upstream: {recipe}: the release {m.group(2)} has no {url.rsplit('/', 1)[-1]}, its tag archive answers: {alternative}")
+
+
+def recipe_version(values, recipe):
+    """(version, series): PKG_VER, or the series of the name followed by PKG_SUFFIX (rpi-firmware_1
+    with .20260915: 1.20260915), or a numeric PKG_SUFFIX alone (.20260914: 20260914)"""
+    if values.get("PKG_VER"):
+        return values["PKG_VER"], None
+    series = recipe_series(recipe)
+    suffix = values.get("PKG_SUFFIX", "")
+    if series:
+        return series + suffix, series
+    if re.match(r"^[._-]?\d", suffix):
+        return suffix.lstrip("._-"), ""
+    return "", None
+
+
+def suffix_edit(values, series, new):
+    """the PKG_SUFFIX edit that turns the version into new, or None"""
+    if series is None or not new.startswith(series):
+        return None
+    old_suffix = values.get("PKG_SUFFIX", "")
+    new_suffix = new[len(series):]
+    if series == "":
+        new_suffix = old_suffix[:len(old_suffix) - len(old_suffix.lstrip("._-"))] + new
+    return ("PKG_SUFFIX", old_suffix, new_suffix) if old_suffix and new_suffix != old_suffix else None
+
+
+def url_version(text, version):
+    """the part of the version the URL carries: a Debian revision (1.0.5-1, 237-2) or a commit
+    suffix (2.0.2.3+af2dd23) is not in the upstream archive name"""
+    v = version
+    while v and not version_pattern(text, v):
+        m = re.match(r"^(.*\d)[-+~][^-+~]*$", v)
+        if not m:
+            return version
+        v = m.group(1)
+    return v or version
+
+
+def survey_commit(recipe, values, url, current, series, commit):
+    """the report row of a recipe pinned to a commit"""
+    literal, setenv_var = version_source(recipe)
+    pin = commit["pin"]
+    status = commit["status"]
+    if commit.get("newer"):
+        status += "/series:" + commit["newer"]
+    latest = ""
+    new_version = None
+    if commit.get("head"):
+        if commit["version"]:
+            new_version = commit["version"]
+        elif re.match(r"^[._-]?\d{8}\+?$", values.get("PKG_SUFFIX", "")) and series is not None and commit["date"]:
+            # a date suffix follows the commit (a trailing + marks a commit after that date's release)
+            new_version = (series + "." if series else "") + commit["date"].replace("-", "") + ("+" if current.endswith("+") else "")
+        latest = " ".join(x for x in (new_version, commit["head"][:12], commit["date"]) if x)
+        if commit["status"] == "outdated":
+            latest += f" ({commit['branch']}" + (f" +{commit['behind']}" if commit["behind"] else "") + ")"
+    target_url = url
+    if commit["status"] == "outdated":
+        head = commit["head"][:len(pin)]
+        target_url = url.replace(pin, head)
+        if OPTIONS["apply"]:
+            edits = [(None, pin, head)]
+            edit = suffix_edit(values, series, new_version) if new_version and not setenv_var else None
+            if edit:
+                edits.append(edit)
+            elif new_version and literal == current and new_version != current:
+                edits.append(("PKG_VER", current, new_version))
+            outcome, resolved = apply_version(recipe, edits, OPTIONS["platform"])
+            status += "/" + outcome
+            target_url = resolved or target_url
+    return [recipe, current, latest, "commit", "", status, target_url or values.get("GIT_URL", "")]
+
+
 def survey(recipe, forced, platform):
     values = resolve(recipe, platform)
-    current = values.get("PKG_VER", "")
+    current, series = recipe_version(values, recipe)
     url = values.get("PKG_URL", "").split()[0] if values.get("PKG_URL") else ""
+    git_url, git_ref = values.get("GIT_URL", ""), values.get("GIT_COMMIT", "")
     literal, setenv_var = version_source(recipe)
+    if not url and not git_url and not setenv_var and values.get("BUILD_PROCESS") != "pythonbuild":
+        # the recipe carries its own files: nothing upstream
+        return [recipe, current, "", "none", "", "local", ""]
+    pin = commit_pin(url, git_url, git_ref) if not forced else None
+    if pin:
+        return survey_commit(recipe, values, url, current, series, git_commit(pin[0], pin[1], recipe))
+    branch = github_branch(url, current) if url.startswith("https://github.com/") else None
+    if branch and not (branch["versioned"] and current):
+        # the recipe follows a branch: whatever its head is when the archive is downloaded
+        latest = " ".join(x for x in (branch["head"][:12], branch["date"]) if x)
+        return [recipe, current, latest, "github-branch", "", "tracking:" + branch["branch"], url]
+    probe = url_version(url or git_ref, current) if current else ""
     backend, latest = "none", None
-    if current and url:
+    if branch:
+        backend, latest = "github-branch", branch["latest"]
+    elif current and url:
         if url.startswith("https://github.com/"):
-            backend, latest = github_latest(url, current)
+            backend, latest = github_latest(url, probe)
         elif re.match(r"https://gitlab\.[^/]+/", url):
-            backend, latest = gitlab_latest(url, current)
+            backend, latest = gitlab_latest(url, probe)
+        elif re.match(r"https?://([a-z0-9-]+\.)*sourceforge\.net/", url):
+            backend, latest = sourceforge_latest(url, probe)
+        elif pypi_source_latest(url, probe):
+            backend, latest = pypi_source_latest(url, probe)
         else:
-            backend, latest = listing_latest(url, current)
-    elif current and values.get("BUILD_PROCESS") == "pythonbuild":
+            backend, latest = listing_latest(url, probe)
+    elif current and git_url and git_ref:
+        backend, latest = git_tag_latest(git_url, git_ref, probe)
+    elif values.get("BUILD_PROCESS") == "pythonbuild":
         backend, latest = pypi_latest(recipe)
-    anitya = anitya_latest(recipe, url) if OPTIONS["anitya"] else None
+        if not current:
+            # pip installs whatever PyPI publishes when the package is built
+            return [recipe, "", latest or "", backend, "", "unpinned", ""]
+    anitya = anitya_latest(recipe, url or git_url) if OPTIONS["anitya"] else None
     best = forced or latest or anitya
     if not current:
-        status = "noversion"
+        status = "unversioned" if url else "noversion"
     elif not best:
         status = "unknown"
-    elif vkey(best) > vkey(current):
+    elif vkey(best) > vkey(probe):
         status = "outdated"
-    elif vkey(best) < vkey(current):
+    elif vkey(best) < vkey(probe):
         status = "ahead"
     else:
         status = "current"
@@ -447,19 +870,43 @@ def survey(recipe, forced, platform):
         status += "/disagree"
     if setenv_var:
         status += "/setenv:" + setenv_var
-    target_url = new_url(url, current, best) if url and current and best and best != current else url
-    if OPTIONS["apply"] and best and current and best != current and not setenv_var:
-        if literal != current:
+    target_url = new_url(url, probe, best) if url and current and best and best != probe else url
+    if OPTIONS["setenv"] and setenv_var and best and current and best != probe:
+        outcome, resolved = apply_setenv(recipe, setenv_var, current, best, platform)
+        status += "/" + outcome
+        target_url = resolved or target_url
+    elif OPTIONS["apply"] and best and current and best != probe and not setenv_var:
+        edit = ("PKG_VER", current, best) if literal == current and probe == current else suffix_edit(values, series, best)
+        if not edit:
             status += "/not-rewritten"
         else:
-            outcome, resolved = apply_version(recipe, current, best, platform)
+            outcome, resolved = apply_version(recipe, [edit], platform)
             status += "/" + outcome
             target_url = resolved or target_url
-    return [recipe, current, latest or "", backend, anitya or "", status, target_url]
+            if outcome == "url-missing":
+                release_without_asset(recipe, resolved)
+    return [recipe, current, latest or "", backend, anitya or "", status, target_url or git_url]
+
+
+def is_update(row):
+    status = row[5]
+    # in apply mode the recipes it could not rewrite are shown too
+    return status.startswith("outdated") or "/series:" in status or re.search(r"/(applied|url-missing|not-rewritten)", status) is not None
+
+
+def show(out, row, header):
+    """a row on the screen: aligned on a terminal, tab separated otherwise"""
+    if not out.isatty():
+        out.write("\t".join(row) + "\n")
+        return
+    recipe, current, latest, backend, anitya, status, url = row
+    if header:
+        out.write(f"{'recipe':<40} {'current':<16} {'latest':<44} status\n")
+    extra = f" anitya {anitya}" if "/disagree" in status else ""
+    out.write(f"{recipe:<40} {current:<16} {latest:<44} {status}{extra}\n")
 
 
 def main():
-    global GH_TOKEN
     args = sys.argv[1:]
     specs = []
     while args:
@@ -472,24 +919,22 @@ def main():
             OPTIONS["groups"] = args.pop(0).split(",")
         elif a == "-a":
             OPTIONS["apply"] = True
+        elif a == "-S":
+            OPTIONS["apply"] = OPTIONS["setenv"] = True
         elif a == "-A":
             OPTIONS["anitya"] = False
         elif a == "-f":
             OPTIONS["refresh"] = True
         elif a == "-o":
             OPTIONS["output"] = args.pop(0)
+        elif a == "-v":
+            OPTIONS["verbose"] = True
         elif a in ("-h", "--help"):
             usage(0)
         elif a.startswith("-"):
             usage(1)
         else:
             specs.append(a)
-    GH_TOKEN = os.environ.get("GITHUB_TOKEN", "")
-    if not GH_TOKEN:
-        try:
-            GH_TOKEN = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True).stdout.strip()
-        except OSError:
-            GH_TOKEN = ""
     forced = {}
     recipes = []
     for spec in specs:
@@ -505,17 +950,38 @@ def main():
         recipes = all_recipes()
     if OPTIONS["groups"]:
         recipes = [r for r in recipes if r.split("/")[0] in OPTIONS["groups"]]
-    out = open(OPTIONS["output"], "w") if OPTIONS["output"] else sys.stdout
-    out.write("\t".join(["recipe", "current", "latest", "backend", "anitya", "status", "url"]) + "\n")
-    for recipe in recipes:
+    columns = ["recipe", "current", "latest", "backend", "anitya", "status", "url"]
+    report = open(OPTIONS["output"], "w") if OPTIONS["output"] else None
+    if report:
+        report.write("\t".join(columns) + "\n")
+    screen = sys.stdout
+    if not screen.isatty():
+        screen.write("\t".join(columns) + "\n")
+    shown = 0
+    counts = {}
+    for n, recipe in enumerate(recipes, 1):
         if not os.path.isfile(os.path.join(BB_HOME, "packages", recipe, "package.env")):
-            sys.stderr.write(f"pkg_upstream: {recipe}: no package.env\n")
+            note(f"pkg_upstream: {recipe}: no package.env")
             continue
-        out.write("\t".join(survey(recipe, forced.get(recipe), OPTIONS["platform"])) + "\n")
-        out.flush()
-    if out is not sys.stdout:
-        out.close()
-
+        progress(f"[{n}/{len(recipes)}] {recipe}")
+        row = survey(recipe, forced.get(recipe), OPTIONS["platform"])
+        kind = "update" if is_update(row) else re.split("[/:]", row[5])[0]
+        counts[kind] = counts.get(kind, 0) + 1
+        if report:
+            report.write("\t".join(row) + "\n")
+            report.flush()
+        if OPTIONS["verbose"] or kind == "update":
+            clear_progress()
+            show(screen, row, shown == 0)
+            screen.flush()
+            shown += 1
+    clear_progress()
+    if report:
+        report.close()
+    summary = ", ".join(f"{counts[k]} {k}" for k in ("update", "current", "ahead", "tracking", "unpinned", "local", "unversioned", "unknown", "noversion") if counts.get(k))
+    sys.stderr.write(f"pkg_upstream: {sum(counts.values())} recipes: {summary or 'none'}\n")
+    if ERRORS["count"] and not OPTIONS["verbose"]:
+        sys.stderr.write(f"pkg_upstream: {ERRORS['count']} downloads failed (-v prints them)\n")
 
 if __name__ == "__main__":
     main()
