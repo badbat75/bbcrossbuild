@@ -30,18 +30,19 @@
 # of the recipe is located inside the archive name (2.6.4, 2_6_4 or 2-6-4) and the same pattern is
 # matched against the tags of the GitHub or GitLab repository or against the links of the parent
 # directory of the archive (and of the newest sibling directories when the parent is named after the
-# version, python/3.10.15/, glib/2.83/, kernel/v6.x/), of the RSS feed of a SourceForge project or
-# of the tags of a GIT_URL checked out at a tag (GIT_COMMIT=tags/v1.3.5). A URL that names no tag (a
-# GitHub attachment) is compared with the tags that are a plain version, when the current one is
-# among them. The Debian revision or commit suffix of a version (1.0.5-1, 2.0.2.3+af2dd23) is left
-# out when the URL does not carry it. Pre-release names (rc, alpha, beta, a1, b2, dev, pre) and
-# versions of another shape (lame-398 next to 3.100, the m4 beta 1.9a next to 1.4.21: a letter
-# suffix only when the current version has one) are skipped, and so is a GNOME minor version from 90
-# on that jumps over the current series (pango 1.90 after 1.58, the preview of Pango 2). A
-# pythonbuild recipe without PKG_URL, and an sdist of packages/source/ on files.pythonhosted.org (a
-# directory without listing), are looked up on the JSON API of PyPI. Anitya is looked up by recipe
-# name (language ecosystems excluded but for the one of the URL, PyPI for files.pythonhosted.org;
-# the project whose homepage matches the URL host preferred).
+# version, python/3.10.15/, glib/2.83/, kernel/v6.x/), of the RSS feed of a SourceForge project, of
+# the tags of the repository of a cgit snapshot (git.kernel.org), of the +download page of a
+# Launchpad project or of the tags of a GIT_URL checked out at a tag (GIT_COMMIT=tags/v1.3.5). A URL
+# that names no tag (a GitHub attachment) is compared with the tags that are a plain version, when
+# the current one is among them. The Debian revision or commit suffix of a version (1.0.5-1,
+# 2.0.2.3+af2dd23) is left out when the URL does not carry it. Pre-release names (rc, alpha, beta,
+# a1, b2, dev, pre) and versions of another shape (lame-398 next to 3.100, the m4 beta 1.9a next to
+# 1.4.21: a letter suffix only when the current version has one) are skipped, and so is a GNOME
+# minor version from 90 on that jumps over the current series (pango 1.90 after 1.58, the preview of
+# Pango 2). A pythonbuild recipe without PKG_URL, and an sdist of packages/source/ on
+# files.pythonhosted.org (a directory without listing), are looked up on the JSON API of PyPI.
+# Anitya is looked up by recipe name (language ecosystems excluded but for the one of the URL, PyPI
+# for files.pythonhosted.org; the project whose homepage matches the URL host preferred).
 # A recipe without PKG_VER has the version of its name and suffix: rpi-firmware_1 with PKG_SUFFIX
 # .20260915 is 1.20260915, raspberrypi-sys-mods with .20260914 is 20260914; -a rewrites PKG_SUFFIX.
 # A GitHub archive of a commit (archive/<sha>.tar.gz), or a GIT_URL checked out at a commit, is
@@ -503,6 +504,19 @@ def github_branch(url, version):
     return {"branch": branch, "head": heads[branch], "date": date, "latest": latest, "versioned": pat is not None}
 
 
+def cgit_latest(url, version):
+    """a cgit snapshot (<repo>.git/snapshot/<name>-<version>.tar.gz, git.kernel.org): the snapshot
+    directory has no listing, the tags of the repository do; None for another URL"""
+    m = re.match(r"(https?://[^?]+?\.git)/snapshot/([^/]+?)\.(?:tar\.(?:gz|xz|bz2)|zip)$", url)
+    if not m:
+        return None
+    repo_url, stem = m.groups()
+    names = git_tags(repo_url)
+    pat = version_pattern(stem, version)
+    latest = newest(names, pat[0], pat[1], version) if pat else None
+    return "git", latest or bare_tags(names, repo_url.rsplit("/", 1)[-1].removesuffix(".git"), version)
+
+
 def sourceforge_latest(url, version):
     """the files of a SourceForge project, from the RSS feed of the directory above the archive (the
     parent of a directory named after the version: pcre/8.45/, e2fsprogs/v1.47.1/): SourceForge
@@ -586,6 +600,11 @@ def listing_latest(url, version):
     if pat is None:
         return "unknown", None
     names = []
+    lp = re.match(r"https://launchpad\.net/([^/]+)/.*/\+download$", parent)
+    if lp:
+        # Launchpad: +download of a release has no listing, +download of the project lists them all
+        data = fetch(f"https://launchpad.net/{lp.group(1)}/+download")
+        return "launchpad", newest(links(data or ""), pat[0], pat[1], version)
     data = fetch(parent + "/")
     if data:
         names += links(data)
@@ -845,6 +864,8 @@ def survey(recipe, forced, platform):
             backend, latest = sourceforge_latest(url, probe)
         elif pypi_source_latest(url, probe):
             backend, latest = pypi_source_latest(url, probe)
+        elif cgit_latest(url, probe):
+            backend, latest = cgit_latest(url, probe)
         else:
             backend, latest = listing_latest(url, probe)
     elif current and git_url and git_ref:
