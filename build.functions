@@ -1711,7 +1711,9 @@ function cmakebuild () {
 	fi
 
 	### AR, RANLIB and STRIP of a target build are program names (settcenv): CMake would take a name for
-	### a path into the build directory, so the cache gets the program PATH finds
+	### a path into the build directory, so the cache gets the program PATH finds. With LTO (IPO) CMake
+	### archives with CMAKE_<LANG>_COMPILER_AR/RANLIB instead, which it looks for next to the compiler:
+	### the clang of the platform toolchain has no llvm-ar there (NOTFOUND), so they get the same ones
 	cat >runconfig.sh <<-EOF
 		#!/bin/bash
 		source "${PKG_BLDPATH}/recipe.source"
@@ -1727,7 +1729,11 @@ function cmakebuild () {
 		   -DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \\
 		   -DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \\
 		   -DCMAKE_AR=\$(command -v \${AR}) \\
+		   -DCMAKE_C_COMPILER_AR=\$(command -v \${AR}) \\
+		   -DCMAKE_CXX_COMPILER_AR=\$(command -v \${AR}) \\
 		   -DCMAKE_RANLIB=\$(command -v \${RANLIB}) \\
+		   -DCMAKE_C_COMPILER_RANLIB=\$(command -v \${RANLIB}) \\
+		   -DCMAKE_CXX_COMPILER_RANLIB=\$(command -v \${RANLIB}) \\
 		   -DCMAKE_STRIP=\$(command -v \${STRIP}) \\
 		   -DCMAKE_CROSSCOMPILING:BOOL=ON \\
 		   -DCMAKE_SKIP_RPATH:BOOL=ON \\
