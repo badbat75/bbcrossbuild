@@ -95,12 +95,12 @@ container_image () {
 			run_cmd -s "install -d -o \"$(id -u)\" -g \"$(id -g)\" \"$(dirname "${IMAGE_LOG}")\"" > /dev/null || return
 	fi
 
-	echo -n "Building the container image ${CONTAINER_NAME} (log: ${IMAGE_LOG})... "
+	echo -n "Building the container image ${CONTAINER_NAME}... "
 	STATUS=0
 	run_cmd "docker build ${BUILD_OPTS} --file \"${BB_HOME}/Dockerfile\" \"${BB_HOME}\"" > "${IMAGE_LOG}" || STATUS=${?}
 	if [ "${STATUS}" -ne 0 ]
 	then
-		echo "failed."
+		echo "failed, see ${IMAGE_LOG}."
 		return "${STATUS}"
 	fi
 	echo "ok."

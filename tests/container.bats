@@ -242,7 +242,7 @@ docker push ghcr.io/badbat75/bbcrossbuild-devel"
 	}
 	run container_image --force
 	[ "${status}" -eq 1 ]
-	assert_output_lines "Building the container image bbcrossbuild-fixture (log: ${GLOBAL_LOG_PATH}/container_bbcrossbuild-fixture.log)... failed."
+	assert_output_lines "Building the container image bbcrossbuild-fixture... failed, see ${GLOBAL_LOG_PATH}/container_bbcrossbuild-fixture.log."
 	grep -q "#6 RUN dnf -y upgrade" "${GLOBAL_LOG_PATH}/container_bbcrossbuild-fixture.log"
 	grep -q "#6 ERROR: dnf failed" "${GLOBAL_LOG_PATH}/container_bbcrossbuild-fixture.log"
 }
