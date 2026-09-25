@@ -3,6 +3,5 @@
 /images
 /projects/*.conf
 /projects/test*.prj
-/utilities/container/*.conf
 /projects-tmp
 */__pycache__

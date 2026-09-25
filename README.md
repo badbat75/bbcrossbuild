@@ -100,13 +100,13 @@ not. `push` needs `CONTAINER_REGISTRY` in `bbxb.conf` (e.g. `ghcr.io/<user>`) an
 <registry>` done once: bbxb never reads a password.
 
 The user who runs `bbxb` has to be in the `docker` group; the host keeps docker and the binfmt
-handlers of `qemu-user-static` (`utilities/container/host_binfmt_setup.sh`), which the container
-shares with it.
+handlers of `qemu-user-static` (registered by the package the bootstrap scripts install, see
+`ls /proc/sys/fs/binfmt_misc/`), which the container shares with it.
 
 ```bash
 # Rebuild the image and export the build cache to /var/cache/bbcrossbuild-docker (BBXB_CACHE_DIR),
 # which survives the "docker system prune" that closes the run and which every later build imports
-$ utilities/container/build.sh
+$ ./bbxb container build
 ```
 
 ### AWS
@@ -1044,11 +1044,6 @@ BBCrossBuild includes several utility scripts to help with development:
 - `qemu_cmdgen`: Generate QEMU commands for testing
   ```
   utilities/qemu_cmdgen [--run] [--quiet] [--batchtype <type>] [--rootdev <dev>] [--rootfs <fs>] [--savecmd <file>] <project> <platform>
-  ```
-
-- `fs_manager`: Create and manage filesystem images
-  ```
-  utilities/fs_manager/fs_manager [-c] [-m] [-u] [-r] [-s <size>] [--rootfs <fs>] [--layout <file>] <image>
   ```
 
 - `aws_create_infrastructure`: Manage AWS EC2 instances

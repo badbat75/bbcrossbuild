@@ -31,11 +31,15 @@ CONTAINER_CACHE_PATH=${BBXB_CACHE_DIR:-/var/cache/bbcrossbuild-docker}
 
 container_name () {
 	### container_name: set CONTAINER_NAME, the image of this checkout, named after its branch
-	### (utilities/container/getenv)
+	local BRANCH
 	if [ -z "${CONTAINER_NAME}" ]
 	then
-		# shellcheck source=/dev/null
-		source "${BB_HOME}/utilities/container/getenv"
+		BRANCH=$(git -C "${BB_HOME}" symbolic-ref --short HEAD 2> /dev/null || echo detached)
+		case ${BRANCH} in
+			development) CONTAINER_NAME=bbcrossbuild-devel ;;
+			master) CONTAINER_NAME=bbcrossbuild-latest ;;
+			*) CONTAINER_NAME=bbcrossbuild-${BRANCH//\//-} ;;
+		esac
 	fi
 	return 0
 }
