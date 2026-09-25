@@ -40,6 +40,23 @@ exec {BBXB_CONSOLE_FD}>&2
 trap 'on_error ${?}' ERR
 trap 'on_interrupt' SIGINT
 
+### bbxb container <command>: the image and the containers of bbxb on this host (container_command),
+### with the settings of bbxb.conf (CONTAINER_REGISTRY) and nothing of a project or a platform
+if [ "${1}" == container ]
+then
+	shift
+	if [ -f "${BB_HOME}/bbxb.conf" ]
+	then
+		# shellcheck source=/dev/null
+		source "${BB_HOME}/bbxb.conf"
+	fi
+	container_command "${@}"
+	set +E +o pipefail
+	trap - ERR SIGINT
+	rm -f "${TMPDIR:-/tmp}/bbxb_error.${$}"
+	exit 0
+fi
+
 OPTS="--container --no-container" OPTS_WITH_VALUE="" param2value "${@}"
 
 ### bbxb [--container|--no-container] <command> <project> <platform>: build runs the project file,
@@ -52,7 +69,7 @@ PROJECT_NAME="${_param_2}"
 # shellcheck disable=SC2154
 PLATFORM_NAME="${_param_3}"
 
-BBXB_USAGE="bbxb [--container|--no-container] build|logtail <project> <platform>"
+BBXB_USAGE="bbxb [--container|--no-container] build|logtail <project> <platform>, bbxb container <command>"
 case "${BBXB_COMMAND}" in
 	build|logtail)
 		;;

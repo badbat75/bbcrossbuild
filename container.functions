@@ -3,13 +3,16 @@
 check_core_functions
 
 ### container.functions: the container bbxb runs the build in. Sourced by bbxb right after
-### core.functions and by utilities/container/build.sh.
+### core.functions.
 ###
 ### "./bbxb --container build <project> <platform>" is "./bbxb build <project> <platform>" run inside the
 ### image of this checkout: the image carries the host dependencies only, the checkout and the
 ### data directory are mounted where they are on the host, and the build runs as the user who
 ### started bbxb. A recipe edit is therefore one run away and the image needs a rebuild only when
 ### the Dockerfile changes.
+###
+### "./bbxb container <command>" manages them on the host (container_command): the image of the
+### checkout (build, list, rm, push, purge) and the containers that build in it (ps, stop).
 
 ### The variables container_env_names never passes: the ones bbxb sets itself or the image sets,
 ### and the names of the shell and of the session, in case a configuration file ever assigns one
@@ -22,13 +25,13 @@ CONTAINER_ENV_SKIP="DATA_PATH BB_HOME BBXB_IN_CONTAINER BBXB_CONSOLE_FD BUILD_CH
 ### ones the framework computes from them (setenv exports several of its paths)
 CONTAINER_ENV_INITIAL=" $(compgen -e | tr '\n' ' ')"
 
-### The build cache of the image, exported by "utilities/container/build.sh" and imported by every
-### build that follows: it survives the "docker system prune" that closes a build.sh run
+### The build cache of the image, exported by "bbxb container build" and imported by every build
+### of the image that follows: it survives a "docker system prune", "bbxb container purge" removes it
 CONTAINER_CACHE_PATH=${BBXB_CACHE_DIR:-/var/cache/bbcrossbuild-docker}
 
 container_name () {
 	### container_name: set CONTAINER_NAME, the image of this checkout, named after its branch
-	### (utilities/container/getenv, which the other container utilities source too)
+	### (utilities/container/getenv)
 	if [ -z "${CONTAINER_NAME}" ]
 	then
 		# shellcheck source=/dev/null
@@ -88,7 +91,16 @@ container_run () {
 	### mounted at the paths they have on the host (the logs the console names stay valid there),
 	### the variables the environment set travel with -e, and the exit status of the build becomes
 	### the one of bbxb: docker replaces this shell, there is nothing left to clean up here.
-	local RUN_OPTS ENV_NAME
+	local RUN_OPTS ENV_NAME RUN_NAME
+
+	### One container per project and platform: the name ps and stop find it by, and a second
+	### build of the same pair refused before it runs over the files of the first one
+	RUN_NAME=$(container_run_name "${PROJECT_NAME}" "${PLATFORM_NAME}")
+	container_docker
+	if [ -n "$(docker ps -aq --filter "name=^${RUN_NAME}\$")" ]
+	then
+		trow_error "${ERROR_GENERIC}" "${PROJECT_NAME} ${PLATFORM_NAME} is already building in the container ${RUN_NAME} (./bbxb container stop ${PROJECT_NAME} ${PLATFORM_NAME})."
+	fi
 
 	# shellcheck disable=SC2119
 	container_image
@@ -98,7 +110,8 @@ container_run () {
 		mkdir -p "${DATA_PATH}" 2> /dev/null || run_cmd -s "install -d -o \"$(id -u)\" -g \"$(id -g)\" \"${DATA_PATH}\""
 	fi
 
-	RUN_OPTS=(--rm --privileged)
+	RUN_OPTS=(--rm --privileged --name "${RUN_NAME}"
+		--label "bbxb.project=${PROJECT_NAME}" --label "bbxb.platform=${PLATFORM_NAME}")
 	### A terminal only when there is one: a build started by cron or by a script has none
 	if [ -t 0 ]
 	then
@@ -206,6 +219,315 @@ container_user () {
 	exec setpriv --reuid "${USER_UID}" --regid "${USER_GID}" --init-groups \
 		env HOME="${USER_HOME}" USER="${USER_NAME}" LOGNAME="${USER_NAME}" \
 		"${BB_HOME}/bbxb" "${@}"
+}
+
+container_run_name () {
+	### container_run_name <project> <platform>: the name of the container that builds <project>
+	### for <platform>
+	echo "bbxb-${1}-${2}"
+}
+
+container_is_image () {
+	### container_is_image <image>: whether <image> is one of bbxb, local (bbcrossbuild-<name>) or
+	### tagged for a registry (<registry>/bbcrossbuild-<name>)
+	[[ ${1%%:*} =~ (^|/)bbcrossbuild-[^/]+$ ]]
+}
+
+container_running () {
+	### container_running: the containers that build with an image of bbxb, one per line:
+	### <name> <image> <project> <platform> <running for>, tab separated. A container started by
+	### a bbxb without labels (before "bbxb container") is found by its image and has "-" for the
+	### project and the platform; one whose image was rebuilt meanwhile keeps its labels.
+	local NAME IMAGE PROJECT PLATFORM RUNNING
+
+	### Fields separated by US, not by tabs: read joins adjacent whitespace separators, the empty
+	### labels of an old container would shift the fields
+	docker ps --format "{{.Names}}"$'\x1f'"{{.Image}}"$'\x1f'"{{.Label \"bbxb.project\"}}"$'\x1f'"{{.Label \"bbxb.platform\"}}"$'\x1f'"{{.RunningFor}}" |
+	while IFS=$'\x1f' read -r NAME IMAGE PROJECT PLATFORM RUNNING
+	do
+		if [ -n "${PROJECT}" ] || container_is_image "${IMAGE}"
+		then
+			printf '%s\t%s\t%s\t%s\t%s\n' "${NAME}" "${IMAGE}" "${PROJECT:--}" "${PLATFORM:--}" "${RUNNING}"
+		fi
+	done
+}
+
+container_images () {
+	### container_images: the images of bbxb docker has, one per line: <image> <id> <created>
+	### <size>, tab separated, the registry tags of container_push included
+	local IMAGE ID CREATED SIZE
+
+	docker image ls --format '{{.Repository}}:{{.Tag}}	{{.ID}}	{{.CreatedSince}}	{{.Size}}' |
+	while IFS=$'\t' read -r IMAGE ID CREATED SIZE
+	do
+		if container_is_image "${IMAGE}"
+		then
+			printf '%s\t%s\t%s\t%s\n' "${IMAGE}" "${ID}" "${CREATED}" "${SIZE}"
+		fi
+	done
+}
+
+container_build () {
+	### container_build: rebuild the image of the checkout, whatever the one docker has, and
+	### export its build cache to CONTAINER_CACHE_PATH, which every later build of the image
+	### imports: the dnf layer survives a "docker system prune". The directory is of the group
+	### docker: the buildkit daemon (root) writes it, any user of docker reads it.
+	container_docker || return
+	if [ ! -d "${CONTAINER_CACHE_PATH}" ]
+	then
+		run_cmd -s "install -d -g docker -m 2775 \"${CONTAINER_CACHE_PATH}\"" || return
+	fi
+	container_image --force --cache-export
+}
+
+container_list () {
+	### container_list: the images of bbxb, the one of this checkout marked with "*", each "up to
+	### date" when it was built from the Dockerfile of the checkout (its label), "outdated" when
+	### the next "bbxb --container" will rebuild it
+	local DOCKERFILE_SUM IMAGE ID CREATED SIZE IMAGE_SUM STATE CURRENT
+
+	container_name
+	container_docker || return
+	DOCKERFILE_SUM=$(md5sum "${BB_HOME}/Dockerfile" | awk '{print $1}')
+	{
+		printf ' \tIMAGE\tID\tCREATED\tSIZE\tDOCKERFILE\n'
+		container_images | while IFS=$'\t' read -r IMAGE ID CREATED SIZE
+		do
+			IMAGE_SUM=$(docker image inspect --format '{{index .Config.Labels "bbxb.dockerfile"}}' "${ID}" 2> /dev/null || true)
+			STATE=outdated
+			if [ "${IMAGE_SUM}" == "${DOCKERFILE_SUM}" ]
+			then
+				STATE="up to date"
+			fi
+			CURRENT=" "
+			if [ "${IMAGE}" == "${CONTAINER_NAME}:latest" ]
+			then
+				CURRENT="*"
+			fi
+			printf '%s\t%s\t%s\t%s\t%s\t%s\n' "${CURRENT}" "${IMAGE}" "${ID}" "${CREATED}" "${SIZE}" "${STATE}"
+		done
+	} | column -t -s $'\t'
+}
+
+container_ps () {
+	### container_ps: the builds running in a container
+	container_docker || return
+	{
+		printf 'CONTAINER\tIMAGE\tPROJECT\tPLATFORM\tRUNNING FOR\n'
+		container_running
+	} | column -t -s $'\t'
+}
+
+container_stop () {
+	### container_stop <project> <platform> | <container>: interrupt a build running in a container
+	### as Ctrl-C does on its terminal. docker stop would send SIGTERM to bbxb alone, PID 1 there,
+	### and SIGKILL after 10 seconds: the loop devices and the mounts of the images (the ones of the
+	### host kernel, the container is privileged) would stay. SIGINT goes to every process of the
+	### container instead, bbxb runs on_interrupt and unmounts them, then the container exits and
+	### is removed (--rm). CONTAINER_STOP_TIMEOUT seconds later (default 300) it is killed.
+	local NAME WAITED
+
+	case ${#} in
+		1)
+			NAME=${1}
+			;;
+		2)
+			NAME=$(container_run_name "${1}" "${2}")
+			;;
+		*)
+			trow_error "${ERROR_NOT_VALID_OPTION}" "Usage: bbxb container stop <project> <platform> | <container>." || return
+			;;
+	esac
+	container_docker || return
+	### Not a pipe into grep -q: with pipefail, the SIGPIPE of cut when grep leaves early is a failure
+	if ! grep -qxF -- "${NAME}" <<< "$(container_running | cut -f1)"
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "No build runs in the container ${NAME} (bbxb container ps)." || return
+	fi
+
+	echo "Interrupting the build in ${NAME}..."
+	run_cmd "docker exec \"${NAME}\" bash -c 'kill -INT -1 2> /dev/null; kill -INT 1'" || return
+	WAITED=0
+	while [ -n "$(docker ps -q --filter "name=^${NAME}\$")" ]
+	do
+		if [ "${WAITED}" -ge "${CONTAINER_STOP_TIMEOUT:-300}" ]
+		then
+			echo "${NAME} did not stop in ${CONTAINER_STOP_TIMEOUT:-300} seconds: killed, the images it had mounted may still be."
+			run_cmd "docker kill \"${NAME}\"" || return
+			return 0
+		fi
+		sleep 1
+		WAITED=$((WAITED+1))
+	done
+	echo "${NAME} stopped."
+}
+
+container_remove () {
+	### container_remove [<image>]: remove an image of bbxb (default: the one of this checkout), with
+	### every tag of it (the registry ones of container_push too). Refused while a build uses it.
+	local IMAGE ID
+
+	container_name
+	IMAGE=${1:-${CONTAINER_NAME}}
+	if ! container_is_image "${IMAGE}"
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "${IMAGE} is not an image of bbxb (bbxb container list)." || return
+	fi
+	container_docker || return
+	if ! ID=$(docker image inspect --format '{{.Id}}' "${IMAGE}" 2> /dev/null)
+	then
+		trow_error "${ERROR_FILE_NOT_FOUND}" "docker has no image ${IMAGE}." || return
+	fi
+	if [ -n "$(docker ps -q --filter "ancestor=${ID}")" ]
+	then
+		trow_error "${ERROR_GENERIC}" "A build runs in ${IMAGE} (bbxb container ps)." || return
+	fi
+	run_cmd "docker image rm --force \"${ID}\""
+}
+
+container_purge () {
+	### container_purge [--yes]: remove what bbxb has in docker and nothing else: the images of
+	### bbxb (every branch, every tag) with the stopped containers left of them, and the exported
+	### build cache (CONTAINER_CACHE_PATH), so that the next build starts from scratch. It asks
+	### before removing (--yes does not) and refuses while a build runs. The internal cache of
+	### buildkit is shared with every other user of docker: "docker builder prune" is left to them.
+	local ASSUME_YES RUNNING IMAGES IDS ID CONTAINERS ANSWER
+
+	OPTS="--yes" OPTS_WITH_VALUE="" param2value "${@}"
+	ASSUME_YES=${_param_yes:-0}
+	container_docker || return
+
+	RUNNING=$(container_running)
+	if [ -n "${RUNNING}" ]
+	then
+		echo "${RUNNING}" | cut -f1,3,4 | tr '\t' ' '
+		trow_error "${ERROR_GENERIC}" "Builds are running: stop them first (bbxb container stop)." || return
+	fi
+
+	IMAGES=$(container_images)
+	IDS=$(echo "${IMAGES}" | cut -f2 | sort -u | xargs)
+	CONTAINERS=
+	for ID in ${IDS}
+	do
+		CONTAINERS+=" $(docker ps -aq --filter "ancestor=${ID}" | xargs)"
+	done
+	CONTAINERS=$(echo "${CONTAINERS}" | xargs -n1 | sort -u | xargs)
+
+	if [ -z "${IDS}" ] && [ -z "${CONTAINERS}" ] && [ ! -e "${CONTAINER_CACHE_PATH}" ]
+	then
+		echo "Nothing to remove."
+		return 0
+	fi
+	echo "To remove:"
+	if [ -n "${IMAGES}" ]
+	then
+		echo "${IMAGES}" | awk -F'\t' '{ print "  image " $1 " (" $4 ")" }'
+	fi
+	if [ -n "${CONTAINERS}" ]
+	then
+		echo "  stopped containers: ${CONTAINERS}"
+	fi
+	if [ -e "${CONTAINER_CACHE_PATH}" ]
+	then
+		echo "  build cache ${CONTAINER_CACHE_PATH} ($(du -sh "${CONTAINER_CACHE_PATH}" 2> /dev/null | cut -f1))"
+	fi
+
+	if [ "${ASSUME_YES}" -ne 1 ]
+	then
+		if [ ! -t 0 ]
+		then
+			trow_error "${ERROR_NOT_VALID_OPTION}" "No terminal to confirm on: bbxb container purge --yes." || return
+		fi
+		read -r -p "Remove them? [y/N] " ANSWER
+		if [[ ${ANSWER} != [yY]* ]]
+		then
+			echo "Nothing removed."
+			return 0
+		fi
+	fi
+
+	if [ -n "${CONTAINERS}" ]
+	then
+		run_cmd "docker rm --force ${CONTAINERS}" || return
+	fi
+	if [ -n "${IDS}" ]
+	then
+		run_cmd "docker image rm --force ${IDS}" || return
+	fi
+	if [ -e "${CONTAINER_CACHE_PATH}" ]
+	then
+		run_cmd "rm -rf \"${CONTAINER_CACHE_PATH}\" 2> /dev/null" || run_cmd -s "rm -rf \"${CONTAINER_CACHE_PATH}\"" || return
+	fi
+	echo "Purged."
+}
+
+container_push () {
+	### container_push: push the image of the checkout, built first when it is missing or out of
+	### date, to CONTAINER_REGISTRY (bbxb.conf, e.g. ghcr.io/<user>) as
+	### <registry>/<image name>. The credentials are the ones of "docker login <registry>", run
+	### once by the user: nothing here reads or passes a password.
+	local TARGET
+
+	if [ -z "${CONTAINER_REGISTRY}" ]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "No registry: set CONTAINER_REGISTRY in bbxb.conf (e.g. ghcr.io/<user>) and run docker login once." || return
+	fi
+	# shellcheck disable=SC2119
+	container_image || return
+	TARGET=${CONTAINER_REGISTRY%/}/${CONTAINER_NAME}
+	run_cmd "docker tag \"${CONTAINER_NAME}\" \"${TARGET}\"" || return
+	run_cmd "docker push \"${TARGET}\""
+}
+
+container_command () {
+	### container_command <command> [<argument>...]: "bbxb container <command>", on the host
+	local COMMAND USAGE
+
+	COMMAND=${1}
+	USAGE="bbxb container build|list|ps|stop <project> <platform>|rm [<image>]|purge [--yes]|push"
+	if [ -n "${BBXB_IN_CONTAINER}" ]
+	then
+		trow_error "${ERROR_GENERIC}" "bbxb container runs on the host, not in a container." || return
+	fi
+	if [ ${#} -gt 0 ]
+	then
+		shift
+	fi
+	case "${COMMAND}" in
+		build|list|ps|push)
+			if [ ${#} -gt 0 ]
+			then
+				trow_error "${ERROR_NOT_VALID_OPTION}" "bbxb container ${COMMAND} takes no argument: ${USAGE}." || return
+			fi
+			;;&
+		build)
+			container_build
+			;;
+		list)
+			container_list
+			;;
+		ps)
+			container_ps
+			;;
+		stop)
+			container_stop "${@}"
+			;;
+		rm)
+			container_remove "${@}"
+			;;
+		purge)
+			container_purge "${@}"
+			;;
+		push)
+			container_push
+			;;
+		"")
+			trow_error "${ERROR_NOT_VALID_OPTION}" "No container command: ${USAGE}."
+			;;
+		*)
+			trow_error "${ERROR_NOT_VALID_OPTION}" "Unknown container command ${COMMAND}: ${USAGE}."
+			;;
+	esac
 }
 
 is_container_functions () {

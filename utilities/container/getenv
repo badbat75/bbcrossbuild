@@ -1,6 +1,5 @@
 #!/bin/bash
-# The image of this checkout is named after its branch. Sourced by container.functions (bbxb) and
-# by the container utilities next to this file.
+# The image of this checkout is named after its branch. Sourced by container.functions (bbxb).
 # shellcheck shell=bash disable=SC2034
 CONTAINER_PATH=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
 CURRENT_BRANCH=$(git -C "${CONTAINER_PATH}" symbolic-ref --short HEAD 2> /dev/null || echo detached)

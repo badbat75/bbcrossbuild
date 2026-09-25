@@ -68,6 +68,24 @@ and the data directory keeps its owner (the build runs inside as the user who st
 with the checkout. `CONTAINER_BUILD=1` in `bbxb.conf` makes it the default, `--no-container` turns
 it off again for one run.
 
+The images and the containers of bbxb are managed with `bbxb container`, on the host:
+
+```bash
+$ ./bbxb container build                       # rebuild the image of the checkout, export its build cache
+$ ./bbxb container list                        # the images of bbxb, the one of the checkout marked with *
+$ ./bbxb container ps                          # the builds running in a container
+$ ./bbxb container stop <project> <platform>   # interrupt a build as Ctrl-C does: the images are unmounted
+$ ./bbxb container rm [<image>]                # remove an image (default: the one of the checkout)
+$ ./bbxb container purge [--yes]               # remove every image of bbxb and the build cache
+$ ./bbxb container push                        # push the image to CONTAINER_REGISTRY
+```
+
+A build runs in the container `bbxb-<project>-<platform>`: a second build of the same project and
+platform is refused while the first one runs. `rm` and `purge` touch only the images of bbxb
+(`bbcrossbuild-*`) and refuse while a build uses them; `purge` asks before removing, `--yes` does
+not. `push` needs `CONTAINER_REGISTRY` in `bbxb.conf` (e.g. `ghcr.io/<user>`) and a `docker login
+<registry>` done once: bbxb never reads a password.
+
 The user who runs `bbxb` has to be in the `docker` group; the host keeps docker and the binfmt
 handlers of `qemu-user-static` (`utilities/container/host_binfmt_setup.sh`), which the container
 shares with it.

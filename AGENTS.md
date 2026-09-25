@@ -59,10 +59,20 @@ PRJ_PATH=projects-tmp PRJ_DIR=projects-tmp ./bbxb build lfs rpi3-aarch64   # the
 # sudo without password for the run_cmd -s steps). The user has to be in the docker group;
 # CONTAINER_BUILD=1 in bbxb.conf makes it the default, --no-container turns it off for one run.
 ./bbxb --container build lfs rpi3-aarch64
-utilities/container/build.sh          # rebuild the image and export the build cache to
-                                      # /var/cache/bbcrossbuild-docker (group docker, override with
-                                      # BBXB_CACHE_DIR), which every later build imports, so the dnf
-                                      # layer survives the "docker system prune" that closes the run
+# The images and the containers of bbxb on the host (container_command in container.functions): a build
+# runs in the container bbxb-<project>-<platform>, labelled with both, and a second one of the same pair
+# is refused. build rebuilds the image and exports the build cache to /var/cache/bbcrossbuild-docker
+# (group docker, override with BBXB_CACHE_DIR), which every later build imports, so the dnf layer
+# survives a "docker system prune"; list marks the image of the checkout and whether it matches the
+# Dockerfile; stop sends SIGINT to every process of the container (docker stop would SIGTERM bbxb alone,
+# PID 1, then SIGKILL it with the images still mounted), so on_interrupt unmounts them; rm and purge
+# touch only the images of bbxb (bbcrossbuild-*), purge also the cache and asks first; push tags and
+# pushes to CONTAINER_REGISTRY of bbxb.conf with the credentials of "docker login", never a password
+./bbxb container build|list|ps
+./bbxb container stop lfs rpi3-aarch64
+./bbxb container rm [<image>]
+./bbxb container purge [--yes]
+./bbxb container push
 
 # Regenerate the branch-tracking patches for gcc/binutils/glibc/gdb under packages/lfs/<pkg>/variants/version/<ver>/patches/
 utilities/update_patches gcc 14.2.0
@@ -81,7 +91,7 @@ utilities/pkg_upstream [-p rpi3-aarch64] [-P lfs] [-g raspberrypi] [-a|-S] [-v] 
 # is no CI for now (the GitHub Actions were removed, September 2026): these three commands, bats and pkg_lint
 # per package group are run by hand.
 shellcheck -x bbxb seterr setenv core.functions build.functions toolchain.functions images.functions project.functions data.functions osconfig.functions container.functions
-shellcheck -x utilities/pkgtools.functions utilities/pkg_lint utilities/pkg_show utilities/update_patches utilities/container/build.sh utilities/container/getenv
+shellcheck -x utilities/pkgtools.functions utilities/pkg_lint utilities/pkg_show utilities/update_patches utilities/container/getenv
 shellcheck -x tests/test_helper.bash tests/*.bats tests/board_check
 # Unit tests (bats-core, seconds): variant selection, patch lists, recipe scripts, recipe checksum, target
 # prefixes, recipe resolution, core helpers, the dependency walk of build, the sfx installer. tests/test_helper.bash sources the framework through
@@ -112,7 +122,7 @@ Where things land (`DATA_PATH` defaults to `/mnt/bbcrossbuild/datadir`; the conf
 
 ### Sourcing chain
 
-`bbxb build <project> <platform>` sources, in order: `seterr` (error codes), `core.functions`, `container.functions` (the `--container` switch: on the host it builds the image and re-runs the command line inside it, in the container it creates the user of the host and runs the build as it), optional `bbxb.conf`, `platforms/<platform>.conf`, `setenv` (all path and version defaults, computed from what was set so far), optional `projects/<project>.conf`, then `build.functions`, `project.functions`, `toolchain.functions`, `images.functions`, `data.functions`, `osconfig.functions`, and finally `projects/<project>.prj` itself. A project file is therefore ordinary Bash executed with every library function and variable in scope: it sets policy variables (`TOOLCHAIN`, `LTOENABLE`, `BUILD_LIBSTATIC`, versions), calls `setup_full_toolchain`, then calls `build`, image and chroot functions in sequence.
+`bbxb build <project> <platform>` sources, in order: `seterr` (error codes), `core.functions`, `container.functions` (the `--container` switch: on the host it builds the image and re-runs the command line inside it, in the container it creates the user of the host and runs the build as it; `bbxb container <command>` is dispatched right after it, with `bbxb.conf` only), optional `bbxb.conf`, `platforms/<platform>.conf`, `setenv` (all path and version defaults, computed from what was set so far), optional `projects/<project>.conf`, then `build.functions`, `project.functions`, `toolchain.functions`, `images.functions`, `data.functions`, `osconfig.functions`, and finally `projects/<project>.prj` itself. A project file is therefore ordinary Bash executed with every library function and variable in scope: it sets policy variables (`TOOLCHAIN`, `LTOENABLE`, `BUILD_LIBSTATIC`, versions), calls `setup_full_toolchain`, then calls `build`, image and chroot functions in sequence.
 
 Precedence for a setting: environment variable > `bbxb.conf` > platform `.conf` > `setenv` default, then `projects/<project>.conf` (the user file of the project, sourced by `bbxb` right after `setenv`, so the parameters it prints are the ones of the build) and the `.prj` itself can overwrite any of them before the first `build`.
 
@@ -159,7 +169,7 @@ One rule splits them in two. What is a file is written into the sysroot (`${BIN_
 - `packages/<group>/<name>/`: `lfs/` (BLFS-style recipes, the bulk), `raspberrypi/`, `moode/`, `python/`, `perl/`, `firmwares/`, `fonts/`, `microsoft/` (WSL kernel). Every group is a git submodule of its own repository `packages-<group>` (`.gitmodules`); `bbxb` stops with an error when a group directory is empty. `packages/template/` is the annotated starting point for a new recipe and lives in this repository.
 - `configurations/`: templates for `bbxb.conf` and `lfs.conf`.
 - `utilities/`: host helpers (`deptool`, `crossgdb`, `crossldd`, `qemu_cmdgen`, `fs_manager`, `aws_create_infrastructure`, bootstrap scripts, container scripts); `pkg_lint` and `pkg_show` share `utilities/pkgtools.functions`, which sources the framework with the build steps stubbed out and resolves a recipe through `set_target_prefixes` and `apply_recipe_variants`, the same code `build` uses.
-- `tests/*.bats`: the bats suite; `tests/test_helper.bash` loads the framework the same way (`load_framework`, platform from `PLATFORM_NAME`) and offers `make_recipe`, `put`, `select_target`, `assert_output_lines`, `assert_equal` to build and check fixture recipes under `BATS_TEST_TMPDIR`. One file per area: `variants`, `recipe_files` (patches, scripts), `checksum`, `prefixes`, `pkgtools` (`recipe_resolve`), `core`, `build` (the order of `build` on recipes that build nothing: the real `build` and `run_cmd` over the stubs, cross target), `container` (the image name and the variables of the environment that travel to it, no docker), `host_paths` (`strip_host_paths`, `host_path_maps`, `gcc_host_path_specs`, `clang_host_path_config`, `find_host_paths`, `lto_object_files`, `strip_lto_objects`), `sfx` (the installer of `create_sfx_package` and its post install scripts), `osconfig` (the directives of `osconfig.functions` over a sysroot in the temporary directory, with `run_on_root_dir` stubbed). `tests/board_check` is the
+- `tests/*.bats`: the bats suite; `tests/test_helper.bash` loads the framework the same way (`load_framework`, platform from `PLATFORM_NAME`) and offers `make_recipe`, `put`, `select_target`, `assert_output_lines`, `assert_equal` to build and check fixture recipes under `BATS_TEST_TMPDIR`. One file per area: `variants`, `recipe_files` (patches, scripts), `checksum`, `prefixes`, `pkgtools` (`recipe_resolve`), `core`, `build` (the order of `build` on recipes that build nothing: the real `build` and `run_cmd` over the stubs, cross target), `container` (the image name, the variables of the environment that travel to it, and the `bbxb container` commands over a docker stub), `host_paths` (`strip_host_paths`, `host_path_maps`, `gcc_host_path_specs`, `clang_host_path_config`, `find_host_paths`, `lto_object_files`, `strip_lto_objects`), `sfx` (the installer of `create_sfx_package` and its post install scripts), `osconfig` (the directives of `osconfig.functions` over a sysroot in the temporary directory, with `run_on_root_dir` stubbed). `tests/board_check` is the
   other kind of test: a plain script copied to a system the framework built and run there as root, which
   checks the state of that system (units and presets, the mode of `/` and the leftovers in it, machine-id and
   clock-epoch, the lines of `nsswitch.conf` and what each one resolves with timings, the domain of the DHCP
@@ -172,4 +182,4 @@ One rule splits them in two. What is a file is written into the sysroot (`${BIN_
 - Every external command inside a library function goes through `run_cmd` (with `-s` for sudo) so it is logged via `log_buffer` into the package log; do not print progress with bare `echo` inside build steps, the console line is written by `build` itself.
 - New optional recipe variables must also be added to the `unset` list at the top of `build` in `build.functions`, otherwise they leak from one package into the next.
 - A change to the pure logic of `build.functions` (variant selection, patch lists, checksum, prefixes), of `core.functions` or of `osconfig.functions` comes with a bats test in `tests/`; run `bats tests` and the shellcheck commands above before committing: nothing else gates them.
-- Branching: work happens on `development`; `master` holds releases tagged `X.Y.Z`. The two GitHub Actions (`docker-build.yml`, which built and pushed the Docker image, and `checks.yml`, which ran shellcheck, the bats suite and `pkg_lint`) were removed in September 2026 because they kept failing; they are in the git history for when CI comes back, and the image is built with `utilities/container/build.sh`.
+- Branching: work happens on `development`; `master` holds releases tagged `X.Y.Z`. The two GitHub Actions (`docker-build.yml`, which built and pushed the Docker image, and `checks.yml`, which ran shellcheck, the bats suite and `pkg_lint`) were removed in September 2026 because they kept failing; they are in the git history for when CI comes back, and the image is built with `./bbxb container build`.
