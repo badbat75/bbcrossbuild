@@ -2157,10 +2157,24 @@ function kernelbuild () {
 
 	if [ "${PKG_KERNEL_INITRAMFS:-0}" -eq 1 ]
 	then
-		run_cmd "mkdir -pv \"${PKG_PKGPATH}/postinst_scripts\""
-		run_cmd "echo \"dracut --force --kver ${KERNEL_RELEASE} -N -a drm --fstab --zstd --filesystems \\\"${PKG_KERNEL_INITRAMFS_DRIVERS:-ext4}\\\"\" > \"${PKG_PKGPATH}/postinst_scripts/99_kernel\""
-		#run_cmd "export QEMU_LD_PREFIX=\"${BIN_PATH}\" ; dracut --force --sysroot \"${BIN_PATH}\" --kver ${KERNEL_RELEASE} -N -a drm --zstd --filesystems \"${PKG_KERNEL_INITRAMFS_DRIVERS:-ext4}\""
-		#run_cmd "cp \"${BIN_PATH}/boot/initramfs-${KERNEL_RELEASE}.img\" \"${PKG_PKGPATH}/boot\""
+		### The initramfs is part of the package, made here by the dracut of the sysroot (lfs/dracut, a
+		### dependency of the recipe) run with the bash of the host: its modules and the files they
+		### install come from the sysroot, dracut-install is the one of the host (lfs/dracut:native),
+		### which resolves the libraries of the target binaries reading their ELF headers. dracut takes
+		### the kernel modules from the sysroot, so the ones of this build go there first (the package
+		### installs them there anyway). The programs it runs on the host come from the global
+		### toolchain, the dependencies of lfs/dracut:native: systemctl --root, depmod, cpio and zstd
+		### (the first of PATH). ldconfig -r chroots into the tree of the initramfs: the static
+		### ldconfig of the target, as the root of a user namespace (the one of the host skips every
+		### library of another architecture)
+		run_cmd "mkdir -pv \"${BIN_PATH}/lib/modules/${KERNEL_RELEASE}\""
+		run_cmd "rsync -a --delete \"${PKG_PKGPATH}/lib/modules/${KERNEL_RELEASE}/\" \"${BIN_PATH}/lib/modules/${KERNEL_RELEASE}/\""
+		run_cmd "PATH=\"${GLOBAL_TOOLCHAIN_PATH}/bin:${PATH}\" SYSTEMCTL=\"${GLOBAL_TOOLCHAIN_PATH}/bin/systemctl\" DRACUT_COMPRESS_ZSTD=\"${GLOBAL_TOOLCHAIN_PATH}/bin/zstd\" \
+			DRACUT_INSTALL=\"${GLOBAL_TOOLCHAIN_PATH}/bin/dracut-install\" DRACUT_ARCH=\"${HM}\" DRACUT_LDCONFIG=\"unshare -r ${BIN_PATH}/usr/sbin/ldconfig\" \
+			bash \"${BIN_PATH}/usr/bin/dracut\" --sysroot \"${BIN_PATH}\" --tmpdir \"${PKG_BLDPATH}\" --force --kver \"${KERNEL_RELEASE}\" \
+			-N -a drm --fstab --zstd --filesystems \"${PKG_KERNEL_INITRAMFS_DRIVERS:-ext4}\" \"${PKG_PKGPATH}/boot/initramfs-${KERNEL_RELEASE}.img\""
+		### The post install script that made it inside the image, left in the sysroot by earlier builds
+		run_cmd "rm -fv \"${BIN_PATH}/postinst_scripts/99_kernel\""
 	fi
 
 	PKG_KERNEL_BLDPATH="${PWD}"

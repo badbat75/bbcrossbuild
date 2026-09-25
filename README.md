@@ -937,7 +937,7 @@ Kernel module path.
 `PKG_KERNEL_MODPATH="extra"`
 
 **PKG_KERNEL_INITRAMFS:**  
-Create initramfs for the kernel (default: 0).  
+Create initramfs for the kernel (default: 0). `kernelbuild` runs the dracut of the sysroot with the `dracut-install` of `lfs/dracut:native` on the host and puts `boot/initramfs-<release>.img` into the package: the recipe depends on `lfs/dracut` and `lfs/dracut:native`, whose dependencies give the programs dracut runs on the host (`systemctl` and libsystemd of `lfs/systemd:native`, `depmod` of `lfs/kmod:native`, `cpio`, `zstd`).  
 `PKG_KERNEL_INITRAMFS=1`
 
 **PKG_KERNEL_INITRAMFS_DRIVERS:**  

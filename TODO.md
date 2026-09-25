@@ -24,6 +24,10 @@ workaround is part of closing the item.
    - the native Python of `setup_python` links the host `openssl-devel`, `libffi-devel`,
      `libuuid-devel`, `tcl-devel`, `tk-devel`: native builds of those libraries (openssl and Tcl
      already have one);
+   - the dracut of the image, run on the host by `kernelbuild`, takes every program from the
+     native packages (`lfs/dracut:native` and its dependencies) except `ldconfig -r`: the static
+     one of the target, through qemu-user, because glibc builds ldconfig only for the machine it
+     runs on (the one of the host skips the libraries of another architecture);
    - go through the remaining lines one by one (docbook-utils, docbook2X, asciidoc, texinfo,
      gtk-doc, help2man, swig, gperf, flex, pandoc, intltool, the `*-devel` packages) and either
      give the tool a native recipe or drop the feature that needs it.
