@@ -180,7 +180,10 @@ then
 	source "${BB_HOME}/bbxb.conf"
 fi
 
-PROJECT=${BB_HOME}/${PRJ_PATH:-projects}/${PROJECT_NAME}.prj
+### PRJ_PATH is relative to the checkout, or absolute: the one setenv computed on the host reaches a
+### container build through its environment
+PROJECT=${PRJ_PATH:-projects}/${PROJECT_NAME}.prj
+[[ ${PROJECT} == /* ]] || PROJECT=${BB_HOME}/${PROJECT}
 PLATFORM=${BB_HOME}/${PLATFORM_DIR:-platforms}/${PLATFORM_NAME}.conf
 
 if [ ! -f "${PLATFORM}" ]
