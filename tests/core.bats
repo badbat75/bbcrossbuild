@@ -100,12 +100,12 @@ setup () {
 ### The logging and error handling functions are tested in a fresh shell: pkgtools.functions
 ### stubs run_cmd, and bats has its own ERR trap.
 
-@test "log_buffer prefixes every line, keeps the indentation and an unterminated last line" {
-	run bash -c 'source "${BB_HOME}/core.functions"; cd /tmp; printf "one\n  two\nlast" | log_buffer error'
+@test "log_buffer prefixes every line with time and type, keeps the indentation and an unterminated last line" {
+	run bash -c 'source "${BB_HOME}/core.functions"; printf "one\n  two\nlast" | log_buffer error'
 	[ "${#lines[@]}" -eq 3 ]
-	[[ ${lines[0]} =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9:]{8}\ -\ \[tmp\]!\ one$ ]]
-	[[ ${lines[1]} == *"]!   two" ]]
-	[[ ${lines[2]} == *"]! last" ]]
+	[[ ${lines[0]} =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9:]{8}\ !\ one$ ]]
+	[[ ${lines[1]} == *" !   two" ]]
+	[[ ${lines[2]} == *" ! last" ]]
 }
 
 @test "log_buffer writes to the stdout it inherits, never reopening /dev/stdout" {
@@ -122,14 +122,14 @@ setup () {
 		chmod 644 "${RUN_LOG}"
 		exec 1>&3
 		echo "status=${STATUS} log=$(cat "${RUN_LOG}")"'
-	[[ ${output} == "status=0 log="*"]- line" ]]
+	[[ ${output} == "status=0 log="*" - line" ]]
 }
 
 @test "run_cmd returns the status of the command once its whole output is in the log" {
 	export RUN_LOG="${BATS_TEST_TMPDIR}/run.log"
 	run bash -c 'source "${BB_HOME}/seterr"; source "${BB_HOME}/core.functions"
 		run_cmd "seq 1 2000; echo the-error >&2; (exit 3)" > "${RUN_LOG}"
-		echo "status=${?} lines=$(wc -l < "${RUN_LOG}") errors=$(grep -c "]! the-error" "${RUN_LOG}")"'
+		echo "status=${?} lines=$(wc -l < "${RUN_LOG}") errors=$(grep -c " ! the-error" "${RUN_LOG}")"'
 	assert_output_lines "status=3 lines=2002 errors=1"
 }
 
@@ -146,7 +146,7 @@ setup () {
 	run bash -c 'source "${BB_HOME}/seterr"; source "${BB_HOME}/core.functions"
 		function sleep () { :; }
 		MAX_RETRIES=3 run_cmd "echo attempt; false" > "${RUN_LOG}"
-		echo "status=${?} attempts=$(grep -c "]- attempt" "${RUN_LOG}")"'
+		echo "status=${?} attempts=$(grep -c " - attempt" "${RUN_LOG}")"'
 	assert_output_lines "status=1 attempts=3"
 }
 
@@ -172,10 +172,10 @@ setup () {
 	[[ ${output} == *"ERROR: command failed [status 3]"* ]]
 	[[ ${output} == *"Stack:   step inner outer main"* ]]
 	[[ ${output} == *"Log:     ${RUN_LOG}"* ]]
-	[[ ${output} == *"]! the-error"* ]]
+	[[ ${output} == *" ! the-error"* ]]
 	[[ ${output} == *"Build stopped [status 3]."* ]]
 	[[ ${output} != *"not reached"* ]]
-	grep -q "]! ERROR: command failed \[status 3\]" "${RUN_LOG}"
+	grep -q " ! ERROR: command failed \[status 3\]" "${RUN_LOG}"
 }
 
 @test "on_error reports the message of trow_error, once" {

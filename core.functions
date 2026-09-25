@@ -326,12 +326,13 @@ pathremove () {
 }
 
 log_buffer () {
-	### log_buffer [log_type] [log_file]: prefix every line of stdin with time, directory and type.
+	### log_buffer [log_type] [log_file]: prefix every line of stdin with time and type (the log a
+	### line belongs to is its file name, which bbxb logtail prints in front of it).
 	### No external command per line: the writer has to keep up with the output of a parallel make.
 	(
 		local LOG_TYPE="${1:-log}"
 		local LOG_DEST="${2:-/dev/stdout}"
-		local LOG_CHAR LOG_DIR LOG_LINE LOG_FD
+		local LOG_CHAR LOG_LINE LOG_FD
 		case ${LOG_TYPE} in
 			cmd)    LOG_CHAR='$';;
 			info)   LOG_CHAR='#';;
@@ -348,10 +349,9 @@ log_buffer () {
 		else
 			exec {LOG_FD}>> "${LOG_DEST}"
 		fi
-		LOG_DIR=${PWD##*/}
 		while IFS= read -r LOG_LINE || [ -n "${LOG_LINE}" ]
 		do
-			printf '%(%Y-%m-%d %H:%M:%S)T - [%s]%s %s\n' -1 "${LOG_DIR:-/}" "${LOG_CHAR}" "${LOG_LINE}"
+			printf '%(%Y-%m-%d %H:%M:%S)T %s %s\n' -1 "${LOG_CHAR}" "${LOG_LINE}"
 		done >&"${LOG_FD}"
 	)
 }
@@ -538,15 +538,15 @@ on_error () {
 				### stdout and stderr have a log writer each: the error lines (type !) are
 				### not necessarily the last ones of the log, and some tools (meson, cmake)
 				### explain the failure on stdout, so the end of both streams is shown
-				if grep -q '^[-0-9]* [0-9:]* - \[[^]]*\]! ' "${ERROR_LOG}"
+				if grep -q '^[-0-9]* [0-9:]* ! ' "${ERROR_LOG}"
 				then
-					if grep -q '^[-0-9]* [0-9:]* - \[[^]]*\]- ' "${ERROR_LOG}"
+					if grep -q '^[-0-9]* [0-9:]* - ' "${ERROR_LOG}"
 					then
 						echo "   Last $(( ${ERROR_LOG_LINES:-20} / 2 )) output lines of the log:"
-						grep '^[-0-9]* [0-9:]* - \[[^]]*\]- ' "${ERROR_LOG}" | tail -n "$(( ${ERROR_LOG_LINES:-20} / 2 ))" | sed 's/^/   | /'
+						grep '^[-0-9]* [0-9:]* - ' "${ERROR_LOG}" | tail -n "$(( ${ERROR_LOG_LINES:-20} / 2 ))" | sed 's/^/   | /'
 					fi
 					echo "   Last ${ERROR_LOG_LINES:-20} error lines of the log:"
-					grep '^[-0-9]* [0-9:]* - \[[^]]*\]! ' "${ERROR_LOG}" | tail -n "${ERROR_LOG_LINES:-20}" | sed 's/^/   | /'
+					grep '^[-0-9]* [0-9:]* ! ' "${ERROR_LOG}" | tail -n "${ERROR_LOG_LINES:-20}" | sed 's/^/   | /'
 				else
 					echo "   Last ${ERROR_LOG_LINES:-20} lines of the log:"
 					tail -n "${ERROR_LOG_LINES:-20}" "${ERROR_LOG}" | sed 's/^/   | /'
