@@ -421,7 +421,7 @@ function set_network_wait_online () {
 
 function configure_wireless () {
 	### configure_wireless <device> --ssid <name> [--country <code>] [--passphrase-file <file>]
-	###	[--noservice]
+	###	[--noservice] [--networkmanager]
 	### The wpa_supplicant configuration of one wireless link, plus the wpa_supplicant@<device>
 	### unit that reads it (--noservice leaves the unit alone). The passphrase is read from stdin,
 	### or from the file --passphrase-file names: it stays out of every command line, of every log
@@ -429,8 +429,15 @@ function configure_wireless () {
 	### copy of the passphrase wpa_passphrase prints is dropped). --country is the ISO 3166 code of
 	### the regulatory domain: without it the world domain leaves out the channels some countries
 	### add (12 and 13 in Europe).
-	local WLAN_DEVICE WLAN_SSID WLAN_COUNTRY WLAN_PASSPHRASE_FILE WLAN_NOSERVICE WPA_CONF
-	OPTS="--noservice" OPTS_WITH_VALUE="--ssid --country --passphrase-file" param2value "${@}"
+	### --networkmanager writes the keyfile profile of NetworkManager instead,
+	### /etc/NetworkManager/system-connections/<device>.nmconnection (mode 600, the 64 hex digits
+	### of the derived key as psk, DHCP for IPv4 and IPv6), and no unit: NetworkManager starts
+	### wpa_supplicant over D-Bus. The profile has no uuid, which NetworkManager derives from the
+	### name of the file, the same at every boot. NetworkManager does not set the regulatory domain,
+	### so --country goes to the option of cfg80211 in /etc/modprobe.d/cfg80211.conf.
+	local WLAN_DEVICE WLAN_SSID WLAN_COUNTRY WLAN_PASSPHRASE_FILE WLAN_NOSERVICE WLAN_NM WPA_CONF \
+		WLAN_PSK WLAN_KEYFILE_SSID
+	OPTS="--noservice --networkmanager" OPTS_WITH_VALUE="--ssid --country --passphrase-file" param2value "${@}"
 
 	WLAN_DEVICE=${_param_1}
 	# shellcheck disable=SC2154
@@ -441,6 +448,8 @@ function configure_wireless () {
 	WLAN_PASSPHRASE_FILE=${_param_passphrase_file}
 	# shellcheck disable=SC2154
 	WLAN_NOSERVICE=${_param_noservice:-0}
+	# shellcheck disable=SC2154
+	WLAN_NM=${_param_networkmanager:-0}
 
 	if [ -z "${WLAN_DEVICE}" ] || [ -z "${WLAN_SSID}" ]
 	then
@@ -458,6 +467,65 @@ function configure_wireless () {
 	build lfs/wpa_supplicant:native
 
 	echo "Wireless link: ${WLAN_DEVICE} (SSID ${WLAN_SSID})"
+	if [ "${WLAN_NM}" -eq 1 ]
+	then
+		### Not through run_cmd: the passphrase reaches wpa_passphrase on its stdin, the key stays
+		### in a local variable and no log sees either
+		if [ -n "${WLAN_PASSPHRASE_FILE}" ]
+		then
+			WLAN_PSK=$("${GLOBAL_TOOLCHAIN_PATH}/bin/wpa_passphrase" "${WLAN_SSID}" < "${WLAN_PASSPHRASE_FILE}" \
+				| sed -n 's/^[[:space:]]*psk=//p')
+		else
+			WLAN_PSK=$("${GLOBAL_TOOLCHAIN_PATH}/bin/wpa_passphrase" "${WLAN_SSID}" | sed -n 's/^[[:space:]]*psk=//p')
+		fi
+		if [[ ! ${WLAN_PSK} =~ ^[0-9a-f]{64}$ ]]
+		then
+			trow_error "${ERROR_NOT_VALID_OPTION}" "configure_wireless: wpa_passphrase derived no key (a passphrase has 8 to 63 characters)."
+			return "${?}"
+		fi
+		### A key file string escapes the backslash; a list separator in the SSID makes it the list
+		### of its bytes, which NetworkManager reads as well
+		if [[ ${WLAN_SSID} == *\;* ]]
+		then
+			WLAN_KEYFILE_SSID=$(printf '%s' "${WLAN_SSID}" | od -An -tu1 -v | tr -s ' \n' ';')
+			WLAN_KEYFILE_SSID=${WLAN_KEYFILE_SSID#;}
+		else
+			WLAN_KEYFILE_SSID=${WLAN_SSID//\\/\\\\}
+		fi
+		WPA_CONF=$(osconfig_file "${TARGET_SYSCONFDIR}/NetworkManager/system-connections/${WLAN_DEVICE}.nmconnection")
+		(
+		umask 077
+		cat > "${WPA_CONF}" <<-EOF
+			[connection]
+			id=${WLAN_DEVICE}
+			type=wifi
+			interface-name=${WLAN_DEVICE}
+			autoconnect=true
+
+			[wifi]
+			mode=infrastructure
+			ssid=${WLAN_KEYFILE_SSID}
+
+			[wifi-security]
+			key-mgmt=wpa-psk
+			psk=${WLAN_PSK}
+
+			[ipv4]
+			method=auto
+
+			[ipv6]
+			method=auto
+		EOF
+		)
+		chmod 600 "${WPA_CONF}"
+		if [ -n "${WLAN_COUNTRY}" ]
+		then
+			echo "options cfg80211 ieee80211_regdom=${WLAN_COUNTRY}" \
+				> "$(osconfig_file "${TARGET_SYSCONFDIR}/modprobe.d/cfg80211.conf")"
+		fi
+		return 0
+	fi
+
 	WPA_CONF=$(osconfig_file "${TARGET_SYSCONFDIR}/wpa_supplicant/wpa_supplicant-${WLAN_DEVICE}.conf")
 	### Not through run_cmd: the passphrase reaches wpa_passphrase on its stdin and no log sees it
 	{
@@ -481,6 +549,30 @@ function configure_wireless () {
 	then
 		enable_service "wpa_supplicant@${WLAN_DEVICE}"
 	fi
+}
+
+function configure_networkmanager () {
+	### configure_networkmanager [--dns <mode>] [--file <name>]
+	### The configuration of NetworkManager the project decides, /etc/NetworkManager/conf.d/<name>.conf
+	### (00-<project> by default). --dns is the dns= of [main], systemd-resolved by default:
+	### NetworkManager hands the servers and the search domains of every connection, the domain of
+	### the DHCP lease included, to systemd-resolved, which keeps /etc/resolv.conf. A wired link
+	### needs nothing here: NetworkManager gives every Ethernet device without a profile a DHCP
+	### connection of its own.
+	local NM_DNS NM_CONF
+	OPTS_WITH_VALUE="--dns --file" param2value "${@}"
+
+	# shellcheck disable=SC2154
+	NM_DNS=${_param_dns:-systemd-resolved}
+	# shellcheck disable=SC2154
+	NM_CONF=${_param_file:-00-${PROJECT_NAME}}
+
+	echo "NetworkManager: DNS through ${NM_DNS}"
+	NM_CONF=$(osconfig_file "${TARGET_SYSCONFDIR}/NetworkManager/conf.d/${NM_CONF}.conf")
+	cat > "${NM_CONF}" <<-EOF
+		[main]
+		dns=${NM_DNS}
+	EOF
 }
 
 function configure_ssh () {

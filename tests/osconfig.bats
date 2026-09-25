@@ -152,3 +152,44 @@ setup () {
 	[ "${status}" -eq 9 ]
 	[[ ${output} == *"--ssid"* ]]
 }
+
+@test "configure_wireless --networkmanager writes a keyfile profile with the derived key only" {
+	### wpa_passphrase stub: the key is fixed, the commented passphrase is what must not get through
+	function build () {
+		:
+	}
+	mkdir -p "${GLOBAL_TOOLCHAIN_PATH}/bin"
+	cat > "${GLOBAL_TOOLCHAIN_PATH}/bin/wpa_passphrase" <<-'STUB'
+		#!/bin/bash
+		read -r PASSPHRASE
+		printf 'network={\n\tssid="%s"\n\t#psk="%s"\n\tpsk=%s\n}\n' "${1}" "${PASSPHRASE}" "$(printf '%064d' 0 | tr 0 a)"
+	STUB
+	chmod +x "${GLOBAL_TOOLCHAIN_PATH}/bin/wpa_passphrase"
+	printf 'secretpass\n' | configure_wireless wlan0 --networkmanager --ssid 'My Net' --country IT
+	KEYFILE="${BIN_PATH}${TARGET_SYSCONFDIR}/NetworkManager/system-connections/wlan0.nmconnection"
+	run cat "${KEYFILE}"
+	assert_output_lines "[connection]" "id=wlan0" "type=wifi" "interface-name=wlan0" "autoconnect=true" \
+		"" "[wifi]" "mode=infrastructure" "ssid=My Net" \
+		"" "[wifi-security]" "key-mgmt=wpa-psk" "psk=$(printf '%064d' 0 | tr 0 a)" \
+		"" "[ipv4]" "method=auto" "" "[ipv6]" "method=auto"
+	[ "$(stat -c %a "${KEYFILE}")" = 600 ]
+	run grep -rq secretpass "${BIN_PATH}" "${LOG_PATH}"
+	[ "${status}" -eq 1 ]
+	[ ! -e "${BIN_PATH}${TARGET_SYSCONFDIR}/wpa_supplicant/wpa_supplicant-wlan0.conf" ]
+	[ ! -e "${POSTINST}" ]
+	run cat "${BIN_PATH}${TARGET_SYSCONFDIR}/modprobe.d/cfg80211.conf"
+	assert_output_lines "options cfg80211 ieee80211_regdom=IT"
+	### A list separator in the SSID turns it into the list of its bytes
+	printf 'secretpass\n' | configure_wireless wlan0 --networkmanager --ssid 'a;b'
+	run grep '^ssid=' "${KEYFILE}"
+	assert_output_lines "ssid=97;59;98;"
+}
+
+@test "configure_networkmanager writes the DNS mode into conf.d" {
+	configure_networkmanager
+	run cat "${BIN_PATH}${TARGET_SYSCONFDIR}/NetworkManager/conf.d/00-${PROJECT_NAME}.conf"
+	assert_output_lines "[main]" "dns=systemd-resolved"
+	configure_networkmanager --dns default --file dns
+	run cat "${BIN_PATH}${TARGET_SYSCONFDIR}/NetworkManager/conf.d/dns.conf"
+	assert_output_lines "[main]" "dns=default"
+}

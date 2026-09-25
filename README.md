@@ -571,14 +571,23 @@ What the project decides about the system it builds. A file is written into the 
 
 - **configure_wireless**: The wpa_supplicant configuration of one wireless link, and its `wpa_supplicant@<device>` unit
   ```
-  <passphrase source> | configure_wireless <device> --ssid <name> [--country <code>] [--passphrase-file <file>] [--noservice]
+  <passphrase source> | configure_wireless <device> --ssid <name> [--country <code>] [--passphrase-file <file>] [--noservice] [--networkmanager]
   ```
   - `<device>`: Wireless interface
   - `--ssid <name>`: Name of the network
   - `--country <code>`: ISO 3166 code of the regulatory domain
   - `--passphrase-file <file>`: File holding the passphrase; without it the passphrase is read from stdin
   - `--noservice`: Do not enable the unit
+  - `--networkmanager`: Write the NetworkManager keyfile profile `/etc/NetworkManager/system-connections/<device>.nmconnection` (mode 600, DHCP) instead, and no unit; `--country` goes to `/etc/modprobe.d/cfg80211.conf`
   - The image gets only the key `wpa_passphrase` derives: the passphrase never reaches a command line or a log
+
+- **configure_networkmanager**: The configuration of NetworkManager decided by the project, `/etc/NetworkManager/conf.d/<name>.conf`
+  ```
+  configure_networkmanager [--dns <mode>] [--file <name>]
+  ```
+  - `--dns <mode>`: `dns=` of `[main]` (default `systemd-resolved`)
+  - `--file <name>`: Name of the file (default `00-<project>`)
+  - A wired link needs no profile: NetworkManager gives every Ethernet device a DHCP connection of its own
 
 - **configure_ssh**: Enable the ssh daemon and install the host keys of the project
   ```
