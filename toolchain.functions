@@ -1810,6 +1810,11 @@ function setup_full_toolchain () {
 	TOOLCHAIN=gnu build lfs/pkgconf:cross
 	TOOLCHAIN=gnu build lfs/bison:native
 	TOOLCHAIN=gnu build lfs/cmake:native
+	### mold, when it is the linker of a toolchain: the builds before it link with bfd (linker_for_build)
+	if [ "${GCC_DEFAULT_LD}" == mold ] || [ "${LLVM_DEFAULT_LD}" == mold ]
+	then
+		TOOLCHAIN=gnu build lfs/mold:cross
+	fi
 	TOOLCHAIN=gnu setup_binutils
 	# shellcheck disable=SC2086
 	setup_gcc ${SETUP_GCC}

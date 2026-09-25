@@ -371,3 +371,19 @@ function calls () {
 	PKG_URL=https://example.com/b.tar.gz
 	[ "$(sources_key)" != "${KEY}" ]
 }
+
+@test "linker_for_build: mold once the PATH finds ld.mold, the fallback before, any other linker as it is" {
+	local BIN_DIR=${BATS_TEST_TMPDIR}/bin
+	mkdir -p "${BIN_DIR}"
+	PATH="${BIN_DIR}:/usr/bin:/bin"
+	assert_equal "$(linker_for_build bfd lld)" "bfd"
+	assert_equal "$(linker_for_build lld bfd)" "lld"
+	if ! command -v ld.mold > /dev/null
+	then
+		assert_equal "$(linker_for_build mold bfd)" "bfd"
+		assert_equal "$(linker_for_build mold lld)" "lld"
+	fi
+	printf '#!/bin/sh\n' > "${BIN_DIR}/ld.mold"
+	chmod +x "${BIN_DIR}/ld.mold"
+	assert_equal "$(linker_for_build mold bfd)" "mold"
+}

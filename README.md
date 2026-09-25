@@ -945,7 +945,7 @@ Override LTOENABLE environment variable.
 
 **PKG_OVERRIDELD:**  
 Override default linker.  
-`PKG_OVERRIDELD=bfd|lld` (`gold` only with a binutils older than 2.45; the default is `GCC_DEFAULT_LD`, `bfd`)
+`PKG_OVERRIDELD=bfd|lld|mold` (`gold` only with a binutils older than 2.45; the default is `GCC_DEFAULT_LD`, `bfd`, with gnu and `LLVM_DEFAULT_LD`, `lld`, with llvm; `mold` is `lfs/mold:cross`, which `setup_full_toolchain` builds when one of the two defaults is `mold`, and the native and cross builds link with `bfd` or `lld` until it is there)
 
 **PKG_OVERRIDESHARED:**  
 Override BUILD_SHARED environment variable.  
