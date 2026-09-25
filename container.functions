@@ -56,7 +56,9 @@ container_image () {
 	### container_image [--force] [--cache-export]: build the image when docker does not have it
 	### or when the label with the checksum of the Dockerfile does not match the Dockerfile of the
 	### checkout. Nothing of the checkout is copied into it, so this is the only reason to rebuild.
-	local DOCKERFILE_SUM IMAGE_SUM BUILD_OPTS
+	### The output of docker build goes to container_<image>.log among the global logs (logtail
+	### follows it), the console gets one line; a failure reports the log as a package build does.
+	local DOCKERFILE_SUM IMAGE_SUM BUILD_OPTS IMAGE_LOG STATUS
 
 	OPTS="--force --cache-export" OPTS_WITH_VALUE="" param2value "${@}"
 
@@ -81,8 +83,23 @@ container_image () {
 		BUILD_OPTS+=" --cache-from type=local,src=${CONTAINER_CACHE_PATH}"
 	fi
 
-	echo "Building the container image ${CONTAINER_NAME}..."
-	run_cmd "docker build ${BUILD_OPTS} --file \"${BB_HOME}/Dockerfile\" \"${BB_HOME}\""
+	### setenv computes GLOBAL_LOG_PATH, "bbxb container build" runs without it
+	IMAGE_LOG=${GLOBAL_LOG_PATH:-${DATA_PATH:-/mnt/bbcrossbuild/datadir}/${LOG_DIR:-logs}}/container_${CONTAINER_NAME}.log
+	if [ ! -d "$(dirname "${IMAGE_LOG}")" ]
+	then
+		mkdir -p "$(dirname "${IMAGE_LOG}")" 2> /dev/null ||
+			run_cmd -s "install -d -o \"$(id -u)\" -g \"$(id -g)\" \"$(dirname "${IMAGE_LOG}")\"" > /dev/null || return
+	fi
+
+	echo -n "Building the container image ${CONTAINER_NAME} (log: ${IMAGE_LOG})... "
+	STATUS=0
+	run_cmd "docker build ${BUILD_OPTS} --file \"${BB_HOME}/Dockerfile\" \"${BB_HOME}\"" > "${IMAGE_LOG}" || STATUS=${?}
+	if [ "${STATUS}" -ne 0 ]
+	then
+		echo "failed."
+		return "${STATUS}"
+	fi
+	echo "ok."
 }
 
 container_run () {
@@ -135,7 +152,7 @@ container_run () {
 		RUN_OPTS+=(--env "${ENV_NAME}=${!ENV_NAME}")
 	done
 
-	echo "Running ${PROJECT_NAME} ${PLATFORM_NAME} in the container ${CONTAINER_NAME}."
+	echo "Running ${PROJECT_NAME} ${PLATFORM_NAME} in the container ${RUN_NAME} (image ${CONTAINER_NAME})."
 	echo
 	exec docker run "${RUN_OPTS[@]}" "${CONTAINER_NAME}" "${BB_HOME}/bbxb" "${@}"
 }
@@ -479,12 +496,34 @@ container_push () {
 	run_cmd "docker push \"${TARGET}\""
 }
 
+container_usage () {
+	### container_usage: the help of "bbxb container"
+	container_name
+	cat <<-EOF
+		Usage: bbxb container <command> [<argument>...]
+
+		The image of this checkout (${CONTAINER_NAME}) and the containers that build in it, on this host.
+
+		Commands:
+		  build                       rebuild the image and export its build cache (${CONTAINER_CACHE_PATH})
+		  list                        the images of bbxb: * the one of this checkout, up to date or outdated
+		  ps                          the builds running in a container
+		  stop <project> <platform>   interrupt a build as Ctrl-C does: the images are unmounted
+		  stop <container>            the same, by the name bbxb container ps prints
+		  rm [<image>]                remove an image of bbxb (default: the one of this checkout)
+		  purge [--yes]               remove every image of bbxb, their stopped containers and the build
+		                              cache, after a confirmation (--yes: none)
+		  push                        push the image to CONTAINER_REGISTRY (bbxb.conf), after docker login
+		  help                        this help
+	EOF
+}
+
 container_command () {
-	### container_command <command> [<argument>...]: "bbxb container <command>", on the host
-	local COMMAND USAGE
+	### container_command <command> [<argument>...]: "bbxb container <command>", on the host. No
+	### command, or stop without arguments: the help
+	local COMMAND
 
 	COMMAND=${1}
-	USAGE="bbxb container build|list|ps|stop <project> <platform>|rm [<image>]|purge [--yes]|push"
 	if [ -n "${BBXB_IN_CONTAINER}" ]
 	then
 		trow_error "${ERROR_GENERIC}" "bbxb container runs on the host, not in a container." || return
@@ -493,11 +532,16 @@ container_command () {
 	then
 		shift
 	fi
+	if [[ ${COMMAND} == @(|help|-h|--help) ]] || { [ "${COMMAND}" == stop ] && [ ${#} -eq 0 ]; }
+	then
+		container_usage
+		return 0
+	fi
 	case "${COMMAND}" in
 		build|list|ps|push)
 			if [ ${#} -gt 0 ]
 			then
-				trow_error "${ERROR_NOT_VALID_OPTION}" "bbxb container ${COMMAND} takes no argument: ${USAGE}." || return
+				trow_error "${ERROR_NOT_VALID_OPTION}" "bbxb container ${COMMAND} takes no argument (bbxb container help)." || return
 			fi
 			;;&
 		build)
@@ -521,11 +565,8 @@ container_command () {
 		push)
 			container_push
 			;;
-		"")
-			trow_error "${ERROR_NOT_VALID_OPTION}" "No container command: ${USAGE}."
-			;;
 		*)
-			trow_error "${ERROR_NOT_VALID_OPTION}" "Unknown container command ${COMMAND}: ${USAGE}."
+			trow_error "${ERROR_NOT_VALID_OPTION}" "Unknown container command ${COMMAND} (bbxb container help)."
 			;;
 	esac
 }

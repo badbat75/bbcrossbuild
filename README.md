@@ -44,6 +44,19 @@ its log, the logs that appear during the build included (Ctrl-C to stop):
 $ ./bbxb logtail <project> <platform>
 ```
 
+Mount the image of a project (`<platform>/<project>.img`, where the build leaves it), or any disk
+image, to look into it or change it: the partition with `/etc/fstab` is the root, the others go
+where that fstab says (`/boot`), an image without a system has each partition on `p<n>`:
+
+```bash
+$ ./bbxb mount [--ro] <project> <platform> [<directory>]   # default: <project>.mnt next to the image
+$ ./bbxb mount [--ro] <image> [<directory>]                # default: <image>.mnt
+$ ./bbxb mount list                                        # the images mounted, by bbxb mount or by a build
+$ ./bbxb umount <project> <platform> | <image> | <directory>
+```
+
+`./bbxb` without arguments, or `./bbxb help`, prints every command.
+
 **Output**
 
 Find your package at: `.bbxb/<project>/<platform>/<project>.tar.xz`

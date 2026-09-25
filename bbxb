@@ -28,6 +28,48 @@ then
 	container_user "${@}"
 fi
 
+function bbxb_usage () {
+	### bbxb_usage: the help of bbxb, with the projects and the platforms of the checkout
+	local NAMES
+	cat <<-EOF
+		Usage: bbxb [--container|--no-container] <command> <project> <platform>
+		       bbxb container <command> [<argument>...]
+
+		Commands:
+		  build <project> <platform>     build the project for the platform
+		  logtail <project> <platform>   follow the logs of the project on the platform, the new ones
+		                                 included (Ctrl-C to stop): the native, cross and target builds
+		  mount [--ro] <project> <platform> [<directory>]
+		                                 mount the image of the project (<platform>/<project>.img) on
+		                                 <directory> (default: <project>.mnt next to it): the partition
+		                                 with /etc/fstab is the root, the others go where its fstab says
+		  mount [--ro] <image> [<directory>]
+		                                 the same for any disk image (default: <image>.mnt)
+		  mount list                     the images mounted, by bbxb mount or by a build
+		  umount <project> <platform> | <image> | <directory>
+		                                 unmount an image and detach its loop device
+		  container <command>            the image and the containers of bbxb (bbxb container help)
+		  help                           this help
+
+		Options:
+		  --container      build in the container of this checkout (CONTAINER_BUILD=1 in bbxb.conf)
+		  --no-container   build on the host
+
+	EOF
+	NAMES=$(find "${BB_HOME}/${PRJ_PATH:-projects}" -maxdepth 1 -name '*.prj' -printf '%f\n' 2> /dev/null | sed 's/\.prj$//' | sort | xargs)
+	echo "Projects:  ${NAMES:-none} (${PRJ_PATH:-projects}/<project>.prj)"
+	NAMES=$(find "${BB_HOME}/${PLATFORM_DIR:-platforms}" -maxdepth 1 -name '*.conf' -printf '%f\n' 2> /dev/null | sed 's/\.conf$//' | sort | xargs)
+	echo "Platforms: ${NAMES:-none} (${PLATFORM_DIR:-platforms}/<platform>.conf)"
+}
+
+function bbxb_done () {
+	### bbxb_done [<status>]: leave without the handlers of an error
+	set +E +o pipefail
+	trap - ERR SIGINT
+	rm -f "${TMPDIR:-/tmp}/bbxb_error.${$}" "${BUILD_CHECKED_FILE}"
+	exit "${1:-0}"
+}
+
 ### From here on the handlers of core.functions: one report from the innermost shell, the
 ### images unmounted by the main shell only (unmount_tag is looked up when the error happens)
 rm -f "${TMPDIR:-/tmp}/bbxb_error.${$}"
@@ -51,13 +93,47 @@ then
 		source "${BB_HOME}/bbxb.conf"
 	fi
 	container_command "${@}"
-	set +E +o pipefail
-	trap - ERR SIGINT
-	rm -f "${TMPDIR:-/tmp}/bbxb_error.${$}"
-	exit 0
+	bbxb_done
 fi
 
-OPTS="--container --no-container" OPTS_WITH_VALUE="" param2value "${@}"
+### No argument, or no project and no platform after the command: the help, not an error
+if [ ${#} -eq 0 ] || [[ ${1} == @(help|-h|--help) ]] || { [[ ${1} == @(build|logtail|mount|umount) ]] && [ ${#} -eq 1 ]; }
+then
+	bbxb_usage
+	bbxb_done
+fi
+
+### bbxb mount|umount of an image file or a directory, and bbxb mount list: nothing of a project or a
+### platform. With a project and a platform they go on below, where setenv gives the image its path
+if [[ ${1} == @(mount|umount) ]]
+then
+	OPTS="--ro" OPTS_WITH_VALUE="" param2value "${@:2}"
+	# shellcheck disable=SC2154
+	MOUNT_ARGS=("${_param_1}" "${_param_2}" "${_param_3}")
+	MOUNT_RO=${_param_ro:+--ro}
+	if [ "${1}" == mount ] && [ "${MOUNT_ARGS[0]}" == list ] && [ -z "${MOUNT_ARGS[1]}" ]
+	then
+		# shellcheck source=/dev/null
+		source "${BB_HOME}/images.functions"
+		image_mount_list
+		bbxb_done
+	fi
+	if [ -e "${MOUNT_ARGS[0]}" ] && [ -z "${MOUNT_ARGS[2]}" ]
+	then
+		# shellcheck source=/dev/null
+		source "${BB_HOME}/images.functions"
+		if [ "${1}" == mount ]
+		then
+			# shellcheck disable=SC2086
+			image_mount ${MOUNT_RO} "${MOUNT_ARGS[0]}" ${MOUNT_ARGS[1]:+"${MOUNT_ARGS[1]}"}
+		else
+			image_umount "${MOUNT_ARGS[0]}"
+		fi
+		bbxb_done
+	fi
+fi
+
+OPTS="--container --no-container --ro" OPTS_WITH_VALUE="" param2value "${@}"
 
 ### bbxb [--container|--no-container] <command> <project> <platform>: build runs the project file,
 ### logtail follows the logs of the project on the platform (the native, cross and target builds,
@@ -69,26 +145,30 @@ PROJECT_NAME="${_param_2}"
 # shellcheck disable=SC2154
 PLATFORM_NAME="${_param_3}"
 
-BBXB_USAGE="bbxb [--container|--no-container] build|logtail <project> <platform>, bbxb container <command>"
+### mount: the directory after the platform, --ro (only for mount)
+# shellcheck disable=SC2154
+MOUNT_DIR=${_param_4}
+if [ -n "${_param_ro}" ] && [ "${BBXB_COMMAND}" != mount ]
+then
+	trow_error "${ERROR_NOT_VALID_OPTION}" "--ro is an option of mount (bbxb help)."
+fi
+
 case "${BBXB_COMMAND}" in
-	build|logtail)
-		;;
-	"")
-		trow_error "${ERROR_NOT_VALID_OPTION}" "No command specified: ${BBXB_USAGE}."
+	build|logtail|mount|umount)
 		;;
 	*)
-		trow_error "${ERROR_NOT_VALID_OPTION}" "Unknown command ${BBXB_COMMAND}: ${BBXB_USAGE}."
+		trow_error "${ERROR_NOT_VALID_OPTION}" "Unknown command ${BBXB_COMMAND} (bbxb help)."
 		;;
 esac
 
 if [ -z "${PROJECT_NAME}" ]
 then
-	trow_error "${ERROR_NOT_VALID_OPTION}" "No project name specified."
+	trow_error "${ERROR_NOT_VALID_OPTION}" "No project name specified (bbxb help)."
 fi
 
 if [ -z "${PLATFORM_NAME}" ]
 then
-	trow_error "${ERROR_NOT_VALID_OPTION}" "No platform name specified."
+	trow_error "${ERROR_NOT_VALID_OPTION}" "No platform name specified (bbxb help)."
 fi
 
 ulimit -n 2048
@@ -129,6 +209,25 @@ if [ "${BBXB_COMMAND}" = logtail ]
 then
 	echo "Following the logs of ${LOG_PATH} and ${GLOBAL_LOG_PATH} (Ctrl-C to stop)"
 	log_tail "${LOG_PATH}" "${GLOBAL_LOG_PATH}"
+fi
+
+### The image of the project, where unmount_tag --finalize leaves it
+if [[ ${BBXB_COMMAND} == @(mount|umount) ]]
+then
+	# shellcheck source=/dev/null
+	source "${BB_HOME}/images.functions"
+	if [ ! -f "${PLATFORM_PATH}/${PROJECT_NAME}.img" ]
+	then
+		trow_error "${ERROR_FILE_NOT_FOUND}" "${PROJECT_NAME} ${PLATFORM_NAME} has no image ${PLATFORM_PATH}/${PROJECT_NAME}.img."
+	fi
+	if [ "${BBXB_COMMAND}" == mount ]
+	then
+		# shellcheck disable=SC2086
+		image_mount ${MOUNT_RO} "${PLATFORM_PATH}/${PROJECT_NAME}.img" ${MOUNT_DIR:+"${MOUNT_DIR}"}
+	else
+		image_umount "${PLATFORM_PATH}/${PROJECT_NAME}.img"
+	fi
+	bbxb_done
 fi
 
 ### The package groups are git submodules: an empty packages/<group> is a checkout without them
@@ -211,6 +310,4 @@ unmount_tag --all
 
 echo -e "Build completed!\n"
 
-set +E +o pipefail
-trap - ERR SIGINT
-rm -f "${TMPDIR:-/tmp}/bbxb_error.${$}" "${BUILD_CHECKED_FILE}"
+bbxb_done

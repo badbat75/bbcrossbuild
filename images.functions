@@ -591,6 +591,276 @@ function run_postinstall_scripts () {
 	} >> "${LOG_PATH}/images_${_param_1}.log"
 }
 
+function image_mount_dir () {
+	### image_mount_dir <image file>: the directory bbxb mount uses by default, next to the image:
+	### lfs.img -> lfs.mnt
+	echo "${1%.img}.mnt"
+}
+
+function image_fstab_mounts () {
+	### image_fstab_mounts <fstab>: the file systems of the fstab of an image other than the root,
+	### one per line as "<spec> <mount point>", in the order of the file (a parent before what is
+	### mounted in it): the ones named by PARTUUID, UUID or LABEL, which a partition of the image
+	### can match. Swap, pseudo file systems and devices by path are left out.
+	local SPEC MPOINT FSTYPE REST
+	while read -r SPEC MPOINT FSTYPE REST
+	do
+		if [[ ${SPEC} != @(PARTUUID|UUID|LABEL)=* ]] || [[ ${MPOINT} != /?* ]] || [ "${FSTYPE}" == swap ]
+		then
+			continue
+		fi
+		echo "${SPEC} ${MPOINT}"
+	done < "${1}"
+}
+
+function image_partitions () {
+	### image_partitions <loop device> <image file>: the partitions of the loop device of an image,
+	### one per line. Their nodes are created when /dev has none (a container, whose /dev is no
+	### devtmpfs), and when the image has a partition table they are waited for a few seconds: the
+	### kernel reads it after losetup.
+	local LOOPDEV NAME MAJMIN TYPE TRIES TABLE
+	LOOPDEV=${1}
+	TABLE=$(sfdisk -d "${2}" 2> /dev/null || true)
+	TRIES=0
+	while [[ ${TABLE} == *$'\n/'* ]] && [[ $'\n'$(lsblk -rno TYPE "${LOOPDEV}")$'\n' != *$'\npart\n'* ]] &&
+		[ "${TRIES}" -lt 5 ]
+	do
+		sleep 1
+		TRIES=$((TRIES+1))
+	done
+	lsblk -rno NAME,MAJ:MIN,TYPE "${LOOPDEV}" | while read -r NAME MAJMIN TYPE
+	do
+		if [ "${TYPE}" != part ]
+		then
+			continue
+		fi
+		if [ ! -e "/dev/${NAME}" ]
+		then
+			run_cmd -s "mknod -m 0660 \"/dev/${NAME}\" b ${MAJMIN%%:*} ${MAJMIN##*:}" > /dev/null || return
+		fi
+		echo "/dev/${NAME}"
+	done
+}
+
+function image_mount_point () {
+	### image_mount_point <loop device>: the mount point closest to / among the ones of the loop
+	### device and of its partitions (the root of the image), none when nothing of it is mounted
+	lsblk -rno MOUNTPOINT "${1}" 2> /dev/null | awk 'NF { print length, $0 }' | sort -n | head -n1 |
+		cut -d' ' -f2- | while IFS= read -r DIR
+	do
+		### lsblk -r writes a blank and the other special characters as \x<hex>
+		printf '%b\n' "${DIR}"
+	done
+}
+
+function image_mount_list () {
+	### image_mount_list: the disk images attached to a loop device, by bbxb mount or by a build
+	### (mount_tag): the image, the loop device, the directory of its root and whether it is
+	### read-only
+	local NAME RO BACKFILE DIR LINES
+	LINES=$(losetup -l -n --raw -O NAME,RO,BACK-FILE | while read -r NAME RO BACKFILE
+	do
+		DIR=$(image_mount_point "${NAME}")
+		### An image without a system: its partitions on <directory>/p<n>
+		if [[ ${DIR} =~ /p[0-9]+$ ]]
+		then
+			DIR=$(dirname "${DIR}")
+		fi
+		printf '%b\t%s\t%s\t%s\n' "${BACKFILE}" "${NAME}" "${DIR:-(not mounted)}" "$( [ "${RO}" == 1 ] && echo ro || echo rw )"
+	done)
+	if [ -z "${LINES}" ]
+	then
+		echo "No image is mounted."
+		return 0
+	fi
+	printf 'IMAGE\tLOOP\tDIRECTORY\tMODE\n%s\n' "${LINES}" | column -t -s $'\t'
+}
+
+function image_mount () {
+	### image_mount [--ro] <image file> [<directory>]: mount the file systems of a disk image on
+	### <directory> (default: image_mount_dir), the way the system it holds mounts them: the
+	### partition with /etc/fstab is the root, the partitions its fstab names by PARTUUID, UUID or
+	### LABEL go to their mount points (the boot partition of create_image, /boot/firmware of
+	### Raspberry Pi OS). An image with no such partition has each partition on <directory>/p<n>,
+	### one without a partition table its file system on <directory>. Nothing of the chroot of
+	### mount_tag (dev, proc, sys, resolv.conf): this is to look into an image or to change it.
+	### image_umount undoes it; a failure halfway undoes what was done.
+	local RO IMAGE DIR LOOPDEV ATTACHED PART PARTS ROOTPART SPEC MPOINT FOUND KEY VALUE
+	local -a MOUNT_OPTS LOSETUP_OPTS
+
+	OPTS="--ro" OPTS_WITH_VALUE="" param2value "${@}"
+	RO=${_param_ro:-0}
+	IMAGE=${_param_1}
+	DIR=${_param_2}
+	if [ ! -f "${IMAGE}" ]
+	then
+		trow_error "${ERROR_FILE_NOT_FOUND}" "No image ${IMAGE}." || return
+	fi
+	IMAGE=$(realpath "${IMAGE}")
+	DIR=$(realpath -m "${DIR:-$(image_mount_dir "${IMAGE}")}")
+	ATTACHED=$(losetup -nO NAME -j "${IMAGE}" | xargs)
+	if [ -n "${ATTACHED}" ]
+	then
+		trow_error "${ERROR_GENERIC}" "${IMAGE} is already attached to ${ATTACHED} (bbxb umount ${IMAGE})." || return
+	fi
+	if mountpoint -q "${DIR}"
+	then
+		trow_error "${ERROR_GENERIC}" "${DIR} is already a mount point." || return
+	fi
+	MOUNT_OPTS=()
+	LOSETUP_OPTS=(--find --partscan --show)
+	if [ "${RO}" -eq 1 ]
+	then
+		MOUNT_OPTS=(-o ro)
+		LOSETUP_OPTS+=(--read-only)
+	fi
+
+	function image_mount_undo () {
+		sudo umount -R "${DIR}" 2> /dev/null || true
+		sudo losetup -d "${LOOPDEV}" 2> /dev/null || true
+		return 1
+	}
+
+	if [ ! -d "${DIR}" ]
+	then
+		run_cmd "mkdir -p \"${DIR}\"" > /dev/null || return
+	fi
+	LOOPDEV=$(sudo losetup "${LOSETUP_OPTS[@]}" "${IMAGE}") || return
+	echo "${IMAGE} on ${LOOPDEV}"
+	mapfile -t PARTS < <(image_partitions "${LOOPDEV}" "${IMAGE}")
+
+	if [ "${#PARTS[@]}" -eq 0 ]
+	then
+		run_cmd -s "mount ${MOUNT_OPTS[*]} \"${LOOPDEV}\" \"${DIR}\"" > /dev/null || image_mount_undo || return
+		echo "${LOOPDEV} on ${DIR}"
+	else
+		### The root: the first partition that mounts and has /etc/fstab
+		ROOTPART=
+		for PART in "${PARTS[@]}"
+		do
+			if sudo mount "${MOUNT_OPTS[@]}" "${PART}" "${DIR}" 2> /dev/null
+			then
+				if [ -f "${DIR}/etc/fstab" ]
+				then
+					ROOTPART=${PART}
+					echo "${PART} on ${DIR}"
+					break
+				fi
+				sudo umount "${DIR}" || image_mount_undo || return
+			fi
+		done
+		if [ -n "${ROOTPART}" ]
+		then
+			while read -r SPEC MPOINT
+			do
+				FOUND=
+				for PART in "${PARTS[@]}"
+				do
+					if [ "${PART}" == "${ROOTPART}" ]
+					then
+						continue
+					fi
+					while IFS='=' read -r KEY VALUE
+					do
+						if [ "${KEY}=${VALUE}" == "${SPEC}" ]
+						then
+							FOUND=${PART}
+						fi
+					done < <(sudo blkid -o export "${PART}")
+					if [ -n "${FOUND}" ]
+					then
+						break
+					fi
+				done
+				if [ -z "${FOUND}" ]
+				then
+					echo "${SPEC} ${MPOINT}: not a partition of the image, left out"
+					continue
+				fi
+				if [ ! -d "${DIR}${MPOINT}" ]
+				then
+					run_cmd -s "mkdir -p \"${DIR}${MPOINT}\"" > /dev/null || image_mount_undo || return
+				fi
+				run_cmd -s "mount ${MOUNT_OPTS[*]} \"${FOUND}\" \"${DIR}${MPOINT}\"" > /dev/null || image_mount_undo || return
+				echo "${FOUND} on ${DIR}${MPOINT}"
+			done < <(image_fstab_mounts "${DIR}/etc/fstab")
+		else
+			### No system in it: every partition on p<n>
+			for PART in "${PARTS[@]}"
+			do
+				MPOINT=${DIR}/p${PART##*p}
+				run_cmd "mkdir -p \"${MPOINT}\"" > /dev/null || image_mount_undo || return
+				if run_cmd -s "mount ${MOUNT_OPTS[*]} \"${PART}\" \"${MPOINT}\"" > /dev/null
+				then
+					echo "${PART} on ${MPOINT}"
+				else
+					echo "${PART}: no file system mount knows, left out"
+				fi
+			done
+		fi
+	fi
+	echo "Mounted${MOUNT_OPTS[*]:+ read-only}: bbxb umount ${DIR} to release it."
+}
+
+function image_umount () {
+	### image_umount <image file | directory>: unmount what image_mount mounted, from the image or
+	### from its directory (the mounts in it: the p<n> of an image without a system too), and
+	### detach the loop devices; the directories left empty are removed. An image attached but not
+	### mounted is only detached.
+	local TARGET SOURCE PKNAME LOOPDEV LOOPDEVS MPOINT
+	local -a MPOINTS
+
+	TARGET=${1}
+	if [ -z "${TARGET}" ] || [ ! -e "${TARGET}" ]
+	then
+		trow_error "${ERROR_FILE_NOT_FOUND}" "No image or directory ${TARGET}." || return
+	fi
+	TARGET=$(realpath "${TARGET}")
+	if [ -d "${TARGET}" ]
+	then
+		LOOPDEVS=$(findmnt -rn -o SOURCE,TARGET | awk -v dir="${TARGET}" '$2 == dir || index($2, dir "/") == 1 { print $1 }' |
+			while read -r SOURCE
+			do
+				PKNAME=$(lsblk -ndo PKNAME "${SOURCE}" 2> /dev/null || true)
+				echo "/dev/${PKNAME:-$(basename "${SOURCE}")}"
+			done | grep '^/dev/loop' | sort -u | xargs || true)
+		if [ -z "${LOOPDEVS}" ]
+		then
+			trow_error "${ERROR_GENERIC}" "No image is mounted on ${TARGET} (bbxb mount list)." || return
+		fi
+	else
+		LOOPDEVS=$(losetup -nO NAME -j "${TARGET}" | xargs)
+		if [ -z "${LOOPDEVS}" ]
+		then
+			trow_error "${ERROR_GENERIC}" "${TARGET} is not attached to a loop device (bbxb mount list)." || return
+		fi
+	fi
+
+	for LOOPDEV in ${LOOPDEVS}
+	do
+		### Every mount point of the device and its partitions, the deepest first
+		mapfile -t MPOINTS < <(lsblk -rno MOUNTPOINT "${LOOPDEV}" | awk 'NF { print length, $0 }' | sort -rn |
+			cut -d' ' -f2- | while IFS= read -r MPOINT; do printf '%b\n' "${MPOINT}"; done)
+		for MPOINT in "${MPOINTS[@]}"
+		do
+			run_cmd -s "umount \"${MPOINT}\"" > /dev/null || return
+			echo "${MPOINT} unmounted"
+		done
+		run_cmd -s "losetup -d \"${LOOPDEV}\"" > /dev/null || return
+		echo "${LOOPDEV} detached"
+		### The directories image_mount made: the mount points outside the image, and the one of
+		### the p<n>. Inside the image (boot) they went with it; rmdir leaves any with content
+		for MPOINT in "${MPOINTS[@]}"
+		do
+			rmdir "${MPOINT}" 2> /dev/null || true
+			if [[ ${MPOINT} =~ /p[0-9]+$ ]]
+			then
+				rmdir "$(dirname "${MPOINT}")" 2> /dev/null || true
+			fi
+		done
+	done
+}
+
 unset MOUNTED_IMAGES
 
 is_images_functions () {

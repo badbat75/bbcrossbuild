@@ -28,6 +28,15 @@ DATA_PATH=~/.bbxb TOOLCHAIN=llvm ./bbxb build lfs generic-x64   # any setenv/bbx
 # the name of its log ([glibc_2.44-cross] ...), the new ones as they appear (log_tail in core.functions), on the host
 # also for a container build
 ./bbxb logtail lfs rpi3-aarch64
+# Mount the image of a project (<platform>/<project>.img, left by unmount_tag --finalize) or any disk image on
+# <image>.mnt or a directory given: the partition with /etc/fstab is the root, the partitions its fstab names by
+# PARTUUID/UUID/LABEL go to their mount points, an image without one has p<n> (image_mount in images.functions,
+# no dev/proc/sys: that is mount_tag); mount list shows every image on a loop device, the ones of a build too;
+# umount takes the project, the image or the directory. No argument, help, -h, --help: the help
+./bbxb mount [--ro] lfs rpi3-aarch64 [<directory>]
+./bbxb mount [--ro] <image> [<directory>]
+./bbxb mount list
+./bbxb umount lfs rpi3-aarch64 | <image> | <directory>
 
 # Smoke test: bootstraps a toolchain and a handful of packages for gnu+llvm on generic-x64, rpi, rpi3-aarch64.
 # It writes projects/test.prj, uses ~/.bbxb_test as DATA_PATH and takes hours.
@@ -61,7 +70,8 @@ PRJ_PATH=projects-tmp PRJ_DIR=projects-tmp ./bbxb build lfs rpi3-aarch64   # the
 ./bbxb --container build lfs rpi3-aarch64
 # The images and the containers of bbxb on the host (container_command in container.functions): a build
 # runs in the container bbxb-<project>-<platform>, labelled with both, and a second one of the same pair
-# is refused. build rebuilds the image and exports the build cache to /var/cache/bbcrossbuild-docker
+# is refused. The output of docker build goes to <DATA_PATH>/logs/container_<image>.log (logtail follows
+# it), the console gets one line. No command prints the help. build rebuilds the image and exports the build cache to /var/cache/bbcrossbuild-docker
 # (group docker, override with BBXB_CACHE_DIR), which every later build imports, so the dnf layer
 # survives a "docker system prune"; list marks the image of the checkout and whether it matches the
 # Dockerfile; stop sends SIGINT to every process of the container (docker stop would SIGTERM bbxb alone,
@@ -155,7 +165,7 @@ The script runs with `set -E -o pipefail` and an ERR trap (`on_error` in `core.f
 
 ### Images and chroot (images.functions)
 
-`create_image` / `mount_tag` / `unmount_tag` manage loop-mounted disk images under `<platform>/diskimages`; `mount_tag --url` also downloads a vendor image (the moode project mounts a Raspberry Pi OS image as `distos`). `inject_into_mount_tag` copies the sysroot in, `run_on_root_dir` chroots with qemu-user-static, `unmount_tag --finalize` produces a `.dd` file. All of this needs root, which is why the container runs `--privileged` and why the ERR trap unmounts on failure.
+`create_image` / `mount_tag` / `unmount_tag` manage loop-mounted disk images under `<platform>/diskimages`; `mount_tag --url` also downloads a vendor image (the moode project mounts a Raspberry Pi OS image as `distos`). `inject_into_mount_tag` copies the sysroot in, `run_on_root_dir` chroots with qemu-user-static, `unmount_tag --finalize` produces a `.dd` file. `image_mount` / `image_umount` / `image_mount_list` are the `bbxb mount` commands, outside a build: a whole image on a directory, its partitions placed by its own fstab. All of this needs root, which is why the container runs `--privileged` and why the ERR trap unmounts on failure.
 
 ### Configuration of the built system (osconfig.functions)
 
@@ -169,7 +179,7 @@ One rule splits them in two. What is a file is written into the sysroot (`${BIN_
 - `packages/<group>/<name>/`: `lfs/` (BLFS-style recipes, the bulk), `raspberrypi/`, `moode/`, `python/`, `perl/`, `firmwares/`, `fonts/`, `microsoft/` (WSL kernel). Every group is a git submodule of its own repository `packages-<group>` (`.gitmodules`); `bbxb` stops with an error when a group directory is empty. `packages/template/` is the annotated starting point for a new recipe and lives in this repository.
 - `configurations/`: templates for `bbxb.conf` and `lfs.conf`.
 - `utilities/`: host helpers (`deptool`, `crossgdb`, `crossldd`, `qemu_cmdgen`, `fs_manager`, `aws_create_infrastructure`, bootstrap scripts, container scripts); `pkg_lint` and `pkg_show` share `utilities/pkgtools.functions`, which sources the framework with the build steps stubbed out and resolves a recipe through `set_target_prefixes` and `apply_recipe_variants`, the same code `build` uses.
-- `tests/*.bats`: the bats suite; `tests/test_helper.bash` loads the framework the same way (`load_framework`, platform from `PLATFORM_NAME`) and offers `make_recipe`, `put`, `select_target`, `assert_output_lines`, `assert_equal` to build and check fixture recipes under `BATS_TEST_TMPDIR`. One file per area: `variants`, `recipe_files` (patches, scripts), `checksum`, `prefixes`, `pkgtools` (`recipe_resolve`), `core`, `build` (the order of `build` on recipes that build nothing: the real `build` and `run_cmd` over the stubs, cross target), `container` (the image name, the variables of the environment that travel to it, and the `bbxb container` commands over a docker stub), `host_paths` (`strip_host_paths`, `host_path_maps`, `gcc_host_path_specs`, `clang_host_path_config`, `find_host_paths`, `lto_object_files`, `strip_lto_objects`), `sfx` (the installer of `create_sfx_package` and its post install scripts), `osconfig` (the directives of `osconfig.functions` over a sysroot in the temporary directory, with `run_on_root_dir` stubbed). `tests/board_check` is the
+- `tests/*.bats`: the bats suite; `tests/test_helper.bash` loads the framework the same way (`load_framework`, platform from `PLATFORM_NAME`) and offers `make_recipe`, `put`, `select_target`, `assert_output_lines`, `assert_equal` to build and check fixture recipes under `BATS_TEST_TMPDIR`. One file per area: `bbxb` (the command line up to the project: the help, which no argument, `help`, `-h`, `--help` and a command without project and platform print, the unknown commands), `variants`, `recipe_files` (patches, scripts), `checksum`, `prefixes`, `pkgtools` (`recipe_resolve`), `core`, `build` (the order of `build` on recipes that build nothing: the real `build` and `run_cmd` over the stubs, cross target), `container` (the image name, the variables of the environment that travel to it, and the `bbxb container` commands over a docker stub), `images` (`bbxb mount`, `umount`, `mount list` over stubs of losetup, lsblk, findmnt and sudo), `host_paths` (`strip_host_paths`, `host_path_maps`, `gcc_host_path_specs`, `clang_host_path_config`, `find_host_paths`, `lto_object_files`, `strip_lto_objects`), `sfx` (the installer of `create_sfx_package` and its post install scripts), `osconfig` (the directives of `osconfig.functions` over a sysroot in the temporary directory, with `run_on_root_dir` stubbed). `tests/board_check` is the
   other kind of test: a plain script copied to a system the framework built and run there as root, which
   checks the state of that system (units and presets, the mode of `/` and the leftovers in it, machine-id and
   clock-epoch, the lines of `nsswitch.conf` and what each one resolves with timings, the domain of the DHCP

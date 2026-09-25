@@ -3,7 +3,7 @@
 # the environment that travel to the container) and the commands of "bbxb container" over a docker
 # stub (docker_stub). Nothing here talks to docker.
 # The tests set variables the sourced framework reads and read the ones it sets:
-# shellcheck disable=SC1091,SC2016,SC2030,SC2031,SC2034,SC2154
+# shellcheck disable=SC1091,SC2016,SC2030,SC2031,SC2034,SC2154,SC2329
 
 load test_helper
 
@@ -208,8 +208,14 @@ docker push ghcr.io/badbat75/bbcrossbuild-devel"
 
 @test "container_command checks the command and its arguments, and runs on the host only" {
 	docker_stub
+	CONTAINER_NAME=bbcrossbuild-fixture
 	run container_command
-	[ "${status}" -eq "${ERROR_NOT_VALID_OPTION}" ]
+	[ "${status}" -eq 0 ]
+	[[ ${lines[0]} == "Usage: bbxb container <command>"* ]]
+	run container_command stop
+	[ "${status}" -eq 0 ]
+	[[ ${lines[0]} == "Usage: bbxb container <command>"* ]]
+	run ! grep -q "^docker exec" "${DOCKER_CALLS}"
 	run container_command pull
 	[ "${status}" -eq "${ERROR_NOT_VALID_OPTION}" ]
 	run container_command ps lfs
@@ -219,4 +225,24 @@ docker push ghcr.io/badbat75/bbcrossbuild-devel"
 	BBXB_IN_CONTAINER=1
 	run container_command ps
 	[ "${status}" -eq "${ERROR_GENERIC}" ]
+}
+
+@test "container_image writes the output of docker build to its log, one line on the console" {
+	docker_stub
+	CONTAINER_NAME=bbcrossbuild-fixture
+	GLOBAL_LOG_PATH=${BATS_TEST_TMPDIR}/logs
+	function docker () {
+		if [ "${1}" == build ]
+		then
+			echo "#6 RUN dnf -y upgrade"
+			echo "#6 ERROR: dnf failed" >&2
+			return 1
+		fi
+		return 0
+	}
+	run container_image --force
+	[ "${status}" -eq 1 ]
+	assert_output_lines "Building the container image bbcrossbuild-fixture (log: ${GLOBAL_LOG_PATH}/container_bbcrossbuild-fixture.log)... failed."
+	grep -q "#6 RUN dnf -y upgrade" "${GLOBAL_LOG_PATH}/container_bbcrossbuild-fixture.log"
+	grep -q "#6 ERROR: dnf failed" "${GLOBAL_LOG_PATH}/container_bbcrossbuild-fixture.log"
 }
