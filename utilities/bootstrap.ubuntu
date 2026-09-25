@@ -40,3 +40,7 @@ sudo apt-get install -y xsltproc docbook-xsl docbook2x
 
 # for btrfs-progs
 sudo apt-get install -y asciidoc
+
+# for Tk 9, which packs its script library into a zip appended to the library (zipfs): its Makefile
+# has no rule for the minizip configure falls back to without zip
+sudo apt-get install -y zip

@@ -18,7 +18,7 @@ RUN dnf -y upgrade && \
     perl-Thread-Queue perl-FindBin perl-IPC-Cmd perl-Pod-Html python3-passlib python3-docutils \
     graphviz libxslt docbook-style-xsl libxml2-devel \
     libedit-devel lua-devel openssl-devel libffi-devel libuuid-devel \
-    tcl-devel tk-devel glibc-devel glibc-gconv-extra \
+    tcl-devel tk-devel glibc-devel glibc-gconv-extra zip \
     shadow-utils util-linux sudo
 
 # The checksum of this file, which bbxb compares with the one of the checkout to know whether the

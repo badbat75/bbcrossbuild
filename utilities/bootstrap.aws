@@ -42,6 +42,10 @@ PACKAGES+=" libxslt docbook-xsl docbook2X"
 # for btrfs-progs
 PACKAGES+=" asciidoc"
 
+# for Tk 9, which packs its script library into a zip appended to the library (zipfs): its Makefile
+# has no rule for the minizip configure falls back to without zip
+PACKAGES+=" zip"
+
 if dnf > /dev/null 2>&1
 then
     sudo dnf -y install ${PACKAGES}
