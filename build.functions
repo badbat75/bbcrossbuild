@@ -2156,11 +2156,12 @@ function kernelbuild () {
 			local STATUS=${?}
 			;;
 		*)
-			if [ ! -d "${PKG_PKGPATH}/boot" ]
-			then
-				mkdir "${PKG_PKGPATH}/boot"
-			fi
-			run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=\"${KERNEL_ARCH}\"} ${HARCH:+CROSS_COMPILE=\"${HARCH}-\"} INSTALL_PATH=\"${PKG_PKGPATH}/boot\" ${PKG_MAKEVARS} install"
+			### Not "make install": scripts/install.sh hands the image to the installkernel of the build
+			### machine, which ignores INSTALL_PATH (kernel-install of the Fedora container: no image in
+			### the package), and the fallback of the architecture names no version
+			run_cmd "mkdir -p \"${PKG_PKGPATH}/boot\""
+			run_cmd "cp \"arch/${KERNEL_ARCH}/boot/${KERNEL_IMAGE}\" \"${PKG_PKGPATH}/boot/vmlinuz-${KERNEL_RELEASE}\""
+			run_cmd "cp System.map \"${PKG_PKGPATH}/boot/System.map-${KERNEL_RELEASE}\""
 			;;
 	esac
 	
