@@ -1910,6 +1910,11 @@ function mesonninja () {
 		*)
 			createmesoncross
 			MESON_FLAGS+=" --cross-file cross-${PLATFORM_NAME}"
+			### A dependency of the build machine (native: true, wayland-scanner) is a program the build
+			### runs: the pc files of the cross builds win over the ones of the sysroot, whose programs
+			### are of the target (on a host of the same architecture they run natively, without the
+			### libraries of the sysroot)
+			MESON_FLAGS+=" -Dbuild.pkg_config_path=${TOOLCHAIN_PATH}/lib/pkgconfig"
 		;;
 	esac
 	cat > runconfig.sh <<-EOF
