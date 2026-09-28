@@ -826,6 +826,10 @@ function create_environment_source () {
 
 		export QEMU_LD_PREFIX='${SYSROOT}'
 		export QEMU_LD_LIBRARY_PATH='${QEMU_LD_LIBRARY_PATH}'
+		### The CPU qemu-user emulates for the programs of the target the build runs (exe_wrapper,
+		### binfmt): its default lacks what HMARCH may grant (qemu64 has no SSE4.2 for x86-64-v2).
+		### Not the QEMU_CPU of the platform, which is the machine of emulator.functions
+		export QEMU_CPU=max
 
 		export ENVIRONMENT_SOURCE_PATH='${PWD}'
 	EOF
