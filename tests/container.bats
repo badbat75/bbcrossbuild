@@ -29,22 +29,23 @@ setup () {
 	assert_equal "${CONTAINER_NAME}" "bbcrossbuild-fixture"
 }
 
-@test "container_env_names passes the framework overrides of the environment and nothing else" {
+@test "container_env_names passes the framework overrides and the host names of the environment, nothing else" {
 	### The order of bbxb: container.functions remembers the environment, then the platform file
 	### and setenv are sourced, and they export paths of their own that are no overrides
 	run bash -c 'export TOOLCHAIN=llvm PRJ_PATH=/fixture/projects HMCPU=fixture-cpu
-		export DATA_PATH=/fixture/data SESSION_TOKEN=secret
+		export DATA_PATH=/fixture/data SESSION_TOKEN=secret WSL_DISTRO_NAME=Fixture-44
 		source "${BB_HOME}/core.functions"
 		source "${BB_HOME}/container.functions"
 		PLATFORM="${BB_HOME}/platforms/generic-x64.conf"
 		source "${PLATFORM}"
 		source "${BB_HOME}/setenv"
 		container_env_names'
-	assert_output_lines HMCPU PRJ_PATH TOOLCHAIN
+	assert_output_lines HMCPU PRJ_PATH TOOLCHAIN WSL_DISTRO_NAME
 }
 
 @test "container_env_names leaves out a variable the environment did not carry" {
-	run bash -c 'source "${BB_HOME}/core.functions"
+	### env -u: under WSL the environment of the test carries WSL_DISTRO_NAME, a name that travels
+	run env -u WSL_DISTRO_NAME bash -c 'source "${BB_HOME}/core.functions"
 		source "${BB_HOME}/container.functions"
 		export TOOLCHAIN=llvm
 		container_env_names'

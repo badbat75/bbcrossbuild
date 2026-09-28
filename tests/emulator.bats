@@ -1,0 +1,224 @@
+#!/usr/bin/env bats
+# emulator.bats: bbxb emulator cmdgen and run (emulator_cmdgen, emulator_run of emulator.functions)
+# on a project directory in the temporary directory, with stubs of fdtoverlay, qemu and sudo:
+# nothing is emulated. The tests set variables the sourced framework reads and read the ones it sets:
+# shellcheck disable=SC1091,SC2034,SC2154,SC2329
+
+load test_helper
+
+setup () {
+	# shellcheck source=seterr
+	source "${BB_HOME}/seterr"
+	# shellcheck source=core.functions
+	source "${BB_HOME}/core.functions"
+	# shellcheck source=emulator.functions
+	source "${BB_HOME}/emulator.functions"
+	unset WSL_DISTRO_NAME QEMU_EXE_PREFIX
+	### A generic-aarch64 build of lfs: the image, the kernel of system_config
+	PROJECT_NAME=lfs
+	PLATFORM_NAME=generic-aarch64
+	PLATFORM_PATH=${BATS_TEST_TMPDIR}/data/lfs/${PLATFORM_NAME}
+	BIN_PATH=${PLATFORM_PATH}/binaries
+	STATUS_PATH=${PLATFORM_PATH}/status
+	GLOBAL_TOOLCHAIN_PATH=${BATS_TEST_TMPDIR}/data/toolchain
+	HM=aarch64
+	KERNEL_VER=0.0
+	KERNEL_NAME=
+	QEMU_MACHINE=virt
+	QEMU_CPU=cortex-a53
+	QEMU_SMP=2
+	QEMU_RAM=2048
+	QEMU_STORAGE=virtio-blk-pci
+	QEMU_NETWORK=virtio-net-pci
+	QEMU_GRAPHIC=
+	QEMU_INPUT=
+	QEMU_CONSOLE=ttyAMA0
+	QEMU_DTB=
+	QEMU_DTBO=
+	QEMU_OTHERDEVICES=virtio-rng-pci
+	QEMU_KERNCONFIG=net.ifnames=0
+	put "${PLATFORM_PATH}/lfs.img"
+	put "${STATUS_PATH}/system_config" "KERNEL_VER=6.12.1
+KERNEL_RELEASE=6.12.1-v8"
+}
+
+@test "the linux command line names the image, the kernel of system_config and the root" {
+	emulator_cmdline linux "" "" ""
+	assert_equal "${EMULATOR_CMDLINE}" "\"\${QEMU_EXE_PREFIX}qemu-system-aarch64\" -machine virt -cpu cortex-a53 -smp 2 -m 2048 -device virtio-blk-pci,drive=disk0 -drive file=\"\${SYSTEM_PREFIX}${PLATFORM_PATH}/lfs.img\",if=none,format=raw,id=disk0 -device virtio-net-pci,netdev=eth0 -netdev user,id=eth0,hostfwd=tcp::5022-:22 -nographic  -device virtio-rng-pci -kernel \"\${SYSTEM_PREFIX}${BIN_PATH}/boot/vmlinuz-6.12.1-v8\" -initrd \"\${SYSTEM_PREFIX}${BIN_PATH}/boot/initramfs-6.12.1-v8.img\" -append \"console=ttyAMA0 root=/dev/vda2 rootfstype=ext4 rootwait cgroup_enable=memory systemd.gpt_auto=no net.ifnames=0\""
+	assert_equal "${EMULATOR_KERNEL_VER}" 6.12.1
+	### The KERNEL_VER of the build stays
+	assert_equal "${KERNEL_VER}" 0.0
+}
+
+@test "the root is the device given, or the partition given of the disk of QEMU_STORAGE" {
+	emulator_cmdline linux PARTUUID=1234-02 btrfs ""
+	[[ ${EMULATOR_CMDLINE} == *'-append "console=ttyAMA0 root=PARTUUID=1234-02 rootfstype=btrfs rootwait '* ]]
+	QEMU_STORAGE=sd-card
+	emulator_cmdline linux "" "" 3
+	[[ ${EMULATOR_CMDLINE} == *" root=/dev/mmcblk0p3 rootfstype=ext4 "* ]]
+}
+
+### image_table <label> <partitions>: a partition table on the image, written by sfdisk on the file;
+### blkid answers TYPE=<fs> for the partition that starts at sector 4096 (the root of the tables
+### below), nothing elsewhere
+function image_table () {
+	truncate -s 8M "${PLATFORM_PATH}/lfs.img"
+	printf '%s\n' "${@}" | sfdisk -q "${PLATFORM_PATH}/lfs.img"
+	function blkid () {
+		if [[ " ${*} " == *" --offset $((4096 * 512)) "* ]]
+		then
+			echo "TYPE=${BLKID_TYPE}"
+		fi
+	}
+}
+
+@test "the root of an MBR image is the PARTUUID and the file system of its partition 2" {
+	image_table "label: dos" "label-id: 0xEB4AE0EE" "start=2048, size=2048, type=c" "start=4096, type=83"
+	BLKID_TYPE=btrfs
+	run emulator_image_root "${PLATFORM_PATH}/lfs.img" 2
+	assert_equal "${output}" "PARTUUID=eb4ae0ee-02|btrfs"
+	emulator_cmdline linux "" "" ""
+	[[ ${EMULATOR_CMDLINE} == *" root=PARTUUID=eb4ae0ee-02 rootfstype=btrfs rootwait "* ]]
+	### What the command line gives wins, the rest still comes from the image
+	emulator_cmdline linux /dev/vda2 "" ""
+	[[ ${EMULATOR_CMDLINE} == *" root=/dev/vda2 rootfstype=btrfs rootwait "* ]]
+	emulator_cmdline linux "" xfs ""
+	[[ ${EMULATOR_CMDLINE} == *" root=PARTUUID=eb4ae0ee-02 rootfstype=xfs rootwait "* ]]
+}
+
+@test "the root of a GPT image is the uuid of the partition, --rootpart chooses it" {
+	image_table "label: gpt" "start=2048, size=2048, uuid=0A1B2C3D-0000-4000-8000-000000000001" \
+		"start=4096, size=4096, uuid=0A1B2C3D-0000-4000-8000-00000000000A" "start=8192"
+	BLKID_TYPE=ext4
+	emulator_cmdline linux "" "" ""
+	[[ ${EMULATOR_CMDLINE} == *" root=PARTUUID=0a1b2c3d-0000-4000-8000-00000000000a rootfstype=ext4 rootwait "* ]]
+	### Partition 1: its uuid, no file system blkid knows there, ext4
+	BLKID_TYPE=vfat
+	emulator_cmdline linux "" "" 1
+	[[ ${EMULATOR_CMDLINE} == *" root=PARTUUID=0a1b2c3d-0000-4000-8000-000000000001 rootfstype=ext4 rootwait "* ]]
+	### No partition 5: the device of QEMU_STORAGE
+	run emulator_image_root "${PLATFORM_PATH}/lfs.img" 5
+	assert_equal "${output}" "|"
+	emulator_cmdline linux "" "" 5
+	[[ ${EMULATOR_CMDLINE} == *" root=/dev/vda5 rootfstype=ext4 rootwait "* ]]
+}
+
+@test "the win command line runs on the snapshot, with the paths of WSL and %KERNEL_VER%" {
+	WSL_DISTRO_NAME=Fedora
+	KERNEL_NAME="kernel8-\${KERNEL_VER}.img"
+	emulator_cmdline win "" "" ""
+	[[ ${EMULATOR_CMDLINE} == '"%QEMU_EXE_PREFIX%qemu-system-aarch64.exe" '* ]]
+	[[ ${EMULATOR_CMDLINE} == *' -drive file="%SNAPSHOT%",if=none,format=qcow2,id=disk0 '* ]]
+	[[ ${EMULATOR_CMDLINE} == *" -kernel \"\\\\wsl\$\\Fedora${BIN_PATH//\//\\}\\boot\\kernel8-%KERNEL_VER%.img\" "* ]]
+	[[ ${EMULATOR_SNAPSHOT} == "%SystemRoot%\\TEMP\\lfs-generic-aarch64-"+([0-9])".qcow2" ]]
+	unset WSL_DISTRO_NAME
+	emulator_cmdline win "" "" ""
+	[[ ${EMULATOR_CMDLINE} == *" -initrd \"%SYSTEM_PREFIX%${BIN_PATH//\//\\}\\boot\\initramfs-6.12.1-v8.img\" "* ]]
+}
+
+@test "the overlays of QEMU_DTBO go into <project>.dtb with the fdtoverlay of the global toolchain" {
+	put "${GLOBAL_TOOLCHAIN_PATH}/bin/fdtoverlay" "#!/bin/sh
+echo \"\${*}\" > \"${BATS_TEST_TMPDIR}/fdtoverlay.args\""
+	chmod +x "${GLOBAL_TOOLCHAIN_PATH}/bin/fdtoverlay"
+	QEMU_DTB=bcm2710-rpi-3-b.dtb
+	QEMU_DTBO="disable-bt miniuart-bt"
+	emulator_cmdline linux "" "" ""
+	[[ ${EMULATOR_CMDLINE} == *" -dtb \"\${SYSTEM_PREFIX}${PLATFORM_PATH}/lfs.dtb\" "* ]]
+	assert_equal "$(cat "${BATS_TEST_TMPDIR}/fdtoverlay.args")" "-i ${BIN_PATH}/boot/bcm2710-rpi-3-b.dtb -o ${PLATFORM_PATH}/lfs.dtb ${BIN_PATH}/boot/overlays/disable-bt.dtbo ${BIN_PATH}/boot/overlays/miniuart-bt.dtbo"
+	QEMU_DTBO=
+	emulator_cmdline linux "" "" ""
+	[[ ${EMULATOR_CMDLINE} == *" -dtb \"\${SYSTEM_PREFIX}${BIN_PATH}/boot/bcm2710-rpi-3-b.dtb\" "* ]]
+}
+
+@test "a platform without QEMU settings, a project without image or kernel fail" {
+	run emulator_cmdgen
+	[ "${status}" -eq 0 ]
+	rm "${STATUS_PATH}/system_config"
+	run emulator_cmdgen
+	[ "${status}" -eq "${ERROR_FILE_NOT_FOUND}" ]
+	[[ ${output} == *"system_config does not exist"* ]]
+	rm "${PLATFORM_PATH}/lfs.img"
+	run emulator_cmdgen
+	[ "${status}" -eq "${ERROR_FILE_NOT_FOUND}" ]
+	[[ ${output} == *"has no image"* ]]
+	QEMU_STORAGE=
+	run emulator_cmdgen
+	[ "${status}" -eq "${ERROR_NOT_VALID_OPTION}" ]
+	[[ ${output} == *"has no QEMU settings"* ]]
+	run emulator_cmdgen --batchtype dos
+	[ "${status}" -eq "${ERROR_NOT_VALID_OPTION}" ]
+	[[ ${output} == *"Unknown batch type dos"* ]]
+}
+
+@test "cmdgen prints the command line, --savecmd writes the script" {
+	run emulator_cmdgen --rootpart 1
+	[ "${status}" -eq 0 ]
+	[ "${#lines[@]}" -eq 1 ]
+	[[ ${output} == *" root=/dev/vda1 "* ]]
+	run emulator_cmdgen --quiet --savecmd "${BATS_TEST_TMPDIR}/run.sh"
+	[ "${status}" -eq 0 ]
+	assert_output_lines
+	[ -x "${BATS_TEST_TMPDIR}/run.sh" ]
+	assert_equal "$(sed -n 1p "${BATS_TEST_TMPDIR}/run.sh")" "#!/bin/sh"
+	assert_equal "$(sed -n 3p "${BATS_TEST_TMPDIR}/run.sh")" "KERNEL_VER=6.12.1"
+	[[ $(sed -n 5p "${BATS_TEST_TMPDIR}/run.sh") == "\"\${QEMU_EXE_PREFIX}qemu-system-aarch64\" -machine virt "* ]]
+}
+
+@test "cmdgen --batchtype all writes <project>.qemu and <project>.qemu.bat next to the image" {
+	WSL_DISTRO_NAME=Fedora
+	run emulator_cmdgen --quiet --batchtype all
+	[ "${status}" -eq 0 ]
+	[ -x "${PLATFORM_PATH}/lfs.qemu" ]
+	[ -f "${PLATFORM_PATH}/lfs.qemu.bat" ]
+	### The batch has the line ends of cmd
+	[ "$(grep -c $'\r$' "${PLATFORM_PATH}/lfs.qemu.bat")" -eq "$(wc -l < "${PLATFORM_PATH}/lfs.qemu.bat")" ]
+	grep -qx $'set KERNEL_VER=6.12.1\r' "${PLATFORM_PATH}/lfs.qemu.bat"
+	grep -qx "set IMAGE=\\\\\\\\wsl\\\$\\\\Fedora${PLATFORM_PATH//\//\\\\}\\\\lfs.img"$'\r' "${PLATFORM_PATH}/lfs.qemu.bat"
+	grep -q '^"%QEMU_EXE_PREFIX%qemu-system-aarch64.exe" ' "${PLATFORM_PATH}/lfs.qemu.bat"
+}
+
+@test "run checks QEMU and runs the command line with sudo, the kernel of system_config in it" {
+	QEMU_EXE_PREFIX=${BATS_TEST_TMPDIR}/qemu/
+	KERNEL_NAME="kernel8-\${KERNEL_VER}.img"
+	put "${QEMU_EXE_PREFIX}qemu-system-aarch64" "#!/bin/sh
+case \"\${1}\" in
+	--version) echo 'QEMU emulator version 10.1.0' ;;
+	-machine) printf '%s\\n' 'Supported machines are:' 'virt                 QEMU 10.1 ARM Virtual Machine (alias of virt-10.1)' ;;
+esac"
+	chmod +x "${QEMU_EXE_PREFIX}qemu-system-aarch64"
+	function sudo () {
+		printf '%s\n' "${@}" > "${BATS_TEST_TMPDIR}/sudo.args"
+	}
+	run emulator_run --rootdev PARTUUID=1234-02
+	[ "${status}" -eq 0 ]
+	assert_equal "$(sed -n 1p "${BATS_TEST_TMPDIR}/sudo.args")" "${QEMU_EXE_PREFIX}qemu-system-aarch64"
+	grep -qx "file=${PLATFORM_PATH}/lfs.img,if=none,format=raw,id=disk0" "${BATS_TEST_TMPDIR}/sudo.args"
+	grep -qx "${BIN_PATH}/boot/kernel8-6.12.1.img" "${BATS_TEST_TMPDIR}/sudo.args"
+	grep -qx "console=ttyAMA0 root=PARTUUID=1234-02 rootfstype=ext4 rootwait cgroup_enable=memory systemd.gpt_auto=no net.ifnames=0" "${BATS_TEST_TMPDIR}/sudo.args"
+	QEMU_MACHINE=raspi3b
+	run emulator_run
+	[ "${status}" -eq "${ERROR_NOT_VALID_OPTION}" ]
+	[[ ${output} == *"QEMU 10.1.0 does not support the machine raspi3b"* ]]
+	run emulator_run --quiet
+	[ "${status}" -eq "${ERROR_NOT_VALID_OPTION}" ]
+	[[ ${output} == *"Unrecognized option: --quiet"* ]]
+}
+
+@test "bbxb emulator without a command, a project or a platform prints the help, an unknown command fails" {
+	run "${BB_HOME}/bbxb" emulator
+	[ "${status}" -eq 0 ]
+	[[ ${lines[0]} == "Usage: bbxb "* ]]
+	[[ ${output} == *"emulator run "* ]]
+	run "${BB_HOME}/bbxb" emulator cmdgen
+	[ "${status}" -eq 0 ]
+	[[ ${lines[0]} == "Usage: bbxb "* ]]
+	run "${BB_HOME}/bbxb" emulator boot lfs generic-x64
+	[ "${status}" -eq "${ERROR_NOT_VALID_OPTION}" ]
+	[[ ${output} == *"Unknown emulator command boot"* ]]
+	run "${BB_HOME}/bbxb" emulator run lfs
+	[ "${status}" -eq "${ERROR_NOT_VALID_OPTION}" ]
+	[[ ${output} == *"No platform name specified"* ]]
+	run "${BB_HOME}/bbxb" emulator run --savecmd x lfs generic-x64
+	[ "${status}" -eq "${ERROR_NOT_VALID_OPTION}" ]
+	[[ ${output} == *"Unrecognized option: --savecmd"* ]]
+}

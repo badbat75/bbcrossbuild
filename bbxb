@@ -48,6 +48,14 @@ function bbxb_usage () {
 		  mount list                     the images mounted, by bbxb mount or by a build
 		  umount <project> <platform> | <image> | <directory>
 		                                 unmount an image and detach its loop device
+		  emulator cmdgen [--quiet] [--batchtype linux|win|all] [--savecmd <file>] [<root>] <project> <platform>
+		                                 print the QEMU command line of the image of the project and
+		                                 with --savecmd write it as a script (<file>, <file>.bat for win;
+		                                 all: both, default <platform>/<project>.qemu next to the image)
+		  emulator run [<root>] <project> <platform>
+		                                 run the image of the project in the QEMU of this host (sudo)
+		                                 <root>: --rootdev <device> (PARTUUID=...), --rootfs <fs> (ext4),
+		                                 --rootpart <n> (2, of the disk QEMU_STORAGE gives the guest)
 		  container <command>            the image and the containers of bbxb (bbxb container help)
 		  help                           this help
 
@@ -97,7 +105,8 @@ then
 fi
 
 ### No argument, or no project and no platform after the command: the help, not an error
-if [ ${#} -eq 0 ] || [[ ${1} == @(help|-h|--help) ]] || { [[ ${1} == @(build|logtail|mount|umount) ]] && [ ${#} -eq 1 ]; }
+if [ ${#} -eq 0 ] || [[ ${1} == @(help|-h|--help) ]] || { [[ ${1} == @(build|logtail|mount|umount) ]] && [ ${#} -eq 1 ]; } ||
+	{ [ "${1}" == emulator ] && [ ${#} -le 2 ]; }
 then
 	bbxb_usage
 	bbxb_done
@@ -133,6 +142,34 @@ then
 	fi
 fi
 
+### bbxb emulator cmdgen|run [<option>...] <project> <platform>: the options go to emulator_cmdgen or
+### emulator_run (emulator.functions), which reject the ones they do not take; what is left is an
+### ordinary bbxb emulator <project> <platform> for the checks below
+EMULATOR_OPTS=()
+if [ "${1}" == emulator ]
+then
+	OPTS="--quiet" OPTS_WITH_VALUE="--batchtype --rootdev --rootfs --rootpart --savecmd" param2value "${@:2}"
+	EMULATOR_COMMAND=${_param_1}
+	if [[ ${EMULATOR_COMMAND} != @(cmdgen|run) ]]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "Unknown emulator command ${EMULATOR_COMMAND} (bbxb help)."
+	fi
+	if [ -n "${_param_quiet}" ]
+	then
+		EMULATOR_OPTS+=(--quiet)
+	fi
+	for EMULATOR_OPT in batchtype rootdev rootfs rootpart savecmd
+	do
+		EMULATOR_VALUE=_param_${EMULATOR_OPT}
+		if [ -n "${!EMULATOR_VALUE}" ]
+		then
+			EMULATOR_OPTS+=("--${EMULATOR_OPT}" "${!EMULATOR_VALUE}")
+		fi
+	done
+	unset EMULATOR_OPT EMULATOR_VALUE
+	set -- emulator "${_param_2}" "${_param_3}"
+fi
+
 OPTS="--container --no-container --ro" OPTS_WITH_VALUE="" param2value "${@}"
 
 ### bbxb [--container|--no-container] <command> <project> <platform>: build runs the project file,
@@ -154,7 +191,7 @@ then
 fi
 
 case "${BBXB_COMMAND}" in
-	build|logtail|mount|umount)
+	build|logtail|mount|umount|emulator)
 		;;
 	*)
 		trow_error "${ERROR_NOT_VALID_OPTION}" "Unknown command ${BBXB_COMMAND} (bbxb help)."
@@ -233,6 +270,15 @@ then
 	bbxb_done
 fi
 
+### QEMU for the image of the project, on the host: the command line, its scripts, or a run
+if [ "${BBXB_COMMAND}" == emulator ]
+then
+	# shellcheck source=/dev/null
+	source "${BB_HOME}/emulator.functions"
+	"emulator_${EMULATOR_COMMAND}" "${EMULATOR_OPTS[@]}"
+	bbxb_done
+fi
+
 ### The package groups are git submodules: an empty packages/<group> is a checkout without them
 for PKG_GROUP in "${PKG_PATH}"/*/
 do
@@ -273,6 +319,8 @@ source "${BB_HOME}/images.functions"
 source "${BB_HOME}/data.functions"
 # shellcheck source=/dev/null
 source "${BB_HOME}/osconfig.functions"
+# shellcheck source=/dev/null
+source "${BB_HOME}/emulator.functions"
 
 if [ ! -f "${PROJECT}" ]
 then

@@ -1,0 +1,395 @@
+#!/bin/bash
+# emulator.functions: QEMU for the image of a project, from the QEMU_* settings of the platform.
+# bbxb emulator cmdgen|run <project> <platform> calls them with the environment of the project
+# (platform file, setenv, projects/<project>.conf), a project file calls emulator_cmdgen after
+# unmount_tag --finalize. They read the image <PLATFORM_PATH>/<PROJECT_NAME>.img and the kernel
+# and the initramfs of the sysroot, named after KERNEL_VER and KERNEL_RELEASE of system_config.
+
+check_core_functions
+
+function emulator_system_path () {
+	### emulator_system_path <batch type> <path>: a path of this system as the script names it.
+	### linux: behind ${SYSTEM_PREFIX}, which the script expands when it runs. win: with the
+	### backslashes of Windows, behind \\wsl$\<distribution> (the files of the distribution for
+	### Windows; in a container build WSL_DISTRO_NAME comes from the host, CONTAINER_ENV_HOST)
+	### or %SYSTEM_PREFIX% out of WSL
+	local BATCH_TYPE=${1}
+	local SYSTEM_PATH=${2}
+
+	if [ "${BATCH_TYPE}" == win ]
+	then
+		if [ -n "${WSL_DISTRO_NAME}" ]
+		then
+			printf '%s\n' "\\\\wsl\$\\${WSL_DISTRO_NAME}${SYSTEM_PATH//\//\\}"
+		else
+			printf '%s\n' "%SYSTEM_PREFIX%${SYSTEM_PATH//\//\\}"
+		fi
+	else
+		echo "\${SYSTEM_PREFIX}${SYSTEM_PATH}"
+	fi
+	return 0
+}
+
+function emulator_qemu_exe () {
+	### emulator_qemu_exe: the qemu-system program of the platform (HM, x86 is x86_64)
+	case ${HM} in
+		x86) echo qemu-system-x86_64 ;;
+		*) echo "qemu-system-${HM}" ;;
+	esac
+	return 0
+}
+
+function emulator_image_root () {
+	### emulator_image_root <image> <partition>: "<root device>|<file system>" of partition
+	### <partition> of the image, read from the image file without root: PARTUUID=<label-id>-<nn>
+	### for an MBR table, PARTUUID=<uuid> of the partition for GPT (sfdisk -d), the TYPE blkid
+	### probes at its offset. Each is empty when it cannot be read (no partition table, no such
+	### partition, no file system blkid knows)
+	local IMAGE=${1}
+	local PARTNO=${2}
+	local TABLE LABEL LABEL_ID SECTOR_SIZE LINE START ROOTDEV FSTYPE KEY VALUE
+
+	TABLE=$(sfdisk -d "${IMAGE}" 2> /dev/null || true)
+	LABEL=$(sed -n 's/^label: //p' <<< "${TABLE}")
+	LABEL_ID=$(sed -n 's/^label-id: //p' <<< "${TABLE}")
+	SECTOR_SIZE=$(sed -n 's/^sector-size: //p' <<< "${TABLE}")
+	### The partition lines name the image as it was given, then the number (p<n> after a digit)
+	LINE=$(awk -v A="${IMAGE}${PARTNO} :" -v B="${IMAGE}p${PARTNO} :" \
+		'index($0, A) == 1 || index($0, B) == 1' <<< "${TABLE}")
+	if [ -z "${LINE}" ]
+	then
+		echo "|"
+		return 0
+	fi
+	START=$(sed -n 's/.* start= *\([0-9]*\),.*/\1/p' <<< "${LINE}")
+	case ${LABEL} in
+		dos)
+			ROOTDEV=$(printf 'PARTUUID=%08x-%02x' "${LABEL_ID}" "${PARTNO}")
+			;;
+		gpt)
+			ROOTDEV=$(sed -n 's/.*, uuid=\([0-9A-Fa-f-]*\).*/\1/p' <<< "${LINE}")
+			ROOTDEV=${ROOTDEV:+PARTUUID=${ROOTDEV,,}}
+			;;
+	esac
+	if [ -n "${START}" ]
+	then
+		while IFS='=' read -r KEY VALUE
+		do
+			if [ "${KEY}" == TYPE ]
+			then
+				FSTYPE=${VALUE}
+			fi
+		done < <(blkid -p -o export --offset "$((START * ${SECTOR_SIZE:-512}))" "${IMAGE}" 2> /dev/null || true)
+	fi
+	echo "${ROOTDEV}|${FSTYPE}"
+	return 0
+}
+
+function emulator_cmdline () {
+	### emulator_cmdline <batch type> <root device> <root fs> <root partition>: set EMULATOR_CMDLINE,
+	### the QEMU command line of the image for a linux or a win script, EMULATOR_IMAGE, the image,
+	### EMULATOR_KERNEL_VER, the KERNEL_VER the script sets (its kernel name can name ${KERNEL_VER}),
+	### and for win EMULATOR_SNAPSHOT, the qcow2 snapshot the batch runs on. An empty root device or
+	### file system is the one of partition <root partition> (2) of the image (emulator_image_root);
+	### when the image does not tell, the partition of the disk QEMU_STORAGE gives the guest, ext4
+	local BATCH_TYPE=${1}
+	local KERN_ROOTDEV=${2}
+	local KERN_ROOTFS=${3}
+	local KERN_ROOTPARTITION=${4:-2}
+	local IMAGE_ROOTDEV IMAGE_ROOTFS
+	local QEMU_EXE SPECS_HW SPECS_STORAGE SPECS_NETWORK SPECS_GRAPHIC SPECS_SOUND SPECS_DEVICES
+	local SPECS_KERNEL KERN_ROOT KERN_CONSOLE KERN_APPEND KERNEL_RELEASE DEVICE DTBO DTB_PATH
+	local -a DTB_OVERLAYS
+
+	EMULATOR_CMDLINE=
+	EMULATOR_SNAPSHOT=
+	EMULATOR_IMAGE=${PLATFORM_PATH}/${PROJECT_NAME}.img
+
+	if [ -z "${QEMU_MACHINE}" ] || [ -z "${QEMU_STORAGE}" ]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "Platform ${PLATFORM_NAME} has no QEMU settings (QEMU_MACHINE, QEMU_STORAGE)." || return
+	fi
+	if [ ! -f "${EMULATOR_IMAGE}" ]
+	then
+		trow_error "${ERROR_FILE_NOT_FOUND}" "${PROJECT_NAME} ${PLATFORM_NAME} has no image ${EMULATOR_IMAGE}." || return
+	fi
+	if [ ! -f "${STATUS_PATH}/system_config" ]
+	then
+		trow_error "${ERROR_FILE_NOT_FOUND}" "${STATUS_PATH}/system_config does not exist: no kernel built for ${PROJECT_NAME} ${PLATFORM_NAME}." || return
+	fi
+	if [ -z "${KERN_ROOTDEV}" ] || [ -z "${KERN_ROOTFS}" ]
+	then
+		IFS='|' read -r IMAGE_ROOTDEV IMAGE_ROOTFS < <(emulator_image_root "${EMULATOR_IMAGE}" "${KERN_ROOTPARTITION}")
+		KERN_ROOTDEV=${KERN_ROOTDEV:-${IMAGE_ROOTDEV}}
+		KERN_ROOTFS=${KERN_ROOTFS:-${IMAGE_ROOTFS}}
+	fi
+	KERN_ROOTFS=${KERN_ROOTFS:-ext4}
+	### The kernel of the image, not the KERNEL_VER of setenv: in a subshell, which leaves the
+	### variables of the build as they are
+	EMULATOR_KERNEL_VER=$(
+		# shellcheck source=/dev/null
+		source "${STATUS_PATH}/system_config"
+		echo "${KERNEL_VER}"
+	)
+	KERNEL_RELEASE=$(
+		# shellcheck source=/dev/null
+		source "${STATUS_PATH}/system_config"
+		echo "${KERNEL_RELEASE}"
+	)
+
+	### QEMU exe specification
+	QEMU_EXE=$(emulator_qemu_exe)
+	case ${BATCH_TYPE} in
+		linux)
+			QEMU_EXE="\${QEMU_EXE_PREFIX}${QEMU_EXE}"
+			;;
+		win)
+			QEMU_EXE="%QEMU_EXE_PREFIX%${QEMU_EXE}.exe"
+			;;
+		*)
+			trow_error "${ERROR_NOT_VALID_OPTION}" "Unknown batch type ${BATCH_TYPE} (linux, win)." || return
+			;;
+	esac
+
+	### Machine specification
+	SPECS_HW="-machine ${QEMU_MACHINE}"
+	if [ -n "${QEMU_CPU}" ]
+	then
+		SPECS_HW+=" -cpu ${QEMU_CPU}"
+	fi
+	SPECS_HW+=" -smp ${QEMU_SMP:-2} -m ${QEMU_RAM:-2048}"
+
+	### Disk device specification
+	if [ "${BATCH_TYPE}" == win ]
+	then
+		### The batch writes into a qcow2 snapshot of the image in the TEMP of Windows, on a disk of
+		### its own instead of the virtual disk of WSL, and the image stays as the build left it. The
+		### modification time of the image is in the name: a new image gets a new snapshot, the one of
+		### the previous image would show a disk that no longer matches its backing file
+		EMULATOR_SNAPSHOT="%SystemRoot%\\TEMP\\${PROJECT_NAME}-${PLATFORM_NAME}-$(stat -c %Y "${EMULATOR_IMAGE}").qcow2"
+		SPECS_STORAGE="-device ${QEMU_STORAGE},drive=disk0 -drive file=\"%SNAPSHOT%\",if=none,format=qcow2,id=disk0"
+	else
+		SPECS_STORAGE="-device ${QEMU_STORAGE},drive=disk0 -drive file=\"$(emulator_system_path "${BATCH_TYPE}" "${EMULATOR_IMAGE}")\",if=none,format=raw,id=disk0"
+	fi
+
+	if [ -n "${KERN_ROOTDEV}" ]
+	then
+		KERN_ROOT="root=${KERN_ROOTDEV}"
+	else
+		case ${QEMU_STORAGE} in
+			ide-hd)
+				KERN_ROOT="root=/dev/hda${KERN_ROOTPARTITION}" ;;
+			scsi-hd)
+				KERN_ROOT="root=/dev/sda${KERN_ROOTPARTITION}" ;;
+			virtio-blk-pci|virtio-blk)
+				KERN_ROOT="root=/dev/vda${KERN_ROOTPARTITION}" ;;
+			sd-card)
+				KERN_ROOT="root=/dev/mmcblk0p${KERN_ROOTPARTITION}" ;;
+		esac
+	fi
+	KERN_ROOT+=" rootfstype=${KERN_ROOTFS}"
+
+	### Network device specification
+	if [ -n "${QEMU_NETWORK}" ]
+	then
+		SPECS_NETWORK="-device ${QEMU_NETWORK},netdev=eth0 -netdev user,id=eth0,hostfwd=tcp::5022-:22"
+	fi
+
+	### Graphics device specification
+	if [ -n "${QEMU_GRAPHIC}" ]
+	then
+		SPECS_GRAPHIC="-vga none -device ${QEMU_GRAPHIC}"
+		KERN_CONSOLE="console=${QEMU_CONSOLE:-ttyS0} console=tty1 "
+	else
+		SPECS_GRAPHIC="-nographic"
+		KERN_CONSOLE="console=${QEMU_CONSOLE:-ttyS0} "
+	fi
+
+	### Sound device specification
+	if [ -n "${QEMU_SOUND}" ]
+	then
+		SPECS_SOUND="-device ${QEMU_SOUND},audiodev=default -audiodev dsound,id=default"
+	fi
+
+	### Other devices specification
+	for DEVICE in ${QEMU_INPUT} ${QEMU_OTHERDEVICES}
+	do
+		SPECS_DEVICES+=" -device ${DEVICE}"
+	done
+
+	SPECS_KERNEL="-kernel \"$(emulator_system_path "${BATCH_TYPE}" "${BIN_PATH}/boot/${KERNEL_NAME:-vmlinuz-${KERNEL_RELEASE}}")\""
+	SPECS_KERNEL+=" -initrd \"$(emulator_system_path "${BATCH_TYPE}" "${BIN_PATH}/boot/${INITRAMFS_NAME:-initramfs-${KERNEL_RELEASE}.img}")\""
+	### QEMU_DTBO lists the overlays of the device tree that the firmware of the board would apply
+	### (dtoverlay= of config.txt) and QEMU does not: fdtoverlay of lfs/dtc:native merges them into
+	### <project>.dtb next to the image
+	if [ -n "${QEMU_DTB}" ]
+	then
+		DTB_PATH=${BIN_PATH}/boot/${QEMU_DTB}
+		if [ -n "${QEMU_DTBO}" ]
+		then
+			for DTBO in ${QEMU_DTBO}
+			do
+				DTB_OVERLAYS+=( "${BIN_PATH}/boot/overlays/${DTBO}.dtbo" )
+			done
+			DTB_PATH=${PLATFORM_PATH}/${PROJECT_NAME}.dtb
+			if ! "${GLOBAL_TOOLCHAIN_PATH}/bin/fdtoverlay" -i "${BIN_PATH}/boot/${QEMU_DTB}" -o "${DTB_PATH}" "${DTB_OVERLAYS[@]}"
+			then
+				trow_error "${ERROR_GENERIC}" "fdtoverlay could not apply ${QEMU_DTBO} to ${QEMU_DTB} (it comes from build lfs/dtc:native)." || return
+			fi
+		fi
+		SPECS_KERNEL+=" -dtb \"$(emulator_system_path "${BATCH_TYPE}" "${DTB_PATH}")\""
+	fi
+	KERN_APPEND="-append \"${KERN_CONSOLE}${KERN_ROOT} rootwait cgroup_enable=memory systemd.gpt_auto=no ${QEMU_KERNCONFIG}\""
+
+	### KERNEL_NAME of a platform names the kernel through ${KERNEL_VER}, which the script expands when it
+	### runs: the batch sets the same value a few lines above the command, where cmd reads it as %KERNEL_VER%
+	if [ "${BATCH_TYPE}" == win ]
+	then
+		SPECS_KERNEL=${SPECS_KERNEL//\$\{KERNEL_VER\}/%KERNEL_VER%}
+	fi
+
+	EMULATOR_CMDLINE="\"${QEMU_EXE}\""
+	EMULATOR_CMDLINE+=" ${SPECS_HW}"
+	EMULATOR_CMDLINE+=" ${SPECS_STORAGE}"
+	EMULATOR_CMDLINE+=" ${SPECS_NETWORK}"
+	EMULATOR_CMDLINE+=" ${SPECS_GRAPHIC}"
+	EMULATOR_CMDLINE+=" ${SPECS_SOUND}"
+	EMULATOR_CMDLINE+="${SPECS_DEVICES}"
+	EMULATOR_CMDLINE+=" ${SPECS_KERNEL}"
+	EMULATOR_CMDLINE+=" ${KERN_APPEND}"
+	return 0
+}
+
+function emulator_script () {
+	### emulator_script <batch type> <file>: write the script of EMULATOR_CMDLINE (emulator_cmdline),
+	### <file> for linux, <file>.bat for win
+	local BATCH_TYPE=${1}
+	local SCRIPT_FILE=${2}
+
+	case ${BATCH_TYPE} in
+		linux)
+			cat <<-EOF > "${SCRIPT_FILE}"
+				#!/bin/sh
+				# File generated by bbxb emulator cmdgen
+				KERNEL_VER=${EMULATOR_KERNEL_VER}
+
+				${EMULATOR_CMDLINE}
+			EOF
+			chmod +x "${SCRIPT_FILE}"
+			;;
+		win)
+			### No wt in front of QEMU: the batch waits for it to end before asking about the
+			### snapshot. choice: errorlevel 1 is Y, 2 is N. A user may create files in the TEMP of
+			### Windows but not list it, and if exist and del look for a file by listing: qemu-img
+			### info tells whether the snapshot is there and PowerShell removes it, both by name.
+			### QEMU_EXE_PREFIX, when the environment of Windows does not set it, is the directory
+			### of the QEMU installer if it is there (otherwise the programs are looked up in PATH).
+			### The line ends of cmd: CRLF
+			cat <<-EOF | sed 's/$/\r/' > "${SCRIPT_FILE}.bat"
+				@echo off
+				rem File generated by bbxb emulator cmdgen
+				setlocal
+				if not defined QEMU_EXE_PREFIX if exist "%ProgramFiles%\\qemu\\qemu-img.exe" set "QEMU_EXE_PREFIX=%ProgramFiles%\\qemu\\"
+				set KERNEL_VER=${EMULATOR_KERNEL_VER}
+				set IMAGE=$(emulator_system_path win "${EMULATOR_IMAGE}")
+				set SNAPSHOT=${EMULATOR_SNAPSHOT}
+
+				"%QEMU_EXE_PREFIX%qemu-img.exe" info "%SNAPSHOT%" >nul 2>&1
+				if errorlevel 1 (
+				    echo Creating the snapshot %SNAPSHOT% of %IMAGE%
+				    "%QEMU_EXE_PREFIX%qemu-img.exe" create -q -f qcow2 -F raw -b "%IMAGE%" "%SNAPSHOT%"
+				    if errorlevel 1 exit /b 1
+				)
+
+				${EMULATOR_CMDLINE}
+
+				choice /c YN /m "Delete the snapshot %SNAPSHOT%"
+				if errorlevel 2 exit /b 0
+				powershell -NoProfile -Command "Remove-Item -LiteralPath \$env:SNAPSHOT"
+			EOF
+			;;
+	esac
+	return 0
+}
+
+# shellcheck disable=SC2154 # the _param_ variables of param2value (eval)
+function emulator_cmdgen () {
+	### emulator_cmdgen [--quiet] [--batchtype linux|win|all] [--rootdev <device>] [--rootfs <fs>]
+	###                 [--rootpart <n>] [--savecmd <file>]: print the QEMU command line of the image
+	### of the project (not with --quiet) and with --savecmd write it as a script, <file> for linux,
+	### <file>.bat for win. all is both, saved by default next to the image as <project>.qemu and
+	### <project>.qemu.bat. The root is <device> with the file system <fs>, by default the PARTUUID
+	### and the file system of partition <n> (2) of the image (emulator_image_root)
+	local IS_QUIET BATCH_TYPES BATCH_TYPE KERN_ROOTDEV KERN_ROOTFS KERN_ROOTPARTITION SAVECMD
+
+	OPTS="--quiet" OPTS_WITH_VALUE="--batchtype --rootdev --rootfs --rootpart --savecmd" param2value "${@}"
+	IS_QUIET=${_param_quiet}
+	BATCH_TYPES=${_param_batchtype:-linux}
+	KERN_ROOTDEV=${_param_rootdev}
+	KERN_ROOTFS=${_param_rootfs}
+	KERN_ROOTPARTITION=${_param_rootpart}
+	SAVECMD=${_param_savecmd}
+
+	case ${BATCH_TYPES} in
+		linux|win) ;;
+		unix) BATCH_TYPES=linux ;;
+		all)
+			BATCH_TYPES="linux win"
+			SAVECMD=${SAVECMD:-${PLATFORM_PATH}/${PROJECT_NAME}.qemu}
+			;;
+		*)
+			trow_error "${ERROR_NOT_VALID_OPTION}" "Unknown batch type ${BATCH_TYPES} (linux, win, all)." || return
+			;;
+	esac
+
+	for BATCH_TYPE in ${BATCH_TYPES}
+	do
+		emulator_cmdline "${BATCH_TYPE}" "${KERN_ROOTDEV}" "${KERN_ROOTFS}" "${KERN_ROOTPARTITION}" || return
+		if [ -z "${IS_QUIET}" ]
+		then
+			echo "${EMULATOR_CMDLINE}"
+		fi
+		if [ -n "${SAVECMD}" ]
+		then
+			emulator_script "${BATCH_TYPE}" "${SAVECMD}"
+		fi
+	done
+	return 0
+}
+
+# shellcheck disable=SC2154 # the _param_ variables of param2value (eval)
+function emulator_run () {
+	### emulator_run [--rootdev <device>] [--rootfs <fs>] [--rootpart <n>]: run the image of the
+	### project in QEMU of this host (as root, with sudo), the root as for emulator_cmdgen.
+	### QEMU_EXE_PREFIX of the environment is the directory of qemu-system-*, default PATH
+	local KERN_ROOTDEV KERN_ROOTFS KERN_ROOTPARTITION QEMU_EXE QEMU_VERSION
+
+	OPTS="" OPTS_WITH_VALUE="--rootdev --rootfs --rootpart" param2value "${@}"
+	KERN_ROOTDEV=${_param_rootdev}
+	KERN_ROOTFS=${_param_rootfs}
+	KERN_ROOTPARTITION=${_param_rootpart}
+
+	emulator_cmdline linux "${KERN_ROOTDEV}" "${KERN_ROOTFS}" "${KERN_ROOTPARTITION}" || return
+
+	QEMU_EXE=${QEMU_EXE_PREFIX}$(emulator_qemu_exe)
+	if ! QEMU_VERSION=$("${QEMU_EXE}" --version 2> /dev/null | head -n1 | awk '{print $4}')
+	then
+		trow_error "${ERROR_FILE_NOT_FOUND}" "${QEMU_EXE} does not run (not installed?)." || return
+	fi
+	if ! "${QEMU_EXE}" -machine help | grep -q "^${QEMU_MACHINE} "
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "QEMU ${QEMU_VERSION} does not support the machine ${QEMU_MACHINE}." || return
+	fi
+
+	### The command line names ${QEMU_EXE_PREFIX}, ${SYSTEM_PREFIX} and ${KERNEL_VER}, as the linux
+	### script does: SYSTEM_PREFIX and QEMU_EXE_PREFIX come from the environment, KERNEL_VER is the one
+	### of system_config, in a subshell that leaves the one of the build as it is
+	(
+		KERNEL_VER=${EMULATOR_KERNEL_VER}
+		eval sudo "${EMULATOR_CMDLINE}"
+	)
+}
+
+is_emulator_functions () {
+	return 0
+}

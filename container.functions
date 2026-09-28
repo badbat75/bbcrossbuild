@@ -20,6 +20,11 @@ CONTAINER_ENV_SKIP="DATA_PATH BB_HOME BBXB_IN_CONTAINER BBXB_CONSOLE_FD BUILD_CH
 	CONTAINER_BUILD CONTAINER_NAME CONTAINER_USER PATH HOME USER LOGNAME SHELL TERM HOSTNAME
 	PWD OLDPWD TMPDIR"
 
+### The variables of the host that the build reads although no framework file assigns them, passed
+### when the environment carries them: WSL_DISTRO_NAME names the \\wsl$ share of the Windows
+### script of bbxb emulator cmdgen (emulator.functions)
+CONTAINER_ENV_HOST="WSL_DISTRO_NAME"
+
 ### The variables the environment carried when bbxb started: container.functions is sourced before
 ### bbxb.conf, the platform file and setenv, so these are the ones the user set, as opposed to the
 ### ones the framework computes from them (setenv exports several of its paths)
@@ -167,8 +172,9 @@ container_env_names () {
 	### (CONTAINER_ENV_INITIAL), when setenv, the configuration template or the platform file
 	### assigns it (every one of those can be overridden from the environment:
 	### "DATA_PATH=... TOOLCHAIN=llvm ./bbxb --container ..." works inside as it does outside) and
-	### when it is not one of CONTAINER_ENV_SKIP. The session of the user, and whatever it carries,
-	### stays outside; bbxb.conf and projects/*.conf come with the checkout.
+	### when it is not one of CONTAINER_ENV_SKIP; the names of CONTAINER_ENV_HOST travel too. The
+	### session of the user, and whatever else it carries, stays outside; bbxb.conf and
+	### projects/*.conf come with the checkout.
 	local ENV_NAME FRAMEWORK_FILES FRAMEWORK_NAMES
 
 	FRAMEWORK_FILES=("${BB_HOME}/setenv" "${BB_HOME}/configurations/bbxb.conf")
@@ -181,6 +187,11 @@ container_env_names () {
 
 	for ENV_NAME in ${CONTAINER_ENV_INITIAL}
 	do
+		if [[ " ${CONTAINER_ENV_HOST} " == *" ${ENV_NAME} "* ]]
+		then
+			echo "${ENV_NAME}"
+			continue
+		fi
 		if [[ ${FRAMEWORK_NAMES} != *" ${ENV_NAME} "* ]]
 		then
 			continue

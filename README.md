@@ -55,6 +55,14 @@ $ ./bbxb mount list                                        # the images mounted,
 $ ./bbxb umount <project> <platform> | <image> | <directory>
 ```
 
+Run the image of a project in QEMU, with the `QEMU_*` settings of the platform (see Platform
+Configuration), or write the command line as a script for Linux and a batch for Windows:
+
+```bash
+$ ./bbxb emulator run [--rootdev <device>] [--rootfs <fs>] [--rootpart <n>] <project> <platform>
+$ ./bbxb emulator cmdgen [--quiet] [--batchtype linux|win|all] [--savecmd <file>] [--rootdev <device>] [--rootfs <fs>] [--rootpart <n>] <project> <platform>
+```
+
 `./bbxb` without arguments, or `./bbxb help`, prints every command.
 
 **Output**
@@ -657,6 +665,23 @@ What the project decides about the system it builds. A file is written into the 
   host_on_target <mount tag> <native recipe> "<command>"...
   ```
 
+#### Emulator Functions (emulator.functions)
+
+QEMU for the image of the project, `<platform>/<project>.img` (where `unmount_tag --finalize` leaves it), from the `QEMU_*` settings of the platform: the kernel and the initramfs of the sysroot, named after `KERNEL_VER` and `KERNEL_RELEASE` of `status/system_config`, the device tree `QEMU_DTB` with the overlays of `QEMU_DTBO` merged by the `fdtoverlay` of `lfs/dtc:native` into `<platform>/<project>.dtb`. `bbxb emulator cmdgen|run <project> <platform>` calls them with the environment of the project.
+
+- **emulator_cmdgen**: Print the QEMU command line of the image and write it as scripts
+  ```
+  emulator_cmdgen [--quiet] [--batchtype linux|win|all] [--savecmd <file>] [--rootdev <device>] [--rootfs <fs>] [--rootpart <n>]
+  ```
+  - `--batchtype`: `linux` (default) a `sh` script in `<file>`, `win` a batch in `<file>.bat`, `all` both, by default `<platform>/<project>.qemu` and `<project>.qemu.bat` next to the image (`lfs.prj` writes them). The Windows batch names the files of WSL as `\\wsl$\<WSL_DISTRO_NAME>\...`, runs QEMU on a qcow2 snapshot of the image in `%SystemRoot%\TEMP` (created on first use, named after the modification time of the image, so a rebuilt image gets a new one) and asks whether to delete it when QEMU exits. `QEMU_EXE_PREFIX` is the directory of `qemu-system-*.exe` and `qemu-img.exe`, `%ProgramFiles%\qemu\` when it is unset and QEMU is installed there
+  - `--rootdev <device>`: The root of the kernel command line; default: the `PARTUUID` of partition `--rootpart` (2) of the image, read from its partition table with `sfdisk` (MBR: `<label-id>-<nn>`, GPT: the uuid of the partition), and when the image has none that partition of the disk `QEMU_STORAGE` gives the guest
+  - `--rootfs <fs>`: Its file system; default: the one `blkid` finds on that partition of the image, ext4 when it finds none
+
+- **emulator_run**: Run the image in the QEMU of the build host, with sudo (`QEMU_EXE_PREFIX` of the environment is the directory of `qemu-system-*`, otherwise `PATH`)
+  ```
+  emulator_run [--rootdev <device>] [--rootfs <fs>] [--rootpart <n>]
+  ```
+
 Here's a simple example of how to create a project file:
 
 ```bash
@@ -693,6 +718,9 @@ run_on_root_dir myimage root "echo 'custom config' > /etc/config"
 
 ## Unmount the image
 unmount_tag myimage
+
+## Write the QEMU scripts of the image unmount_tag --finalize left (<project>.qemu, <project>.qemu.bat)
+emulator_cmdgen --quiet --batchtype all
 
 ## Create self-extracting package
 create_sfx_package ${PACKAGES_PATH}/my_package
@@ -1031,7 +1059,7 @@ QEMU_STORAGE=sd-card
 QEMU_NETWORK=usb-net
 QEMU_CONSOLE=ttyAMA0
 QEMU_DTB=bcm2710-rpi-3-b.dtb
-QEMU_DTBO=disable-bt # Overlays qemu_cmdgen applies to QEMU_DTB (fdtoverlay of lfs/dtc:native), as dtoverlay= on the board
+QEMU_DTBO=disable-bt # Overlays bbxb emulator applies to QEMU_DTB (fdtoverlay of lfs/dtc:native), as dtoverlay= on the board
 ```
 
 ## Utilities
@@ -1053,11 +1081,6 @@ BBCrossBuild includes several utility scripts to help with development:
 - `crossldd`: Show shared library dependencies
   ```
   utilities/crossldd <executable>
-  ```
-
-- `qemu_cmdgen`: Generate QEMU commands for testing
-  ```
-  utilities/qemu_cmdgen [--run] [--quiet] [--batchtype <type>] [--rootdev <dev>] [--rootfs <fs>] [--savecmd <file>] <project> <platform>
   ```
 
 - `aws_create_infrastructure`: Manage AWS EC2 instances
