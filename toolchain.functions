@@ -1791,9 +1791,16 @@ function setup_full_toolchain () {
 		run_cmd "mkdir -pv \"${GLOBAL_CACHE_PATH}/sccache\"" > "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
 	fi
 	# Starts sccache server
+	# SCCACHE_DIRECT=0: the key of the preprocessor cache mode is the compiler binary, the arguments
+	# and the source only, not the working directory, and the headers it records are absolute paths.
+	# The sources are shared by the platforms of a project, so a host program of the gcc build
+	# (genmodes, -I. of the build directory) got the object of another platform, whose build
+	# directory still had its auto-host.h (the aarch64 modes in the arm gcc); the <HARCH>-clang
+	# copies are the same binary, their target in the .cfg next to them, which sccache never reads
 	run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}\"/bin/sccache --stop-server > /dev/null || :" >> "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
 	TOOLCHAIN=gnu run_cmd "SCCACHE_DIR=${GLOBAL_CACHE_PATH}/sccache \\
 		SCCACHE_CACHE_SIZE=${SCCACHE_CACHE_SIZE:-16G} \\
+		SCCACHE_DIRECT=0 \\
 		SCCACHE_START_SERVER=1 \\
 		SCCACHE_NO_DAEMON=0 \\
 		SCCACHE_IDLE_TIMEOUT=0 \\
