@@ -1538,7 +1538,18 @@ function downloadonly () {
 	fi
 }
 
-function configmake () {	
+function libtool_sysroot () {
+	### libtool_sysroot <sysroot> <dir>: lt_sysroot=<sysroot> in the libtool scripts configure generated
+	### under <dir> without one
+	local SYSROOT_DIR=${1}
+	local LIBTOOL_FILE
+	while read -r LIBTOOL_FILE
+	do
+		run_cmd "sed -i 's#^lt_sysroot=\$#lt_sysroot=${SYSROOT_DIR}#' \"${LIBTOOL_FILE}\""
+	done < <(grep -rlx --include=libtool 'lt_sysroot=' "${2}" 2>/dev/null || true)
+}
+
+function configmake () {
 	if [ "${PKG_AUTOCONF:-0}" != 0 ]
 	then
 		if [ "${PKG_AUTOCONF:-0}" == 1 ]
@@ -1606,6 +1617,7 @@ function configmake () {
 					clang_config_installed
 				then
 					CONF_FLAGS="--build=${BARCH} --host=${HARCH} ${CONF_FLAGS}"
+					local LT_SYSROOT=${BIN_PATH}
 				else
 					CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH} ${CONF_FLAGS}"
 				fi
@@ -1638,6 +1650,14 @@ function configmake () {
 	run_cmd "chmod +x runconfig.sh runmake.sh"
 
 	run_cmd "./runconfig.sh"
+	### The libtool of a clang build without --with-sysroot has no sysroot: a relink at install time
+	### (-L<libdir> of the libraries of the package) searches the libdir of the build host, where a host
+	### of the same architecture has libraries of the same name (libcrypto without SM4 for tpm2-tss on
+	### generic-x64). The sysroot the gnu build gets from gcc -print-sysroot, with no configure option
+	if [ -n "${LT_SYSROOT}" ]
+	then
+		libtool_sysroot "${LT_SYSROOT}" "${PKG_BLDPATH}"
+	fi
 	IFS=,
 	for target in ${PKG_MAKETARGETS:-all,install}
 	do

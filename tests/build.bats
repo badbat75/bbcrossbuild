@@ -387,3 +387,19 @@ function calls () {
 	chmod +x "${BIN_DIR}/ld.mold"
 	assert_equal "$(linker_for_build mold bfd)" "mold"
 }
+
+@test "libtool_sysroot: lt_sysroot in the libtool scripts without one, the others and every other file left as they are" {
+	local DIR=${BATS_TEST_TMPDIR}/bld
+	mkdir -p "${DIR}/sub" "${DIR}/other"
+	printf 'a\nlt_sysroot=\nb\n' > "${DIR}/libtool"
+	printf 'lt_sysroot=\n' > "${DIR}/sub/libtool"
+	printf 'lt_sysroot=/else\n' > "${DIR}/other/libtool"
+	printf 'lt_sysroot=\n' > "${DIR}/libtool.m4"
+	libtool_sysroot /sys/root "${DIR}"
+	assert_equal "$(cat "${DIR}/libtool")" $'a\nlt_sysroot=/sys/root\nb'
+	assert_equal "$(cat "${DIR}/sub/libtool")" "lt_sysroot=/sys/root"
+	assert_equal "$(cat "${DIR}/other/libtool")" "lt_sysroot=/else"
+	assert_equal "$(cat "${DIR}/libtool.m4")" "lt_sysroot="
+	### no libtool at all (a configure without LT_INIT)
+	libtool_sysroot /sys/root "${BATS_TEST_TMPDIR}/none"
+}
