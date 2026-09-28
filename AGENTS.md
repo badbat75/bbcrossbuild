@@ -11,15 +11,17 @@ BBCrossBuild (`bbxb`) is a pure-Bash framework that cross-compiles whole Linux s
 The framework only runs on Linux with sudo, loop devices and `qemu-user-static`. This checkout lives inside WSL (`FedoraLinux-44`); run `bbxb` and `git` from inside WSL. From the Windows side git refuses the UNC path with "dubious ownership", so use `wsl -d FedoraLinux-44 -- git -C ~/git/bbcrossbuild ...`.
 
 ```bash
-# The package groups are git submodules (packages/<group> -> repository packages-<group>, URLs relative to origin)
+# The package groups are git submodules (packages/<group> -> repository packages-<group>, URLs relative to origin),
+# and so are the project files (projects -> repository bbcrossbuild-projects): the framework names no project
 git clone --recurse-submodules https://github.com/badbat75/bbcrossbuild.git   # or, in a checkout: git submodule update --init
 # A recipe change is committed inside packages/<group> (its own repository, branch main), then the new
 # submodule commit is committed here: git -C packages/lfs commit ...; git add packages/lfs; git commit
+# (the same for a project change: git -C projects commit ...; git add projects; git commit)
 
 # One-time host setup and configuration
 utilities/bootstrap.fedora            # or bootstrap.ubuntu / bootstrap.aws
 cp configurations/bbxb.conf bbxb.conf # README mentions bbxb.conf.default; that file does not exist
-cp configurations/lfs.conf projects/lfs.conf   # optional per-project settings (gitignored)
+cp projects/lfs.conf.template projects/lfs.conf   # optional per-project settings (gitignored by the projects repository)
 
 # Build a project for a platform (project = projects/<name>.prj, platform = platforms/<name>.conf)
 ./bbxb build lfs rpi3-aarch64
@@ -44,10 +46,10 @@ DATA_PATH=~/.bbxb TOOLCHAIN=llvm ./bbxb build lfs generic-x64   # any setenv/bbx
 ./bbxb emulator run [--rootdev PARTUUID=...] [--rootfs <fs>] [--rootpart <n>] lfs rpi3-aarch64
 
 # Smoke test: bootstraps a toolchain and a handful of packages for gnu+llvm on generic-x64, rpi, rpi3-aarch64.
-# It writes projects/test.prj, uses ~/.bbxb_test as DATA_PATH and takes hours.
+# It writes test.prj into a temporary PRJ_PATH, uses ~/.bbxb_test as DATA_PATH and takes hours.
 utilities/bbxb_test [clean-start|clean-platform]
 
-# Test a single package: projects/test*.prj is gitignored, so write a throwaway project
+# Test a single package: projects/test*.prj is gitignored by the projects repository, so write a throwaway project
 cat > projects/test-zlib.prj <<'EOF'
 build lfs/create-base-fs_1.0
 setup_full_toolchain --with-gnu-install
@@ -57,13 +59,13 @@ EOF
 # With --keep_builddir the build dir keeps recipe.source, environment.source, runprebuild.sh, runpostbuild.sh: re-runnable by hand
 # A new project name means a new <project> directory, hence a whole cross toolchain of its own. To build one
 # package into the datadir a project already has (and get its .sfx next to the others), keep the project name
-# and move the project file instead: bbxb resolves <PRJ_PATH>/<project>.prj before setenv, setenv rebuilds the
-# absolute path from PRJ_DIR, so both name the same directory next to projects/ (remove it when done)
+# and move the project file instead: PRJ_PATH (absolute, or relative to the checkout; setenv makes it absolute)
+# is the directory bbxb reads <project>.prj and <project>.conf from (remove it when done)
 mkdir -p projects-tmp && cat > projects-tmp/lfs.prj <<'EOF'
 setup_full_toolchain --with-gnu-install --with-main-gcc --with-llvm --with-python
 build --force --keep_builddir raspberrypi/rpi-utils
 EOF
-PRJ_PATH=projects-tmp PRJ_DIR=projects-tmp ./bbxb build lfs rpi3-aarch64   # the toolchain steps are checks, so it starts in a minute
+PRJ_PATH=projects-tmp ./bbxb build lfs rpi3-aarch64   # the toolchain steps are checks, so it starts in a minute
 
 # Containers: the same command line, in the image of this checkout (name from the git branch:
 # development -> bbcrossbuild-devel, master -> bbcrossbuild-latest). bbxb builds the image when
@@ -107,7 +109,7 @@ utilities/pkg_upstream [-p rpi3-aarch64] [-P lfs] [-g raspberrypi] [-a|-S] [-v] 
 # per package group are run by hand.
 shellcheck -x bbxb seterr setenv core.functions build.functions toolchain.functions images.functions project.functions data.functions osconfig.functions container.functions emulator.functions
 shellcheck -x utilities/pkgtools.functions utilities/pkg_lint utilities/pkg_show utilities/update_patches
-shellcheck -x tests/test_helper.bash tests/*.bats tests/board_check
+shellcheck -x tests/test_helper.bash tests/*.bats
 # Unit tests (bats-core, seconds): variant selection, patch lists, recipe scripts, recipe checksum, target
 # prefixes, recipe resolution, core helpers, the dependency walk of build, the sfx installer. tests/test_helper.bash sources the framework through
 # utilities/pkgtools.functions and builds fixture recipes under the per-test temporary directory.
@@ -116,7 +118,8 @@ bats tests                    # dnf install bats / apt install bats; bats tests/
 # Checks on a system the framework built, while it runs: run it after every flash and after every
 # installer tried on a running board, and in QEMU too (what the emulator lacks is skipped). It prints
 # ok, FAIL, warn or skip per check and exits with the number of failures; it prints no secret.
-scp tests/board_check <host>:/tmp/ && ssh <host> sudo /tmp/board_check
+# It checks what lfs.prj builds, so it lives in the projects repository
+scp projects/tests/board_check <host>:/tmp/ && ssh <host> sudo /tmp/board_check
 BOARD_CHECK_SLOW=1 BOARD_CHECK_EXTERNAL=example.com sudo /tmp/board_check   # adds the timeout checks
 ```
 
@@ -180,11 +183,11 @@ One rule splits them in two. What is a file is written into the sysroot (`${BIN_
 
 ### Projects and packages layout
 
-- `projects/*.prj`: `lfs.prj` is the full reference project (toolchain, kernel, ~100 packages, image creation, QEMU command generation; `LFS_ENABLENM=1` swaps systemd-networkd for lfs/NetworkManager). `librespot.prj` and `rpi-kernel.prj` are minimal examples. `projects/*.conf` and `projects/test*.prj` are gitignored user files; `bbxb` sources `projects/<project>.conf` itself, a `.prj` does not have to.
+- `projects/`: a git submodule of its own repository `bbcrossbuild-projects`, the only place that names a project; `PRJ_PATH` points `bbxb` to another directory, and `bbxb` names the submodule when the project is missing from an empty `projects/`. `lfs.prj` is the full reference project (toolchain, kernel, ~100 packages, image creation, QEMU command generation; `LFS_ENABLENM=1` swaps systemd-networkd for lfs/NetworkManager), `lfs.conf.template` the template of its settings. `librespot.prj` and `rpi-kernel.prj` are minimal examples. The projects repository also holds what belongs to one project: `tests/board_check` (below) and `utilities/gcc_tkit_path` (the toolchains of `gcc-toolkits.prj`). `*.conf` and `test*.prj` are user files its `.gitignore` keeps out; `bbxb` sources `<PRJ_PATH>/<project>.conf` itself, a `.prj` does not have to.
 - `packages/<group>/<name>/`: `lfs/` (BLFS-style recipes, the bulk), `raspberrypi/`, `moode/`, `python/`, `perl/`, `firmwares/`, `fonts/`, `microsoft/` (WSL kernel). Every group is a git submodule of its own repository `packages-<group>` (`.gitmodules`); `bbxb` stops with an error when a group directory is empty. `packages/template/` is the annotated starting point for a new recipe and lives in this repository.
-- `configurations/`: templates for `bbxb.conf` and `lfs.conf`.
+- `configurations/`: the template of `bbxb.conf`.
 - `utilities/`: host helpers (`deptool`, `crossgdb`, `crossldd`, `aws_create_infrastructure`, bootstrap scripts); `pkg_lint` and `pkg_show` share `utilities/pkgtools.functions`, which sources the framework with the build steps stubbed out and resolves a recipe through `set_target_prefixes` and `apply_recipe_variants`, the same code `build` uses.
-- `tests/*.bats`: the bats suite; `tests/test_helper.bash` loads the framework the same way (`load_framework`, platform from `PLATFORM_NAME`) and offers `make_recipe`, `put`, `select_target`, `assert_output_lines`, `assert_equal` to build and check fixture recipes under `BATS_TEST_TMPDIR`. One file per area: `bbxb` (the command line up to the project: the help, which no argument, `help`, `-h`, `--help` and a command without project and platform print, the unknown commands), `variants`, `recipe_files` (patches, scripts), `checksum`, `prefixes`, `pkgtools` (`recipe_resolve`), `core`, `build` (the order of `build` on recipes that build nothing: the real `build` and `run_cmd` over the stubs, cross target), `container` (the image name, the variables of the environment that travel to it, and the `bbxb container` commands over a docker stub), `images` (`bbxb mount`, `umount`, `mount list` over stubs of losetup, lsblk, findmnt and sudo), `host_paths` (`strip_host_paths`, `host_path_maps`, `gcc_host_path_specs`, `clang_host_path_config`, `find_host_paths`, `lto_object_files`, `strip_lto_objects`), `sfx` (the installer of `create_sfx_package` and its post install scripts), `emulator` (`bbxb emulator cmdgen|run`: the QEMU command lines, the scripts and the run over stubs of fdtoverlay, qemu and sudo), `osconfig` (the directives of `osconfig.functions` over a sysroot in the temporary directory, with `run_on_root_dir` stubbed). `tests/board_check` is the
+- `tests/*.bats`: the bats suite; `tests/test_helper.bash` loads the framework the same way (`load_framework`, platform from `PLATFORM_NAME`) and offers `make_recipe`, `put`, `select_target`, `assert_output_lines`, `assert_equal` to build and check fixture recipes under `BATS_TEST_TMPDIR`. One file per area: `bbxb` (the command line up to the project: the help, which no argument, `help`, `-h`, `--help` and a command without project and platform print, the unknown commands, a missing project over a fixture `PRJ_PATH`), `variants`, `recipe_files` (patches, scripts), `checksum`, `prefixes`, `pkgtools` (`recipe_resolve`), `core`, `build` (the order of `build` on recipes that build nothing: the real `build` and `run_cmd` over the stubs, cross target), `container` (the image name, the variables of the environment that travel to it, and the `bbxb container` commands over a docker stub), `images` (`bbxb mount`, `umount`, `mount list` over stubs of losetup, lsblk, findmnt and sudo), `host_paths` (`strip_host_paths`, `host_path_maps`, `gcc_host_path_specs`, `clang_host_path_config`, `find_host_paths`, `lto_object_files`, `strip_lto_objects`), `sfx` (the installer of `create_sfx_package` and its post install scripts), `emulator` (`bbxb emulator cmdgen|run`: the QEMU command lines, the scripts and the run over stubs of fdtoverlay, qemu and sudo), `osconfig` (the directives of `osconfig.functions` over a sysroot in the temporary directory, with `run_on_root_dir` stubbed). `projects/tests/board_check` is the
   other kind of test: a plain script copied to a system the framework built and run there as root, which
   checks the state of that system (units and presets, the mode of `/` and the leftovers in it, machine-id and
   clock-epoch, the lines of `nsswitch.conf` and what each one resolves with timings, the domain of the DHCP

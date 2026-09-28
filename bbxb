@@ -30,7 +30,7 @@ fi
 
 function bbxb_usage () {
 	### bbxb_usage: the help of bbxb, with the projects and the platforms of the checkout
-	local NAMES
+	local NAMES PROJECTS
 	cat <<-EOF
 		Usage: bbxb [--container|--no-container] <command> <project> <platform>
 		       bbxb container <command> [<argument>...]
@@ -64,7 +64,9 @@ function bbxb_usage () {
 		  --no-container   build on the host
 
 	EOF
-	NAMES=$(find "${BB_HOME}/${PRJ_PATH:-projects}" -maxdepth 1 -name '*.prj' -printf '%f\n' 2> /dev/null | sed 's/\.prj$//' | sort | xargs)
+	PROJECTS=${PRJ_PATH:-projects}
+	[[ ${PROJECTS} == /* ]] || PROJECTS=${BB_HOME}/${PROJECTS}
+	NAMES=$(find "${PROJECTS}" -maxdepth 1 -name '*.prj' -printf '%f\n' 2> /dev/null | sed 's/\.prj$//' | sort | xargs)
 	echo "Projects:  ${NAMES:-none} (${PRJ_PATH:-projects}/<project>.prj)"
 	NAMES=$(find "${BB_HOME}/${PLATFORM_DIR:-platforms}" -maxdepth 1 -name '*.conf' -printf '%f\n' 2> /dev/null | sed 's/\.conf$//' | sort | xargs)
 	echo "Platforms: ${NAMES:-none} (${PLATFORM_DIR:-platforms}/<platform>.conf)"
@@ -217,10 +219,6 @@ then
 	source "${BB_HOME}/bbxb.conf"
 fi
 
-### PRJ_PATH is relative to the checkout, or absolute: the one setenv computed on the host reaches a
-### container build through its environment
-PROJECT=${PRJ_PATH:-projects}/${PROJECT_NAME}.prj
-[[ ${PROJECT} == /* ]] || PROJECT=${BB_HOME}/${PROJECT}
 PLATFORM=${BB_HOME}/${PLATFORM_DIR:-platforms}/${PLATFORM_NAME}.conf
 
 if [ ! -f "${PLATFORM}" ]
@@ -232,6 +230,10 @@ fi
 source "${PLATFORM}"
 # shellcheck source=/dev/null
 source "${BB_HOME}/setenv"
+
+### PRJ_PATH (setenv) is absolute: the one computed on the host reaches a container build through
+### its environment
+PROJECT=${PRJ_PATH}/${PROJECT_NAME}.prj
 
 ### The settings of the project: the user file next to its .prj (gitignored), sourced here so that
 ### everything below, the parameters printed included, already has the values the build uses
@@ -289,6 +291,17 @@ do
 done
 unset PKG_GROUP
 
+### The projects are a git submodule too (projects/), unless PRJ_PATH names another directory. Checked
+### before a container starts: the build inside would stop on the same missing file
+if [ ! -f "${PROJECT}" ]
+then
+	if [ -z "$(ls -A "${PRJ_PATH}" 2> /dev/null)" ]
+	then
+		trow_error "${ERROR_FILE_NOT_FOUND}" "${PRJ_PATH} is empty: run 'git submodule update --init' in ${BB_HOME}."
+	fi
+	trow_error "${ERROR_FILE_NOT_FOUND}" "Project ${PROJECT} does not exist."
+fi
+
 ### --container (CONTAINER_BUILD of bbxb.conf, --no-container to turn it off): the same command
 ### line runs inside the container of this checkout, which is built first when it is missing.
 ### Inside it BBXB_IN_CONTAINER is set and the build runs here, as on the host
@@ -321,11 +334,6 @@ source "${BB_HOME}/data.functions"
 source "${BB_HOME}/osconfig.functions"
 # shellcheck source=/dev/null
 source "${BB_HOME}/emulator.functions"
-
-if [ ! -f "${PROJECT}" ]
-then
-	trow_error "${ERROR_FILE_NOT_FOUND}" "Project ${PROJECT} does not exist."
-fi
 
 echo
 echo "Core parameters:"

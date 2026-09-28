@@ -13,7 +13,11 @@ echo "This script will check if bbxb will work and if it is able to boostrap ima
 echo "Platforms to test: ${PLATFORMS}"
 echo
 
-cat <<-EOF >projects/test.prj
+### The test project lives outside the projects submodule: bbxb reads it through PRJ_PATH
+PRJ_PATH=$(mktemp -d)
+export PRJ_PATH
+
+cat <<-EOF >${PRJ_PATH}/test.prj
     ## Enable shared libraries (default) but disable static ones
     BUILD_LIBSHARED=1
     BUILD_LIBSTATIC=0
@@ -66,6 +70,6 @@ do
     echo
 done
 unset IFS
-rm -rf ${DATA_PATH} projects/test.prj
+rm -rf ${DATA_PATH} ${PRJ_PATH}
 popd >/dev/null
 set +e

@@ -12,13 +12,16 @@ setup () {
 
 @test "bbxb without arguments, help, -h and --help print the help and succeed" {
 	local ARGS
+	# The projects are a submodule the checkout may not have: the ones of PRJ_PATH are listed
+	mkdir -p "${BATS_TEST_TMPDIR}/projects"
+	touch "${BATS_TEST_TMPDIR}/projects/fixture.prj"
 	for ARGS in "" help -h --help
 	do
 		# shellcheck disable=SC2086
-		run "${BB_HOME}/bbxb" ${ARGS}
+		PRJ_PATH=${BATS_TEST_TMPDIR}/projects run "${BB_HOME}/bbxb" ${ARGS}
 		[ "${status}" -eq 0 ]
 		[[ ${lines[0]} == "Usage: bbxb "* ]]
-		[[ ${output} == *"Projects:  "*lfs* ]]
+		[[ ${output} == *"Projects:  fixture (${BATS_TEST_TMPDIR}/projects/<project>.prj)"* ]]
 		[[ ${output} == *"Platforms: "*generic-x64* ]]
 	done
 }
@@ -56,4 +59,15 @@ setup () {
 	[ "${status}" -eq 0 ]
 	run "${BB_HOME}/bbxb" build --ro lfs generic-x64
 	[ "${status}" -eq "${ERROR_NOT_VALID_OPTION}" ]
+}
+
+@test "a missing project fails, naming the submodule when the projects directory is empty" {
+	mkdir -p "${BATS_TEST_TMPDIR}/projects"
+	PRJ_PATH=${BATS_TEST_TMPDIR}/projects DATA_PATH=${BATS_TEST_TMPDIR}/data run "${BB_HOME}/bbxb" --no-container build fixture generic-x64
+	[ "${status}" -eq "${ERROR_FILE_NOT_FOUND}" ]
+	[[ ${output} == *"${BATS_TEST_TMPDIR}/projects is empty: run 'git submodule update --init'"* ]]
+	touch "${BATS_TEST_TMPDIR}/projects/other.prj"
+	PRJ_PATH=${BATS_TEST_TMPDIR}/projects DATA_PATH=${BATS_TEST_TMPDIR}/data run "${BB_HOME}/bbxb" --no-container build fixture generic-x64
+	[ "${status}" -eq "${ERROR_FILE_NOT_FOUND}" ]
+	[[ ${output} == *"Project ${BATS_TEST_TMPDIR}/projects/fixture.prj does not exist."* ]]
 }

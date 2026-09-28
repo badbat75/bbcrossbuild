@@ -22,3 +22,6 @@
 [submodule "packages/microsoft"]
 	path = packages/microsoft
 	url = ../packages-microsoft.git
+[submodule "projects"]
+	path = projects
+	url = ../bbcrossbuild-projects.git

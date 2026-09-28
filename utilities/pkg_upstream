@@ -193,7 +193,8 @@ def project_order(project, platform):
 
     for spec in calls(os.path.join(BB_HOME, "toolchain.functions"), False):
         visit(spec)
-    prj = os.path.join(BB_HOME, "projects", project + ".prj")
+    # PRJ_PATH as bbxb reads it: the projects/ submodule, or a directory relative to the checkout
+    prj = os.path.join(BB_HOME, os.environ.get("PRJ_PATH", "projects"), project + ".prj")
     if not os.path.isfile(prj):
         sys.stderr.write(f"pkg_upstream: no such project: {prj}\n")
         sys.exit(1)

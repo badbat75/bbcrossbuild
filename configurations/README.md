@@ -1,6 +1,8 @@
 # configuration templates
-This directory contains templates for this tool and projects.
+This directory contains the templates of the framework.
 ## Configurations
 
  - bbxb.conf - configuration template for bbxb framework (copy it in the root directory)
- - lfs.conf - configuration template for lfs project (copy it in the projects directory)
+
+The template of the settings of a project lives with the project, in the projects submodule
+(projects/lfs.conf.template for projects/lfs.prj).

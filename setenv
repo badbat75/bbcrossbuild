@@ -43,7 +43,10 @@ PACKAGES_PATH=${PLATFORM_PATH}/${PACKAGES_DIR:-packages}
 CACHE_PATH=${PLATFORM_PATH}/${CACHE_DIR:-cache}
 export DISTOS_PATH BIN_PATH TOOLCHAIN_PATH
 
-PRJ_PATH=${BB_HOME}/${PRJ_DIR:-projects}
+# The projects: the projects/ submodule, or any directory given as PRJ_PATH (absolute, or relative to
+# the checkout, as bbxb reads it)
+PRJ_PATH=${PRJ_PATH:-${PRJ_DIR:-projects}}
+[[ ${PRJ_PATH} == /* ]] || PRJ_PATH=${BB_HOME}/${PRJ_PATH}
 PKG_PATH=${BB_HOME}/${PKG_DIR:-packages}
 # Name of the recipe file inside every packages/<group>/<name>/ directory: variable definitions
 # sourced by build, the shell scripts live next to it as *.sh files

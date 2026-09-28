@@ -18,7 +18,7 @@ $ cp bbxb.conf.default bbxb.conf
 $ utilities/bootstrap.<fedora|ubuntu|aws>
 ```
 
-The package groups under `packages/` are git submodules (`packages-lfs`, `packages-moode`... next to this repository): an existing checkout gets them with `git submodule update --init`, and `bbxb` refuses to run while a group directory is empty. The `bootstrap` script installs all required dependencies on the build host.
+The package groups under `packages/` are git submodules (`packages-lfs`, `packages-moode`... next to this repository), and so are the project files under `projects/` (`bbcrossbuild-projects`): the framework itself names no project. An existing checkout gets them with `git submodule update --init`, and `bbxb` refuses to run while a group directory is empty or the project it is asked for is missing from an empty `projects/`. The `bootstrap` script installs all required dependencies on the build host.
 
 **Customization**
 
@@ -86,7 +86,7 @@ host, so a recipe edit is one run away, the log files the console names are the 
 and the data directory keeps its owner (the build runs inside as the user who started `bbxb`, with
 `sudo` for the steps that need root, as on the host). The environment overrides travel with it
 (`DATA_PATH=... TOOLCHAIN=llvm ./bbxb --container ...`), and `bbxb.conf` and `projects/*.conf` come
-with the checkout. `CONTAINER_BUILD=1` in `bbxb.conf` makes it the default, `--no-container` turns
+with the checkout (a `PRJ_PATH` outside it is not mounted). `CONTAINER_BUILD=1` in `bbxb.conf` makes it the default, `--no-container` turns
 it off again for one run.
 
 The images and the containers of bbxb are managed with `bbxb container`, on the host:
@@ -139,14 +139,17 @@ $ utilities/aws_create_infrastructure destroy
 
 Projects are defined in `.prj` files that specify build steps and package dependencies. To create a new project:
 
-1. Create a new file in the `projects/` directory with a `.prj` extension
+1. Create a new file in the `projects/` directory with a `.prj` extension (the `bbcrossbuild-projects`
+   submodule, committed there), or in a directory of your own named by `PRJ_PATH` (absolute, or
+   relative to the checkout: `PRJ_PATH=~/my-projects ./bbxb build <project> <platform>`)
 2. Configure build options and specify packages to build
 
 Settings that belong to the machine rather than to the project (a toolchain, a WiFi passphrase) go
-into `projects/<project>.conf`, a user file that `.gitignore` keeps out of the repository:
-`bbxb` sources it right after `setenv`, before the project file, so it overrides `bbxb.conf`, the
-platform and the `setenv` defaults, and the parameters `bbxb` prints are the ones of the build.
-`configurations/lfs.conf` is the template of the one `projects/lfs.prj` expects.
+into `<project>.conf` next to the `.prj`, a user file that the `.gitignore` of the projects
+repository keeps out of it: `bbxb` sources it right after `setenv`, before the project file, so it
+overrides `bbxb.conf`, the platform and the `setenv` defaults, and the parameters `bbxb` prints are
+the ones of the build. `projects/lfs.conf.template` is the template of the one `projects/lfs.prj`
+expects.
 
 ### Project Directives
 

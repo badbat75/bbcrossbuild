@@ -1,7 +1,5 @@
 /.vscode
 /bbxb.conf
 /images
-/projects/*.conf
-/projects/test*.prj
 /projects-tmp
 */__pycache__
