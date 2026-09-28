@@ -3,6 +3,10 @@
 check_core_functions
 
 function create_key_sscertificate () {
+	### create_key_sscertificate: a key and a self-signed certificate in the data of the project,
+	### named PKI_KEY_NAME with the subject PKI_SUBJECT (bbxb.conf), kept once created
+	local PKI_KEY_NAME=${PKI_KEY_NAME:-$(whoami)}
+	local PKI_SUBJECT=${PKI_SUBJECT:-/CN=$(whoami)/emailAddress=$(whoami)@$(hostname -f)}
 	if [ ! -d "${USERDATA_PATH}/pki" ]
 	then
 		run_cmd "mkdir -p \"${USERDATA_PATH}/pki\""
