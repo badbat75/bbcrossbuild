@@ -1839,6 +1839,9 @@ function mesonninja () {
 			FORTRAN_ARGS=$(buildmesonargs "${FFLAGS}")
 			FORTRAN_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
 		fi
+		### needs_exe_wrapper: a program of the target the build runs (mesa_clc, the introspection dumper)
+		### goes through qemu with the sysroot also when the build host has the same architecture, where
+		### meson would run it natively with the libraries of the host (generic-x64)
 		cat > "cross-${PLATFORM_NAME}" <<-EOF
 			[binaries]
 			c = [${C}]
@@ -1862,6 +1865,7 @@ function mesonninja () {
 
 			[properties]
 			sys_root = '${SYSROOT}'
+			needs_exe_wrapper = true
 			c_args = [${C_ARGS}]
 			cpp_args = [${CPP_ARGS}]
 			fortran_args= [${FORTRAN_ARGS}]
