@@ -48,14 +48,17 @@ function bbxb_usage () {
 		  mount list                     the images mounted, by bbxb mount or by a build
 		  umount <project> <platform> | <image> | <directory>
 		                                 unmount an image and detach its loop device
-		  emulator cmdgen [--quiet] [--batchtype linux|win|all] [--savecmd <file>] [<root>] <project> <platform>
+		  emulator cmdgen [--quiet] [--batchtype linux|win|all] [--savecmd <file>] [<root>] [<firmware>] <project> <platform>
 		                                 print the QEMU command line of the image of the project and
 		                                 with --savecmd write it as a script (<file>, <file>.bat for win;
 		                                 all: both, default <platform>/<project>.qemu next to the image)
-		  emulator run [<root>] <project> <platform>
+		  emulator run [<root>] [<firmware>] <project> <platform>
 		                                 run the image of the project in the QEMU of this host (sudo)
 		                                 <root>: --rootdev <device> (PARTUUID=...), --rootfs <fs> (ext4),
 		                                 --rootpart <n> (2, of the disk QEMU_STORAGE gives the guest)
+		                                 <firmware>: --firmware bios|efi (default: efi when the image has
+		                                 an EFI system partition); efi boots the disk with OVMF, whose
+		                                 boot loader chooses the kernel and the root (no <root>)
 		  container <command>            the image and the containers of bbxb (bbxb container help)
 		  help                           this help
 
@@ -150,7 +153,7 @@ fi
 EMULATOR_OPTS=()
 if [ "${1}" == emulator ]
 then
-	OPTS="--quiet" OPTS_WITH_VALUE="--batchtype --rootdev --rootfs --rootpart --savecmd" param2value "${@:2}"
+	OPTS="--quiet" OPTS_WITH_VALUE="--batchtype --rootdev --rootfs --rootpart --firmware --savecmd" param2value "${@:2}"
 	EMULATOR_COMMAND=${_param_1}
 	if [[ ${EMULATOR_COMMAND} != @(cmdgen|run) ]]
 	then
@@ -160,7 +163,7 @@ then
 	then
 		EMULATOR_OPTS+=(--quiet)
 	fi
-	for EMULATOR_OPT in batchtype rootdev rootfs rootpart savecmd
+	for EMULATOR_OPT in batchtype rootdev rootfs rootpart firmware savecmd
 	do
 		EMULATOR_VALUE=_param_${EMULATOR_OPT}
 		if [ -n "${!EMULATOR_VALUE}" ]

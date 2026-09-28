@@ -103,6 +103,101 @@ function image_table () {
 	[[ ${EMULATOR_CMDLINE} == *" root=/dev/vda5 rootfstype=ext4 rootwait "* ]]
 }
 
+@test "an image with an EFI system partition boots with OVMF, --firmware chooses" {
+	HM=x86_64
+	QEMU_MACHINE=q35
+	image_table "label: dos" "start=2048, size=2048, type=ef" "start=4096, type=83"
+	run emulator_image_firmware "${PLATFORM_PATH}/lfs.img"
+	assert_equal "${output}" efi
+	emulator_cmdline linux "" "" ""
+	assert_equal "${EMULATOR_FIRMWARE}" efi
+	assert_equal "${EMULATOR_EFIVARS}" "${PLATFORM_PATH}/lfs.efivars.fd"
+	# shellcheck disable=SC2016 # the variables the script sets
+	[[ ${EMULATOR_CMDLINE} == *' -m 2048 -drive if=pflash,format=raw,unit=0,readonly=on,file="${OVMF_CODE}" -drive if=pflash,format=raw,unit=1,file="${EFIVARS}" -device virtio-blk-pci,'* ]]
+	### The boot loader of the image chooses the kernel and the root
+	[[ ${EMULATOR_CMDLINE} != *" -kernel "* ]]
+	[[ ${EMULATOR_CMDLINE} != *" -append "* ]]
+	emulator_cmdline linux "" "" "" bios
+	[[ ${EMULATOR_CMDLINE} != *"pflash"* ]]
+	[[ ${EMULATOR_CMDLINE} == *" -kernel "* ]]
+	### GPT: the type of the EFI system partition; a FAT partition is not one
+	image_table "label: gpt" "start=2048, size=2048, type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B" "start=4096"
+	run emulator_image_firmware "${PLATFORM_PATH}/lfs.img"
+	assert_equal "${output}" efi
+	image_table "label: dos" "start=2048, size=2048, type=c" "start=4096, type=83"
+	run emulator_image_firmware "${PLATFORM_PATH}/lfs.img"
+	assert_equal "${output}" bios
+	run emulator_cmdline linux "" "" "" uboot
+	[ "${status}" -eq "${ERROR_NOT_VALID_OPTION}" ]
+	[[ ${output} == *"Unknown firmware uboot"* ]]
+	HM=aarch64
+	run emulator_cmdline linux "" "" "" efi
+	[ "${status}" -eq "${ERROR_NOT_VALID_OPTION}" ]
+	[[ ${output} == *"No UEFI firmware for aarch64"* ]]
+}
+
+@test "the efi scripts find OVMF and copy the variables of the image the first time" {
+	HM=x86_64
+	WSL_DISTRO_NAME=Fedora
+	run emulator_cmdgen --quiet --batchtype all --firmware efi
+	[ "${status}" -eq 0 ]
+	### linux: the OVMF of the environment, the variables copied next to the image, then QEMU
+	put "${BATS_TEST_TMPDIR}/ovmf/code.fd" code
+	put "${BATS_TEST_TMPDIR}/ovmf/vars.fd" vars
+	put "${BATS_TEST_TMPDIR}/qemu/qemu-system-x86_64" "#!/bin/sh
+printf '%s\\n' \"\${@}\" > \"${BATS_TEST_TMPDIR}/qemu.args\""
+	chmod +x "${BATS_TEST_TMPDIR}/qemu/qemu-system-x86_64"
+	OVMF_CODE=${BATS_TEST_TMPDIR}/ovmf/code.fd OVMF_VARS=${BATS_TEST_TMPDIR}/ovmf/vars.fd \
+		QEMU_EXE_PREFIX=${BATS_TEST_TMPDIR}/qemu/ SYSTEM_PREFIX='' sh "${PLATFORM_PATH}/lfs.qemu"
+	assert_equal "$(cat "${PLATFORM_PATH}/lfs.efivars.fd")" vars
+	grep -qx "if=pflash,format=raw,unit=0,readonly=on,file=${BATS_TEST_TMPDIR}/ovmf/code.fd" "${BATS_TEST_TMPDIR}/qemu.args"
+	grep -qx "if=pflash,format=raw,unit=1,file=${PLATFORM_PATH}/lfs.efivars.fd" "${BATS_TEST_TMPDIR}/qemu.args"
+	### No OVMF: the script stops before QEMU
+	rm "${BATS_TEST_TMPDIR}/qemu.args"
+	EMULATOR_OVMF_PAIRS=/nonexistent/code.fd:/nonexistent/vars.fd emulator_cmdgen --quiet --firmware efi --savecmd "${BATS_TEST_TMPDIR}/none.sh"
+	run env -u OVMF_CODE -u OVMF_VARS QEMU_EXE_PREFIX="${BATS_TEST_TMPDIR}/qemu/" sh "${BATS_TEST_TMPDIR}/none.sh"
+	[ "${status}" -eq 1 ]
+	[[ ${output} == "No UEFI firmware (OVMF)"* ]]
+	[ ! -f "${BATS_TEST_TMPDIR}/qemu.args" ]
+	### win: the firmware of the QEMU installer, the variables next to the snapshot, both deleted
+	grep -qxF $'if not defined OVMF_CODE set "OVMF_CODE=%QEMU_EXE_PREFIX%share\\edk2-x86_64-code.fd"\r' "${PLATFORM_PATH}/lfs.qemu.bat"
+	grep -q '^set EFIVARS=%SystemRoot%\\TEMP\\lfs-generic-aarch64-[0-9]*\.efivars\.fd'$'\r$' "${PLATFORM_PATH}/lfs.qemu.bat"
+	grep -q '^"%QEMU_EXE_PREFIX%qemu-system-x86_64.exe" .* -drive if=pflash,format=raw,unit=1,file="%EFIVARS%" ' "${PLATFORM_PATH}/lfs.qemu.bat"
+	grep -qx $'powershell -NoProfile -Command "Remove-Item -LiteralPath $env:SNAPSHOT, $env:EFIVARS"\r' "${PLATFORM_PATH}/lfs.qemu.bat"
+}
+
+@test "run with efi takes OVMF of the host and makes the variables of the image" {
+	HM=x86_64
+	QEMU_MACHINE=q35
+	QEMU_EXE_PREFIX=${BATS_TEST_TMPDIR}/qemu/
+	put "${QEMU_EXE_PREFIX}qemu-system-x86_64" "#!/bin/sh
+case \"\${1}\" in
+	--version) echo 'QEMU emulator version 10.1.0' ;;
+	-machine) printf '%s\\n' 'Supported machines are:' 'q35                  Standard PC (Q35 + ICH9, 2009) (alias of pc-q35-10.1)' ;;
+esac"
+	chmod +x "${QEMU_EXE_PREFIX}qemu-system-x86_64"
+	put "${BATS_TEST_TMPDIR}/ovmf/OVMF_CODE.fd" code
+	put "${BATS_TEST_TMPDIR}/ovmf/OVMF_VARS.fd" vars
+	EMULATOR_OVMF_PAIRS="/nonexistent/code.fd:/nonexistent/vars.fd ${BATS_TEST_TMPDIR}/ovmf/OVMF_CODE.fd:${BATS_TEST_TMPDIR}/ovmf/OVMF_VARS.fd"
+	function sudo () {
+		printf '%s\n' "${@}" > "${BATS_TEST_TMPDIR}/sudo.args"
+	}
+	run emulator_run --firmware efi
+	[ "${status}" -eq 0 ]
+	assert_equal "$(cat "${PLATFORM_PATH}/lfs.efivars.fd")" vars
+	grep -qx "if=pflash,format=raw,unit=0,readonly=on,file=${BATS_TEST_TMPDIR}/ovmf/OVMF_CODE.fd" "${BATS_TEST_TMPDIR}/sudo.args"
+	grep -qx "if=pflash,format=raw,unit=1,file=${PLATFORM_PATH}/lfs.efivars.fd" "${BATS_TEST_TMPDIR}/sudo.args"
+	### The variables of the image stay from one run to the next
+	echo changed > "${PLATFORM_PATH}/lfs.efivars.fd"
+	run emulator_run --firmware efi
+	[ "${status}" -eq 0 ]
+	assert_equal "$(cat "${PLATFORM_PATH}/lfs.efivars.fd")" changed
+	EMULATOR_OVMF_PAIRS=/nonexistent/code.fd:/nonexistent/vars.fd
+	run emulator_run --firmware efi
+	[ "${status}" -eq "${ERROR_FILE_NOT_FOUND}" ]
+	[[ ${output} == *"No UEFI firmware (OVMF)"* ]]
+}
+
 @test "the win command line runs on the snapshot, with the paths of WSL and %KERNEL_VER%" {
 	WSL_DISTRO_NAME=Fedora
 	KERNEL_NAME="kernel8-\${KERNEL_VER}.img"

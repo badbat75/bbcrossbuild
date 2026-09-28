@@ -42,8 +42,11 @@ DATA_PATH=~/.bbxb TOOLCHAIN=llvm ./bbxb build lfs generic-x64   # any setenv/bbx
 # QEMU for the image of a project, from the QEMU_* of the platform (emulator.functions): cmdgen prints the
 # command line and writes it as a sh script and a Windows batch (--batchtype all: <platform>/<project>.qemu
 # and .qemu.bat, which lfs.prj writes with emulator_cmdgen after unmount_tag --finalize), run starts it with sudo
-./bbxb emulator cmdgen [--quiet] [--batchtype linux|win|all] [--savecmd <file>] [--rootdev <dev>] [--rootfs <fs>] [--rootpart <n>] lfs rpi3-aarch64
-./bbxb emulator run [--rootdev PARTUUID=...] [--rootfs <fs>] [--rootpart <n>] lfs rpi3-aarch64
+# The firmware is the one of the image (--firmware bios|efi overrides): bios loads kernel and initramfs of the
+# sysroot with -kernel; efi (an EFI system partition, lfs.prj with LFS_EFI=1, the default on generic-*) boots the
+# disk with OVMF (edk2-ovmf, or OVMF_CODE/OVMF_VARS) and GRUB, the variables in <platform>/<project>.efivars.fd
+./bbxb emulator cmdgen [--quiet] [--batchtype linux|win|all] [--savecmd <file>] [--rootdev <dev>] [--rootfs <fs>] [--rootpart <n>] [--firmware bios|efi] lfs rpi3-aarch64
+./bbxb emulator run [--rootdev PARTUUID=...] [--rootfs <fs>] [--rootpart <n>] [--firmware bios|efi] lfs rpi3-aarch64
 
 # Smoke test: bootstraps a toolchain and a handful of packages for gnu+llvm on generic-x64, rpi, rpi3-aarch64.
 # It writes test.prj into a temporary PRJ_PATH, uses ~/.bbxb_test as DATA_PATH and takes hours.

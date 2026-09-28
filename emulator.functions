@@ -85,24 +85,54 @@ function emulator_image_root () {
 	return 0
 }
 
+### The UEFI firmware (OVMF) of an x86_64 host, "<code>:<variables template>" in the order the linux
+### script and emulator_run look for them: Fedora (edk2-ovmf), Debian and Ubuntu (ovmf, 4M then 2M),
+### the files of QEMU itself (make install, Arch). The batch of Windows takes the ones of the QEMU installer
+EMULATOR_OVMF_PAIRS="/usr/share/edk2/ovmf/OVMF_CODE.fd:/usr/share/edk2/ovmf/OVMF_VARS.fd"
+EMULATOR_OVMF_PAIRS+=" /usr/share/OVMF/OVMF_CODE_4M.fd:/usr/share/OVMF/OVMF_VARS_4M.fd"
+EMULATOR_OVMF_PAIRS+=" /usr/share/OVMF/OVMF_CODE.fd:/usr/share/OVMF/OVMF_VARS.fd"
+EMULATOR_OVMF_PAIRS+=" /usr/share/qemu/edk2-x86_64-code.fd:/usr/share/qemu/edk2-i386-vars.fd"
+
+function emulator_image_firmware () {
+	### emulator_image_firmware <image>: efi when the partition table of the image has an EFI system
+	### partition (MBR type ef, the GPT type C12A7328-F81F-11D2-BA4B-00A0C93EC93B), bios otherwise
+	local IMAGE=${1}
+
+	if sfdisk -d "${IMAGE}" 2> /dev/null | grep -qiE '(type=ef|type=C12A7328-F81F-11D2-BA4B-00A0C93EC93B)(,|$)'
+	then
+		echo efi
+	else
+		echo bios
+	fi
+	return 0
+}
+
 function emulator_cmdline () {
-	### emulator_cmdline <batch type> <root device> <root fs> <root partition>: set EMULATOR_CMDLINE,
+	### emulator_cmdline <batch type> <root device> <root fs> <root partition> [<firmware>]: set EMULATOR_CMDLINE,
 	### the QEMU command line of the image for a linux or a win script, EMULATOR_IMAGE, the image,
+	### EMULATOR_FIRMWARE, bios or efi (<firmware>, default the one of the image: emulator_image_firmware),
 	### EMULATOR_KERNEL_VER, the KERNEL_VER the script sets (its kernel name can name ${KERNEL_VER}),
 	### and for win EMULATOR_SNAPSHOT, the qcow2 snapshot the batch runs on. An empty root device or
 	### file system is the one of partition <root partition> (2) of the image (emulator_image_root);
-	### when the image does not tell, the partition of the disk QEMU_STORAGE gives the guest, ext4
+	### when the image does not tell, the partition of the disk QEMU_STORAGE gives the guest, ext4.
+	### bios loads the kernel and the initramfs of the sysroot with the root on its command line; efi
+	### boots the disk with OVMF, whose code and variables the script names as ${OVMF_CODE} and
+	### ${EFIVARS} (%OVMF_CODE% and %EFIVARS% in the batch), and the boot loader of the image
+	### chooses the kernel and the root: <root device>, <root fs> and <root partition> do not count
 	local BATCH_TYPE=${1}
 	local KERN_ROOTDEV=${2}
 	local KERN_ROOTFS=${3}
 	local KERN_ROOTPARTITION=${4:-2}
+	local FIRMWARE=${5}
 	local IMAGE_ROOTDEV IMAGE_ROOTFS
-	local QEMU_EXE SPECS_HW SPECS_STORAGE SPECS_NETWORK SPECS_GRAPHIC SPECS_SOUND SPECS_DEVICES
+	local QEMU_EXE SPECS_HW SPECS_FIRMWARE SPECS_STORAGE SPECS_NETWORK SPECS_GRAPHIC SPECS_SOUND SPECS_DEVICES
 	local SPECS_KERNEL KERN_ROOT KERN_CONSOLE KERN_APPEND KERNEL_RELEASE DEVICE DTBO DTB_PATH
 	local -a DTB_OVERLAYS
 
 	EMULATOR_CMDLINE=
 	EMULATOR_SNAPSHOT=
+	EMULATOR_EFIVARS=
+	EMULATOR_FIRMWARE=
 	EMULATOR_IMAGE=${PLATFORM_PATH}/${PROJECT_NAME}.img
 
 	if [ -z "${QEMU_MACHINE}" ] || [ -z "${QEMU_STORAGE}" ]
@@ -117,6 +147,19 @@ function emulator_cmdline () {
 	then
 		trow_error "${ERROR_FILE_NOT_FOUND}" "${STATUS_PATH}/system_config does not exist: no kernel built for ${PROJECT_NAME} ${PLATFORM_NAME}." || return
 	fi
+	EMULATOR_FIRMWARE=${FIRMWARE:-$(emulator_image_firmware "${EMULATOR_IMAGE}")}
+	case ${EMULATOR_FIRMWARE} in
+		bios) ;;
+		efi)
+			if [ "${HM}" != x86_64 ]
+			then
+				trow_error "${ERROR_NOT_VALID_OPTION}" "No UEFI firmware for ${HM} (only OVMF, x86_64)." || return
+			fi
+			;;
+		*)
+			trow_error "${ERROR_NOT_VALID_OPTION}" "Unknown firmware ${EMULATOR_FIRMWARE} (bios, efi)." || return
+			;;
+	esac
 	if [ -z "${KERN_ROOTDEV}" ] || [ -z "${KERN_ROOTFS}" ]
 	then
 		IFS='|' read -r IMAGE_ROOTDEV IMAGE_ROOTFS < <(emulator_image_root "${EMULATOR_IMAGE}" "${KERN_ROOTPARTITION}")
@@ -158,6 +201,20 @@ function emulator_cmdline () {
 		SPECS_HW+=" -cpu ${QEMU_CPU}"
 	fi
 	SPECS_HW+=" -smp ${QEMU_SMP:-2} -m ${QEMU_RAM:-2048}"
+
+	### UEFI firmware specification: the code read only, the variables in a copy of their template
+	### that belongs to the image, next to it (linux) or next to the snapshot of the batch (win)
+	if [ "${EMULATOR_FIRMWARE}" == efi ]
+	then
+		if [ "${BATCH_TYPE}" == win ]
+		then
+			EMULATOR_EFIVARS="%SystemRoot%\\TEMP\\${PROJECT_NAME}-${PLATFORM_NAME}-$(stat -c %Y "${EMULATOR_IMAGE}").efivars.fd"
+			SPECS_FIRMWARE="-drive if=pflash,format=raw,unit=0,readonly=on,file=\"%OVMF_CODE%\" -drive if=pflash,format=raw,unit=1,file=\"%EFIVARS%\""
+		else
+			EMULATOR_EFIVARS=${PLATFORM_PATH}/${PROJECT_NAME}.efivars.fd
+			SPECS_FIRMWARE="-drive if=pflash,format=raw,unit=0,readonly=on,file=\"\${OVMF_CODE}\" -drive if=pflash,format=raw,unit=1,file=\"\${EFIVARS}\""
+		fi
+	fi
 
 	### Disk device specification
 	if [ "${BATCH_TYPE}" == win ]
@@ -250,34 +307,117 @@ function emulator_cmdline () {
 
 	EMULATOR_CMDLINE="\"${QEMU_EXE}\""
 	EMULATOR_CMDLINE+=" ${SPECS_HW}"
+	if [ -n "${SPECS_FIRMWARE}" ]
+	then
+		EMULATOR_CMDLINE+=" ${SPECS_FIRMWARE}"
+	fi
 	EMULATOR_CMDLINE+=" ${SPECS_STORAGE}"
 	EMULATOR_CMDLINE+=" ${SPECS_NETWORK}"
 	EMULATOR_CMDLINE+=" ${SPECS_GRAPHIC}"
 	EMULATOR_CMDLINE+=" ${SPECS_SOUND}"
 	EMULATOR_CMDLINE+="${SPECS_DEVICES}"
-	EMULATOR_CMDLINE+=" ${SPECS_KERNEL}"
-	EMULATOR_CMDLINE+=" ${KERN_APPEND}"
+	if [ "${EMULATOR_FIRMWARE}" == bios ]
+	then
+		EMULATOR_CMDLINE+=" ${SPECS_KERNEL}"
+		EMULATOR_CMDLINE+=" ${KERN_APPEND}"
+	fi
 	return 0
+}
+
+function emulator_ovmf () {
+	### emulator_ovmf: "<code>:<variables template>" of the UEFI firmware of this host, OVMF_CODE and
+	### OVMF_VARS of the environment when both are set, else the first pair of EMULATOR_OVMF_PAIRS
+	### whose files are there; fails when there is none
+	local OVMF
+
+	if [ -n "${OVMF_CODE}" ] && [ -n "${OVMF_VARS}" ]
+	then
+		echo "${OVMF_CODE}:${OVMF_VARS}"
+		return 0
+	fi
+	for OVMF in ${EMULATOR_OVMF_PAIRS}
+	do
+		if [ -f "${OVMF%%:*}" ] && [ -f "${OVMF#*:}" ]
+		then
+			echo "${OVMF}"
+			return 0
+		fi
+	done
+	trow_error "${ERROR_FILE_NOT_FOUND}" "No UEFI firmware (OVMF): install edk2-ovmf (Fedora) or ovmf (Debian, Ubuntu), or set OVMF_CODE and OVMF_VARS." || return
 }
 
 function emulator_script () {
 	### emulator_script <batch type> <file>: write the script of EMULATOR_CMDLINE (emulator_cmdline),
-	### <file> for linux, <file>.bat for win
+	### <file> for linux, <file>.bat for win. With the efi firmware the script first finds OVMF (the
+	### linux script as emulator_ovmf does, the batch in the share directory of the QEMU installer,
+	### OVMF_CODE and OVMF_VARS of the environment first) and copies the template of the variables
+	### to EFIVARS when it is not there yet
 	local BATCH_TYPE=${1}
 	local SCRIPT_FILE=${2}
+	local SCRIPT_FIRMWARE SCRIPT_CLEANUP
 
 	case ${BATCH_TYPE} in
 		linux)
+			if [ "${EMULATOR_FIRMWARE}" == efi ]
+			then
+				SCRIPT_FIRMWARE=$(cat <<-EOF
+					if [ -z "\${OVMF_CODE}" ] || [ -z "\${OVMF_VARS}" ]
+					then
+					    for OVMF in ${EMULATOR_OVMF_PAIRS}
+					    do
+					        if [ -z "\${OVMF_CODE}" ] && [ -f "\${OVMF%%:*}" ] && [ -f "\${OVMF#*:}" ]
+					        then
+					            OVMF_CODE=\${OVMF%%:*}
+					            OVMF_VARS=\${OVMF#*:}
+					        fi
+					    done
+					fi
+					if [ -z "\${OVMF_CODE}" ]
+					then
+					    echo "No UEFI firmware (OVMF): install edk2-ovmf (Fedora) or ovmf (Debian, Ubuntu), or set OVMF_CODE and OVMF_VARS" >&2
+					    exit 1
+					fi
+					EFIVARS="$(emulator_system_path linux "${EMULATOR_EFIVARS}")"
+					if [ ! -f "\${EFIVARS}" ]
+					then
+					    cp "\${OVMF_VARS}" "\${EFIVARS}" || exit 1
+					fi
+					EOF
+				)
+			fi
 			cat <<-EOF > "${SCRIPT_FILE}"
 				#!/bin/sh
 				# File generated by bbxb emulator cmdgen
 				KERNEL_VER=${EMULATOR_KERNEL_VER}
-
+				${SCRIPT_FIRMWARE:+${SCRIPT_FIRMWARE}
+				}
 				${EMULATOR_CMDLINE}
 			EOF
 			chmod +x "${SCRIPT_FILE}"
 			;;
 		win)
+			### qemu-img info tells whether the copy of the variables is there, as for the snapshot,
+			### qemu-img convert makes it
+			# shellcheck disable=SC2016 # PowerShell expands them
+			SCRIPT_CLEANUP='$env:SNAPSHOT'
+			if [ "${EMULATOR_FIRMWARE}" == efi ]
+			then
+				SCRIPT_FIRMWARE=$(cat <<-EOF
+					if not defined OVMF_CODE set "OVMF_CODE=%QEMU_EXE_PREFIX%share\\edk2-x86_64-code.fd"
+					if not defined OVMF_VARS set "OVMF_VARS=%QEMU_EXE_PREFIX%share\\edk2-i386-vars.fd"
+					set EFIVARS=${EMULATOR_EFIVARS}
+
+					"%QEMU_EXE_PREFIX%qemu-img.exe" info "%EFIVARS%" >nul 2>&1
+					if errorlevel 1 (
+					    echo Creating the UEFI variables %EFIVARS%
+					    "%QEMU_EXE_PREFIX%qemu-img.exe" convert -f raw -O raw "%OVMF_VARS%" "%EFIVARS%"
+					    if errorlevel 1 exit /b 1
+					)
+					EOF
+				)
+				# shellcheck disable=SC2016 # PowerShell expands them
+				SCRIPT_CLEANUP+=', $env:EFIVARS'
+			fi
 			### No wt in front of QEMU: the batch waits for it to end before asking about the
 			### snapshot. choice: errorlevel 1 is Y, 2 is N. A user may create files in the TEMP of
 			### Windows but not list it, and if exist and del look for a file by listing: qemu-img
@@ -300,12 +440,14 @@ function emulator_script () {
 				    "%QEMU_EXE_PREFIX%qemu-img.exe" create -q -f qcow2 -F raw -b "%IMAGE%" "%SNAPSHOT%"
 				    if errorlevel 1 exit /b 1
 				)
-
+				${SCRIPT_FIRMWARE:+
+				${SCRIPT_FIRMWARE}
+				}
 				${EMULATOR_CMDLINE}
 
-				choice /c YN /m "Delete the snapshot %SNAPSHOT%"
+				choice /c YN /m "Delete the snapshot %SNAPSHOT%${EMULATOR_EFIVARS:+ and the UEFI variables}"
 				if errorlevel 2 exit /b 0
-				powershell -NoProfile -Command "Remove-Item -LiteralPath \$env:SNAPSHOT"
+				powershell -NoProfile -Command "Remove-Item -LiteralPath ${SCRIPT_CLEANUP}"
 			EOF
 			;;
 	esac
@@ -315,19 +457,21 @@ function emulator_script () {
 # shellcheck disable=SC2154 # the _param_ variables of param2value (eval)
 function emulator_cmdgen () {
 	### emulator_cmdgen [--quiet] [--batchtype linux|win|all] [--rootdev <device>] [--rootfs <fs>]
-	###                 [--rootpart <n>] [--savecmd <file>]: print the QEMU command line of the image
+	###                 [--rootpart <n>] [--firmware bios|efi] [--savecmd <file>]: print the QEMU command line of the image
 	### of the project (not with --quiet) and with --savecmd write it as a script, <file> for linux,
 	### <file>.bat for win. all is both, saved by default next to the image as <project>.qemu and
 	### <project>.qemu.bat. The root is <device> with the file system <fs>, by default the PARTUUID
-	### and the file system of partition <n> (2) of the image (emulator_image_root)
-	local IS_QUIET BATCH_TYPES BATCH_TYPE KERN_ROOTDEV KERN_ROOTFS KERN_ROOTPARTITION SAVECMD
+	### and the file system of partition <n> (2) of the image (emulator_image_root). The firmware is
+	### the one of the image (emulator_image_firmware) unless --firmware says
+	local IS_QUIET BATCH_TYPES BATCH_TYPE KERN_ROOTDEV KERN_ROOTFS KERN_ROOTPARTITION FIRMWARE SAVECMD
 
-	OPTS="--quiet" OPTS_WITH_VALUE="--batchtype --rootdev --rootfs --rootpart --savecmd" param2value "${@}"
+	OPTS="--quiet" OPTS_WITH_VALUE="--batchtype --rootdev --rootfs --rootpart --firmware --savecmd" param2value "${@}"
 	IS_QUIET=${_param_quiet}
 	BATCH_TYPES=${_param_batchtype:-linux}
 	KERN_ROOTDEV=${_param_rootdev}
 	KERN_ROOTFS=${_param_rootfs}
 	KERN_ROOTPARTITION=${_param_rootpart}
+	FIRMWARE=${_param_firmware}
 	SAVECMD=${_param_savecmd}
 
 	case ${BATCH_TYPES} in
@@ -344,7 +488,7 @@ function emulator_cmdgen () {
 
 	for BATCH_TYPE in ${BATCH_TYPES}
 	do
-		emulator_cmdline "${BATCH_TYPE}" "${KERN_ROOTDEV}" "${KERN_ROOTFS}" "${KERN_ROOTPARTITION}" || return
+		emulator_cmdline "${BATCH_TYPE}" "${KERN_ROOTDEV}" "${KERN_ROOTFS}" "${KERN_ROOTPARTITION}" "${FIRMWARE}" || return
 		if [ -z "${IS_QUIET}" ]
 		then
 			echo "${EMULATOR_CMDLINE}"
@@ -359,17 +503,28 @@ function emulator_cmdgen () {
 
 # shellcheck disable=SC2154 # the _param_ variables of param2value (eval)
 function emulator_run () {
-	### emulator_run [--rootdev <device>] [--rootfs <fs>] [--rootpart <n>]: run the image of the
-	### project in QEMU of this host (as root, with sudo), the root as for emulator_cmdgen.
-	### QEMU_EXE_PREFIX of the environment is the directory of qemu-system-*, default PATH
-	local KERN_ROOTDEV KERN_ROOTFS KERN_ROOTPARTITION QEMU_EXE QEMU_VERSION
+	### emulator_run [--rootdev <device>] [--rootfs <fs>] [--rootpart <n>] [--firmware bios|efi]: run
+	### the image of the project in QEMU of this host (as root, with sudo), the root and the firmware
+	### as for emulator_cmdgen. QEMU_EXE_PREFIX of the environment is the directory of qemu-system-*,
+	### default PATH; efi takes OVMF from emulator_ovmf, the variables of the image from
+	### <project>.efivars.fd next to it (a copy of the template, made the first time)
+	local KERN_ROOTDEV KERN_ROOTFS KERN_ROOTPARTITION FIRMWARE QEMU_EXE QEMU_VERSION OVMF
 
-	OPTS="" OPTS_WITH_VALUE="--rootdev --rootfs --rootpart" param2value "${@}"
+	OPTS="" OPTS_WITH_VALUE="--rootdev --rootfs --rootpart --firmware" param2value "${@}"
 	KERN_ROOTDEV=${_param_rootdev}
 	KERN_ROOTFS=${_param_rootfs}
 	KERN_ROOTPARTITION=${_param_rootpart}
+	FIRMWARE=${_param_firmware}
 
-	emulator_cmdline linux "${KERN_ROOTDEV}" "${KERN_ROOTFS}" "${KERN_ROOTPARTITION}" || return
+	emulator_cmdline linux "${KERN_ROOTDEV}" "${KERN_ROOTFS}" "${KERN_ROOTPARTITION}" "${FIRMWARE}" || return
+	if [ "${EMULATOR_FIRMWARE}" == efi ]
+	then
+		OVMF=$(emulator_ovmf) || return
+		if [ ! -f "${EMULATOR_EFIVARS}" ]
+		then
+			cp "${OVMF#*:}" "${EMULATOR_EFIVARS}" || return
+		fi
+	fi
 
 	QEMU_EXE=${QEMU_EXE_PREFIX}$(emulator_qemu_exe)
 	if ! QEMU_VERSION=$("${QEMU_EXE}" --version 2> /dev/null | head -n1 | awk '{print $4}')
@@ -383,9 +538,13 @@ function emulator_run () {
 
 	### The command line names ${QEMU_EXE_PREFIX}, ${SYSTEM_PREFIX} and ${KERNEL_VER}, as the linux
 	### script does: SYSTEM_PREFIX and QEMU_EXE_PREFIX come from the environment, KERNEL_VER is the one
-	### of system_config, in a subshell that leaves the one of the build as it is
+	### of system_config, in a subshell that leaves the one of the build as it is; OVMF_CODE and
+	### EFIVARS the firmware files of efi, which it names the same way
 	(
 		KERNEL_VER=${EMULATOR_KERNEL_VER}
+		OVMF_CODE=${OVMF%%:*}
+		# shellcheck disable=SC2034 # read by the eval below
+		EFIVARS=${EMULATOR_EFIVARS}
 		eval sudo "${EMULATOR_CMDLINE}"
 	)
 }

@@ -42,10 +42,13 @@ function loopdevmgr() {
 
 function create_image() {
 	# create_image <tag_name> [--rootfstype <fs_type>] [--size <size_in_KiB> [--layout <layout_file>]
+	#              [--boottype <sfdisk type>]
+	### --boottype is the MBR type of the FAT boot partition of the default layout: c (FAT32 LBA),
+	### ef for the EFI system partition the UEFI firmware boots from
 
-	OPTS="" OPTS_WITH_VALUE="--rootfstype --size --layout" param2value "${@}"
+	OPTS="" OPTS_WITH_VALUE="--rootfstype --size --layout --boottype" param2value "${@}"
 
-	local MOUNT_NAME MOUNT_LAYOUT IMAGE_PATH MOUNT_DIR ROOTFS_TYPE SIZEIEC LAYOUT LODEVICE
+	local MOUNT_NAME MOUNT_LAYOUT IMAGE_PATH MOUNT_DIR ROOTFS_TYPE SIZEIEC LAYOUT LODEVICE BOOT_TYPE
 
 	# shellcheck disable=SC2154
 	MOUNT_NAME=${_param_1}
@@ -55,6 +58,8 @@ function create_image() {
 	MOUNT_DIR=${PLATFORM_PATH}/${MOUNT_NAME}
 	ROOTFS_TYPE=${_param_rootfstype:-ext4}
 	SIZEIEC=${_param_size:-2G}
+	# shellcheck disable=SC2154
+	BOOT_TYPE=${_param_boottype:-c}
 
 	if [ -z "${MOUNT_LAYOUT}" ]
 	then
@@ -63,7 +68,7 @@ function create_image() {
 			unit: sectors
 			sector-size: 512
 
-			start=        8192, size=      524288, type=c
+			start=        8192, size=      524288, type=${BOOT_TYPE}
 			start=      532480, type=83
 			EOF
 		)"
