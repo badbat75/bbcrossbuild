@@ -1054,6 +1054,91 @@ function find_host_paths () {
 	done | LC_ALL=C sort -u
 }
 
+function unresolved_needed () {
+	### unresolved_needed <dir> <sysroot>: the libraries the programs and libraries of the target under
+	### <dir> need (NEEDED) that neither <dir> nor <sysroot> has, as "<file>: <library>" with the file
+	### relative to <dir>, in byte order. A library is looked for where the loader of the image looks:
+	### the RUNPATH or RPATH of the file ($ORIGIN is its directory), the directory of the file itself (a
+	### private library next to the one that loads it, as libsystemd-core next to libsystemd-shared), the
+	### directories of etc/ld.so.conf.d and /lib, /usr/lib, /lib<HARCH_LIB> and TARGET_LIBDIR with their
+	### multiarch suffix. Only the ELF files of the machine of the platform count (the firmware files of
+	### other processors do not), the static libraries, objects and kernel modules not. A library the
+	### build took from the build host has a name the sysroot does not have (libxml2.so.2 of the host
+	### against libxml2.so.16, libssl.so.3 against libssl.so.4): build stops on it
+	local DIR=${1%/}
+	local ROOT=${2%/}
+	local MACHINE ENTRY KIND FILE NEEDED RUNPATH LIBDIR BASE FOUND
+	local -a RUNPATH_DIRS ENTRIES
+	local -a LIBDIRS=()
+	local -A RUNPATHS=()
+	if [ ! -d "${DIR}" ]
+	then
+		return 0
+	fi
+	case ${HM} in
+		x86_64) MACHINE="Advanced Micro Devices X86-64" ;;
+		i?86) MACHINE="Intel 80386" ;;
+		aarch64) MACHINE="AArch64" ;;
+		arm*) MACHINE="ARM" ;;
+		riscv*) MACHINE="RISC-V" ;;
+		*) MACHINE= ;;
+	esac
+	for LIBDIR in /lib /usr/lib "/lib${HARCH_LIB}" "${TARGET_LIBDIR}"
+	do
+		LIBDIRS+=( "${LIBDIR}" "${LIBDIR}${TARGET_LIBSUFFIX}" )
+	done
+	while read -r LIBDIR
+	do
+		LIBDIRS+=( "${LIBDIR}" )
+	done < <( cat "${ROOT}"/etc/ld.so.conf.d/*.conf "${DIR}"/etc/ld.so.conf.d/*.conf 2> /dev/null | grep '^/' || true )
+	### One readelf for every file: with more than one file (/dev/null is always there) it names each
+	### one, the ones that are no ELF go to its errors (and its status: /dev/null is always one). The
+	### RUNPATH of a file comes after its NEEDED
+	mapfile -t ENTRIES < <( { find "${DIR}" -type f ! -name '*.a' ! -name '*.o' ! -name '*.ko' ! -name '*.ko.*' -print0 2> /dev/null || true; } | \
+		{ xargs -0 -r readelf -hdW /dev/null 2> /dev/null || true; } | \
+		awk -v machine="${MACHINE}" '
+			/^File: / { file = substr($0, 7); skip = 0; next }
+			/^  Machine:/ { sub(/^  Machine: +/, ""); skip = (machine != "" && $0 != machine); next }
+			skip { next }
+			/\((RUNPATH|RPATH)\)/ { if (match($0, /\[.*\]/)) print "R\t" file "\t" substr($0, RSTART + 1, RLENGTH - 2); next }
+			/\(NEEDED\)/ { if (match($0, /\[.*\]/)) print "N\t" file "\t" substr($0, RSTART + 1, RLENGTH - 2) }' )
+	for ENTRY in "${ENTRIES[@]}"
+	do
+		IFS=$'\t' read -r KIND FILE NEEDED <<< "${ENTRY}"
+		if [ "${KIND}" == R ]
+		then
+			RUNPATHS[${FILE}]=${NEEDED}
+		fi
+	done
+	for ENTRY in "${ENTRIES[@]}"
+	do
+		IFS=$'\t' read -r KIND FILE NEEDED <<< "${ENTRY}"
+		if [ "${KIND}" != N ]
+		then
+			continue
+		fi
+		FOUND=0
+		BASE=$( dirname "${FILE#"${DIR}"}" )
+		RUNPATH=${RUNPATHS[${FILE}]:-}
+		RUNPATH=${RUNPATH//\$\{ORIGIN\}/${BASE}}
+		RUNPATH=${RUNPATH//\$ORIGIN/${BASE}}
+		IFS=: read -r -a RUNPATH_DIRS <<< "${RUNPATH}"
+		for LIBDIR in "${RUNPATH_DIRS[@]}" "${BASE}" "${LIBDIRS[@]}"
+		do
+			if [ -e "${DIR}${LIBDIR}/${NEEDED}" ] || [ -e "${ROOT}${LIBDIR}/${NEEDED}" ]
+			then
+				FOUND=1
+				break
+			fi
+		done
+		if [ "${FOUND}" -eq 0 ]
+		then
+			echo "${FILE#"${DIR}/"}: ${NEEDED}"
+		fi
+	done | LC_ALL=C sort -u
+	return 0
+}
+
 function linker_for_build () {
 	### linker_for_build <linker> <fallback>: the linker of the native and cross builds. mold is a
 	### package of the framework (lfs/mold:cross, which setup_full_toolchain builds after lfs/cmake:native
@@ -3066,6 +3151,13 @@ function build () {(
 					echo "WARNING: host paths in $(wc -l <<< "${HOST_PATH_FILES}") files of ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}:"
 					echo "${HOST_PATH_FILES}"
 				} | log_buffer info
+			fi
+			### Every library the package needs is in the package or in the sysroot: one of the build
+			### host has another name there
+			UNRESOLVED_FILES=$( unresolved_needed "${PKG_PKGPATH}" "${BIN_PATH}" )
+			if [ -n "${UNRESOLVED_FILES}" ]
+			then
+				trow_error "${ERROR_GENERIC}" "Libraries neither ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}} nor the sysroot has, taken from the build host: $(tr '\n' ' ' <<< "${UNRESOLVED_FILES}")"
 			fi
 			if [ "${NOSAVESTATUS}" -eq 0 ] && [ -z "${TEMPORARY_STATUS}" ]
 			then

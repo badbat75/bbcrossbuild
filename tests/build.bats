@@ -444,3 +444,41 @@ echo "${QEMU_LD_PREFIX} ${QEMU_CPU} ${*}"'
 	run env -u QEMU_LD_PREFIX -u QEMU_CPU PATH="${BATS_TEST_TMPDIR}/bin:${PATH}" "${RUNNER}" /bin/prog x
 	assert_output_lines "${SYSROOT} max /bin/prog x"
 }
+
+@test "unresolved_needed: the libraries neither the package nor the sysroot has, where the loader of the image looks" {
+	command -v cc > /dev/null || skip "no C compiler on this host"
+	local STAGE=${BATS_TEST_TMPDIR}/stage ROOT=${BATS_TEST_TMPDIR}/root SRC=${BATS_TEST_TMPDIR}/src
+	HM=$( uname -m ) HARCH_LIB=64 TARGET_LIBSUFFIX='' TARGET_LIBDIR=/usr/lib64
+	mkdir -p "${SRC}" "${STAGE}/usr/bin" "${STAGE}/usr/lib64/app" "${STAGE}/usr/lib64/plug" "${ROOT}/usr/lib64" "${ROOT}/opt/lib"
+	put "${SRC}/f.c" 'int f(void) { return 0; }'
+	put "${SRC}/main.c" 'int main(void) { return 0; }'
+	### A library of the sysroot, one of the build host, one in the RUNPATH, one private next to the one
+	### that loads it, one in a directory of ld.so.conf.d
+	cc -shared -fPIC -Wl,-soname,libfoo.so.1 -o "${ROOT}/usr/lib64/libfoo.so.1" "${SRC}/f.c"
+	cc -shared -fPIC -Wl,-soname,libhost.so.3 -o "${SRC}/libhost.so" "${SRC}/f.c"
+	cc -shared -fPIC -Wl,-soname,libplug.so.0 -o "${STAGE}/usr/lib64/plug/libplug.so.0" "${SRC}/f.c"
+	cc -shared -fPIC -Wl,-soname,libpriv.so -o "${STAGE}/usr/lib64/app/libpriv.so" "${SRC}/f.c"
+	cc -shared -fPIC -Wl,-soname,libconf.so.2 -o "${ROOT}/opt/lib/libconf.so.2" "${SRC}/f.c"
+	put "${ROOT}/etc/ld.so.conf.d/opt.conf" /opt/lib
+	### The C library of the sysroot: the check looks for the name only
+	put "${ROOT}/usr/lib64/libc.so.6"
+	cc -o "${STAGE}/usr/bin/app" "${SRC}/main.c" -Wl,--no-as-needed "${ROOT}/usr/lib64/libfoo.so.1" "${SRC}/libhost.so" \
+		"${STAGE}/usr/lib64/plug/libplug.so.0" "${ROOT}/opt/lib/libconf.so.2" -Wl,-rpath,'$ORIGIN/../lib64/plug'
+	cc -shared -fPIC -o "${STAGE}/usr/lib64/app/libuser.so" "${SRC}/f.c" -Wl,--no-as-needed "${STAGE}/usr/lib64/app/libpriv.so"
+	### Not ELF, a static library: not read
+	put "${STAGE}/usr/lib64/libx.a" '!<arch>'
+	put "${STAGE}/usr/share/doc/README" text
+	run unresolved_needed "${STAGE}/" "${ROOT}"
+	[ "${status}" -eq 0 ]
+	assert_output_lines "usr/bin/app: libhost.so.3"
+	### Under the ERR trap of bbxb (set -E): readelf always fails on /dev/null, which is no error
+	run bash -c "set -E -o pipefail; trap 'echo ERR' ERR; $( declare -f unresolved_needed )
+		HM=${HM} HARCH_LIB=64 TARGET_LIBSUFFIX='' TARGET_LIBDIR=/usr/lib64 unresolved_needed '${STAGE}' '${ROOT}'"
+	assert_output_lines "usr/bin/app: libhost.so.3"
+	### The ELF files of another machine are not the ones of the platform
+	HM=riscv64
+	run unresolved_needed "${STAGE}" "${ROOT}"
+	assert_output_lines
+	run unresolved_needed "${BATS_TEST_TMPDIR}/none" "${ROOT}"
+	assert_output_lines
+}
