@@ -1635,8 +1635,9 @@ function target_runner_script () {
 	### Across architectures (HM is not BM, the machine of the build host) qemu-<HM>-static with it. On
 	### the machine of the build host the program runs natively through the dynamic loader of the
 	### sysroot, the one its PT_INTERP names, without the cache of the host and with the libraries of
-	### the sysroot: first LD_LIBRARY_PATH (the libraries of the build directory) and QEMU_LD_LIBRARY_PATH,
-	### each directory inside the sysroot when it is there, as qemu opens it, then the library
+	### the sysroot: first LD_LIBRARY_PATH (the libraries of the build directory), QEMU_LD_LIBRARY_PATH
+	### and the RUNPATH of the program (the loader would look for its image paths on the host), each
+	### directory inside the sysroot when it is there, as qemu opens it, then the library
 	### directories of the sysroot. Only the default directories of the loader stay the ones of the host,
 	### after all of these. A program without PT_INTERP (static, a script) runs as it is
 	local SYSROOT_LIBS="\${SYSROOT}/lib${HARCH_LIB}${TARGET_LIBSUFFIX}:\${SYSROOT}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}"
@@ -1673,6 +1674,7 @@ function target_runner_script () {
 		    ;;
 		esac
 		LOADER=\$(readelf -lW "\${PROGRAM}" 2> /dev/null | sed -n 's/^.*\[Requesting program interpreter: \(.*\)\]\$/\1/p')
+		RUNPATH=\$(readelf -dW "\${PROGRAM}" 2> /dev/null | sed -n 's/^.*(R\(UN\)\{0,1\}PATH).*\[\(.*\)\]\$/\2/p' | sed "s#\\\$ORIGIN#\${PROGRAM%/*}#g" | head -n1)
 		if [ -z "\${LOADER}" ]
 		then
 		    exec "\${@}"
@@ -1680,7 +1682,7 @@ function target_runner_script () {
 		shift
 		LIBRARY_PATH=
 		IFS=:
-		for DIR in \${LD_LIBRARY_PATH} \${QEMU_LD_LIBRARY_PATH}
+		for DIR in \${LD_LIBRARY_PATH} \${QEMU_LD_LIBRARY_PATH} \${RUNPATH}
 		do
 		    if [ -z "\${DIR}" ]
 		    then
@@ -2357,28 +2359,6 @@ function kernelbuild () {
 		run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=\"${KERNEL_ARCH}\"} ${HARCH:+CROSS_COMPILE=\"${HARCH}-\"} INSTALL_DTBS_PATH=\"${PKG_PKGPATH}/boot\" ${PKG_MAKEVARS} dtbs_install"
 	fi
 
-	if [ "${PKG_KERNEL_INITRAMFS:-0}" -eq 1 ]
-	then
-		### The initramfs is part of the package, made here by the dracut of the sysroot (lfs/dracut, a
-		### dependency of the recipe) run with the bash of the host: its modules and the files they
-		### install come from the sysroot, dracut-install is the one of the host (lfs/dracut:native),
-		### which resolves the libraries of the target binaries reading their ELF headers. dracut takes
-		### the kernel modules from the sysroot, so the ones of this build go there first (the package
-		### installs them there anyway). The programs it runs on the host come from the global
-		### toolchain, the dependencies of lfs/dracut:native: systemctl --root, depmod, cpio and zstd
-		### (the first of PATH). ldconfig -r chroots into the tree of the initramfs: the static
-		### ldconfig of the target, as the root of a user namespace (the one of the host skips every
-		### library of another architecture)
-		run_cmd "mkdir -pv \"${BIN_PATH}/lib/modules/${KERNEL_RELEASE}\""
-		run_cmd "rsync -a --delete \"${PKG_PKGPATH}/lib/modules/${KERNEL_RELEASE}/\" \"${BIN_PATH}/lib/modules/${KERNEL_RELEASE}/\""
-		run_cmd "PATH=\"${GLOBAL_TOOLCHAIN_PATH}/bin:${PATH}\" SYSTEMCTL=\"${GLOBAL_TOOLCHAIN_PATH}/bin/systemctl\" DRACUT_COMPRESS_ZSTD=\"${GLOBAL_TOOLCHAIN_PATH}/bin/zstd\" \
-			DRACUT_INSTALL=\"${GLOBAL_TOOLCHAIN_PATH}/bin/dracut-install\" DRACUT_ARCH=\"${HM}\" DRACUT_LDCONFIG=\"unshare -r ${BIN_PATH}/usr/sbin/ldconfig\" \
-			bash \"${BIN_PATH}/usr/bin/dracut\" --sysroot \"${BIN_PATH}\" --tmpdir \"${PKG_BLDPATH}\" --force --kver \"${KERNEL_RELEASE}\" \
-			-N -a drm --fstab --zstd --filesystems \"${PKG_KERNEL_INITRAMFS_DRIVERS:-ext4}\" \"${PKG_PKGPATH}/boot/initramfs-${KERNEL_RELEASE}.img\""
-		### The post install script that made it inside the image, left in the sysroot by earlier builds
-		run_cmd "rm -fv \"${BIN_PATH}/postinst_scripts/99_kernel\""
-	fi
-
 	PKG_KERNEL_BLDPATH="${PWD}"
 	PKG_KERNEL_VERSION="$(./make4kern.sh kernelversion)"
 
@@ -2513,39 +2493,75 @@ function custom () {
 }
 
 function perlmodule () {
+	### perlmodule: a perl module with a Makefile.PL (ExtUtils::MakeMaker), run by the native perl
+	### (lfs/perl5:native, a dependency of the recipe). The native target installs it into that perl, the
+	### configuration tools of the other modules (File::ShareDir::Install...). A target build makes it for
+	### the perl of the image (lfs/perl5, of the same PERL_VER): Makefile.PL finds first in its @INC a
+	### directory with the Config of the image alone (Config.pm, Config_heavy.pl, Config_git.pl, and
+	### Errno.pm, which checks that the architecture of the Config is its own and is generated for it), so
+	### MakeMaker takes the install directories and the build settings of the target, while the native
+	### perl keeps its own XS modules; the library directories of that Config (archlibexp, privlibexp)
+	### are the ones of the sysroot, so the headers are its CORE; the compiler, the archiver and their
+	### flags (OPTIMIZE, LDDLFLAGS) are the ones of the build, not the ones perl was built with. The module goes into site_perl (INSTALLDIRS=site: the perl of the
+	### image has no vendor directories), installed with pure_install: no perllocal.pod, which every
+	### module would append to. CONF_FLAGS are more Makefile.PL arguments, PKG_MAKETARGETS the make
+	### targets (all,pure_install)
+	local PERL_EXE=${GLOBAL_TOOLCHAIN_PATH}/perl5/bin/perl
+	local PERL_ARCHLIB PERL_CONFIG PERL_TARGET_ARGS
+	PERL_ARCHLIB=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/$( echo "${PERL_VER}" | cut -d. -f1,2 )/core_perl
 	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
+	if [ "${PKG_TARGET_ENV}" == target ]
+	then
+		PERL_CONFIG="PERL5LIB=\"\${PWD}/bbxb-perl-config\""
+		PERL_TARGET_ARGS="CC=\"\${CC}\" LD=\"\${CC}\" AR=\"\${AR}\" FULL_AR=\"\${AR}\" RANLIB=\"\${RANLIB}\""
+		PERL_TARGET_ARGS+=" OPTIMIZE=\"\${CFLAGS}\" LDDLFLAGS=\"-shared \${LDFLAGS}\" LDFLAGS=\"\${LDFLAGS}\""
+	fi
 	cat > runconfig.sh <<-EOF
 		#!/bin/bash
 		source "${PKG_BLDPATH}/recipe.source"
 		source "${PKG_BLDPATH}/environment.source"
-
-		perl Makefile.PL \\
-		AR='${AR}' CC='${CC}' CPPRUN='${CPP}' FULL_AR='${AR}' LD='${CC}' \\
-		PERL_INC='${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/5.36/CORE' \\
+		set -e
+		if [ "${PKG_TARGET_ENV}" == target ]
+		then
+			mkdir -p bbxb-perl-config
+			for CONFIG_FILE in Config.pm Config_heavy.pl Config_git.pl Errno.pm
+			do
+				cp -v "\${SYSROOT}${PERL_ARCHLIB}/\${CONFIG_FILE}" bbxb-perl-config/
+			done
+			### The library directories of the perl of the image are the ones of the sysroot during the build:
+			### MakeMaker reads the headers from archlibexp/CORE (every subdirectory too) and the typemap from
+			### privlibexp; it puts neither in the @INC of the native perl
+			sed -i -E "s#^(    (arch|priv)libexp => ')#\\1\${SYSROOT}#" bbxb-perl-config/Config.pm
+			sed -i -E "s#^((arch|priv)libexp=')#\\1\${SYSROOT}#" bbxb-perl-config/Config_heavy.pl
+		fi
+		${PERL_CONFIG} ${CONF_ENV} "${PERL_EXE}" Makefile.PL INSTALLDIRS=site \\
+			PERL="${PERL_EXE}" FULLPERL="${PERL_EXE}" ${PERL_TARGET_ARGS} \\
+			${CONF_FLAGS} \${@}
 	EOF
-	sudo chroot "${SYSROOT}" \
-		perl -V | \
-		grep -o '[^ ].*=.*' | \
-		sed -e 's/ =/=/g' -e 's/^[a-z0-9_]*=/\U&/' -e '/=\x27/! s/=/=\x27/' -e '/\x27$/! s/$/\x27/' | \
-		grep -e 'CCFLAGS=' -e 'CCCDLFLAGS=' -e 'CCDLFLAGS=' -e 'LDDLFLAGS=' -e 'LDFLAGS=' -e 'OFF_T=' | \
-		xargs -d'\n' >> runconfig.sh
-	run_cmd "chmod +x runconfig.sh"
-	run_cmd "./runconfig.sh"
 	cat > runmake.sh <<-EOF
 		#!/bin/bash
 		source "${PKG_BLDPATH}/recipe.source"
 		source "${PKG_BLDPATH}/environment.source"
-		make PERL_INC='${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/5.36/core_perl/CORE'
+		${PERL_CONFIG} ${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
 	EOF
-	run_cmd "chmod +x runmake.sh"
-	run_cmd "./runmake.sh"
-
-	pause
-
+	run_cmd "chmod +x runconfig.sh runmake.sh"
+	run_cmd "./runconfig.sh"
+	IFS=,
+	for target in ${PKG_MAKETARGETS:-all,pure_install}
+	do
+		unset IFS
+		echo "Making ${target}..."
+		run_cmd "./runmake.sh ${target}"
+	done
+	unset IFS
+	### The .packlist of the module lists the files with the staging directory in front
+	if [ -n "${PKG_PKGPATH}" ]
+	then
+		run_cmd "find \"${PKG_PKGPATH}\" -name .packlist -print -delete"
+	fi
 	popd
 }
-
 
 function downloadsources () {
 	if [ -n "${PKG_URL}" ]

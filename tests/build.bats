@@ -426,6 +426,17 @@ printf "%s\n" "${@}"'
 	assert_output_lines --inhibit-cache --library-path \
 		"${SYSROOT}/usr/lib/extra:/build/lib:${SYSROOT}/lib64:${SYSROOT}/usr/lib64" \
 		--argv0 "$( type -P true )" "$( type -P true )" one "two words"
+	### The RUNPATH of the program, an image path, inside the sysroot
+	if command -v cc > /dev/null
+	then
+		put "${BATS_TEST_TMPDIR}/main.c" 'int main(void) { return 0; }'
+		mkdir -p "${SYSROOT}/usr/lib/private"
+		cc -o "${BATS_TEST_TMPDIR}/prog" "${BATS_TEST_TMPDIR}/main.c" -Wl,-rpath,/usr/lib/private:/nonexistent
+		run env -u QEMU_LD_PREFIX LD_LIBRARY_PATH= QEMU_LD_LIBRARY_PATH= "${RUNNER}" "${BATS_TEST_TMPDIR}/prog"
+		assert_output_lines --inhibit-cache --library-path \
+			"${SYSROOT}/usr/lib/private:/nonexistent:${SYSROOT}/lib64:${SYSROOT}/usr/lib64" \
+			--argv0 "${BATS_TEST_TMPDIR}/prog" "${BATS_TEST_TMPDIR}/prog"
+	fi
 	### QEMU_LD_PREFIX of environment.source is the sysroot
 	local STATUS=0
 	env QEMU_LD_PREFIX=/other LD_LIBRARY_PATH= "${RUNNER}" /bin/true 2> /dev/null || STATUS=${?}

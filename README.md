@@ -855,7 +855,7 @@ Available build processes:
 - `kernelbuild`: Downloads, creates source directory and runs a standard kernel build process using platform configuration
 - `kernelmodbuild`: Builds an out of tree kernel module against the kernel built by `kernelbuild`
 - `custom`: Downloads, creates source directory and runs the `build.sh` script of the package
-- `perlmodule`: Downloads, creates source directory and builds a Perl module
+- `perlmodule`: Downloads and builds a Perl module with a `Makefile.PL` (ExtUtils::MakeMaker), run by the native perl of `lfs/perl5:native` (the recipe depends on it). The native target installs the module into that perl (configuration tools such as `perl/File-ShareDir-Install:native`); a target build makes it for the perl of the image (`lfs/perl5`, same `PERL_VER`): the `Config.pm`, `Config_heavy.pl`, `Config_git.pl` and `Errno.pm` of the image come first in `PERL5LIB`, with their `archlibexp` and `privlibexp` in the sysroot (the headers of `CORE`), the compiler, the archiver and their flags are the ones of the build, and the module goes into `site_perl` with `pure_install` (`PKG_MAKETARGETS` default `all,pure_install`, `CONF_FLAGS` more `Makefile.PL` arguments), without `.packlist`. See `perl/XML-Parser`
 - `none`: Runs only the package scripts, no download and no build
 
 **PKG_COPYSRC:**  
@@ -981,7 +981,7 @@ Kernel module path.
 `PKG_KERNEL_MODPATH="extra"`
 
 **PKG_KERNEL_INITRAMFS:**  
-Create initramfs for the kernel (default: 0). `kernelbuild` runs the dracut of the sysroot with the `dracut-install` of `lfs/dracut:native` on the host and puts `boot/initramfs-<release>.img` into the package: the recipe depends on `lfs/dracut` and `lfs/dracut:native`, whose dependencies give the programs dracut runs on the host (`systemctl` and libsystemd of `lfs/systemd:native`, `depmod` of `lfs/kmod:native`, `cpio`, `zstd`).  
+A variable of the kernel recipes, not of `kernelbuild` (default: 0): their `postbuild.sh` (lfs/kernel, raspberrypi/rpi-kernel) runs the dracut of the sysroot on the host through `dracut-sysroot` of `lfs/dracut:native` and puts `boot/initramfs-<release>.img` into the package, with the file systems of `PKG_KERNEL_INITRAMFS_DRIVERS`: the recipe depends on `lfs/dracut` and `lfs/dracut:native`, whose dependencies give the programs dracut runs on the host (`systemctl` and libsystemd of `lfs/systemd:native`, `depmod` of `lfs/kmod:native`, `cpio`, `zstd`).  
 `PKG_KERNEL_INITRAMFS=1`
 
 **PKG_KERNEL_INITRAMFS_DRIVERS:**  
