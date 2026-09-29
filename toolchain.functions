@@ -234,6 +234,7 @@ function setup_autotools () {
 		download_uncompress "${AUTOCONFARCHIVE_URL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" >> "${GLOBAL_LOG_PATH}/toolchain_autoconf-${AUTOCONFARCHIVE_VER}.log"
 	}
 
+	# shellcheck disable=SC2329 # exported: configmake runs it through xargs bash -c
 	function smart_autoreconf () {
 		local WORK_DIR AUTOCONF_CMD ACINCLUDE AUTOMAKE_MAJVER ACINCLUDE
 		WORK_DIR=${1}
@@ -279,7 +280,10 @@ function setup_autotools () {
 	export AUTOTOOLS_PATH
 
 	echo -n "Setting up autotools... "
-	if [ ! -f "${AUTOTOOLS_PATH}/bin/autoconf" ] || [ ! -f "${AUTOTOOLS_PATH}/bin/automake" ] || [ ! -f "${AUTOTOOLS_PATH}/bin/libtoolize" ] || [ ! -f "${AUTOTOOLS_PATH}/bin/autopoint" ]
+	### autom4te records the m4 autoconf was configured with: the one of lfs/m4:native, built before by
+	### setup_full_toolchain; autotools built with another one (the m4 of the build host) are built again
+	if [ ! -f "${AUTOTOOLS_PATH}/bin/autoconf" ] || [ ! -f "${AUTOTOOLS_PATH}/bin/automake" ] || [ ! -f "${AUTOTOOLS_PATH}/bin/libtoolize" ] || [ ! -f "${AUTOTOOLS_PATH}/bin/autopoint" ] || \
+		! grep -q "'${GLOBAL_TOOLCHAIN_PATH}/bin/m4'" "${AUTOTOOLS_PATH}/bin/autom4te" 2> /dev/null
 	then
 		pathadd PATH "${AUTOTOOLS_PATH}/bin"
 		#### Download all auto tools
@@ -326,7 +330,7 @@ function setup_autotools () {
 			fi
 			run_cmd "mkdir -pv \"${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}\""
 			pushd "${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}"
-			run_cmd "\"${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}/configure\" --prefix=\"${AUTOTOOLS_PATH}\""
+			run_cmd "\"${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}/configure\" --prefix=\"${AUTOTOOLS_PATH}\" M4=\"${GLOBAL_TOOLCHAIN_PATH}/bin/m4\""
 			run_cmd "make V=${MAKEVERBOSE:-0}"
 			run_cmd "make V=${MAKEVERBOSE:-0} install"
 			popd 2>&1
@@ -361,9 +365,8 @@ function setup_autotools () {
 		#### Build gettext
 		echo -n "gettext-${GETTEXT_VER}... "
 		{
-			pushd "${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}"
-			smart_autoreconf "${PWD}"
-			popd 2>&1
+			### The release tarball has its configure: autoreconf would run the autopoint of the build host
+			### (the one of these autotools is what this step builds)
 			if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}" ]
 			then
 				run_cmd "rm -rfv \"${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}\""
@@ -1826,6 +1829,8 @@ function setup_full_toolchain () {
 	###
 
 	TOOLCHAIN=gnu build lfs/make:native
+	### The m4 of the autotools, flex and bison, which record its path
+	TOOLCHAIN=gnu build lfs/m4:native
 	setup_autotools --default
 	# shellcheck disable=SC2030
 	TOOLCHAIN=gnu build lfs/pkgconf:native

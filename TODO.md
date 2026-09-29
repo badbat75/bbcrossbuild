@@ -24,18 +24,16 @@ workaround is part of closing the item.
    - the native Python of `setup_python` links the host `openssl-devel`, `libffi-devel`,
      `libuuid-devel`, `tcl-devel`, `tk-devel`: native builds of those libraries (openssl and Tcl
      already have one);
-   - m4: the flex, bison and autotools of the toolchain run the one of the host, whose path their
-     configure recorded (`/usr/bin/m4`); an `lfs/m4:native` built first, and those rebuilt with it
-     (their `PKG_CHECK` is the version only, so it does not happen by itself);
    - go through the remaining lines one by one (docbook-utils, docbook2X, asciidoc, texinfo,
      gtk-doc, help2man, swig, gperf, pandoc, intltool, the `*-devel` packages) and either
      give the tool a native recipe or drop the feature that needs it.
 
    Done: the dracut of the kernel recipes (`dracut-sysroot`) takes every program from native packages (`lfs/dracut:native`
    and its dependencies; only `ldconfig -r` is the static one of the target, through qemu-user,
-   because glibc builds ldconfig only for its own machine); flex and doxygen left the `Dockerfile`
+   because glibc builds ldconfig only for its own machine); flex, doxygen and m4 left the `Dockerfile`
    (`setup_binutils` and `setup_gcc` build `lfs/flex:native` and `lfs/doxygen:native` before any
-   package, first in the `PATH`).
+   package, first in the `PATH`; `lfs/m4:native` comes right after make, and the autotools, flex and
+   bison record its path, the ones of the image `/usr/bin/m4` of `lfs/m4`).
 
 2. **Validate this round on ARM before 4.0.** rpi and rpi3-aarch64 rebuilt with what the generic-x64
    build changed: the dumper of introspection, `mesa_clc`, the `try_run` of CMake through
