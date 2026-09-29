@@ -139,6 +139,8 @@ Where things land (`DATA_PATH` defaults to `/mnt/bbcrossbuild/datadir`; the conf
 | `<project>/<platform>/toolchain/` | Per-platform cross toolchain (`:cross` builds) |
 | `<project>/<platform>/builds/`, `packages/`, `diskimages/`, `distos/` | Build dirs, staging dirs, loop-mounted images, downloaded distro image |
 
+A platform is started again from scratch by removing its whole `<project>/<platform>` directory: the sysroot, `status/` and the cross toolchain go together (glibc and the gcc target libraries are part of the toolchain setup, which skips the headers of the sysroot when the cross compilers are there), so emptying the directory but `toolchain/` is not supported.
+
 ## Architecture
 
 ### Sourcing chain
