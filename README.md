@@ -322,6 +322,13 @@ BBCrossBuild provides various functions for use in project files. These are orga
   - `build` runs it on the staging directory of every target build and logs `WARNING: host paths in <n> files of <package>:` followed by the list: after a build, `grep "host paths in" <platform>/logs/*.log` names the packages that still leak host paths into the image, and each log lists their files
   - The objects and static libraries (`*.o`, `*.a`) with gcc LTO bytecode (`.gnu.lto_` sections) are listed too: their compressed streams always name a host path, which no search of the content finds
 
+- **unresolved_needed**: Print the libraries the ELF files of the machine of the platform under a directory need (NEEDED) that neither the directory nor the sysroot has, as `<file>: <library>` lines in byte order
+  ```
+  unresolved_needed <dir> <sysroot>
+  ```
+  - A library is looked for where the loader of the image looks: the RUNPATH or RPATH of the file (`$ORIGIN` is its directory), the directory of the file, the directories of `etc/ld.so.conf.d` and `/lib`, `/usr/lib`, `/lib<HARCH_LIB>`, `TARGET_LIBDIR` with the multiarch suffix; static libraries, objects, kernel modules and the ELF files of other machines (firmware) are not read
+  - `build` runs it on the staging directory of every target build and stops on any line: a library the build took from the build host has another name in the sysroot (`libxml2.so.2` of the host, `libxml2.so.16` of the sysroot), and a host of the machine of the target links it without complaint
+
 - **lto_object_files**: Print the objects and static libraries under a directory that hold LTO bytecode, as `<kind> <path>` lines in byte order
   ```
   lto_object_files <dir>
