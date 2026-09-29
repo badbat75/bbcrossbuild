@@ -1542,6 +1542,77 @@ function downloadonly () {
 	fi
 }
 
+function target_runner_script () {
+	### target_runner_script: the content of <HARCH>-run (setup_target_runner), the one way a build runs a
+	### program of the target: "<HARCH>-run <program> [<arguments>]", the exe_wrapper of the meson cross
+	### file, the binary wrapper of g-ir-scanner.cross (lfs/gobject-introspection), the emulator of CMake.
+	### The sysroot is QEMU_LD_PREFIX of environment.source (the platform sysroot outside a build).
+	### Across architectures (HM is not BM, the machine of the build host) qemu-<HM>-static with it. On
+	### the machine of the build host the program runs natively through the dynamic loader of the
+	### sysroot, the one its PT_INTERP names, without the cache of the host and with the libraries of
+	### the sysroot: first LD_LIBRARY_PATH (the libraries of the build directory) and QEMU_LD_LIBRARY_PATH,
+	### each directory inside the sysroot when it is there, as qemu opens it, then the library
+	### directories of the sysroot. Only the default directories of the loader stay the ones of the host,
+	### after all of these. A program without PT_INTERP (static, a script) runs as it is
+	local SYSROOT_LIBS="\${SYSROOT}/lib${HARCH_LIB}${TARGET_LIBSUFFIX}:\${SYSROOT}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}"
+
+	cat <<-EOF
+		#!/bin/sh
+		# ${HARCH}-run <program> [<arguments>]: a program of the target, run by a build (bbxb, target_runner_script)
+		SYSROOT=\${QEMU_LD_PREFIX:-${BIN_PATH}}
+	EOF
+	if [ "${HM}" != "${BM}" ]
+	then
+		cat <<-EOF
+			export QEMU_LD_PREFIX="\${SYSROOT}"
+			export QEMU_CPU="\${QEMU_CPU:-max}"
+			exec qemu-${HM}-static "\${@}"
+		EOF
+		return 0
+	fi
+	cat <<-EOF
+		PROGRAM=\${1}
+		case \${PROGRAM} in
+		    */*) ;;
+		    *)
+		        IFS=:
+		        for DIR in \${PATH}
+		        do
+		            if [ -f "\${DIR:-.}/\${1}" ] && [ -x "\${DIR:-.}/\${1}" ]
+		            then
+		                PROGRAM=\${DIR:-.}/\${1}
+		                break
+		            fi
+		        done
+		        unset IFS
+		    ;;
+		esac
+		LOADER=\$(readelf -lW "\${PROGRAM}" 2> /dev/null | sed -n 's/^.*\[Requesting program interpreter: \(.*\)\]\$/\1/p')
+		if [ -z "\${LOADER}" ]
+		then
+		    exec "\${@}"
+		fi
+		shift
+		LIBRARY_PATH=
+		IFS=:
+		for DIR in \${LD_LIBRARY_PATH} \${QEMU_LD_LIBRARY_PATH}
+		do
+		    if [ -z "\${DIR}" ]
+		    then
+		        continue
+		    fi
+		    if [ -d "\${SYSROOT}\${DIR}" ]
+		    then
+		        DIR=\${SYSROOT}\${DIR}
+		    fi
+		    LIBRARY_PATH=\${LIBRARY_PATH}\${DIR}:
+		done
+		unset IFS
+		exec "\${SYSROOT}\${LOADER}" --inhibit-cache --library-path "\${LIBRARY_PATH}${SYSROOT_LIBS}" --argv0 "\${PROGRAM}" "\${PROGRAM}" "\${@}"
+	EOF
+	return 0
+}
+
 function libtool_sysroot () {
 	### libtool_sysroot <sysroot> <dir>: lt_sysroot=<sysroot> in the libtool scripts configure generated
 	### under <dir> without one
@@ -1734,6 +1805,17 @@ function cmakebuild () {
 		EOF
 	fi
 
+	### A target build is a cross build for CMake: -DCMAKE_CROSSCOMPILING does not last, CMake declares
+	### one only for a CMAKE_SYSTEM_NAME given. Without it a target of the machine of the build host
+	### (generic-x64) takes the if(CMAKE_CROSSCOMPILING) branches of a native build, try_run runs
+	### natively against the libraries of the host and a package installs itself with the program it
+	### built (lfs/cmake). try_run and the programs a build runs go through <HARCH>-run
+	local CMAKE_CROSS_FLAGS=
+	if [ "${PKG_TARGET_ENV}" == target ]
+	then
+		CMAKE_CROSS_FLAGS="-DCMAKE_SYSTEM_NAME=${HOS^} -DCMAKE_SYSTEM_PROCESSOR=${HM} -DCMAKE_CROSSCOMPILING_EMULATOR=${HARCH}-run"
+	fi
+
 	### AR, RANLIB and STRIP of a target build are program names (settcenv): CMake would take a name for
 	### a path into the build directory, so the cache gets the program PATH finds. With LTO (IPO) CMake
 	### archives with CMAKE_<LANG>_COMPILER_AR/RANLIB instead, which it looks for next to the compiler:
@@ -1760,6 +1842,7 @@ function cmakebuild () {
 		   -DCMAKE_CXX_COMPILER_RANLIB=\$(command -v \${RANLIB}) \\
 		   -DCMAKE_STRIP=\$(command -v \${STRIP}) \\
 		   -DCMAKE_CROSSCOMPILING:BOOL=ON \\
+		   ${CMAKE_CROSS_FLAGS} \\
 		   -DCMAKE_SKIP_RPATH:BOOL=ON \\
 		   -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" \\
 		   -DCMAKE_INSTALL_LIBDIR="${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}" \\
@@ -1844,8 +1927,8 @@ function mesonninja () {
 			FORTRAN_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
 		fi
 		### needs_exe_wrapper: a program of the target the build runs (mesa_clc, the introspection dumper)
-		### goes through qemu with the sysroot also when the build host has the same architecture, where
-		### meson would run it natively with the libraries of the host (generic-x64)
+		### goes through <HARCH>-run (target_runner_script) also when the build host has the same
+		### architecture, where meson would run it natively with the libraries of the host (generic-x64)
 		cat > "cross-${PLATFORM_NAME}" <<-EOF
 			[binaries]
 			c = [${C}]
@@ -1859,7 +1942,7 @@ function mesonninja () {
 			ranlib = '${RANLIB}'
 			pkgconfig = '${PKG_CONFIG}'
 			${PYTHON}
-			exe_wrapper = 'qemu-${HM}-static'
+			exe_wrapper = '${HARCH}-run'
 
 			[host_machine]
 			system = '${HOS}'

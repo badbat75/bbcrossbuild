@@ -403,3 +403,44 @@ function calls () {
 	### no libtool at all (a configure without LT_INIT)
 	libtool_sysroot /sys/root "${BATS_TEST_TMPDIR}/none"
 }
+
+@test "target_runner_script: the loader of the sysroot on the machine of the build host, qemu across machines" {
+	local SYSROOT=${BATS_TEST_TMPDIR}/sysroot RUNNER=${BATS_TEST_TMPDIR}/run LOADER
+	### BM comes from toolchain.functions, which the suite does not source
+	BM=$( uname -m )
+	### A program of the machine of the build host; its loader in the sysroot is a stub that prints
+	### what it gets
+	LOADER=$( readelf -lW /bin/true | sed -n 's/^.*\[Requesting program interpreter: \(.*\)\]$/\1/p' )
+	[ -n "${LOADER}" ]
+	put "${SYSROOT}${LOADER}" '#!/bin/sh
+printf "%s\n" "${@}"'
+	chmod +x "${SYSROOT}${LOADER}"
+	mkdir -p "${SYSROOT}/usr/lib/extra"
+	HM=${BM} HARCH=${BM}-linux-gnu HARCH_LIB=64 TARGET_LIBSUFFIX='' TARGET_LIBDIR=/usr/lib64 BIN_PATH=${SYSROOT} \
+		target_runner_script > "${RUNNER}"
+	chmod +x "${RUNNER}"
+	### LD_LIBRARY_PATH first, a directory of the image inside the sysroot, one of the build as it is;
+	### then the libraries of the sysroot, without the cache of the host
+	run env -u QEMU_LD_PREFIX LD_LIBRARY_PATH=/usr/lib/extra:/build/lib QEMU_LD_LIBRARY_PATH= "${RUNNER}" true one "two words"
+	[ "${status}" -eq 0 ]
+	assert_output_lines --inhibit-cache --library-path \
+		"${SYSROOT}/usr/lib/extra:/build/lib:${SYSROOT}/lib64:${SYSROOT}/usr/lib64" \
+		--argv0 "$( type -P true )" "$( type -P true )" one "two words"
+	### QEMU_LD_PREFIX of environment.source is the sysroot
+	local STATUS=0
+	env QEMU_LD_PREFIX=/other LD_LIBRARY_PATH= "${RUNNER}" /bin/true 2> /dev/null || STATUS=${?}
+	[ "${STATUS}" -eq 127 ]
+	### A program without a loader (a script) runs as it is
+	put "${BATS_TEST_TMPDIR}/script" '#!/bin/sh
+echo "script ${*}"'
+	chmod +x "${BATS_TEST_TMPDIR}/script"
+	run "${RUNNER}" "${BATS_TEST_TMPDIR}/script" a b
+	assert_output_lines "script a b"
+	### Across machines: qemu-<HM>-static with the sysroot and the CPU of every extension
+	HM=riscv64 HARCH=riscv64-linux-gnu BIN_PATH=${SYSROOT} target_runner_script > "${RUNNER}"
+	put "${BATS_TEST_TMPDIR}/bin/qemu-riscv64-static" '#!/bin/sh
+echo "${QEMU_LD_PREFIX} ${QEMU_CPU} ${*}"'
+	chmod +x "${BATS_TEST_TMPDIR}/bin/qemu-riscv64-static"
+	run env -u QEMU_LD_PREFIX -u QEMU_CPU PATH="${BATS_TEST_TMPDIR}/bin:${PATH}" "${RUNNER}" /bin/prog x
+	assert_output_lines "${SYSROOT} max /bin/prog x"
+}

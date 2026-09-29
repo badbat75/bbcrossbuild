@@ -1057,6 +1057,19 @@ function setup_gcc_specs () {
 	fi
 }
 
+function setup_target_runner () {
+	### setup_target_runner: ${TOOLCHAIN_PATH}/bin/<HARCH>-run, the script of target_runner_script, rewritten
+	### when its content changed
+	local RUNNER=${TOOLCHAIN_PATH}/bin/${HARCH}-run
+	if [ "$( cat "${RUNNER}" 2> /dev/null || true )" != "$( target_runner_script )" ]
+	then
+		mkdir -p "${TOOLCHAIN_PATH}/bin"
+		target_runner_script > "${RUNNER}"
+		chmod 755 "${RUNNER}"
+	fi
+	return 0
+}
+
 function setup_toolchain_wrapper () {
 	true > "${LOG_PATH}/toolchain_wrapper.log"
 	if [ ! -d "${TOOLCHAIN_PATH}/bin" ]
@@ -1782,6 +1795,8 @@ function setup_full_toolchain () {
 	#	SETUP_LLVM="--install"
 	#fi
 
+	### <HARCH>-run, how every build runs a program of the target
+	setup_target_runner
 	setup_rust
 
 	### Set-up sccache
