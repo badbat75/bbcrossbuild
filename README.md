@@ -440,15 +440,6 @@ BBCrossBuild provides various functions for use in project files. These are orga
   - `"<command>"`: Command to execute
   - `--allocate_pty`: Allocate a pseudo-terminal
 
-- **set_ownership**: Set ownership on files
-  ```
-  set_ownership <owner:group> <target_directory> <copy_ownership_from_directory> <file>
-  ```
-  - `<owner:group>`: Owner and group (format: "user:group")
-  - `<target_directory>`: Target directory
-  - `<copy_ownership_from_directory>`: Reference directory
-  - `<file>`: File to set ownership on
-
 - **inject_into_mount_tag**: Copy content into mounted image
   ```
   inject_into_mount_tag <mount_tag> <object> <directory> [<owner>] [--remove_devfiles]
@@ -456,7 +447,7 @@ BBCrossBuild provides various functions for use in project files. These are orga
   - `<mount_tag>`: Tag name of the mounted image
   - `<object>`: Object to inject (binaries or specific file)
   - `<directory>`: Directory under mount point
-  - `[<owner>]`: Owner for the files (default: "root:root")
+  - `[<owner>]`: Owner for the files (default: "root:root"), given by rsync while it copies: the modes of the sysroot (setuid, setgid, sticky) reach the image as they are
   - `--remove_devfiles`: Remove development files
 
 - **run_postinstall_scripts**: Run post-installation scripts

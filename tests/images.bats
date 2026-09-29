@@ -150,3 +150,26 @@ losetup -d /dev/loop0'
 	[[ ${output} == *"already attached to /dev/loop0"* ]]
 	[ ! -s "${SUDO_CALLS}" ]
 }
+
+@test "inject_into_mount_tag keeps setuid, setgid and sticky of the sysroot and gives the owner" {
+	### sudo runs the command as the user of the test, who can give the files to itself only
+	function sudo () {
+		"${@}"
+	}
+	function mountpoint () {
+		return 1
+	}
+	PLATFORM_PATH=${BATS_TEST_TMPDIR}/platform
+	BIN_PATH=${PLATFORM_PATH}/binaries
+	LOG_PATH=${BATS_TEST_TMPDIR}/logs
+	mkdir -p "${BIN_PATH}/usr/bin" "${BIN_PATH}/tmp" "${PLATFORM_PATH}/img" "${LOG_PATH}"
+	touch "${BIN_PATH}/usr/bin/suid" "${BIN_PATH}/usr/bin/sgid"
+	chmod 4755 "${BIN_PATH}/usr/bin/suid"
+	chmod 2755 "${BIN_PATH}/usr/bin/sgid"
+	chmod 1777 "${BIN_PATH}/tmp"
+	run inject_into_mount_tag img binaries / "$(id -u):$(id -g)"
+	[ "${status}" -eq 0 ]
+	assert_equal "$(stat -c '%a %u:%g' "${PLATFORM_PATH}/img/usr/bin/suid")" "4755 $(id -u):$(id -g)"
+	assert_equal "$(stat -c '%a' "${PLATFORM_PATH}/img/usr/bin/sgid")" 2755
+	assert_equal "$(stat -c '%a' "${PLATFORM_PATH}/img/tmp")" 1777
+}

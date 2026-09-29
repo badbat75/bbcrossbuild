@@ -461,28 +461,6 @@ function run_on_root_dir () {
 	log_run "${LOG_PATH}/images_${CHROOT_DIR}.log" chroot_cmd
 }
 
-function set_ownership () {
-	### set_ownership <owner:group> <target_directory> <copy_ownership_from_directory> <file>
-	### A link is owned as a link (chown -h): an absolute one names a file of the image, which -e looks
-	### for on the host and reported as missing
-	if [ -e "${2}/${3}" ] || [ -L "${2}/${3}" ]
-	then
-		chown -h "${1}" "${2}/${3}"	
-		# Check SUID from source path to change it on destination path
-		if [ -u "${4}/${3}" ]
-		then
-			chmod -v u+s "${2}/${3}"
-		fi
-		if [ -g "${4}/${3}" ]
-		then
-			chmod -v g+s "${2}/${3}"
-		fi
-	else
-		echo "${2}/${3} does not exists" >&2
-	fi
-}
-export -f set_ownership
-
 function inject_into_mount_tag () {
 	# inject_into_mount_tag <mount_tag> <object> <directory> <owner>
 	#   mount_tag: name of the mount tag
@@ -543,7 +521,10 @@ function inject_into_mount_tag () {
 		fi
 		echo -n "Syncing ${SOURCE_PATH} to ${TARGET_PATH}... " | log_buffer info
 		pushd "${SOURCE_PATH}" || return "${ERROR_PATH_NOT_FOUND}"
-		run_cmd -s "rsync -K -a ${RSYNC_EXCLUDE} --devices --specials --no-owner --no-group ${TARGET_FILE} \"${TARGET_PATH}\""
+		### The owner is given by rsync (--chown), which sets it before the mode: a chown of its own
+		### after the copy clears setuid and setgid (Linux does it for root too, and for the same
+		### owner), and the modes of the sysroot (setuid, setgid, sticky) reach the image as they are
+		run_cmd -s "rsync -K -a ${RSYNC_EXCLUDE} --devices --specials --chown=${TARGET_OWNER} ${TARGET_FILE} \"${TARGET_PATH}\""
 		popd > /dev/null || return "${ERROR_PATH_NOT_FOUND}"
 		if [ -n "${DEV_BIND}" ]
 		then
@@ -551,28 +532,6 @@ function inject_into_mount_tag () {
 		fi
 		echo -e "Done.\n" | log_buffer info
 	} >> "${LOG_PATH}/images_${ROOT_DIR}.log"
-	echo -n "Setting ownership... "
-	{
-		case ${OBJECT} in
-			binaries)
-				run_cmd -S "$(declare -f set_ownership); export -f set_ownership; find -P ${TARGET_PATH} \\
-					-not \( -path ${TARGET_PATH}/proc -prune \) \\
-					-not \( -path ${TARGET_PATH}/dev -prune \) \\
-					-not \( -path ${TARGET_PATH}/proc -prune \) \\
-					-not \( -path ${TARGET_PATH}/sys -prune \) \\
-					-not \( -path ${TARGET_PATH}/tmp -prune \) \\
-					-printf '%P\0' | xargs -0 -I{} -n1 -P\"${NPROCS}\" bash -c \\
-					'set_ownership \"${TARGET_OWNER}\" \"${TARGET_PATH}\" \"{}\" \"${BIN_PATH}\"' \\
-				"
-				;;
-			*)
-				run_cmd -S "$(declare -f set_ownership); export -f set_ownership; echo \"${TARGET_FILE}\" | xargs -I{} -d'\n' -n1 -P\"${NPROCS}\" bash -c \\
-					'set_ownership \"${TARGET_OWNER}\" \"${TARGET_PATH}\" \"{}\" \"${OBJECT}\"' \\
-				"
-				;;
-		esac
-		echo | log_buffer info
-	}  >> "${LOG_PATH}/images_${ROOT_DIR}.log"
 	echo "Done."
 
 }
