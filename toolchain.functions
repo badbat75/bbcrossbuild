@@ -769,14 +769,22 @@ function setup_gcc () {
 				include ld.so.conf.d/*.conf
 			EOF
 		fi
-		if [ ! -f "${TOOLCHAIN_PATH}/bin/ldconfig" ] && [ -f "$(gcc_sysroot)${TARGET_PREFIX}/sbin/ldconfig" ]
+		### The ldconfig of the target through <HARCH>-run, not through the binfmt entry of qemu; rewritten
+		### when its content changed
+		local LDCONFIG_SCRIPT
+		if [ -f "$(gcc_sysroot)${TARGET_PREFIX}/sbin/ldconfig" ]
 		then
-			run_cmd "cat >\"${TOOLCHAIN_PATH}/bin/ldconfig\"" <<-EOF >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
+			LDCONFIG_SCRIPT=$(cat <<-EOF
 				#!/bin/sh
 				export QEMU_LD_PREFIX=${BIN_PATH}
-				$(gcc_sysroot)${TARGET_PREFIX}/sbin/ldconfig -f /etc/ld.so.conf -C /etc/ld.so.cache -r ${BIN_PATH} \${@}
+				exec ${TOOLCHAIN_PATH}/bin/${HARCH}-run $(gcc_sysroot)${TARGET_PREFIX}/sbin/ldconfig -f /etc/ld.so.conf -C /etc/ld.so.cache -r ${BIN_PATH} "\${@}"
 			EOF
-			run_cmd "chmod +x \"${TOOLCHAIN_PATH}/bin/ldconfig\"" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
+			)
+			if [ "$( cat "${TOOLCHAIN_PATH}/bin/ldconfig" 2> /dev/null || true )" != "${LDCONFIG_SCRIPT}" ]
+			then
+				run_cmd "cat >\"${TOOLCHAIN_PATH}/bin/ldconfig\"" <<<"${LDCONFIG_SCRIPT}" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
+				run_cmd "chmod +x \"${TOOLCHAIN_PATH}/bin/ldconfig\"" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
+			fi
 		fi
 	}
 
