@@ -130,10 +130,19 @@ function image_table () {
 	run emulator_cmdline linux "" "" "" uboot
 	[ "${status}" -eq "${ERROR_NOT_VALID_OPTION}" ]
 	[[ ${output} == *"Unknown firmware uboot"* ]]
+	### The UEFI firmware of the ARM machines (AAVMF), none for another one
 	HM=aarch64
+	QEMU_MACHINE=virt
+	emulator_cmdline linux "" "" "" efi
+	# shellcheck disable=SC2016 # the variables the script sets
+	[[ ${EMULATOR_CMDLINE} == *' -drive if=pflash,format=raw,unit=0,readonly=on,file="${OVMF_CODE}" '* ]]
+	[[ $(emulator_efi_pairs) == /usr/share/edk2/aarch64/QEMU_EFI-pflash.raw:* ]]
+	HM=arm
+	[[ $(emulator_efi_pairs) == *" /usr/share/qemu/edk2-arm-code.fd:/usr/share/qemu/edk2-arm-vars.fd" ]]
+	HM=riscv64
 	run emulator_cmdline linux "" "" "" efi
 	[ "${status}" -eq "${ERROR_NOT_VALID_OPTION}" ]
-	[[ ${output} == *"No UEFI firmware for aarch64"* ]]
+	[[ ${output} == *"No UEFI firmware for riscv64"* ]]
 }
 
 @test "the efi scripts find OVMF and copy the variables of the image the first time" {
@@ -157,13 +166,18 @@ printf '%s\\n' \"\${@}\" > \"${BATS_TEST_TMPDIR}/qemu.args\""
 	EMULATOR_OVMF_PAIRS=/nonexistent/code.fd:/nonexistent/vars.fd emulator_cmdgen --quiet --firmware efi --savecmd "${BATS_TEST_TMPDIR}/none.sh"
 	run env -u OVMF_CODE -u OVMF_VARS QEMU_EXE_PREFIX="${BATS_TEST_TMPDIR}/qemu/" sh "${BATS_TEST_TMPDIR}/none.sh"
 	[ "${status}" -eq 1 ]
-	[[ ${output} == "No UEFI firmware (OVMF)"* ]]
+	[[ ${output} == "No UEFI firmware for x86_64: "* ]]
 	[ ! -f "${BATS_TEST_TMPDIR}/qemu.args" ]
 	### win: the firmware of the QEMU installer, the variables next to the snapshot, both deleted
 	grep -qxF $'if not defined OVMF_CODE set "OVMF_CODE=%QEMU_EXE_PREFIX%share\\edk2-x86_64-code.fd"\r' "${PLATFORM_PATH}/lfs.qemu.bat"
 	grep -q '^set EFIVARS=%SystemRoot%\\TEMP\\lfs-generic-aarch64-[0-9]*\.efivars\.fd'$'\r$' "${PLATFORM_PATH}/lfs.qemu.bat"
 	grep -q '^"%QEMU_EXE_PREFIX%qemu-system-x86_64.exe" .* -drive if=pflash,format=raw,unit=1,file="%EFIVARS%" ' "${PLATFORM_PATH}/lfs.qemu.bat"
 	grep -qx $'powershell -NoProfile -Command "Remove-Item -LiteralPath $env:SNAPSHOT, $env:EFIVARS"\r' "${PLATFORM_PATH}/lfs.qemu.bat"
+	### The firmware of the installer for the machine of the platform
+	HM=aarch64
+	emulator_cmdgen --quiet --batchtype win --firmware efi --savecmd "${BATS_TEST_TMPDIR}/arm64"
+	grep -qxF $'if not defined OVMF_CODE set "OVMF_CODE=%QEMU_EXE_PREFIX%share\\edk2-aarch64-code.fd"\r' "${BATS_TEST_TMPDIR}/arm64.bat"
+	grep -qxF $'if not defined OVMF_VARS set "OVMF_VARS=%QEMU_EXE_PREFIX%share\\edk2-arm-vars.fd"\r' "${BATS_TEST_TMPDIR}/arm64.bat"
 }
 
 @test "run with efi takes OVMF of the host and makes the variables of the image" {
@@ -195,7 +209,7 @@ esac"
 	EMULATOR_OVMF_PAIRS=/nonexistent/code.fd:/nonexistent/vars.fd
 	run emulator_run --firmware efi
 	[ "${status}" -eq "${ERROR_FILE_NOT_FOUND}" ]
-	[[ ${output} == *"No UEFI firmware (OVMF)"* ]]
+	[[ ${output} == *"No UEFI firmware for x86_64: "* ]]
 }
 
 @test "the win command line runs on the snapshot, with the paths of WSL and %KERNEL_VER%" {

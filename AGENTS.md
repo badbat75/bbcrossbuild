@@ -44,7 +44,7 @@ DATA_PATH=~/.bbxb TOOLCHAIN=llvm ./bbxb build lfs generic-x64   # any setenv/bbx
 # and .qemu.bat, which lfs.prj writes with emulator_cmdgen after unmount_tag --finalize), run starts it with sudo
 # The firmware is the one of the image (--firmware bios|efi overrides): bios loads kernel and initramfs of the
 # sysroot with -kernel; efi (an EFI system partition, lfs.prj with LFS_EFI=1, the default on generic-*) boots the
-# disk with OVMF (edk2-ovmf, or OVMF_CODE/OVMF_VARS) and GRUB, the variables in <platform>/<project>.efivars.fd
+# disk with the UEFI firmware of QEMU (OVMF/edk2-ovmf, AAVMF/edk2-aarch64, or OVMF_CODE/OVMF_VARS) and GRUB, the variables in <platform>/<project>.efivars.fd
 ./bbxb emulator cmdgen [--quiet] [--batchtype linux|win|all] [--savecmd <file>] [--rootdev <dev>] [--rootfs <fs>] [--rootpart <n>] [--firmware bios|efi] lfs rpi3-aarch64
 ./bbxb emulator run [--rootdev PARTUUID=...] [--rootfs <fs>] [--rootpart <n>] [--firmware bios|efi] lfs rpi3-aarch64
 

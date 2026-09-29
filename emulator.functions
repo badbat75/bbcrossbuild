@@ -85,13 +85,40 @@ function emulator_image_root () {
 	return 0
 }
 
-### The UEFI firmware (OVMF) of an x86_64 host, "<code>:<variables template>" in the order the linux
-### script and emulator_run look for them: Fedora (edk2-ovmf), Debian and Ubuntu (ovmf, 4M then 2M),
-### the files of QEMU itself (make install, Arch). The batch of Windows takes the ones of the QEMU installer
-EMULATOR_OVMF_PAIRS="/usr/share/edk2/ovmf/OVMF_CODE.fd:/usr/share/edk2/ovmf/OVMF_VARS.fd"
-EMULATOR_OVMF_PAIRS+=" /usr/share/OVMF/OVMF_CODE_4M.fd:/usr/share/OVMF/OVMF_VARS_4M.fd"
-EMULATOR_OVMF_PAIRS+=" /usr/share/OVMF/OVMF_CODE.fd:/usr/share/OVMF/OVMF_VARS.fd"
-EMULATOR_OVMF_PAIRS+=" /usr/share/qemu/edk2-x86_64-code.fd:/usr/share/qemu/edk2-i386-vars.fd"
+### The UEFI firmware of QEMU on the host, "<code>:<variables template>" in the order the linux script and
+### emulator_run look for them: Fedora (edk2-ovmf, edk2-aarch64), Debian and Ubuntu (ovmf, 4M then 2M;
+### qemu-efi-aarch64, qemu-efi-arm), the files of QEMU itself (make install, Arch). EMULATOR_OVMF_PAIRS,
+### when set, replaces the list of the machine (emulator_efi_pairs). The batch of Windows takes the
+### files of the QEMU installer (emulator_efi_share)
+EMULATOR_EFI_PAIRS_x86_64="/usr/share/edk2/ovmf/OVMF_CODE.fd:/usr/share/edk2/ovmf/OVMF_VARS.fd"
+EMULATOR_EFI_PAIRS_x86_64+=" /usr/share/OVMF/OVMF_CODE_4M.fd:/usr/share/OVMF/OVMF_VARS_4M.fd"
+EMULATOR_EFI_PAIRS_x86_64+=" /usr/share/OVMF/OVMF_CODE.fd:/usr/share/OVMF/OVMF_VARS.fd"
+EMULATOR_EFI_PAIRS_x86_64+=" /usr/share/qemu/edk2-x86_64-code.fd:/usr/share/qemu/edk2-i386-vars.fd"
+EMULATOR_EFI_PAIRS_aarch64="/usr/share/edk2/aarch64/QEMU_EFI-pflash.raw:/usr/share/edk2/aarch64/vars-template-pflash.raw"
+EMULATOR_EFI_PAIRS_aarch64+=" /usr/share/AAVMF/AAVMF_CODE.fd:/usr/share/AAVMF/AAVMF_VARS.fd"
+EMULATOR_EFI_PAIRS_aarch64+=" /usr/share/qemu/edk2-aarch64-code.fd:/usr/share/qemu/edk2-arm-vars.fd"
+EMULATOR_EFI_PAIRS_arm="/usr/share/edk2/arm/QEMU_EFI-pflash.raw:/usr/share/edk2/arm/vars-template-pflash.raw"
+EMULATOR_EFI_PAIRS_arm+=" /usr/share/AAVMF/AAVMF32_CODE.fd:/usr/share/AAVMF/AAVMF32_VARS.fd"
+EMULATOR_EFI_PAIRS_arm+=" /usr/share/qemu/edk2-arm-code.fd:/usr/share/qemu/edk2-arm-vars.fd"
+
+function emulator_efi_pairs () {
+	### emulator_efi_pairs: the "<code>:<variables template>" pairs of the UEFI firmware of HM,
+	### EMULATOR_OVMF_PAIRS when set; nothing for a machine without one
+	local PAIRS_NAME=EMULATOR_EFI_PAIRS_${HM}
+	echo "${EMULATOR_OVMF_PAIRS:-${!PAIRS_NAME}}"
+	return 0
+}
+
+function emulator_efi_share () {
+	### emulator_efi_share: "<code>:<variables template>" of the UEFI firmware of HM in the share
+	### directory of the QEMU installer of Windows
+	case ${HM} in
+		x86_64) echo "edk2-x86_64-code.fd:edk2-i386-vars.fd" ;;
+		aarch64) echo "edk2-aarch64-code.fd:edk2-arm-vars.fd" ;;
+		arm) echo "edk2-arm-code.fd:edk2-arm-vars.fd" ;;
+	esac
+	return 0
+}
 
 function emulator_image_firmware () {
 	### emulator_image_firmware <image>: efi when the partition table of the image has an EFI system
@@ -151,9 +178,9 @@ function emulator_cmdline () {
 	case ${EMULATOR_FIRMWARE} in
 		bios) ;;
 		efi)
-			if [ "${HM}" != x86_64 ]
+			if [ -z "$(emulator_efi_pairs)" ]
 			then
-				trow_error "${ERROR_NOT_VALID_OPTION}" "No UEFI firmware for ${HM} (only OVMF, x86_64)." || return
+				trow_error "${ERROR_NOT_VALID_OPTION}" "No UEFI firmware for ${HM} (x86_64, aarch64, arm)." || return
 			fi
 			;;
 		*)
@@ -335,7 +362,7 @@ function emulator_ovmf () {
 		echo "${OVMF_CODE}:${OVMF_VARS}"
 		return 0
 	fi
-	for OVMF in ${EMULATOR_OVMF_PAIRS}
+	for OVMF in $(emulator_efi_pairs)
 	do
 		if [ -f "${OVMF%%:*}" ] && [ -f "${OVMF#*:}" ]
 		then
@@ -343,7 +370,7 @@ function emulator_ovmf () {
 			return 0
 		fi
 	done
-	trow_error "${ERROR_FILE_NOT_FOUND}" "No UEFI firmware (OVMF): install edk2-ovmf (Fedora) or ovmf (Debian, Ubuntu), or set OVMF_CODE and OVMF_VARS." || return
+	trow_error "${ERROR_FILE_NOT_FOUND}" "No UEFI firmware for ${HM}: install edk2-ovmf or edk2-aarch64 (Fedora), ovmf, qemu-efi-aarch64 or qemu-efi-arm (Debian, Ubuntu), or set OVMF_CODE and OVMF_VARS." || return
 }
 
 function emulator_script () {
@@ -354,7 +381,7 @@ function emulator_script () {
 	### to EFIVARS when it is not there yet
 	local BATCH_TYPE=${1}
 	local SCRIPT_FILE=${2}
-	local SCRIPT_FIRMWARE SCRIPT_CLEANUP
+	local SCRIPT_FIRMWARE SCRIPT_CLEANUP EFI_SHARE
 
 	case ${BATCH_TYPE} in
 		linux)
@@ -363,7 +390,7 @@ function emulator_script () {
 				SCRIPT_FIRMWARE=$(cat <<-EOF
 					if [ -z "\${OVMF_CODE}" ] || [ -z "\${OVMF_VARS}" ]
 					then
-					    for OVMF in ${EMULATOR_OVMF_PAIRS}
+					    for OVMF in $(emulator_efi_pairs)
 					    do
 					        if [ -z "\${OVMF_CODE}" ] && [ -f "\${OVMF%%:*}" ] && [ -f "\${OVMF#*:}" ]
 					        then
@@ -374,7 +401,7 @@ function emulator_script () {
 					fi
 					if [ -z "\${OVMF_CODE}" ]
 					then
-					    echo "No UEFI firmware (OVMF): install edk2-ovmf (Fedora) or ovmf (Debian, Ubuntu), or set OVMF_CODE and OVMF_VARS" >&2
+					    echo "No UEFI firmware for ${HM}: install edk2-ovmf or edk2-aarch64 (Fedora), ovmf, qemu-efi-aarch64 or qemu-efi-arm (Debian, Ubuntu), or set OVMF_CODE and OVMF_VARS" >&2
 					    exit 1
 					fi
 					EFIVARS="$(emulator_system_path linux "${EMULATOR_EFIVARS}")"
@@ -402,9 +429,10 @@ function emulator_script () {
 			SCRIPT_CLEANUP='$env:SNAPSHOT'
 			if [ "${EMULATOR_FIRMWARE}" == efi ]
 			then
+				EFI_SHARE=$(emulator_efi_share)
 				SCRIPT_FIRMWARE=$(cat <<-EOF
-					if not defined OVMF_CODE set "OVMF_CODE=%QEMU_EXE_PREFIX%share\\edk2-x86_64-code.fd"
-					if not defined OVMF_VARS set "OVMF_VARS=%QEMU_EXE_PREFIX%share\\edk2-i386-vars.fd"
+					if not defined OVMF_CODE set "OVMF_CODE=%QEMU_EXE_PREFIX%share\\${EFI_SHARE%%:*}"
+					if not defined OVMF_VARS set "OVMF_VARS=%QEMU_EXE_PREFIX%share\\${EFI_SHARE#*:}"
 					set EFIVARS=${EMULATOR_EFIVARS}
 
 					"%QEMU_EXE_PREFIX%qemu-img.exe" info "%EFIVARS%" >nul 2>&1
