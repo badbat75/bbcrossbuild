@@ -31,7 +31,7 @@ workaround is part of closing the item.
      gtk-doc, help2man, swig, gperf, pandoc, intltool, the `*-devel` packages) and either
      give the tool a native recipe or drop the feature that needs it.
 
-   Done: the dracut of `kernelbuild` takes every program from native packages (`lfs/dracut:native`
+   Done: the dracut of the kernel recipes (`dracut-sysroot`) takes every program from native packages (`lfs/dracut:native`
    and its dependencies; only `ldconfig -r` is the static one of the target, through qemu-user,
    because glibc builds ldconfig only for its own machine); flex and doxygen left the `Dockerfile`
    (`setup_binutils` and `setup_gcc` build `lfs/flex:native` and `lfs/doxygen:native` before any
