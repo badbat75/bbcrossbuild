@@ -12,9 +12,9 @@ RUN dnf -y upgrade && \
     dnf -y install \
     bc parted e2fsprogs btrfs-progs dosfstools bzip2-devel rsync vim-common \
     gcc g++ binutils binutils-gold dwarves elfutils-libelf-devel patchelf \
-    libzstd libzstd-devel file tree curl wget gawk flex patch git \
+    libzstd libzstd-devel file tree curl wget gawk patch git \
     qemu-user-static gperf help2man xmltoman docbook-utils docbook-utils-pdf \
-    docbook2X swig doxygen texinfo gtk-doc asciidoc rubygem-asciidoctor \
+    docbook2X swig texinfo gtk-doc asciidoc rubygem-asciidoctor \
     perl-Thread-Queue perl-FindBin perl-IPC-Cmd perl-Pod-Html python3-passlib python3-docutils \
     graphviz libxslt docbook-style-xsl libxml2-devel \
     libedit-devel lua-devel openssl-devel libffi-devel libuuid-devel \
