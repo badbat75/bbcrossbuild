@@ -9,12 +9,6 @@ PACKAGES+=" libedit-devel lua-devel ocaml-findlib ocaml-ctypes ocaml-ocamldoc"
 # For Image emulation
 PACKAGES+=" qemu-*-static qemu-kvm-tools qemu-kvm qemu-system-*"
 
-# for autoconf runtime (the openssl 4 Makefile runs the perl of lfs/perl5:native)
-PACKAGES+=" perl-FindBin perl-IPC-Cmd perl-Pod-Html"
-
-# for Python3
-PACKAGES+=" openssl-devel libffi-devel libuuid-devel tcl-devel"
-
 # for moode
 PACKAGES+=" sqlite"
 

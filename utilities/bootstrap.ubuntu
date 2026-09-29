@@ -11,9 +11,6 @@ sudo apt install -y sqlite3
 # for meson-ninja
 sudo apt-get install -y python3-pip
 
-# for Python 3.7
-sudo apt-get install -y libssl-dev libffi-dev
-
 # for zziplib
 sudo apt install -y python2
 

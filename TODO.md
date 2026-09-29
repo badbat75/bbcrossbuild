@@ -17,23 +17,9 @@ workaround is part of closing the item.
      libxml2 (`graphviz`, `libxslt`, `docbook-style-xsl`, `libxml2-devel` in the lists):
      candidates for `lfs/graphviz:native`, native libxslt and docbook-xsl, an `lfs/libxml2:cross`
      variant;
-   - the native perl lives outside the `PATH` of the builds (`${GLOBAL_TOOLCHAIN_PATH}/perl5`,
-     only `lfs/openssl` uses it): serving every build with it, built before the autotools, lets
-     the `perl-*` host packages go once it also carries the non core modules the builds use
-     (`XML::Parser` for intltool);
-   - the native Python of `setup_python` links the host `openssl-devel`, `libffi-devel`,
-     `libuuid-devel`, `tcl-devel`, `tk-devel`: native builds of those libraries (openssl and Tcl
-     already have one);
    - go through the remaining lines one by one (docbook-utils, docbook2X, asciidoc, texinfo,
      gtk-doc, help2man, swig, gperf, pandoc, intltool, the `*-devel` packages) and either
      give the tool a native recipe or drop the feature that needs it.
-
-   Done: the dracut of the kernel recipes (`dracut-sysroot`) takes every program from native packages (`lfs/dracut:native`
-   and its dependencies; only `ldconfig -r` is the static one of the target, through qemu-user,
-   because glibc builds ldconfig only for its own machine); flex, doxygen and m4 left the `Dockerfile`
-   (`setup_binutils` and `setup_gcc` build `lfs/flex:native` and `lfs/doxygen:native` before any
-   package, first in the `PATH`; `lfs/m4:native` comes right after make, and the autotools, flex and
-   bison record its path, the ones of the image `/usr/bin/m4` of `lfs/m4`).
 
 2. **Validate this round on ARM before 4.0.** rpi and rpi3-aarch64 rebuilt with what the generic-x64
    build changed: the dumper of introspection, `mesa_clc`, the `try_run` of CMake through

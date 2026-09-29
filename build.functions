@@ -20,7 +20,10 @@ function setbuildenv () {
 			unset QEMU_LD_PREFIX COMMON_CPPFLAGS SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH PLATFORM_LDFLAGS
 			PLATFORM_CFLAGS="-march=native"
 			PLATFORM_RUSTFLAGS="-C target-cpu=native"
-			COMMON_CFLAGS="-I${GLOBAL_TOOLCHAIN_PATH}/include"
+			### -isystem: after the -I of the package, whose own headers a header of the global toolchain
+			### with the same name must not shadow (crypt.h of libxcrypt for the minizip of lfs/Tcl, the
+			### tcl*.h of an installed Tcl), and still before the ones of the build host
+			COMMON_CFLAGS="-isystem ${GLOBAL_TOOLCHAIN_PATH}/include"
 			COMMON_CXXFLAGS="${COMMON_CFLAGS}"
 			COMMON_FCFLAGS="${COMMON_CFLAGS}"
 			# C only: the host compiler builds this package (see HOST_CSTD in setenv)
@@ -2203,6 +2206,11 @@ function kernelmodbuild () {
 }
 
 function kernelbuild () {
+	### The host programs of the kernel build (extract-cert and sign-file with libcrypto...) take their
+	### libraries from the global toolchain: HOSTPKG_CONFIG is its pkgconf with its pc files alone (the
+	### PKG_CONFIG variables of the target are emptied below), HOSTLDFLAGS gives them its RUNPATH. A
+	### library it does not have falls back to the one of the build host (objtool: -lelf); the recipe
+	### depends on the native packages its configuration needs (lfs/openssl:native)
 	function make4kern () {
 		cat <<-EOF > make4kern.sh
 			source "${PKG_BLDPATH}/environment.source"
@@ -2228,7 +2236,8 @@ function kernelbuild () {
 				HOSTLD="\${LINKER_EXE_FOR_BUILD}" \\
 				HOSTCFLAGS="\${CFLAGS_FOR_BUILD}" \\
 				HOSTCXXFLAGS="\${CXXFLAGS_FOR_BUILD}" \\
-				HOSTLDFLAGS="\${LDFLAGS_FOR_BUILD}" \\
+				HOSTLDFLAGS="\${LDFLAGS_FOR_BUILD} -Wl,-rpath,${GLOBAL_TOOLCHAIN_PATH}/lib" \\
+				HOSTPKG_CONFIG="env PKG_CONFIG_LIBDIR=${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig:${GLOBAL_TOOLCHAIN_PATH}/share/pkgconfig PKG_CONFIG_SYSROOT_DIR= ${GLOBAL_TOOLCHAIN_PATH}/bin/pkgconf" \\
 				EXTRAVERSION=${KERNEL_EXTRAVERSION} \\
 				LOCALVERSION=${KERNEL_LOCALVERSION} \\
 				${PKG_MAKEVARS} \${@}

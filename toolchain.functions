@@ -173,33 +173,16 @@ function setup_rust () {
 			run_cmd "rustup -v update" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
 		fi
 	fi
-	if [ ! -x "${GLOBAL_TOOLCHAIN_PATH}/bin/cargo-install-update" ]
-	then
-		echo -n "installing cargo-update... "
-		( set -e
-			CARGO_PROFILE_RELEASE_OPT_LEVEL=3
-			CARGO_PROFILE_RELEASE_LTO=thin
-			export CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO
-			run_cmd "cargo install cargo-update" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
-		)
-	fi
-	if [ ! -x "${GLOBAL_TOOLCHAIN_PATH}/bin/bindgen" ]
+	### cargo install upgrades a crate installed in an older version (RUST_UPDATE), no cargo-update:
+	### its openssl-sys linked the openssl of the build host
+	if [ ! -x "${GLOBAL_TOOLCHAIN_PATH}/bin/bindgen" ] || [ "${RUST_UPDATE:-0}" -eq 1 ]
 	then
 		echo -n "installing bindgen-cli... "
 		( set -e
 			CARGO_PROFILE_RELEASE_OPT_LEVEL=3
 			CARGO_PROFILE_RELEASE_LTO=thin
-			run_cmd "cargo install bindgen-cli" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
-		)
-	fi
-	if [ "${RUST_UPDATE:-0}" -eq 1 ]
-	then
-		echo -n "upgrading packages... "
-		( set -e
-			CARGO_PROFILE_RELEASE_OPT_LEVEL=3
-			CARGO_PROFILE_RELEASE_LTO=thin
 			export CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO
-			run_cmd "cargo -v install-update -a" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
+			run_cmd "cargo install bindgen-cli" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
 		)
 	fi
 	echo -n "adding ${CARGO_TARGET} libraries... "
@@ -280,10 +263,13 @@ function setup_autotools () {
 	export AUTOTOOLS_PATH
 
 	echo -n "Setting up autotools... "
-	### autom4te records the m4 autoconf was configured with: the one of lfs/m4:native, built before by
-	### setup_full_toolchain; autotools built with another one (the m4 of the build host) are built again
+	### autom4te records the m4 autoconf was configured with, and autoconf and automake the perl of their
+	### hashbang: the ones of lfs/m4:native and lfs/perl5:native, built before by setup_full_toolchain;
+	### autotools built with others (the ones of the build host) are built again
 	if [ ! -f "${AUTOTOOLS_PATH}/bin/autoconf" ] || [ ! -f "${AUTOTOOLS_PATH}/bin/automake" ] || [ ! -f "${AUTOTOOLS_PATH}/bin/libtoolize" ] || [ ! -f "${AUTOTOOLS_PATH}/bin/autopoint" ] || \
-		! grep -q "'${GLOBAL_TOOLCHAIN_PATH}/bin/m4'" "${AUTOTOOLS_PATH}/bin/autom4te" 2> /dev/null
+		! grep -q "'${GLOBAL_TOOLCHAIN_PATH}/bin/m4'" "${AUTOTOOLS_PATH}/bin/autom4te" 2> /dev/null || \
+		! head -n1 "${AUTOTOOLS_PATH}/bin/autom4te" | grep -q "^#! *${GLOBAL_TOOLCHAIN_PATH}/perl5/bin/perl" || \
+		! head -n1 "${AUTOTOOLS_PATH}/bin/automake" | grep -q "^#! *${GLOBAL_TOOLCHAIN_PATH}/perl5/bin/perl"
 	then
 		pathadd PATH "${AUTOTOOLS_PATH}/bin"
 		#### Download all auto tools
@@ -1220,7 +1206,9 @@ function setup_llvm () {
 		fi
 
 		export LDFLAGS="${LINKER_FLAGS}"
-		
+
+		### No FFI: only lli calls external functions with it, and the libffi it found was the one of
+		### the build host
 		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/cmake\" -S \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm\" -B \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}\" -G Ninja \\
 			-W no-dev \\
 			-DLLVM_PARALLEL_COMPILE_JOBS=${NPROCS} \\
@@ -1249,7 +1237,7 @@ function setup_llvm () {
 			-DLLVM_ENABLE_LTO:BOOL=${LTO} \\
 			-DLLVM_ENABLE_LIBCXX:BOOL=OFF \\
 			-DLLVM_ENABLE_ZLIB:BOOL=ON \\
-			-DLLVM_ENABLE_FFI:BOOL=ON \\
+			-DLLVM_ENABLE_FFI:BOOL=OFF \\
 			-DLLVM_ENABLE_RTTI:BOOL=ON \\
 			-DLLVM_ENABLE_EH:BOOL=ON \\
 			-DLLVM_ENABLE_NEW_PASS_MANAGER:BOOL=ON \\
@@ -1488,6 +1476,12 @@ function setup_llvm () {
 	### Binutils dependency
 	build lfs/binutils:native
 	echo -n "Setting up clang-${LLVM_VER}... "
+	### An LLVM built with FFI links the libffi of the build host (its cmake package finds it again in
+	### every build that uses it): configured and built again without
+	if grep -q 'set(LLVM_ENABLE_FFI TRUE)' "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/cmake/llvm/LLVMConfig.cmake" 2> /dev/null
+	then
+		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}\" \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}\"" > "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
+	fi
 	if [ ! -f "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/clang" ] || [ ! -f "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/bin/ld.lld" ]
 	then
 		true > "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
@@ -1616,11 +1610,21 @@ function setup_python () {
 				;;
 		esac
 		export LDFLAGS+=" -Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/lib"
+		### openssl, libffi and libuuid of the global toolchain (built by setup_python before), not the
+		### ones of the build host: their headers and pc files first, their directory in the RUNPATH.
+		### No Tk there: no _tkinter, which no build uses
+		export CPPFLAGS="-I${GLOBAL_TOOLCHAIN_PATH}/include"
+		### OpenSSL 4 removed the TLSv1.x methods of the deprecated PROTOCOL_TLSv1x paths of _ssl and no
+		### longer defines the macros of their guards (the same flags as lfs/python3)
+		CPPFLAGS+=" -DOPENSSL_NO_SSL3 -DOPENSSL_NO_SSL3_METHOD -DOPENSSL_NO_TLS1 -DOPENSSL_NO_TLS1_METHOD"
+		CPPFLAGS+=" -DOPENSSL_NO_TLS1_1 -DOPENSSL_NO_TLS1_1_METHOD -DOPENSSL_NO_TLS1_2 -DOPENSSL_NO_TLS1_2_METHOD"
+		export LDFLAGS+=" -L${GLOBAL_TOOLCHAIN_PATH}/lib -Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib"
+		export PKG_CONFIG_PATH="${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig"
 		run_cmd "\"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configure\" \\
 			--prefix=\"${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}\" --enable-shared \\
 			--with-system-ffi --with-ensurepip=yes --disable-test-modules \\
 			--with-lto --enable-ipv6 \\
-			--with-system-ffi --with-ensurepip=yes"
+			--with-openssl=\"${GLOBAL_TOOLCHAIN_PATH}\" --with-openssl-rpath=\"${GLOBAL_TOOLCHAIN_PATH}/lib\""
 		#--with-address-sanitizer --with-undefined-behavior-sanitizer
 		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/make\""
 		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/make\" install"
@@ -1670,7 +1674,14 @@ function setup_python () {
 
 	"check_${TOOLCHAIN}_c"
 
-	local PYTHON_DISTOS ONLY_NATIVE
+	### The libraries of the extension modules of the native Python, and the CA certificates its ssl
+	### module reads (the cert.pem of the OPENSSLDIR of lfs/openssl:native)
+	build --toolchain gnu lfs/openssl:native
+	build --toolchain gnu lfs/ca-bundle:native
+	build --toolchain gnu lfs/libffi:native
+	build --toolchain gnu lfs/util-linux:native
+
+	local PYTHON_DISTOS ONLY_NATIVE PYTHON_SSL
 	PYTHON_DISTOS=0
 	ONLY_NATIVE=0
 
@@ -1709,7 +1720,11 @@ function setup_python () {
 	pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin"
 	pathadd PYTHONPATH "${GLOBAL_TOOLCHAIN_PATH}/lib/python${PYTHONBIN_VER}/site-packages"
 
-	if [ ! -x "${PYTHON_FOR_BUILD}" ] || [ ! -x "${PIP_FOR_BUILD}" ]
+	### A native Python whose ssl module does not have the global toolchain in its RUNPATH links the
+	### libraries of the build host: it is built again
+	PYTHON_SSL=$(find "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib/python${PYTHONBIN_VER}/lib-dynload" -name '_ssl.*.so' 2>/dev/null | head -n1 || true)
+	if [ ! -x "${PYTHON_FOR_BUILD}" ] || [ ! -x "${PIP_FOR_BUILD}" ] || [ -z "${PYTHON_SSL}" ] || \
+		! readelf -dW "${PYTHON_SSL}" 2>/dev/null | grep "R\(UN\)\{0,1\}PATH.*[:[]${GLOBAL_TOOLCHAIN_PATH}/lib[]:]" > /dev/null
 	then
 		### run_cmd writes its lines already prefixed: the log is the stdout of the steps, not a
 		### log_buffer, which would prefix them twice and hide the log from on_error. The log is
@@ -1831,6 +1846,9 @@ function setup_full_toolchain () {
 	TOOLCHAIN=gnu build lfs/make:native
 	### The m4 of the autotools, flex and bison, which record its path
 	TOOLCHAIN=gnu build lfs/m4:native
+	### The perl of every build (${GLOBAL_TOOLCHAIN_PATH}/perl5/bin in the PATH), with every core module:
+	### the autotools record its path
+	TOOLCHAIN=gnu build lfs/perl5:native
 	setup_autotools --default
 	# shellcheck disable=SC2030
 	TOOLCHAIN=gnu build lfs/pkgconf:native
@@ -1953,5 +1971,7 @@ fi
 
 set_gnu_buildenv
 
+### The perl of lfs/perl5:native, which lives in a prefix of its own, before the one of the build host
+pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/perl5/bin"
 pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/bin"
 pathadd PATH "${TOOLCHAIN_PATH}/bin"
