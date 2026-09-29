@@ -32,10 +32,3 @@ workaround is part of closing the item.
    /proc/sys/fs/binfmt_misc/qemu-aarch64`; the image steps chroot through it), every program of the
    target still run behind the back of `<HARCH>-run` fails (candidates: the GLib tools of the
    `${pc_sysrootdir}` pc variables).
-
-3. **generic-armv7: build and boot.** `lfs.prj` gives it GRUB `arm-efi` in the EFI system partition
-   (`LFS_EFI=1`, `grub.cfg` with the console on `ttyAMA0` and the one of the UEFI firmware, no
-   gfxterm), `platforms/generic-armv7.conf` builds `zImage`, and `bbxb emulator` boots it with the
-   UEFI firmware of QEMU for arm (`edk2-arm-*.fd` of QEMU: Fedora packages none for arm). None of it
-   has run yet: GRUB built for arm, the EFI stub of `multi_v7_defconfig`, `grub-install
-   --target=arm-efi` in the chroot.
