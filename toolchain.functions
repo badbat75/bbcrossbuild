@@ -919,35 +919,48 @@ function setup_gcc () {
 	}
 
 	function setup_ldd () {
-		local LDD_PATH RTLDLIST RTD
+		### The ldd of the target with the loaders of the target and of the build host: the ones of the target
+		### through <HARCH>-run (a script each in libexec/ldd), not through the binfmt entry of qemu. The
+		### trace is asked with --list of the loader instead of LD_TRACE_LOADED_OBJECTS in the environment,
+		### which the dynamic programs of the host in front of it (the scripts, the shell) would obey first.
+		### Rewritten when the content changed
+		local LDD_PATH RTLDLIST RTD LDSO_RUN LDD_SCRIPT
 		LDD_PATH=${1:-${BIN_PATH}}
-		if [ ! -f "${TOOLCHAIN_PATH}/bin/ldd" ]
+		if [ ! -f "${LDD_PATH}${TARGET_PREFIX}/bin/ldd" ]
 		then
-			if [ -f "${LDD_PATH}${TARGET_PREFIX}/bin/ldd" ]
+			return 0
+		fi
+		mkdir -p "${TOOLCHAIN_PATH}/bin" "${TOOLCHAIN_PATH}/libexec/ldd"
+		eval "$(grep "^RTLDLIST=" "${LDD_PATH}${TARGET_PREFIX}/bin/ldd")"
+		for ldso in ${RTLDLIST}
+		do
+			if [ -f "${LDD_PATH}${ldso}" ]
 			then
-				eval "$(grep "^RTLDLIST=" "${LDD_PATH}${TARGET_PREFIX}/bin/ldd")"
-				for ldso in ${RTLDLIST}
-				do
-					if [ -f "${LDD_PATH}${ldso}" ]
-					then
-						RTD=${RTD:+${RTD} }${LDD_PATH}${ldso}
-					fi
-				done
+				LDSO_RUN=${TOOLCHAIN_PATH}/libexec/ldd/${ldso##*/}
+				# shellcheck disable=SC2016
+				printf '#!/bin/sh\nexec %s %s "${@}"\n' "${TOOLCHAIN_PATH}/bin/${HARCH}-run" "${LDD_PATH}${ldso}" > "${LDSO_RUN}"
+				chmod 755 "${LDSO_RUN}"
+				RTD=${RTD:+${RTD} }${LDSO_RUN}
 			fi
-			LIB64="$( [ -d /usr/lib64 ] && echo "/usr/lib64" || echo "/usr/lib" )"
-			RTLDLIST=$(find "${LIB64}" -name "ld-linux-*.so.*" -print0 | xargs -0)
-			RTD=${RTD:+${RTD} }${RTLDLIST}
-			if [ -n "${RTD}" ]
-			then
-				{
-					if [ ! -d "${TOOLCHAIN_PATH}/bin" ]
-					then
-						run_cmd "mkdir -pv \"${TOOLCHAIN_PATH}/bin\""
-					fi
-					run_cmd "sed 's#^RTLDLIST=.*#RTLDLIST=\"${RTD}\"#' \"${LDD_PATH}/usr/bin/ldd\" > \"${TOOLCHAIN_PATH}/bin/ldd\""
-					run_cmd "chmod +x \"${TOOLCHAIN_PATH}/bin/ldd\""
-				} > "${LOG_PATH}/toolchain_ldd.log"
-			fi
+		done
+		LIB64="$( [ -d /usr/lib64 ] && echo "/usr/lib64" || echo "/usr/lib" )"
+		RTLDLIST=$(find "${LIB64}" -name "ld-linux-*.so.*" -print0 | xargs -0)
+		RTD=${RTD:+${RTD} }${RTLDLIST}
+		# shellcheck disable=SC2016
+		LDD_SCRIPT=$(sed -e "s#^RTLDLIST=.*#RTLDLIST=\"${RTD}\"#" \
+			-e 's#^add_env="LD_TRACE_LOADED_OBJECTS=1 #add_env="#' \
+			-e 's#try_trace "\$RTLD" "\$file"#try_trace "$RTLD" --list "$file"#' \
+			"${LDD_PATH}${TARGET_PREFIX}/bin/ldd")
+		# shellcheck disable=SC2016
+		if grep -q "LD_TRACE_LOADED_OBJECTS=1" <<<"${LDD_SCRIPT}" || ! grep -q -- '--list "\$file"' <<<"${LDD_SCRIPT}"
+		then
+			echo "ERROR: ${LDD_PATH}${TARGET_PREFIX}/bin/ldd: the trace through LD_TRACE_LOADED_OBJECTS not found, ldd of glibc changed" >&2
+			return 1
+		fi
+		if [ "$( cat "${TOOLCHAIN_PATH}/bin/ldd" 2> /dev/null || true )" != "${LDD_SCRIPT}" ]
+		then
+			printf '%s\n' "${LDD_SCRIPT}" > "${TOOLCHAIN_PATH}/bin/ldd"
+			chmod 755 "${TOOLCHAIN_PATH}/bin/ldd"
 		fi
 	}
 
