@@ -279,8 +279,13 @@ function emulator_cmdline () {
 		SPECS_NETWORK="-device ${QEMU_NETWORK},netdev=eth0 -netdev user,id=eth0,hostfwd=tcp::5022-:22"
 	fi
 
-	### Graphics device specification
-	if [ -n "${QEMU_GRAPHIC}" ]
+	### Graphics device specification: a device, or "machine" for the display the machine has of its own
+	### (the framebuffer of the SoC of raspi*, which the mailbox of the firmware sets up); none, -nographic
+	if [ "${QEMU_GRAPHIC}" == machine ]
+	then
+		SPECS_GRAPHIC=
+		KERN_CONSOLE="console=${QEMU_CONSOLE:-ttyS0} console=tty1 "
+	elif [ -n "${QEMU_GRAPHIC}" ]
 	then
 		SPECS_GRAPHIC="-vga none -device ${QEMU_GRAPHIC}"
 		KERN_CONSOLE="console=${QEMU_CONSOLE:-ttyS0} console=tty1 "

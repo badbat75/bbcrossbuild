@@ -50,6 +50,17 @@ KERNEL_RELEASE=6.12.1-v8"
 	assert_equal "${KERNEL_VER}" 0.0
 }
 
+@test "QEMU_GRAPHIC: a device with the console also on tty1, machine the display of the machine, none -nographic" {
+	QEMU_GRAPHIC=virtio-gpu-pci
+	emulator_cmdline linux "" "" ""
+	[[ ${EMULATOR_CMDLINE} == *" -vga none -device virtio-gpu-pci "* ]]
+	[[ ${EMULATOR_CMDLINE} == *'-append "console=ttyAMA0 console=tty1 root='* ]]
+	QEMU_GRAPHIC=machine
+	emulator_cmdline linux "" "" ""
+	[[ ${EMULATOR_CMDLINE} != *"-nographic"* && ${EMULATOR_CMDLINE} != *"-vga"* && ${EMULATOR_CMDLINE} != *"-device machine"* ]]
+	[[ ${EMULATOR_CMDLINE} == *'-append "console=ttyAMA0 console=tty1 root='* ]]
+}
+
 @test "the root is the device given, or the partition given of the disk of QEMU_STORAGE" {
 	emulator_cmdline linux PARTUUID=1234-02 btrfs ""
 	[[ ${EMULATOR_CMDLINE} == *'-append "console=ttyAMA0 root=PARTUUID=1234-02 rootfstype=btrfs rootwait '* ]]
