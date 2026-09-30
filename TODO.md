@@ -20,12 +20,3 @@ workaround is part of closing the item.
    - go through the remaining lines one by one (docbook-utils, docbook2X, asciidoc, texinfo,
      gtk-doc, help2man, swig, gperf, pandoc, intltool, the `*-devel` packages) and either
      give the tool a native recipe or drop the feature that needs it.
-
-2. **Validate this round on the Raspberry Pi platforms before 4.0.** generic-aarch64 and generic-armv7
-   built and booted with it (introspection, `mesa_clc` and the `try_run` of CMake through `<HARCH>-run`
-   under qemu, LLVM as a cross build with `LLVM_TABLEGEN`, `unresolved_needed`); rpi and rpi3-aarch64
-   are left, with their own kernel (`raspberrypi/rpi-kernel_7.2`) and boot, rpi3-aarch64 also with
-   the preprocessor cache of sccache on. With the binfmt entry of qemu disabled during the package
-   builds (`echo 0 > /proc/sys/fs/binfmt_misc/qemu-aarch64`; the image steps chroot through it), every
-   program of the target still run behind the back of `<HARCH>-run` fails (candidates: the GLib tools
-   of the `${pc_sysrootdir}` pc variables).
