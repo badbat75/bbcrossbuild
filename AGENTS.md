@@ -104,8 +104,8 @@ utilities/pkg_show [-p rpi3-aarch64] [-t llvm] [-d] lfs/systemd:bootstrap lfs/gl
 # commit pin against the head of its branch); -P: what a project builds in build order; -a: rewrite PKG_VER (or
 # PKG_SUFFIX, the commit) when the new archive answers, -S also the setenv versions (then update_patches for
 # gcc/binutils/glibc/gdb); <recipe>=<ver> forces a version. Only the updates are
-# printed, the recipe being surveyed on a transient line; -v prints every recipe, -o writes all of them to a file
-utilities/pkg_upstream [-p rpi3-aarch64] [-P lfs] [-g raspberrypi] [-a|-S] [-v] [-o report.tsv] [lfs/curl lfs/expat=2.7.1 ...]
+# printed, the recipe being surveyed on a transient line; -v prints every recipe, -o writes all of them to a file; -j the recipes surveyed at once (8, one with -S, which rewrites setenv)
+utilities/pkg_upstream [-p rpi3-aarch64] [-P lfs] [-g raspberrypi] [-a|-S] [-v] [-j 8] [-o report.tsv] [lfs/curl lfs/expat=2.7.1 ...]
 
 # Lint: the sources carry `# shellcheck disable=` directives, so shellcheck is the expected linter. There
 # is no CI for now (the GitHub Actions were removed, September 2026): these three commands, bats and pkg_lint

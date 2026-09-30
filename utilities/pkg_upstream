@@ -2,7 +2,7 @@
 # pkg_upstream: find the latest upstream version of the package recipes and optionally apply it.
 #
 # Usage: utilities/pkg_upstream [-p <platform>] [-P <project>] [-g <group>[,<group>]] [-a] [-S] [-A] [-f] [-v]
-#                               [-o <report.tsv>] [<group>/<name>[=<version>] ...]
+#                               [-j <jobs>] [-o <report.tsv>] [<group>/<name>[=<version>] ...]
 #
 #   -p <platform>   platform the recipes are resolved for (default generic-x64)
 #   -P <project>    survey every recipe projects/<project>.prj builds, dependencies first, in build
@@ -18,6 +18,8 @@
 #                   (variants/version/<version>/) is reported with the update_patches command it needs
 #   -A              do not query release-monitoring.org (Anitya) for a second opinion
 #   -f              refresh: ignore the cached answers (default cache: one day, under ~/.cache/bbxb)
+#   -j <jobs>       recipes surveyed at once (default 8); the report keeps the order of the recipes.
+#                   With -S one: a setenv rewrite is read by every recipe resolved meanwhile
 #   -o <file>       write the tab separated report of every recipe to a file
 #   -v              print every recipe and the failed downloads, not only the updates
 #   without recipes and without -P: every recipe of every group
@@ -74,7 +76,9 @@ import shlex
 import shutil
 import subprocess
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -94,9 +98,25 @@ ALIASES = {
     "Vulkan-SPIRV-Tools": "spirv-tools", "Vulkan-SPIRV-Headers": "spirv-headers",
 }
 
-OPTIONS = {"platform": "generic-x64", "project": None, "groups": None, "apply": False, "anitya": True, "refresh": False, "output": None, "verbose": False, "setenv": False}
+OPTIONS = {"platform": "generic-x64", "project": None, "groups": None, "apply": False, "anitya": True, "refresh": False, "output": None, "verbose": False, "setenv": False, "jobs": 8}
 PROGRESS = sys.stderr.isatty()
 ERRORS = {"count": 0}
+# the workers share the error count and standard error
+LOCK = threading.Lock()
+
+
+def count_error():
+    with LOCK:
+        ERRORS["count"] += 1
+
+
+def cache_write(key, data, mode):
+    """the answer into the cache: a temporary file renamed over the key, so that a worker reading the
+    same URL (the X.org recipes share one directory listing) never sees half of it"""
+    tmp = f"{key}.{os.getpid()}.{threading.get_ident()}"
+    with open(tmp, mode) as f:
+        f.write(data)
+    os.replace(tmp, key)
 
 
 def clear_progress():
@@ -114,8 +134,9 @@ def progress(text):
 
 
 def note(message):
-    clear_progress()
-    sys.stderr.write(message + "\n")
+    with LOCK:
+        clear_progress()
+        sys.stderr.write(message + "\n")
 
 
 def usage(status):
@@ -229,12 +250,11 @@ def fetch(url, headers=None, quiet=False):
     except (urllib.error.URLError, TimeoutError, OSError) as e:
         if quiet:
             return None
-        ERRORS["count"] += 1
+        count_error()
         if OPTIONS["verbose"]:
             note(f"pkg_upstream: {url}: {e}")
         return None
-    with open(key, "wb") as f:
-        f.write(data)
+    cache_write(key, data, "wb")
     return data.decode("utf-8", "replace")
 
 
@@ -250,12 +270,11 @@ def ls_remote(repo_url, *args, refs=()):
             out = None
             error = str(e)
         if out is None or out.returncode != 0:
-            ERRORS["count"] += 1
+            count_error()
             if OPTIONS["verbose"]:
                 note(f"pkg_upstream: git ls-remote {repo_url}: " + (out.stderr.strip() if out else error))
             return None
-        with open(key, "w") as f:
-            f.write(out.stdout)
+        cache_write(key, out.stdout, "w")
     with open(key) as f:
         return [tuple(line.split("\t", 1)) for line in f.read().splitlines() if "\t" in line]
 
@@ -951,6 +970,8 @@ def main():
             OPTIONS["output"] = args.pop(0)
         elif a == "-v":
             OPTIONS["verbose"] = True
+        elif a == "-j":
+            OPTIONS["jobs"] = int(args.pop(0))
         elif a in ("-h", "--help"):
             usage(0)
         elif a.startswith("-"):
@@ -981,22 +1002,30 @@ def main():
         screen.write("\t".join(columns) + "\n")
     shown = 0
     counts = {}
-    for n, recipe in enumerate(recipes, 1):
-        if not os.path.isfile(os.path.join(BB_HOME, "packages", recipe, "package.env")):
-            note(f"pkg_upstream: {recipe}: no package.env")
-            continue
-        progress(f"[{n}/{len(recipes)}] {recipe}")
-        row = survey(recipe, forced.get(recipe), OPTIONS["platform"])
+    missing = [r for r in recipes if not os.path.isfile(os.path.join(BB_HOME, "packages", r, "package.env"))]
+    for recipe in missing:
+        note(f"pkg_upstream: {recipe}: no package.env")
+    recipes = [r for r in recipes if r not in missing]
+    # the recipes are surveyed by the workers and reported in their order (-P: the build order)
+    jobs = 1 if OPTIONS["setenv"] else max(1, OPTIONS["jobs"])
+    pool = ThreadPoolExecutor(max_workers=jobs)
+    futures = [pool.submit(survey, recipe, forced.get(recipe), OPTIONS["platform"]) for recipe in recipes]
+    for n, (recipe, future) in enumerate(zip(recipes, futures), 1):
+        with LOCK:
+            progress(f"[{n}/{len(recipes)}] {recipe}")
+        row = future.result()
         kind = "update" if is_update(row) else re.split("[/:]", row[5])[0]
         counts[kind] = counts.get(kind, 0) + 1
         if report:
             report.write("\t".join(row) + "\n")
             report.flush()
         if OPTIONS["verbose"] or kind == "update":
-            clear_progress()
-            show(screen, row, shown == 0)
-            screen.flush()
+            with LOCK:
+                clear_progress()
+                show(screen, row, shown == 0)
+                screen.flush()
             shown += 1
+    pool.shutdown()
     clear_progress()
     if report:
         report.close()
