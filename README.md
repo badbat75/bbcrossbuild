@@ -1061,7 +1061,7 @@ QEMU_SMP=4
 QEMU_RAM=1024
 QEMU_STORAGE=sd-card
 QEMU_NETWORK=usb-net,mac=b8:27:eb:12:34:56 # Device of -device, with its options: usbnet names it usb0 with a local MAC, eth0 with a global one
-QEMU_CONSOLE=ttyAMA0
+QEMU_CONSOLE=ttyAMA0 # Console of the kernel, the first serial port: -serial ${QEMU_SERIAL} (default tcp::5021,server=on,wait=off)
 QEMU_DTB=firmware/bcm2710-rpi-3-b.dtb
 QEMU_DTBO=disable-bt # Overlays bbxb emulator applies to QEMU_DTB (fdtoverlay of lfs/dtc:native), as dtoverlay= on the board
 ```

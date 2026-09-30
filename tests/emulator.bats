@@ -44,10 +44,13 @@ KERNEL_RELEASE=6.12.1-v8"
 
 @test "the linux command line names the image, the kernel of system_config and the root" {
 	emulator_cmdline linux "" "" ""
-	assert_equal "${EMULATOR_CMDLINE}" "\"\${QEMU_EXE_PREFIX}qemu-system-aarch64\" -machine virt -cpu cortex-a53 -smp 2 -m 2048 -device virtio-blk-pci,drive=disk0 -drive file=\"\${SYSTEM_PREFIX}${PLATFORM_PATH}/lfs.img\",if=none,format=raw,id=disk0 -device virtio-net-pci,netdev=eth0 -netdev user,id=eth0,hostfwd=tcp::5022-:22 -nographic  -device virtio-rng-pci -kernel \"\${SYSTEM_PREFIX}${BIN_PATH}/boot/vmlinuz-6.12.1-v8\" -initrd \"\${SYSTEM_PREFIX}${BIN_PATH}/boot/initramfs-6.12.1-v8.img\" -append \"console=ttyAMA0 root=/dev/vda2 rootfstype=ext4 rootwait cgroup_enable=memory systemd.gpt_auto=no net.ifnames=0\""
+	assert_equal "${EMULATOR_CMDLINE}" "\"\${QEMU_EXE_PREFIX}qemu-system-aarch64\" -machine virt -cpu cortex-a53 -smp 2 -m 2048 -device virtio-blk-pci,drive=disk0 -drive file=\"\${SYSTEM_PREFIX}${PLATFORM_PATH}/lfs.img\",if=none,format=raw,id=disk0 -device virtio-net-pci,netdev=eth0 -netdev user,id=eth0,hostfwd=tcp::5022-:22 -nographic -serial tcp::5021,server=on,wait=off  -device virtio-rng-pci -kernel \"\${SYSTEM_PREFIX}${BIN_PATH}/boot/vmlinuz-6.12.1-v8\" -initrd \"\${SYSTEM_PREFIX}${BIN_PATH}/boot/initramfs-6.12.1-v8.img\" -append \"console=ttyAMA0 root=/dev/vda2 rootfstype=ext4 rootwait cgroup_enable=memory systemd.gpt_auto=no net.ifnames=0\""
 	assert_equal "${EMULATOR_KERNEL_VER}" 6.12.1
 	### The KERNEL_VER of the build stays
 	assert_equal "${KERNEL_VER}" 0.0
+	### The first serial port goes to TCP port 5021 of the host unless QEMU_SERIAL names another backend
+	QEMU_SERIAL=stdio emulator_cmdline linux "" "" ""
+	[[ ${EMULATOR_CMDLINE} == *" -nographic -serial stdio "* ]]
 }
 
 @test "QEMU_GRAPHIC: a device with the console also on tty1, machine the display of the machine, none -nographic" {

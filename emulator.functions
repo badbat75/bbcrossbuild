@@ -152,7 +152,7 @@ function emulator_cmdline () {
 	local KERN_ROOTPARTITION=${4:-2}
 	local FIRMWARE=${5}
 	local IMAGE_ROOTDEV IMAGE_ROOTFS
-	local QEMU_EXE SPECS_HW SPECS_FIRMWARE SPECS_STORAGE SPECS_NETWORK SPECS_GRAPHIC SPECS_SOUND SPECS_DEVICES
+	local QEMU_EXE SPECS_HW SPECS_FIRMWARE SPECS_STORAGE SPECS_NETWORK SPECS_GRAPHIC SPECS_SERIAL SPECS_SOUND SPECS_DEVICES
 	local SPECS_KERNEL KERN_ROOT KERN_CONSOLE KERN_APPEND KERNEL_RELEASE DEVICE DTBO DTB_PATH
 	local -a DTB_OVERLAYS
 
@@ -294,6 +294,11 @@ function emulator_cmdline () {
 		KERN_CONSOLE="console=${QEMU_CONSOLE:-ttyS0} "
 	fi
 
+	### The first serial port, the console of the kernel (QEMU_CONSOLE), on a TCP port of the host that any
+	### client reaches (nc localhost 5021, PuTTY raw), QEMU_SERIAL for another -serial backend: the
+	### boot does not wait for the client, and -nographic keeps the monitor of QEMU on the terminal
+	SPECS_SERIAL="-serial ${QEMU_SERIAL:-tcp::5021,server=on,wait=off}"
+
 	### Sound device specification
 	if [ -n "${QEMU_SOUND}" ]
 	then
@@ -340,6 +345,7 @@ function emulator_cmdline () {
 	EMULATOR_CMDLINE+=" ${SPECS_STORAGE}"
 	EMULATOR_CMDLINE+=" ${SPECS_NETWORK}"
 	EMULATOR_CMDLINE+=" ${SPECS_GRAPHIC}"
+	EMULATOR_CMDLINE+=" ${SPECS_SERIAL}"
 	EMULATOR_CMDLINE+=" ${SPECS_SOUND}"
 	EMULATOR_CMDLINE+="${SPECS_DEVICES}"
 	if [ "${EMULATOR_FIRMWARE}" == bios ]
