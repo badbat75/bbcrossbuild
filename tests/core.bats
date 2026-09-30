@@ -231,3 +231,20 @@ setup () {
 	run pgrep -f -- "inotifywait .*${DIR}/"
 	[ "${status}" -eq 1 ]
 }
+
+@test "download_uncompress extracts a zip of several files, which file -z takes for a gzip error" {
+	local SRC
+	### The real run_cmd of core.functions, not the stub of load_framework: curl and unzip run
+	# shellcheck source=core.functions
+	source "${BB_HOME}/core.functions"
+	SRC=${BATS_TEST_TMPDIR}/src
+	mkdir -p "${SRC}/ent"
+	echo dtd > "${SRC}/docbookx.dtd"
+	echo ent > "${SRC}/ent/isoamsa.ent"
+	(cd "${SRC}" && zip -qr "${BATS_TEST_TMPDIR}/archive.zip" docbookx.dtd ent)
+	DOWNLOAD_PATH=${BATS_TEST_TMPDIR}/downloads
+	STRIPCOMPONENTS=0 download_uncompress "file://${BATS_TEST_TMPDIR}/archive.zip" "${BATS_TEST_TMPDIR}/dest" > /dev/null
+	[ "$(cat "${BATS_TEST_TMPDIR}/dest/docbookx.dtd")" == dtd ]
+	[ "$(cat "${BATS_TEST_TMPDIR}/dest/ent/isoamsa.ent")" == ent ]
+	[ ! -e "${BATS_TEST_TMPDIR}/dest/archive.zip" ]
+}

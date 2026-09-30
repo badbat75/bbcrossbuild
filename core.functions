@@ -153,6 +153,14 @@ download_uncompress () {
 	FILE_ENCODING=$(file -iz "${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}")
 	DOWNLOAD_FILE_TYPE=$(echo "${FILE_ENCODING}" | grep -E -o "compressed-encoding=[^;]*" | sed 's/compressed-encoding=//' || true )
 	UNCOMPRESSED_FILE_TYPE=$(echo "${FILE_ENCODING}" | awk '{print $2}' | sed 's/;$//')
+	### file -z runs the decompressor of what it recognizes: on a zip of more than one file that is
+	### gzip, which gives up ("more than one entry"), and the type becomes a decompression error. The
+	### type of the file itself, without -z, says zip (docbook-xml)
+	if [ "$(file -b --mime-type "${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}")" == application/zip ]
+	then
+		DOWNLOAD_FILE_TYPE=application/zip
+		UNCOMPRESSED_FILE_TYPE=application/zip
+	fi
 	### A server that answers 200 with an HTML page (a moved repository, a landing page) must
 	### not leave that page in the cache in place of the archive: drop it and fail here.
 	if [ "${UNCOMPRESSED_FILE_TYPE}" = "text/html" ]

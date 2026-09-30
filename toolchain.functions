@@ -1201,7 +1201,9 @@ function setup_llvm () {
 
 		unset CFLAGS CXXFLAGS CPPFLAGS PKG_CONFIG PKG_CONFIG_LIBDIR PKG_CONFIG_SYSROOT_DIR PKG_CONFIG_ALLOW_CROSS
 
-		local PLATFORM_CFLAGS="-march=native"
+		### The headers of the global toolchain after the ones of the sources: zlib.h of lfs/zlib:native
+		### for the lldb CTF plugin, which includes it without linking ZLIB::ZLIB
+		local PLATFORM_CFLAGS="-march=native -isystem ${GLOBAL_TOOLCHAIN_PATH}/include"
 		### The probe is an if condition: in a command substitution (set -E) a missing clang runs the
 		### ERR trap, which reports a failure and leaves the error flag behind for the whole run
 		if clang -v > /dev/null 2>&1
@@ -1772,8 +1774,8 @@ function setup_python () {
 	PYTHON_SSL=$(find "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib/python${PYTHONBIN_VER}/lib-dynload" -name '_ssl.*.so' 2>/dev/null | head -n1 || true)
 	### A Python without one of the compression modules (a build host without the library) is built
 	### again, with the ones of the global toolchain
-	PYTHON_ZMODULES=$(find "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib/python${PYTHONBIN_VER}/lib-dynload" \
-		\( -name 'zlib.*.so' -o -name '_bz2.*.so' -o -name '_lzma.*.so' -o -name '_zstd.*.so' \) 2>/dev/null | wc -l)
+	PYTHON_ZMODULES=$( { find "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib/python${PYTHONBIN_VER}/lib-dynload" \
+		\( -name 'zlib.*.so' -o -name '_bz2.*.so' -o -name '_lzma.*.so' -o -name '_zstd.*.so' \) 2>/dev/null || true; } | wc -l)
 	if [ ! -x "${PYTHON_FOR_BUILD}" ] || [ ! -x "${PIP_FOR_BUILD}" ] || [ -z "${PYTHON_SSL}" ] || \
 		[ "${PYTHON_ZMODULES}" -ne 4 ] || \
 		! readelf -dW "${PYTHON_SSL}" 2>/dev/null | grep "R\(UN\)\{0,1\}PATH.*[:[]${GLOBAL_TOOLCHAIN_PATH}/lib[]:]" > /dev/null
