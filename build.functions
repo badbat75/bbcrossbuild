@@ -2332,21 +2332,13 @@ function kernelbuild () {
 
 	# Build and install kernel
 	run_cmd "./make4kern.sh \"${KERNEL_IMAGE}\""
-	case ${KERNEL_NAME}
-	in
-		kernel*)
-			run_cmd "cp \"arch/${KERNEL_ARCH}/boot/${KERNEL_IMAGE}\" \"${PKG_PKGPATH}/boot/${KERNEL_NAME}\""
-			local STATUS=${?}
-			;;
-		*)
-			### Not "make install": scripts/install.sh hands the image to the installkernel of the build
-			### machine, which ignores INSTALL_PATH (kernel-install of the Fedora container: no image in
-			### the package), and the fallback of the architecture names no version
-			run_cmd "mkdir -p \"${PKG_PKGPATH}/boot\""
-			run_cmd "cp \"arch/${KERNEL_ARCH}/boot/${KERNEL_IMAGE}\" \"${PKG_PKGPATH}/boot/vmlinuz-${KERNEL_RELEASE}\""
-			run_cmd "cp System.map \"${PKG_PKGPATH}/boot/System.map-${KERNEL_RELEASE}\""
-			;;
-	esac
+	### Not "make install": scripts/install.sh hands the image to the installkernel of the build
+	### machine, which ignores INSTALL_PATH (kernel-install of the Fedora container: no image in
+	### the package), and the fallback of the architecture names no version. The name the firmware
+	### of a board wants (KERNEL_NAME of the platform, kernel8.img of the Raspberry Pi) is a copy the
+	### kernel recipe makes
+	run_cmd "cp \"arch/${KERNEL_ARCH}/boot/${KERNEL_IMAGE}\" \"${PKG_PKGPATH}/boot/vmlinuz-${KERNEL_RELEASE}\""
+	run_cmd "cp System.map \"${PKG_PKGPATH}/boot/System.map-${KERNEL_RELEASE}\""
 	
 	# Build and install modules
 
@@ -2362,7 +2354,7 @@ function kernelbuild () {
 	fi
 
 	# Build and install DTBS
-	if [ "${KERNEL_DTBS:-0}" -eq 1 ] && [ "${STATUS}" -eq 0 ]
+	if [ "${KERNEL_DTBS:-0}" -eq 1 ]
 	then
 		if [ ! -d "${PKG_PKGPATH}/boot/overlays" ]
 		then

@@ -390,12 +390,14 @@ BBCrossBuild provides various functions for use in project files. These are orga
 
 - **create_image**: Create a new disk image
   ```
-  create_image <tag_name> [--rootfstype <fs_type>] [--size <size>] [--layout <layout_file>]
+  create_image <tag_name> [--rootfstype <fs_type>] [--size <size>] [--layout <layout_file>] [--boottype <type>] [--bootdir <dir>]
   ```
   - `<tag_name>`: Name for the image
   - `--rootfstype <fs_type>`: Filesystem type (ext4, btrfs, etc.)
   - `--size <size>`: Size of the image (e.g., 2G, 4G)
   - `--layout <layout_file>`: Partition layout file
+  - `--boottype <type>`: MBR type of the FAT boot partition (`c`, default; `ef` for an EFI system partition)
+  - `--bootdir <dir>`: Mount point of the boot partition in the fstab of the image (`/boot`, default; `/boot/firmware` on the Raspberry Pi)
 
 - **mount_tag**: Download and mount system image
   ```

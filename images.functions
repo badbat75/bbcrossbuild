@@ -42,13 +42,14 @@ function loopdevmgr() {
 
 function create_image() {
 	# create_image <tag_name> [--rootfstype <fs_type>] [--size <size_in_KiB> [--layout <layout_file>]
-	#              [--boottype <sfdisk type>]
+	#              [--boottype <sfdisk type>] [--bootdir <mount point>]
 	### --boottype is the MBR type of the FAT boot partition of the default layout: c (FAT32 LBA),
-	### ef for the EFI system partition the UEFI firmware boots from
+	### ef for the EFI system partition the UEFI firmware boots from; --bootdir is where the fstab of
+	### the image mounts it: /boot, /boot/firmware for the firmware of the Raspberry Pi
 
-	OPTS="" OPTS_WITH_VALUE="--rootfstype --size --layout --boottype" param2value "${@}"
+	OPTS="" OPTS_WITH_VALUE="--rootfstype --size --layout --boottype --bootdir" param2value "${@}"
 
-	local MOUNT_NAME MOUNT_LAYOUT IMAGE_PATH MOUNT_DIR ROOTFS_TYPE SIZEIEC LAYOUT LODEVICE BOOT_TYPE
+	local MOUNT_NAME MOUNT_LAYOUT IMAGE_PATH MOUNT_DIR ROOTFS_TYPE SIZEIEC LAYOUT LODEVICE BOOT_TYPE BOOT_DIR
 
 	# shellcheck disable=SC2154
 	MOUNT_NAME=${_param_1}
@@ -60,6 +61,8 @@ function create_image() {
 	SIZEIEC=${_param_size:-2G}
 	# shellcheck disable=SC2154
 	BOOT_TYPE=${_param_boottype:-c}
+	# shellcheck disable=SC2154
+	BOOT_DIR=${_param_bootdir:-/boot}
 
 	if [ -z "${MOUNT_LAYOUT}" ]
 	then
@@ -107,16 +110,16 @@ function create_image() {
 	{
 		run_cmd "mkdir -pv \"${MOUNT_DIR}\""
 		run_cmd -s "mount \"${LODEVICE}p2\" \"${MOUNT_DIR}\""
-		run_cmd -s "mkdir -pv \"${MOUNT_DIR}/\"{boot,dev/pts,etc,proc}"
+		run_cmd -s "mkdir -pv \"${MOUNT_DIR}${BOOT_DIR}\" \"${MOUNT_DIR}/\"{dev/pts,etc,proc}"
 		run_cmd -s "install -dv -m 1777 \"${MOUNT_DIR}/tmp\""
-		run_cmd -s "mount \"${LODEVICE}p1\" \"${MOUNT_DIR}/boot\"" 
+		run_cmd -s "mount \"${LODEVICE}p1\" \"${MOUNT_DIR}${BOOT_DIR}\""
 	} >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 	MOUNTED_IMAGES+=( "${MOUNT_NAME}" )
 	echo "ok."
 	echo -n "Creating /etc/fstab... "
 	run_cmd -s "bash -c 'cat > ${MOUNT_DIR}/etc/fstab <<-EOF
 		proc                 /proc proc defaults 0 0
-		PARTUUID=$(sudo blkid "${LODEVICE}p1" -o value -s PARTUUID) /boot $(sudo blkid "${LODEVICE}p1" -o value -s TYPE) defaults 0 2
+		PARTUUID=$(sudo blkid "${LODEVICE}p1" -o value -s PARTUUID) ${BOOT_DIR} $(sudo blkid "${LODEVICE}p1" -o value -s TYPE) defaults 0 2
 		PARTUUID=$(sudo blkid "${LODEVICE}p2" -o value -s PARTUUID) /     $(sudo blkid "${LODEVICE}p2" -o value -s TYPE) defaults 0 1
 		EOF
 		'" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"

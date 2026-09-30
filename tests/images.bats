@@ -173,3 +173,43 @@ losetup -d /dev/loop0'
 	assert_equal "$(stat -c '%a' "${PLATFORM_PATH}/img/usr/bin/sgid")" 2755
 	assert_equal "$(stat -c '%a' "${PLATFORM_PATH}/img/tmp")" 1777
 }
+
+@test "create_image mounts the boot partition and names it in the fstab on /boot, or on --bootdir" {
+	### run_cmd records the commands instead of running them, blkid of sudo answers for the partitions
+	RUN_CALLS=${BATS_TEST_TMPDIR}/run.calls
+	function run_cmd () {
+		[ "${1}" == -s ] && shift
+		echo "${*}" >> "${RUN_CALLS}"
+	}
+	function loopdevmgr () {
+		echo /dev/loop9
+	}
+	function sudo () {
+		case "${*}" in
+			"blkid /dev/loop9p1 -o value -s PARTUUID") echo 1234-01 ;;
+			"blkid /dev/loop9p1 -o value -s TYPE") echo vfat ;;
+			"blkid /dev/loop9p2 -o value -s PARTUUID") echo 1234-02 ;;
+			"blkid /dev/loop9p2 -o value -s TYPE") echo ext4 ;;
+		esac
+	}
+	function mountpoint () {
+		return 1
+	}
+	function unmount_tag () {
+		:
+	}
+	PLATFORM_PATH=${BATS_TEST_TMPDIR}/platform
+	DISKIMAGES_PATH=${PLATFORM_PATH}/diskimages
+	LOG_PATH=${BATS_TEST_TMPDIR}/logs
+	mkdir -p "${LOG_PATH}"
+	: > "${RUN_CALLS}"
+	create_image lfs > /dev/null
+	grep -qx "mount \"/dev/loop9p1\" \"${PLATFORM_PATH}/lfs/boot\"" "${RUN_CALLS}"
+	grep -q "PARTUUID=1234-01 /boot vfat defaults 0 2" "${RUN_CALLS}"
+	: > "${RUN_CALLS}"
+	create_image lfs --bootdir /boot/firmware > /dev/null
+	grep -qx "mkdir -pv \"${PLATFORM_PATH}/lfs/boot/firmware\" \"${PLATFORM_PATH}/lfs/\"{dev/pts,etc,proc}" "${RUN_CALLS}"
+	grep -qx "mount \"/dev/loop9p1\" \"${PLATFORM_PATH}/lfs/boot/firmware\"" "${RUN_CALLS}"
+	grep -q "PARTUUID=1234-01 /boot/firmware vfat defaults 0 2" "${RUN_CALLS}"
+	grep -q "PARTUUID=1234-02 /     ext4 defaults 0 1" "${RUN_CALLS}"
+}

@@ -223,31 +223,32 @@ esac"
 	[[ ${output} == *"No UEFI firmware for x86_64: "* ]]
 }
 
-@test "the win command line runs on the snapshot, with the paths of WSL and %KERNEL_VER%" {
+@test "the win command line runs on the snapshot, with the paths of WSL" {
 	WSL_DISTRO_NAME=Fedora
-	KERNEL_NAME="kernel8-\${KERNEL_VER}.img"
+	### KERNEL_NAME is the copy the firmware of a board reads: QEMU loads vmlinuz-<release>
+	KERNEL_NAME=kernel8.img
 	emulator_cmdline win "" "" ""
 	[[ ${EMULATOR_CMDLINE} == '"%QEMU_EXE_PREFIX%qemu-system-aarch64.exe" '* ]]
 	[[ ${EMULATOR_CMDLINE} == *' -drive file="%SNAPSHOT%",if=none,format=qcow2,id=disk0 '* ]]
-	[[ ${EMULATOR_CMDLINE} == *" -kernel \"\\\\wsl\$\\Fedora${BIN_PATH//\//\\}\\boot\\kernel8-%KERNEL_VER%.img\" "* ]]
+	[[ ${EMULATOR_CMDLINE} == *" -kernel \"\\\\wsl\$\\Fedora${BIN_PATH//\//\\}\\boot\\vmlinuz-6.12.1-v8\" "* ]]
 	[[ ${EMULATOR_SNAPSHOT} == "%SystemRoot%\\TEMP\\lfs-generic-aarch64-"+([0-9])".qcow2" ]]
 	unset WSL_DISTRO_NAME
 	emulator_cmdline win "" "" ""
 	[[ ${EMULATOR_CMDLINE} == *" -initrd \"%SYSTEM_PREFIX%${BIN_PATH//\//\\}\\boot\\initramfs-6.12.1-v8.img\" "* ]]
 }
 
-@test "the overlays of QEMU_DTBO go into <project>.dtb with the fdtoverlay of the global toolchain" {
+@test "the overlays of QEMU_DTBO, next to QEMU_DTB, go into <project>.dtb with the fdtoverlay of the global toolchain" {
 	put "${GLOBAL_TOOLCHAIN_PATH}/bin/fdtoverlay" "#!/bin/sh
 echo \"\${*}\" > \"${BATS_TEST_TMPDIR}/fdtoverlay.args\""
 	chmod +x "${GLOBAL_TOOLCHAIN_PATH}/bin/fdtoverlay"
-	QEMU_DTB=bcm2710-rpi-3-b.dtb
+	QEMU_DTB=firmware/bcm2710-rpi-3-b.dtb
 	QEMU_DTBO="disable-bt miniuart-bt"
 	emulator_cmdline linux "" "" ""
 	[[ ${EMULATOR_CMDLINE} == *" -dtb \"\${SYSTEM_PREFIX}${PLATFORM_PATH}/lfs.dtb\" "* ]]
-	assert_equal "$(cat "${BATS_TEST_TMPDIR}/fdtoverlay.args")" "-i ${BIN_PATH}/boot/bcm2710-rpi-3-b.dtb -o ${PLATFORM_PATH}/lfs.dtb ${BIN_PATH}/boot/overlays/disable-bt.dtbo ${BIN_PATH}/boot/overlays/miniuart-bt.dtbo"
+	assert_equal "$(cat "${BATS_TEST_TMPDIR}/fdtoverlay.args")" "-i ${BIN_PATH}/boot/firmware/bcm2710-rpi-3-b.dtb -o ${PLATFORM_PATH}/lfs.dtb ${BIN_PATH}/boot/firmware/overlays/disable-bt.dtbo ${BIN_PATH}/boot/firmware/overlays/miniuart-bt.dtbo"
 	QEMU_DTBO=
 	emulator_cmdline linux "" "" ""
-	[[ ${EMULATOR_CMDLINE} == *" -dtb \"\${SYSTEM_PREFIX}${BIN_PATH}/boot/bcm2710-rpi-3-b.dtb\" "* ]]
+	[[ ${EMULATOR_CMDLINE} == *" -dtb \"\${SYSTEM_PREFIX}${BIN_PATH}/boot/firmware/bcm2710-rpi-3-b.dtb\" "* ]]
 }
 
 @test "a platform without QEMU settings, a project without image or kernel fail" {
@@ -299,7 +300,7 @@ echo \"\${*}\" > \"${BATS_TEST_TMPDIR}/fdtoverlay.args\""
 
 @test "run checks QEMU and runs the command line with sudo, the kernel of system_config in it" {
 	QEMU_EXE_PREFIX=${BATS_TEST_TMPDIR}/qemu/
-	KERNEL_NAME="kernel8-\${KERNEL_VER}.img"
+	KERNEL_NAME=kernel8.img
 	put "${QEMU_EXE_PREFIX}qemu-system-aarch64" "#!/bin/sh
 case \"\${1}\" in
 	--version) echo 'QEMU emulator version 10.1.0' ;;
@@ -313,7 +314,7 @@ esac"
 	[ "${status}" -eq 0 ]
 	assert_equal "$(sed -n 1p "${BATS_TEST_TMPDIR}/sudo.args")" "${QEMU_EXE_PREFIX}qemu-system-aarch64"
 	grep -qx "file=${PLATFORM_PATH}/lfs.img,if=none,format=raw,id=disk0" "${BATS_TEST_TMPDIR}/sudo.args"
-	grep -qx "${BIN_PATH}/boot/kernel8-6.12.1.img" "${BATS_TEST_TMPDIR}/sudo.args"
+	grep -qx "${BIN_PATH}/boot/vmlinuz-6.12.1-v8" "${BATS_TEST_TMPDIR}/sudo.args"
 	grep -qx "console=ttyAMA0 root=PARTUUID=1234-02 rootfstype=ext4 rootwait cgroup_enable=memory systemd.gpt_auto=no net.ifnames=0" "${BATS_TEST_TMPDIR}/sudo.args"
 	QEMU_MACHINE=raspi3b
 	run emulator_run
