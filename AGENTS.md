@@ -178,7 +178,7 @@ The script runs with `set -E -o pipefail` and an ERR trap (`on_error` in `core.f
 
 ### Images and chroot (images.functions)
 
-`create_image` / `mount_tag` / `unmount_tag` manage loop-mounted disk images under `<platform>/diskimages`; `mount_tag --url` also downloads a vendor image (the moode project mounts a Raspberry Pi OS image as `distos`). `inject_into_mount_tag` copies the sysroot in, `run_on_root_dir` chroots with qemu-user-static, `unmount_tag --finalize` produces a `.dd` file. `image_mount` / `image_umount` / `image_mount_list` are the `bbxb mount` commands, outside a build: a whole image on a directory, its partitions placed by its own fstab. All of this needs root, which is why the container runs `--privileged` and why the ERR trap unmounts on failure.
+`create_image` / `mount_tag` / `unmount_tag` manage loop-mounted disk images under `<platform>/diskimages`; `mount_tag --url` also downloads a vendor image to mount (a Raspberry Pi OS image, for instance). `inject_into_mount_tag` copies the sysroot in, `run_on_root_dir` chroots with qemu-user-static, `unmount_tag --finalize` produces a `.dd` file. `image_mount` / `image_umount` / `image_mount_list` are the `bbxb mount` commands, outside a build: a whole image on a directory, its partitions placed by its own fstab. All of this needs root, which is why the container runs `--privileged` and why the ERR trap unmounts on failure.
 
 ### Configuration of the built system (osconfig.functions)
 
