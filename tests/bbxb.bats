@@ -71,3 +71,15 @@ setup () {
 	[ "${status}" -eq "${ERROR_FILE_NOT_FOUND}" ]
 	[[ ${output} == *"Project ${BATS_TEST_TMPDIR}/projects/fixture.prj does not exist."* ]]
 }
+
+@test "--container and --no-container before mount and emulator leave them their options" {
+	run "${BB_HOME}/bbxb" --no-container
+	[ "${status}" -eq 0 ]
+	[[ ${lines[0]} == "Usage: bbxb "* ]]
+	PRJ_PATH=${BATS_TEST_TMPDIR}/projects DATA_PATH=${BATS_TEST_TMPDIR}/data run "${BB_HOME}/bbxb" --no-container emulator cmdgen --batchtype all fixture generic-x64
+	[ "${status}" -ne 0 ]
+	[[ ${output} == *"fixture generic-x64 has no image ${BATS_TEST_TMPDIR}/data/fixture/generic-x64/fixture.img."* ]]
+	PRJ_PATH=${BATS_TEST_TMPDIR}/projects DATA_PATH=${BATS_TEST_TMPDIR}/data run "${BB_HOME}/bbxb" --no-container mount --ro fixture generic-x64
+	[ "${status}" -ne 0 ]
+	[[ ${output} == *"fixture generic-x64 has no image ${BATS_TEST_TMPDIR}/data/fixture/generic-x64/fixture.img."* ]]
+}
