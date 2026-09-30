@@ -34,6 +34,7 @@ function bbxb_usage () {
 	cat <<-EOF
 		Usage: bbxb [--container|--no-container] <command> <project> <platform>
 		       bbxb container <command> [<argument>...]
+		       bbxb purge [--yes] [<project> [<platform>]]
 
 		Commands:
 		  build <project> <platform>     build the project for the platform
@@ -60,6 +61,12 @@ function bbxb_usage () {
 		                                 an EFI system partition); efi boots the disk with OVMF, whose
 		                                 boot loader chooses the kernel and the root (no <root>)
 		  container <command>            the image and the containers of bbxb (bbxb container help)
+		  purge [--yes] [<project> [<platform>]]
+		                                 empty the data directory (DATA_PATH) for a build from scratch:
+		                                 without a project all but the downloads, the sccache cache and
+		                                 <project>/data (the global toolchain too); with a project its
+		                                 platforms and sources; with a platform that one only. It asks
+		                                 first (--yes does not); then bbxb build <project> <platform>
 		  help                           this help
 
 		Options:
@@ -117,6 +124,25 @@ then
 		source "${BB_HOME}/bbxb.conf"
 	fi
 	container_command "${@}"
+	bbxb_done
+fi
+
+### bbxb purge [--yes] [<project> [<platform>]]: empty the data directory (data_purge in
+### data.functions), with the DATA_PATH of bbxb.conf and setenv. On the host whatever CONTAINER_BUILD
+### says: the data directory is the same path there, and its root files go through the sudo of the host
+if [ "${1}" == purge ]
+then
+	shift
+	if [ -f "${BB_HOME}/bbxb.conf" ]
+	then
+		# shellcheck source=/dev/null
+		source "${BB_HOME}/bbxb.conf"
+	fi
+	# shellcheck source=/dev/null
+	source "${BB_HOME}/setenv"
+	# shellcheck source=/dev/null
+	source "${BB_HOME}/data.functions"
+	data_purge "${@}"
 	bbxb_done
 fi
 

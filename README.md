@@ -63,6 +63,17 @@ $ ./bbxb emulator run [--rootdev <device>] [--rootfs <fs>] [--rootpart <n>] <pro
 $ ./bbxb emulator cmdgen [--quiet] [--batchtype linux|win|all] [--savecmd <file>] [--rootdev <device>] [--rootfs <fs>] [--rootpart <n>] <project> <platform>
 ```
 
+Start again from scratch: `bbxb purge` empties the data directory (`DATA_PATH`) but the downloads,
+the cache of sccache and the data of the projects (`<project>/data`), the global toolchain included;
+with a project it removes its platforms and sources, with a platform that platform only. It lists
+what goes and asks first (`--yes` does not), and refuses while an image is mounted there or a build
+runs in a container. It runs on the host, the root files of the sysroot through `sudo`:
+
+```bash
+$ ./bbxb purge [--yes] [<project> [<platform>]]
+$ ./bbxb purge --yes && ./bbxb build lfs rpi3-aarch64    # a whole build from scratch
+```
+
 `./bbxb` without arguments, or `./bbxb help`, prints every command.
 
 **Output**

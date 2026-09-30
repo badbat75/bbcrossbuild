@@ -21,3 +21,114 @@ function create_key_sscertificate () {
 
 ### generate_ssh_keys is the ssh identity of a system the framework builds: it lives in
 ### osconfig.functions, next to the other directives that configure the target
+function data_purge () {
+	### data_purge [--yes] [<project> [<platform>]]: empty the data directory (DATA_PATH) for a build
+	### from scratch. Without a project everything but the downloads, the cache of sccache and the
+	### data of every project (<project>/data: the key of create_key_sscertificate, what the user put
+	### there): the global toolchain goes too, which every project and platform share; with a project
+	### its platforms and its sources, not its data; with a platform that platform only, the way the
+	### README restarts a platform. It asks first (--yes does not) and refuses while an image is
+	### mounted under what it removes or a build runs in a container of bbxb. The files the root steps
+	### of a build left (the sysroot, the images) go through sudo.
+	local ASSUME_YES PROJECT PLATFORM TARGETS ENTRY SUB MOUNTED ANSWER
+
+	OPTS="--yes" OPTS_WITH_VALUE="" param2value "${@}"
+	ASSUME_YES=${_param_yes:-0}
+	# shellcheck disable=SC2154
+	PROJECT=${_param_1}
+	# shellcheck disable=SC2154
+	PLATFORM=${_param_2}
+	if [ -n "${_param_3}" ]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "Too many arguments: bbxb purge [--yes] [<project> [<platform>]]." || return
+	fi
+	if [[ ${PROJECT} == @(*/*|.*) ]] || [[ ${PLATFORM} == @(*/*|.*) ]]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "Not a project or platform name: ${PROJECT}${PLATFORM:+ ${PLATFORM}}." || return
+	fi
+	if [ -z "${DATA_PATH}" ] || [ "$(realpath -m "${DATA_PATH}")" == / ]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "DATA_PATH is empty or the root directory." || return
+	fi
+
+	TARGETS=()
+	if [ -z "${PROJECT}" ]
+	then
+		while IFS= read -r -d '' ENTRY
+		do
+			case ${ENTRY##*/} in
+				"${DOWNLOAD_DIR:-downloads}"|"${CACHE_DIR:-cache}") continue ;;
+			esac
+			if [ -d "${ENTRY}/${USERDATA_DIR:-data}" ]
+			then
+				while IFS= read -r -d '' SUB
+				do
+					TARGETS+=( "${SUB}" )
+				done < <(find "${ENTRY}" -mindepth 1 -maxdepth 1 ! -name "${USERDATA_DIR:-data}" -print0 | sort -z)
+			else
+				TARGETS+=( "${ENTRY}" )
+			fi
+		done < <(find "${DATA_PATH}" -mindepth 1 -maxdepth 1 -print0 2> /dev/null | sort -z)
+	elif [ -z "${PLATFORM}" ]
+	then
+		while IFS= read -r -d '' SUB
+		do
+			TARGETS+=( "${SUB}" )
+		done < <(find "${DATA_PATH}/${PROJECT}" -mindepth 1 -maxdepth 1 ! -name "${USERDATA_DIR:-data}" -print0 2> /dev/null | sort -z)
+	elif [ -e "${DATA_PATH}/${PROJECT}/${PLATFORM}" ]
+	then
+		TARGETS=( "${DATA_PATH}/${PROJECT}/${PLATFORM}" )
+	fi
+	if [ ${#TARGETS[@]} -eq 0 ]
+	then
+		echo "Nothing to remove."
+		return 0
+	fi
+
+	### A mounted image or a loop device of a file under what goes: a build or bbxb mount holds it
+	MOUNTED=$( { findmnt -rn -o TARGET 2> /dev/null; losetup -n -O BACK-FILE 2> /dev/null; } | while read -r ENTRY
+		do
+			for SUB in "${TARGETS[@]}"
+			do
+				if [ "${ENTRY}" == "${SUB}" ] || [[ ${ENTRY} == "${SUB}"/* ]]
+				then
+					echo "  ${ENTRY}"
+				fi
+			done
+		done | sort -u )
+	if [ -n "${MOUNTED}" ]
+	then
+		echo "${MOUNTED}"
+		trow_error "${ERROR_GENERIC}" "Images are mounted there: bbxb mount list, bbxb umount." || return
+	fi
+	if docker version > /dev/null 2>&1 && [ -n "$(container_running)" ]
+	then
+		container_running | cut -f1,3,4 | tr '\t' ' '
+		trow_error "${ERROR_GENERIC}" "Builds are running: stop them first (bbxb container stop)." || return
+	fi
+
+	echo "To remove:"
+	for ENTRY in "${TARGETS[@]}"
+	do
+		echo "  ${ENTRY} ($(du -sh "${ENTRY}" 2> /dev/null | cut -f1))"
+	done
+	if [ "${ASSUME_YES}" -ne 1 ]
+	then
+		if [ ! -t 0 ]
+		then
+			trow_error "${ERROR_NOT_VALID_OPTION}" "No terminal to confirm on: bbxb purge --yes." || return
+		fi
+		read -r -p "Remove them? [y/N] " ANSWER
+		if [[ ${ANSWER} != [yY]* ]]
+		then
+			echo "Nothing removed."
+			return 0
+		fi
+	fi
+
+	for ENTRY in "${TARGETS[@]}"
+	do
+		run_cmd "rm -rf \"${ENTRY}\" 2> /dev/null" || run_cmd -s "rm -rf \"${ENTRY}\"" || return
+	done
+	echo "Purged."
+}
