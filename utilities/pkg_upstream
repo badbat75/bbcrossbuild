@@ -39,7 +39,8 @@
 # the current one is among them. The Debian revision or commit suffix of a version (1.0.5-1,
 # 2.0.2.3+af2dd23) is left out when the URL does not carry it. Pre-release names (rc, alpha, beta,
 # a1, b2, dev, pre) and versions of another shape (lame-398 next to 3.100, the m4 beta 1.9a next to
-# 1.4.21: a letter suffix only when the current version has one) are skipped, and so is a GNOME
+# 1.4.21: a letter suffix only when the current version has one; the CPAN trial 1.37_01 next to
+# 1.36: a separator only when the current version has it) are skipped, and so is a GNOME
 # minor version from 90 on that jumps over the current series (pango 1.90 after 1.58, the preview of
 # Pango 2). A pythonbuild recipe without PKG_URL, and an sdist of packages/source/ on
 # files.pythonhosted.org (a directory without listing), are looked up on the JSON API of PyPI.
@@ -336,19 +337,22 @@ def odd_development(version, pattern):
 def newest(names, pattern, style, current, skip=None):
     """the newest version among the names matching the pattern: pre-releases and versions of
     another magnitude or shape (a 20001016 date tag next to a 4.16.0 version, the 1.9a beta of m4
-    next to 1.4.21: a letter suffix counts only when the current version has one) are ignored,
+    next to 1.4.21: a letter suffix counts only when the current version has one; the CPAN trial
+    1.37_01 next to 1.36: a separator counts only when the current version has it) are ignored,
     and so are the versions skip returns true for"""
     found = set()
     digits = len(current.split(".")[0])
     dotted = "." in current
     lettered = re.search(r"\d[A-Za-z]$", current) is not None
+    separators = set(re.findall(r"[._-]", current))
     for name in names:
         m = pattern.match(name)
         if m:
             version = unspell(m.group(1), style)
             # lame-398 next to lame-3.100: a dotted version is not compared with a bare number
             if not PRERELEASE.search(version) and not odd_development(version, pattern) and abs(len(version.split(".")[0]) - digits) <= 2 and ("." in version) == dotted \
-                    and (re.search(r"\d[A-Za-z]$", version) is not None) == lettered and not (skip and skip(version)):
+                    and (re.search(r"\d[A-Za-z]$", version) is not None) == lettered \
+                    and set(re.findall(r"[._-]", version)) <= separators and not (skip and skip(version)):
                 found.add(version)
     return max(found, key=vkey) if found else None
 
