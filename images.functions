@@ -40,6 +40,20 @@ function loopdevmgr() {
 	esac
 }
 
+function image_fs_tools () {
+	### image_fs_tools: the programs of the filesystems of an image (mke2fs, e2fsck, resize2fs and chattr,
+	### mkfs.btrfs and fsck.btrfs, mkfs.vfat and fsck.vfat) are the ones of lfs/e2fsprogs:native,
+	### lfs/btrfs-progs:native and lfs/dosfstools:native in the global toolchain, built here on first
+	### use (their check makes it a test when they are there), not the ones of the build host.
+	### IMAGE_FS_PATH is the PATH sudo runs them with: those sbin and bin first, then the system
+	### directories of fsck (util-linux), which runs the fsck.<type> it finds in the PATH. It calls
+	### build, whose param2value unsets the _param_ variables: the caller has read them before
+	build lfs/e2fsprogs:native
+	build lfs/btrfs-progs:native
+	build lfs/dosfstools:native
+	IMAGE_FS_PATH=${GLOBAL_TOOLCHAIN_PATH}/sbin:${GLOBAL_TOOLCHAIN_PATH}/bin:/usr/sbin:/usr/bin:/sbin:/bin
+}
+
 function create_image() {
 	# create_image <tag_name> [--rootfstype <fs_type>] [--size <size_in_KiB> [--layout <layout_file>]
 	#              [--boottype <sfdisk type>] [--bootdir <mount point>]
@@ -49,7 +63,7 @@ function create_image() {
 
 	OPTS="" OPTS_WITH_VALUE="--rootfstype --size --layout --boottype --bootdir" param2value "${@}"
 
-	local MOUNT_NAME MOUNT_LAYOUT IMAGE_PATH MOUNT_DIR ROOTFS_TYPE SIZEIEC LAYOUT LODEVICE BOOT_TYPE BOOT_DIR
+	local MOUNT_NAME MOUNT_LAYOUT IMAGE_PATH MOUNT_DIR ROOTFS_TYPE SIZEIEC LAYOUT LODEVICE BOOT_TYPE BOOT_DIR IMAGE_FS_PATH
 
 	# shellcheck disable=SC2154
 	MOUNT_NAME=${_param_1}
@@ -63,6 +77,7 @@ function create_image() {
 	BOOT_TYPE=${_param_boottype:-c}
 	# shellcheck disable=SC2154
 	BOOT_DIR=${_param_bootdir:-/boot}
+	image_fs_tools
 
 	if [ -z "${MOUNT_LAYOUT}" ]
 	then
@@ -103,8 +118,8 @@ function create_image() {
 	LODEVICE=$(loopdevmgr create "${IMAGE_PATH}")
 	echo "ok."
 	echo -n "Creating filesystems... "
-	run_cmd -s "mkfs.vfat \"${LODEVICE}p1\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-	run_cmd -s "\"mkfs.${ROOTFS_TYPE}\" \"${LODEVICE}p2\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+	run_cmd -s "env PATH=\"${IMAGE_FS_PATH}\" mkfs.vfat \"${LODEVICE}p1\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+	run_cmd -s "env PATH=\"${IMAGE_FS_PATH}\" \"mkfs.${ROOTFS_TYPE}\" \"${LODEVICE}p2\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 	echo "ok."
 	echo -n "Mounting image... "
 	{
@@ -128,7 +143,7 @@ function create_image() {
 		btrfs)
 			echo -n "Setting COW settings to journal... "
 			run_cmd -s "mkdir -pv \"${MOUNT_DIR}/var/log/journal\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-			run_cmd -s "chattr -RV +C \"${MOUNT_DIR}/var/log/journal\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+			run_cmd -s "env PATH=\"${IMAGE_FS_PATH}\" chattr -RV +C \"${MOUNT_DIR}/var/log/journal\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 			echo "ok."
 		;;
 	esac
@@ -147,6 +162,7 @@ function mount_tag () {
 	OPTS="" OPTS_WITH_VALUE="--url --imgfile --mountlist --resize" param2value "${@}"
 
 	local MOUNT_NAME RESIZE URL IMGFILE IMAGE_PATH IMAGEFILE_PATH MOUNT_DIR PARTNO IMGSIZE PARTINFO PARTNO MPOINT ROOTREADY
+	local MOUNTLIST IMAGE_FS_PATH
 
 	# shellcheck disable=SC2154
 	MOUNT_NAME=${_param_1}
@@ -156,15 +172,18 @@ function mount_tag () {
 	URL=${_param_url}
 	# shellcheck disable=SC2154
 	IMGFILE=${_param_imgfile}
+	# shellcheck disable=SC2154
+	MOUNTLIST=${_param_mountlist}
 	IMAGE_PATH=${DISKIMAGES_PATH}/${MOUNT_NAME}
 	IMAGEFILE_PATH=${DISKIMAGES_PATH}/${MOUNT_NAME}.img
 	MOUNT_DIR=${PLATFORM_PATH}/${MOUNT_NAME}
 
-	if [ -z "${_param_mountlist}" ]
+	if [ -z "${MOUNTLIST}" ]
 	then
 		echo "Error. No mount points specified."
 		false
 	fi
+	image_fs_tools
 
 	if [ ! -d "${IMAGE_PATH}" ] ; then run_cmd "mkdir -pv \"${IMAGE_PATH}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log" ; fi
 
@@ -219,18 +238,18 @@ function mount_tag () {
 	then
 		# Check the root partition
 		echo -n "Check root filesystems... "
-		run_cmd -s "fsck -fp \"${LOOPDEV}p${PARTNO}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+		run_cmd -s "env PATH=\"${IMAGE_FS_PATH}\" fsck -fp \"${LOOPDEV}p${PARTNO}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 		echo "ok."
 		# Resize the root partition
 		echo -n "Resize root partition... "
-		run_cmd -s "resize2fs \"${LOOPDEV}p${PARTNO}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+		run_cmd -s "env PATH=\"${IMAGE_FS_PATH}\" resize2fs \"${LOOPDEV}p${PARTNO}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 		echo "ok."
 	fi
 
 	# Mount the image filesystems
 	echo -n "Mounting all the partitions in ${MOUNT_DIR}... "
 	{
-		for e in ${_param_mountlist}
+		for e in ${MOUNTLIST}
 		do
 			PARTNO=$(echo "${e}" | awk -F: '{print $1}')
 			MPOINT=$(echo "${e}" | awk -F: '{print $2}')
@@ -240,7 +259,7 @@ function mount_tag () {
 				unset MPOINT
 			fi
 			if [ ! -d "${MOUNT_DIR}${MPOINT}" ] ; then run_cmd "mkdir -pv \"${MOUNT_DIR}${MPOINT}\"" ; fi
-			run_cmd -s "fsck -fp \"${LOOPDEV}p${PARTNO}\""
+			run_cmd -s "env PATH=\"${IMAGE_FS_PATH}\" fsck -fp \"${LOOPDEV}p${PARTNO}\""
 			run_cmd -s "mount \"${LOOPDEV}p${PARTNO}\" \"${MOUNT_DIR}${MPOINT}\"" 
 		done
 		if [ "${ROOTREADY}" -eq 1 ]
@@ -401,6 +420,7 @@ function mount_from () {
 	TAG=${_param_tag}
 	IMGFILE=${_param_imgfile}
 	URL=${_param_url}
+	# shellcheck disable=SC2154
 	MOUNTLIST=${_param_mountlist}
 	RESIZE=${_param_resize}
 

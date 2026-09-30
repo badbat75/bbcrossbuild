@@ -174,7 +174,7 @@ losetup -d /dev/loop0'
 	assert_equal "$(stat -c '%a' "${PLATFORM_PATH}/img/tmp")" 1777
 }
 
-@test "create_image mounts the boot partition and names it in the fstab on /boot, or on --bootdir" {
+@test "create_image makes the root with the native mke2fs, mounts the boot partition and names it in the fstab on /boot, or on --bootdir" {
 	### run_cmd records the commands instead of running them, blkid of sudo answers for the partitions
 	RUN_CALLS=${BATS_TEST_TMPDIR}/run.calls
 	function run_cmd () {
@@ -198,12 +198,21 @@ losetup -d /dev/loop0'
 	function unmount_tag () {
 		:
 	}
+	### build records the native recipe of the ext tools instead of building it
+	function build () {
+		echo "build ${*}" >> "${RUN_CALLS}"
+	}
 	PLATFORM_PATH=${BATS_TEST_TMPDIR}/platform
 	DISKIMAGES_PATH=${PLATFORM_PATH}/diskimages
 	LOG_PATH=${BATS_TEST_TMPDIR}/logs
 	mkdir -p "${LOG_PATH}"
 	: > "${RUN_CALLS}"
 	create_image lfs > /dev/null
+	### mke2fs is the one of lfs/e2fsprogs:native, built before the image with lfs/btrfs-progs:native and lfs/dosfstools:native
+	grep -qx "build lfs/e2fsprogs:native" "${RUN_CALLS}"
+	grep -qx "build lfs/btrfs-progs:native" "${RUN_CALLS}"
+	grep -qx "build lfs/dosfstools:native" "${RUN_CALLS}"
+	grep -qx "env PATH=\"${GLOBAL_TOOLCHAIN_PATH}/sbin:${GLOBAL_TOOLCHAIN_PATH}/bin:/usr/sbin:/usr/bin:/sbin:/bin\" \"mkfs.ext4\" \"/dev/loop9p2\"" "${RUN_CALLS}"
 	grep -qx "mount \"/dev/loop9p1\" \"${PLATFORM_PATH}/lfs/boot\"" "${RUN_CALLS}"
 	grep -q "PARTUUID=1234-01 /boot vfat defaults 0 2" "${RUN_CALLS}"
 	: > "${RUN_CALLS}"

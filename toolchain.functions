@@ -432,6 +432,9 @@ function setup_binutils () {
 		fi
 
 		### Config parameters in common with GCC and Binutils
+		### --with-system-zlib: the zlib of lfs/zlib:native (setup_full_toolchain), found through the
+		### CFLAGS, CXXFLAGS and LDFLAGS of the host programs (the top level Makefile passes no CPPFLAGS
+		### to the host directories), not the ones of the target libraries
 		COMMON_CONFIG="--with-sysroot=$(gcc_sysroot) --enable-shared --with-system-zlib"
 		COMMON_CONFIG+=" --with-mpc-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-mpc-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
 		COMMON_CONFIG+=" --with-mpfr-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-mpfr-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
@@ -489,9 +492,9 @@ function setup_binutils () {
 				AR=\"${AR_FOR_BUILD}\" \\
 				NM=\"${NM_FOR_BUILD}\" \\
 				RANLIB=\"${RANLIB_FOR_BUILD}\" \\
-				CFLAGS=\"${HOST_CSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS}\" \\
-				CXXFLAGS=\"${HOST_CXXSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS}\" \\
-				LDFLAGS=\"${LINKERFLAGS}${LTO_LINKERFLAGS}\" \\
+				CFLAGS=\"${HOST_CSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS} -I${GLOBAL_TOOLCHAIN_PATH}/include\" \\
+				CXXFLAGS=\"${HOST_CXXSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS} -I${GLOBAL_TOOLCHAIN_PATH}/include\" \\
+				LDFLAGS=\"${LINKERFLAGS}${LTO_LINKERFLAGS} -L${GLOBAL_TOOLCHAIN_PATH}/lib\" \\
 				CFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
 				CXXFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
 				LDFLAGS_FOR_TARGET=\"${LINKERFLAGS} ${OPTLINK_FLAGS}\" \\
@@ -678,9 +681,9 @@ function setup_gcc () {
 				AR=\"${AR_FOR_BUILD}\" \\
 				NM=\"${NM_FOR_BUILD}\" \\
 				RANLIB=\"${RANLIB_FOR_BUILD}\" \\
-				CFLAGS=\"${HOST_CSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS}\" \\
-				CXXFLAGS=\"${HOST_CXXSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS}\" \\
-				LDFLAGS=\"${LINKERFLAGS}${LTO_LINKERFLAGS}\" \\
+				CFLAGS=\"${HOST_CSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS} -I${GLOBAL_TOOLCHAIN_PATH}/include\" \\
+				CXXFLAGS=\"${HOST_CXXSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS} -I${GLOBAL_TOOLCHAIN_PATH}/include\" \\
+				LDFLAGS=\"${LINKERFLAGS}${LTO_LINKERFLAGS} -L${GLOBAL_TOOLCHAIN_PATH}/lib\" \\
 				CFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}${TARGET_PREFIXMAP_FLAGS}\" \\
 				CXXFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}${TARGET_PREFIXMAP_FLAGS}\" \\
 				LDFLAGS_FOR_TARGET=\"${GNU_EXTRALDFLAGS} ${OPTLINK_FLAGS}\" \\
@@ -1258,6 +1261,16 @@ function setup_llvm () {
 			-DLLVM_ENABLE_LTO:BOOL=${LTO} \\
 			-DLLVM_ENABLE_LIBCXX:BOOL=OFF \\
 			-DLLVM_ENABLE_ZLIB:BOOL=ON \\
+			-DZLIB_ROOT=\"${GLOBAL_TOOLCHAIN_PATH}\" \\
+			-DLLVM_ENABLE_ZSTD:BOOL=OFF \\
+			-DLLVM_ENABLE_LIBXML2:BOOL=OFF \\
+			-DLLVM_ENABLE_LIBEDIT:BOOL=OFF \\
+			-DLLDB_ENABLE_LIBEDIT:BOOL=OFF \\
+			-DLLDB_ENABLE_CURSES:BOOL=OFF \\
+			-DLLDB_ENABLE_LZMA:BOOL=OFF \\
+			-DLLDB_ENABLE_LIBXML2:BOOL=OFF \\
+			-DLLDB_ENABLE_LUA:BOOL=OFF \\
+			-DLLDB_ENABLE_PYTHON:BOOL=OFF \\
 			-DLLVM_ENABLE_FFI:BOOL=OFF \\
 			-DLLVM_ENABLE_RTTI:BOOL=ON \\
 			-DLLVM_ENABLE_EH:BOOL=ON \\
@@ -1497,9 +1510,16 @@ function setup_llvm () {
 	### Binutils dependency
 	build lfs/binutils:native
 	echo -n "Setting up clang-${LLVM_VER}... "
-	### An LLVM built with FFI links the libffi of the build host (its cmake package finds it again in
-	### every build that uses it): configured and built again without
-	if grep -q 'set(LLVM_ENABLE_FFI TRUE)' "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/cmake/llvm/LLVMConfig.cmake" 2> /dev/null
+	### The zlib of the global toolchain (ZLIB_ROOT, which LLVMConfig.cmake passes on to every build that
+	### uses it)
+	build --toolchain gnu lfs/zlib:native
+	### An LLVM built with FFI, zstd, libxml2 or libedit links the libraries of the build host (its cmake
+	### package finds them again in every build that uses it), one built before ZLIB_ROOT its zlib:
+	### configured and built again without, with the zlib of lfs/zlib:native
+	if [ -f "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/cmake/llvm/LLVMConfig.cmake" ] && \
+		{ grep -qE 'set\(LLVM_ENABLE_(FFI|ZSTD|LIBEDIT) TRUE\)|set\(LLVM_ENABLE_LIBXML2 1\)' \
+			"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/cmake/llvm/LLVMConfig.cmake" || \
+		! grep -qx "  set(ZLIB_ROOT ${GLOBAL_TOOLCHAIN_PATH})" "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/cmake/llvm/LLVMConfig.cmake"; }
 	then
 		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}\" \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}\"" > "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
 	fi
@@ -1631,8 +1651,9 @@ function setup_python () {
 				;;
 		esac
 		export LDFLAGS+=" -Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/lib"
-		### openssl, libffi and libuuid of the global toolchain (built by setup_python before), not the
-		### ones of the build host: their headers and pc files first, their directory in the RUNPATH.
+		### openssl, libffi, libuuid, zlib, bzip2, xz and zstd of the global toolchain (built by setup_python
+		### before), not the ones of the build host: their headers and pc files first, their directory in
+		### the RUNPATH (a Python built against the libraries of the host loads these, same sonames).
 		### No Tk there: no _tkinter, which no build uses
 		export CPPFLAGS="-I${GLOBAL_TOOLCHAIN_PATH}/include"
 		### OpenSSL 4 removed the TLSv1.x methods of the deprecated PROTOCOL_TLSv1x paths of _ssl and no
@@ -1701,8 +1722,13 @@ function setup_python () {
 	build --toolchain gnu lfs/ca-bundle:native
 	build --toolchain gnu lfs/libffi:native
 	build --toolchain gnu lfs/util-linux:native
+	### zlib, _bz2, _lzma and _zstd: the compression libraries of the global toolchain
+	build --toolchain gnu lfs/zlib:native
+	build --toolchain gnu lfs/bzip2:native
+	build --toolchain gnu lfs/xz:native
+	build --toolchain gnu lfs/zstd:native
 
-	local PYTHON_DISTOS ONLY_NATIVE PYTHON_SSL
+	local PYTHON_DISTOS ONLY_NATIVE PYTHON_SSL PYTHON_ZMODULES
 	PYTHON_DISTOS=0
 	ONLY_NATIVE=0
 
@@ -1744,7 +1770,12 @@ function setup_python () {
 	### A native Python whose ssl module does not have the global toolchain in its RUNPATH links the
 	### libraries of the build host: it is built again
 	PYTHON_SSL=$(find "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib/python${PYTHONBIN_VER}/lib-dynload" -name '_ssl.*.so' 2>/dev/null | head -n1 || true)
+	### A Python without one of the compression modules (a build host without the library) is built
+	### again, with the ones of the global toolchain
+	PYTHON_ZMODULES=$(find "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib/python${PYTHONBIN_VER}/lib-dynload" \
+		\( -name 'zlib.*.so' -o -name '_bz2.*.so' -o -name '_lzma.*.so' -o -name '_zstd.*.so' \) 2>/dev/null | wc -l)
 	if [ ! -x "${PYTHON_FOR_BUILD}" ] || [ ! -x "${PIP_FOR_BUILD}" ] || [ -z "${PYTHON_SSL}" ] || \
+		[ "${PYTHON_ZMODULES}" -ne 4 ] || \
 		! readelf -dW "${PYTHON_SSL}" 2>/dev/null | grep "R\(UN\)\{0,1\}PATH.*[:[]${GLOBAL_TOOLCHAIN_PATH}/lib[]:]" > /dev/null
 	then
 		### run_cmd writes its lines already prefixed: the log is the stdout of the steps, not a
@@ -1870,12 +1901,19 @@ function setup_full_toolchain () {
 	### The perl of every build (${GLOBAL_TOOLCHAIN_PATH}/perl5/bin in the PATH), with every core module:
 	### the autotools record its path
 	TOOLCHAIN=gnu build lfs/perl5:native
+	### makeinfo and help2man (perl programs, release tarballs with their configure): the manuals the
+	### autotools rebuild (the manual page of libtool) and the ones the release branch patches of
+	### binutils and gcc touch
+	TOOLCHAIN=gnu build lfs/texinfo:native
+	TOOLCHAIN=gnu build lfs/help2man:native
 	setup_autotools --default
 	# shellcheck disable=SC2030
 	TOOLCHAIN=gnu build lfs/pkgconf:native
 	TOOLCHAIN=gnu build lfs/pkgconf:cross
 	TOOLCHAIN=gnu build lfs/bison:native
 	TOOLCHAIN=gnu build lfs/cmake:native
+	### The zlib of binutils and gcc (--with-system-zlib), a cmake build
+	TOOLCHAIN=gnu build lfs/zlib:native
 	### mold, when it is the linker of a toolchain: the builds before it link with bfd (linker_for_build)
 	if [ "${GCC_DEFAULT_LD}" == mold ] || [ "${LLVM_DEFAULT_LD}" == mold ]
 	then

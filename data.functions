@@ -5,8 +5,9 @@ check_core_functions
 function create_key_sscertificate () {
 	### create_key_sscertificate: a key and a self-signed certificate in the data of the project,
 	### named PKI_KEY_NAME with the subject PKI_SUBJECT (bbxb.conf), kept once created
+	### openssl is the one of lfs/openssl:native (setup_full_toolchain)
 	local PKI_KEY_NAME=${PKI_KEY_NAME:-$(whoami)}
-	local PKI_SUBJECT=${PKI_SUBJECT:-/CN=$(whoami)/emailAddress=$(whoami)@$(hostname -f)}
+	local PKI_SUBJECT=${PKI_SUBJECT:-/CN=$(whoami)/emailAddress=$(whoami)@$(uname -n)}
 	if [ ! -d "${USERDATA_PATH}/pki" ]
 	then
 		run_cmd "mkdir -p \"${USERDATA_PATH}/pki\""
@@ -14,7 +15,7 @@ function create_key_sscertificate () {
 	true > "${LOG_PATH}/pki.log"
 	if [ ! -f "${USERDATA_PATH}/pki/${PKI_KEY_NAME}.key.pem" ] && [ ! -f "${USERDATA_PATH}/pki/${PKI_KEY_NAME}.x509.pem" ]
 	then
-		run_cmd "openssl req -newkey rsa:2048 -nodes -keyout \"${USERDATA_PATH}/pki/${PKI_KEY_NAME}.key.pem\" -x509 -days 1461 -subj \"${PKI_SUBJECT}\" -out \"${USERDATA_PATH}/pki/${PKI_KEY_NAME}.x509.pem\"" >> "${LOG_PATH}/pki.log" 2>&1
+		run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/openssl req -newkey rsa:2048 -nodes -keyout \"${USERDATA_PATH}/pki/${PKI_KEY_NAME}.key.pem\" -x509 -days 1461 -subj \"${PKI_SUBJECT}\" -out \"${USERDATA_PATH}/pki/${PKI_KEY_NAME}.x509.pem\"" >> "${LOG_PATH}/pki.log" 2>&1
 	fi
 }
 

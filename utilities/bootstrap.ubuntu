@@ -1,46 +1,16 @@
 #!/bin/bash
-sudo apt-get install -y bc kpartx parted curl build-essential patchelf libzstd1 libzstd-dev \
-    gawk git xmltoman docbook-utils swig texinfo python3-docutils
+
+### The packages of the Dockerfile: every tool a package build runs and every library the programs of
+### the build machine link is built by the framework (lfs/*:native), the host gives the compiler,
+### what bbxb runs before any package is built, the image and emulation tools
+
+# Compiler and base tools
+sudo apt-get install -y rsync util-linux fdisk \
+    build-essential dwarves patchelf file curl gawk patch git \
+    zip unzip debianutils
 
 # For Image emulation
 sudo apt-get install -y qemu-user-static
-
-# for moode
-sudo apt install -y sqlite3
-
-# for meson-ninja
-sudo apt-get install -y python3-pip
-
-# for zziplib
-sudo apt install -y python2
-
-# for libid3tag
-sudo apt-get install -y gperf
-
-# for lxml and the ical-glib-src-generator of lfs/libical:cross
-sudo apt-get install -y libxml2-dev
-
-# for the wayland documentation (dot)
-sudo apt-get install -y graphviz
-
-# for udevil
-sudo apt-get install -y intltool
-
-# for dlc-daemon
-sudo apt-get install -y pandoc
-
-# for lxml
-sudo apt-get install -y libxslt1-dev
-
-# for systemd
-sudo apt-get install -y xsltproc docbook-xsl docbook2x
-
-# for btrfs-progs
-sudo apt-get install -y asciidoc
-
-# for Tk 9, which packs its script library into a zip appended to the library (zipfs): its Makefile
-# has no rule for the minizip configure falls back to without zip
-sudo apt-get install -y zip
 
 # for bbxb logtail, which follows the logs through inotify events
 sudo apt-get install -y inotify-tools

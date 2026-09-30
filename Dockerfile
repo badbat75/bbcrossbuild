@@ -5,20 +5,22 @@
 # directory into it and runs the build there (container.functions). A recipe edit needs no rebuild.
 FROM amd64/fedora:latest
 
-# Install all dependencies in a single layer. shadow-utils, util-linux and sudo are the last three:
-# the build runs as the user who started bbxb, created at run time by container_user, and its root
-# steps go through sudo there as they do on the host
+# Install all dependencies in a single layer. The tools a package build runs and the libraries the
+# programs of the build machine link are packages of the framework (lfs/*:native: texinfo, gperf,
+# help2man, bc, libxml2, libxslt, the DocBook, e2fsprogs, btrfs-progs, zlib, bzip2, xz, zstd...), not
+# of the host. What the host still gives: the compiler, what bbxb runs before any package is built
+# (which, file, curl, gawk, patch, git, rsync, zip, unzip), the tools without a recipe (patchelf,
+# pahole of dwarves) and qemu. util-linux is the loop devices, mounts and partition tables of the
+# images (and setpriv of container_user), which bbxb mount and bbxb emulator use outside a build too. shadow-utils,
+# util-linux and sudo are the last three: the build runs as the user who started bbxb, created at run
+# time by container_user, and its root steps go through sudo there as they do on the host
 RUN dnf -y upgrade && \
     dnf -y install \
-    bc parted e2fsprogs btrfs-progs dosfstools bzip2-devel rsync vim-common \
-    gcc g++ binutils binutils-gold dwarves elfutils-libelf-devel patchelf \
-    libzstd libzstd-devel file tree curl wget gawk patch git \
-    qemu-user-static gperf help2man xmltoman docbook-utils docbook-utils-pdf \
-    docbook2X swig texinfo gtk-doc asciidoc rubygem-asciidoctor \
-    python3-passlib python3-docutils \
-    graphviz libxslt docbook-style-xsl libxml2-devel \
-    libedit-devel lua-devel \
-    glibc-devel glibc-gconv-extra zip \
+    rsync \
+    gcc g++ binutils dwarves patchelf \
+    file curl gawk patch git which \
+    qemu-user-static \
+    glibc-devel glibc-gconv-extra zip unzip \
     shadow-utils util-linux sudo
 
 # The checksum of this file, which bbxb compares with the one of the checkout to know whether the
