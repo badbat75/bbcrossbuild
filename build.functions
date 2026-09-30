@@ -1899,11 +1899,15 @@ function cmakebuild () {
 	### one only for a CMAKE_SYSTEM_NAME given. Without it a target of the machine of the build host
 	### (generic-x64) takes the if(CMAKE_CROSSCOMPILING) branches of a native build, try_run runs
 	### natively against the libraries of the host and a package installs itself with the program it
-	### built (lfs/cmake). try_run and the programs a build runs go through <HARCH>-run
+	### built (lfs/cmake). try_run and the programs a build runs go through <HARCH>-run. find_program
+	### looks in the PATH of the build only (CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER): through the sysroot
+	### it found the programs of the image first (the sed of lfs/Poppler), which only the binfmt entry
+	### of qemu ran; libraries, headers and packages are still searched in the sysroot
 	local CMAKE_CROSS_FLAGS=
 	if [ "${PKG_TARGET_ENV}" == target ]
 	then
 		CMAKE_CROSS_FLAGS="-DCMAKE_SYSTEM_NAME=${HOS^} -DCMAKE_SYSTEM_PROCESSOR=${HM} -DCMAKE_CROSSCOMPILING_EMULATOR=${HARCH}-run"
+		CMAKE_CROSS_FLAGS+=" -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER"
 	fi
 
 	### AR, RANLIB and STRIP of a target build are program names (settcenv): CMake would take a name for
