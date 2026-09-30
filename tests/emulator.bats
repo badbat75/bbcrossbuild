@@ -285,7 +285,8 @@ echo \"\${*}\" > \"${BATS_TEST_TMPDIR}/fdtoverlay.args\""
 	[ -x "${BATS_TEST_TMPDIR}/run.sh" ]
 	assert_equal "$(sed -n 1p "${BATS_TEST_TMPDIR}/run.sh")" "#!/bin/sh"
 	assert_equal "$(sed -n 3p "${BATS_TEST_TMPDIR}/run.sh")" "KERNEL_VER=6.12.1"
-	[[ $(sed -n 5p "${BATS_TEST_TMPDIR}/run.sh") == "\"\${QEMU_EXE_PREFIX}qemu-system-aarch64\" -machine virt "* ]]
+	# shellcheck disable=SC2016 # the script names the variable
+	grep -q '^"${QEMU_EXE_PREFIX}qemu-system-aarch64" -machine virt ' "${BATS_TEST_TMPDIR}/run.sh"
 }
 
 @test "cmdgen --batchtype all writes <project>.qemu and <project>.qemu.bat next to the image" {
@@ -299,6 +300,18 @@ echo \"\${*}\" > \"${BATS_TEST_TMPDIR}/fdtoverlay.args\""
 	grep -qx $'set KERNEL_VER=6.12.1\r' "${PLATFORM_PATH}/lfs.qemu.bat"
 	grep -qx "set IMAGE=\\\\\\\\wsl\\\$\\\\Fedora${PLATFORM_PATH//\//\\\\}\\\\lfs.img"$'\r' "${PLATFORM_PATH}/lfs.qemu.bat"
 	grep -q '^"%QEMU_EXE_PREFIX%qemu-system-aarch64.exe" ' "${PLATFORM_PATH}/lfs.qemu.bat"
+	### Both tell how to reach the guest before QEMU starts
+	grep -qx $'echo Serial console: localhost port 5021, nc localhost 5021 or PuTTY Raw\r' "${PLATFORM_PATH}/lfs.qemu.bat"
+	grep -qx 'echo "SSH: localhost port 5022, ssh -p 5022 user@localhost"' "${PLATFORM_PATH}/lfs.qemu"
+}
+
+@test "the ports of the guest: the serial console on a TCP port, ssh with a network, the monitor with -nographic" {
+	run emulator_ports
+	assert_output_lines "Serial console: localhost port 5021, nc localhost 5021 or PuTTY Raw" "SSH: localhost port 5022, ssh -p 5022 user@localhost" "This terminal: the monitor of QEMU, quit to stop the guest"
+	QEMU_SERIAL=telnet::4444,server=on,wait=off QEMU_NETWORK='' QEMU_GRAPHIC=machine run emulator_ports
+	assert_output_lines "Serial console: localhost port 4444, nc localhost 4444 or PuTTY Raw"
+	QEMU_SERIAL=stdio QEMU_NETWORK='' QEMU_GRAPHIC=machine run emulator_ports
+	assert_equal "${output}" ""
 }
 
 @test "run checks QEMU and runs the command line with sudo, the kernel of system_config in it" {

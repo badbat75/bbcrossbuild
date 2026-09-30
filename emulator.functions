@@ -356,6 +356,27 @@ function emulator_cmdline () {
 	return 0
 }
 
+function emulator_ports () {
+	### emulator_ports: how the guest of emulator_cmdline is reached from the host, one line each: the
+	### serial console when QEMU_SERIAL is a TCP port (the default 5021), ssh when there is a network
+	### (5022, hostfwd of SPECS_NETWORK), the monitor of QEMU on the terminal with -nographic. No
+	### < > | & or parentheses: the lines are echoed by cmd too
+	local SERIAL=${QEMU_SERIAL:-tcp::5021,server=on,wait=off}
+
+	if [[ ${SERIAL} =~ ^(tcp|telnet):[^:,]*:([0-9]+) ]]
+	then
+		echo "Serial console: localhost port ${BASH_REMATCH[2]}, nc localhost ${BASH_REMATCH[2]} or PuTTY Raw"
+	fi
+	if [ -n "${QEMU_NETWORK}" ]
+	then
+		echo "SSH: localhost port 5022, ssh -p 5022 user@localhost"
+	fi
+	if [ -z "${QEMU_GRAPHIC}" ]
+	then
+		echo "This terminal: the monitor of QEMU, quit to stop the guest"
+	fi
+}
+
 function emulator_ovmf () {
 	### emulator_ovmf: "<code>:<variables template>" of the UEFI firmware of this host, OVMF_CODE and
 	### OVMF_VARS of the environment when both are set, else the first pair of EMULATOR_OVMF_PAIRS
@@ -423,6 +444,7 @@ function emulator_script () {
 				KERNEL_VER=${EMULATOR_KERNEL_VER}
 				${SCRIPT_FIRMWARE:+${SCRIPT_FIRMWARE}
 				}
+				$(emulator_ports | sed 's/.*/echo "&"/')
 				${EMULATOR_CMDLINE}
 			EOF
 			chmod +x "${SCRIPT_FILE}"
@@ -476,6 +498,7 @@ function emulator_script () {
 				${SCRIPT_FIRMWARE:+
 				${SCRIPT_FIRMWARE}
 				}
+				$(emulator_ports | sed 's/.*/echo &/')
 				${EMULATOR_CMDLINE}
 
 				choice /c YN /m "Delete the snapshot %SNAPSHOT%${EMULATOR_EFIVARS:+ and the UEFI variables}"
@@ -578,6 +601,7 @@ function emulator_run () {
 		OVMF_CODE=${OVMF%%:*}
 		# shellcheck disable=SC2034 # read by the eval below
 		EFIVARS=${EMULATOR_EFIVARS}
+		emulator_ports
 		eval sudo "${EMULATOR_CMDLINE}"
 	)
 }
