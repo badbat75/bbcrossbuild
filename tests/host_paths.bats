@@ -294,6 +294,17 @@ setup () {
 	split_install --drop "${LIST}" "/usr/bin/named-*"
 	run bash -c "cd '${PKG_PKGPATH}' && find . ! -type d | LC_ALL=C sort"
 	assert_output_lines ./postinst_scripts/50_bind9 ./usr/lib/aarch64-linux-gnu/bind/filter-a.so ./usr/sbin/named
+	### --keep-dev: what a build compiles and links with, and the files of the patterns
+	staging
+	mkdir -p "${PKG_PKGPATH}/usr/include/isc" "${PKG_PKGPATH}/usr/lib/aarch64-linux-gnu/pkgconfig" "${PKG_PKGPATH}/usr/share/et"
+	touch "${PKG_PKGPATH}/usr/include/isc/list.h" "${PKG_PKGPATH}/usr/lib/aarch64-linux-gnu/pkgconfig/isc.pc" \
+		"${PKG_PKGPATH}/usr/bin/isc-config" "${PKG_PKGPATH}/usr/share/et/et_c.awk"
+	INSTALL_LIBDIR=/usr/lib INSTALL_LIBSUFFIX=/aarch64-linux-gnu INSTALL_INCLUDEDIR=/usr/include \
+		INSTALL_SHAREDIR=/usr/share INSTALL_EXECPREFIX=/usr split_install --keep-dev "/usr/share/et/*"
+	run bash -c "cd '${PKG_PKGPATH}' && find . ! -type d | LC_ALL=C sort"
+	assert_output_lines ./postinst_scripts/50_bind9 ./usr/bin/isc-config ./usr/include/isc/list.h \
+		./usr/lib/aarch64-linux-gnu/bind/filter-a.so ./usr/lib/aarch64-linux-gnu/libisc-9.so \
+		./usr/lib/aarch64-linux-gnu/libisc.so ./usr/lib/aarch64-linux-gnu/pkgconfig/isc.pc ./usr/share/et/et_c.awk
 	run split_install --all "${LIST}"
 	[ "${status}" -ne 0 ]
 	### Nothing to split in a native or cross build
