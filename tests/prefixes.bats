@@ -128,3 +128,12 @@ load test_helper
 	run grep '^export PKG_CONFIG_LIBDIR=' "${PKG_BLDPATH}/environment.source"
 	assert_equal "${output}" "export PKG_CONFIG_LIBDIR='${TOOLCHAIN_PATH}/lib/pkgconfig:${TOOLCHAIN_PATH}/share/pkgconfig:${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig:${GLOBAL_TOOLCHAIN_PATH}/share/pkgconfig'"
 }
+
+@test "cargo_target: the Rust target of the platform, or of the build machine" {
+	load_framework
+	assert_equal "$(cargo_target)" "x86_64-unknown-linux-gnu"
+	BM=aarch64 BOS=linux BLIBC=gnu
+	assert_equal "$(cargo_target build)" "aarch64-unknown-linux-gnu"
+	HM=arm HLIBC=gnueabihf
+	assert_equal "$(cargo_target)" "arm-unknown-linux-gnueabihf"
+}

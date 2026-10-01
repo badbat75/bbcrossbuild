@@ -135,45 +135,15 @@ function set_gnu_buildenv () {
 }
 
 function setup_rust () {
-
-	echo -n "Setting up RUST... "
+	### setup_rust: the Rust of the build machine (lfs/rust:native, in ${GLOBAL_TOOLCHAIN_PATH}/rust-<version>)
+	### in the PATH and the standard library of the platform (lfs/rust:native-std). CARGO_HOME, where
+	### cargo keeps the crates it downloads, is the global toolchain
+	local RUST_VER
 	export CARGO_HOME=${GLOBAL_TOOLCHAIN_PATH}
-	export RUSTUP_HOME=${GLOBAL_TOOLCHAIN_PATH}/var/rustup
-	CARGO_TARGET=${HARCH/-/-unknown-}
-	if [ ! -x "${GLOBAL_TOOLCHAIN_PATH}/bin/cargo" ] || [ ! -x "${GLOBAL_TOOLCHAIN_PATH}/bin/rustc" ]
-	then
-		echo -n "downloading... "
-		run_cmd "curl -sSf https://sh.rustup.rs -o /tmp/rustup-init" > "${GLOBAL_LOG_PATH}/toolchain_rust.log"
-		echo -n "installing... "
-		{
-			run_cmd "chmod +x /tmp/rustup-init" 
-			run_cmd "/tmp/rustup-init -v -y --no-modify-path"
-			run_cmd "rm -f /tmp/rustup-init"
-		} >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
-	else
-		if [ "${RUST_UPDATE:-0}" -eq 1 ]
-		then
-			echo -n "already there. Check for updates... "
-			run_cmd "rustup -v update" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
-		fi
-	fi
-	### cargo install upgrades a crate installed in an older version (RUST_UPDATE), no cargo-update:
-	### its openssl-sys linked the openssl of the build host
-	if [ ! -x "${GLOBAL_TOOLCHAIN_PATH}/bin/bindgen" ] || [ "${RUST_UPDATE:-0}" -eq 1 ]
-	then
-		echo -n "installing bindgen-cli... "
-		( set -e
-			CARGO_PROFILE_RELEASE_OPT_LEVEL=3
-			CARGO_PROFILE_RELEASE_LTO=thin
-			export CARGO_PROFILE_RELEASE_OPT_LEVEL CARGO_PROFILE_RELEASE_LTO
-			run_cmd "cargo install bindgen-cli" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
-		)
-	fi
-	echo -n "adding ${CARGO_TARGET} libraries... "
-	run_cmd "rustup -v target add \"${CARGO_TARGET}\"" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
-	
-	echo "done."
-	echo
+	build lfs/rust:native
+	RUST_VER=$( package_version lfs/rust:native )
+	pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/rust-${RUST_VER}/bin"
+	build lfs/rust:native-std
 }
 
 function setup_gcc () {

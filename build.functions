@@ -655,9 +655,21 @@ function settcenv () {
 	esac
 
 	case ${PKG_TARGET_ENV} in
-		native|cross)	TOOLCHAIN_CARGO_TARGET=${BM}-unknown-${BOS}-${BLIBC} ;;
-		target) 		TOOLCHAIN_CARGO_TARGET=${HM}-unknown-${HOS}-${HLIBC} ;;
+		native|cross)	TOOLCHAIN_CARGO_TARGET=$( cargo_target build ) ;;
+		target) 		TOOLCHAIN_CARGO_TARGET=$( cargo_target ) ;;
 	esac
+}
+
+function cargo_target () {
+	### cargo_target [build]: the Rust target of the platform, <HM>-unknown-<HOS>-<HLIBC>
+	### (aarch64-unknown-linux-gnu), or of the build machine with build: the --target of cargo and the
+	### standard library of lfs/rust:native-std
+	if [ "${1}" == build ]
+	then
+		echo "${BM}-unknown-${BOS}-${BLIBC}"
+	else
+		echo "${HM}-unknown-${HOS}-${HLIBC}"
+	fi
 }
 
 function create_environment_source () {
@@ -822,7 +834,6 @@ function create_environment_source () {
 		export CARGO_PROFILE_RELEASE_OPT_LEVEL=${OPTLEVEL:-2}
 		export CARGO_PROFILE_RELEASE_LTO=${TOOLCHAIN_CARGO_PROFILE_RELEASE_LTO}
 		export CARGO_TARGET='${TOOLCHAIN_CARGO_TARGET}'
-		export RUSTUP_HOME='${RUSTUP_HOME}'
 		export BINDGEN_EXTRA_CLANG_ARGS='${TOOLCHAIN_BINDGENFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}'
 
 		export QEMU_LD_PREFIX='${SYSROOT}'

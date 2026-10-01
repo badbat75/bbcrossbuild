@@ -274,6 +274,11 @@ BBCrossBuild provides various functions for use in project files. These are orga
   - `--with_extra_modules <modules>`: Add kernel modules
   - `<package_name>`: Name of package to build (can include target: package:target)
 
+- **cargo_target**: Print the Rust target of the platform, `<HM>-unknown-<HOS>-<HLIBC>`, or of the build machine with `build`: the `--target` of cargo (`CARGO_TARGET`) and the standard library of `lfs/rust:native-std`
+  ```
+  cargo_target [build]
+  ```
+
 - **package_version**: Print the version a build of a recipe gets, `PKG_VER` of its `package.env` and selected variants: the default of the recipe or the variable of the project that overrides it (`GCC_VER` for `lfs/gcc`). The versions are in the recipes, not in `setenv`; a recipe that needs the version of another package calls it in its `package.env`
   ```
   package_version <group>/<name>[:<target>]
@@ -488,6 +493,7 @@ BBCrossBuild provides various functions for use in project files. These are orga
   ```
   setup_rust
   ```
+  - Builds `lfs/rust:native` (rustc, cargo and rustfmt of the build machine from the standalone installers of static.rust-lang.org, no rustup, in `${GLOBAL_TOOLCHAIN_PATH}/rust-<version>`, put in the `PATH`) and `lfs/rust:native-std` (the standard library of the platform, `cargo_target`); `CARGO_HOME` is the global toolchain (the crates cargo downloads). The version is `RUST_VER` of the recipe; the Rust of the image is `lfs/rust`
 
 - **setup_gcc**: Set up GNU C compiler
   ```
