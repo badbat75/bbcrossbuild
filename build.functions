@@ -51,10 +51,11 @@ function setbuildenv () {
 			COMMON_LDFLAGS+=" -Wl,-rpath,${TOOLCHAIN_PATH}/lib:${GLOBAL_TOOLCHAIN_PATH}/lib"
 			COMMON_LDFLAGS+=" -Wl,-rpath-link -Wl,${TOOLCHAIN_PATH}/lib"
 			COMMON_LDFLAGS+=" -Wl,-rpath-link -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib"
-			COMMON_PKG_CONFIG_LIBDIR="${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig"
-			COMMON_PKG_CONFIG_LIBDIR+=":${GLOBAL_TOOLCHAIN_PATH}/share/pkgconfig"
-			COMMON_PKG_CONFIG_LIBDIR+=":${TOOLCHAIN_PATH}/lib/pkgconfig"
+			### The libraries of the platform toolchain first (lfs/<name>:cross), then the global ones
+			COMMON_PKG_CONFIG_LIBDIR="${TOOLCHAIN_PATH}/lib/pkgconfig"
 			COMMON_PKG_CONFIG_LIBDIR+=":${TOOLCHAIN_PATH}/share/pkgconfig"
+			COMMON_PKG_CONFIG_LIBDIR+=":${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig"
+			COMMON_PKG_CONFIG_LIBDIR+=":${GLOBAL_TOOLCHAIN_PATH}/share/pkgconfig"
 		;;
 		target)
 			if [ "${HARCH}" != "${BARCH}" ]
@@ -793,7 +794,7 @@ function create_environment_source () {
 		cross|native)
 			cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 				export PKG_CONFIG='$(which pkg-config 2>/dev/null || :)'
-				export PKG_CONFIG_LIBDIR=${TOOLCHAIN_PATH}/lib/pkgconfig:${TOOLCHAIN_PATH}/share/pkgconfig:${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig:${GLOBAL_TOOLCHAIN_PATH}/share/pkgconfig:/usr/lib64/pkgconfig
+				export PKG_CONFIG_LIBDIR='${COMMON_PKG_CONFIG_LIBDIR}'
 				export PKG_CONFIG_SYSROOT_DIR=
 				export PKG_CONFIG_ALLOW_CROSS=
 			EOF

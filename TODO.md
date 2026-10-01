@@ -31,8 +31,3 @@ were turned off; each item brings one back with a `:native` recipe.
    in the RUNPATH of LLVM and in what `LLVMConfig.cmake` passes to the builds that import it (`ZLIB_ROOT`
    is the model). The same RUNPATH would let `libLLVM` load the zlib of `lfs/zlib:native`: today it is
    compiled against it and loads the `libz.so.1` of the system, which the base image always has.
-
-7. **The plain text README of libdaemon.**
-   Workaround: the postbuild.sh of `packages/lfs/libdaemon` fixes it only when configure made it, which
-   needs lynx; `README.html` is installed. Low value: either a converter of the build machine (lynx,
-   w3m) or nothing.
