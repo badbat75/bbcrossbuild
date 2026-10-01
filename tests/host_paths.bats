@@ -277,6 +277,7 @@ setup () {
 			touch "${PKG_PKGPATH}/${FILE}"
 		done
 		ln -s libisc-9.so "${PKG_PKGPATH}/usr/lib/aarch64-linux-gnu/libisc.so"
+		mkdir -p "${PKG_PKGPATH}/var/lib/named"
 	}
 	### A pattern that names a file of the build host stays a pattern: /usr/bin/* is not the host /usr/bin
 	LIST="/usr/bin/dig /usr/share/man/man1/dig*
@@ -286,7 +287,9 @@ setup () {
 	run bash -c "cd '${PKG_PKGPATH}' && find . ! -type d | LC_ALL=C sort"
 	assert_output_lines ./postinst_scripts/50_bind9 ./usr/bin/dig ./usr/lib/aarch64-linux-gnu/libisc-9.so \
 		./usr/lib/aarch64-linux-gnu/libisc.so ./usr/share/man/man1/dig.1
-	[ ! -d "${PKG_PKGPATH}/usr/sbin" ]
+	### The directories the split empties go, the one the install left empty stays
+	[ ! -d "${PKG_PKGPATH}/usr/sbin" ] && [ ! -d "${PKG_PKGPATH}/usr/lib/aarch64-linux-gnu/bind" ]
+	[ -d "${PKG_PKGPATH}/var/lib/named" ]
 	staging
 	split_install --drop "${LIST}" "/usr/bin/named-*"
 	run bash -c "cd '${PKG_PKGPATH}' && find . ! -type d | LC_ALL=C sort"

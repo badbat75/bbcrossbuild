@@ -1006,14 +1006,16 @@ function split_install () {
 	### part of a build (lfs/bind9:client). The patterns are paths of the image, find -path patterns
 	### (a * also matches a /), in one or more arguments split on blanks, so a recipe variable goes
 	### quoted and none is expanded on the build host. --keep removes from the staging directory
-	### every file (or link) no pattern matches, --drop every one a pattern matches; the empty
-	### directories go, the post install scripts stay. Nothing happens in native and cross builds.
-	local MODE FILE
-	local -a PATTERNS=() MATCH=( -false )
+	### every file (or link) no pattern matches, --drop every one a pattern matches; the directories
+	### that leaves empty go, the ones the install left empty (a state directory) and the post install
+	### scripts stay. Nothing happens in native and cross builds.
+	local MODE FILE DIR
+	local -a PATTERNS=() MATCH=( -false ) REMOVED=() NOT=()
 	MODE=${1}
 	shift
 	case ${MODE} in
-		--keep|--drop) ;;
+		--keep) NOT=( ! ) ;;
+		--drop) ;;
 		*) trow_error "${ERROR_NOT_VALID_OPTION}" "split_install: --keep or --drop, not ${MODE}." || return ;;
 	esac
 	if [ -z "${PKG_PKGPATH}" ] || [ ! -d "${PKG_PKGPATH}" ]
@@ -1026,13 +1028,21 @@ function split_install () {
 	do
 		MATCH+=( -o -path "${PKG_PKGPATH}${FILE}" )
 	done
-	if [ "${MODE}" = "--keep" ]
+	mapfile -d '' REMOVED < <( find "${PKG_PKGPATH}" ! -type d ! -path "${PKG_PKGPATH}/postinst_scripts/*" \
+		"${NOT[@]}" \( "${MATCH[@]}" \) -print0 )
+	if [ "${#REMOVED[@]}" -gt 0 ]
 	then
-		find "${PKG_PKGPATH}" ! -type d ! -path "${PKG_PKGPATH}/postinst_scripts/*" ! \( "${MATCH[@]}" \) -exec rm -f {} +
-	else
-		find "${PKG_PKGPATH}" ! -type d ! -path "${PKG_PKGPATH}/postinst_scripts/*" \( "${MATCH[@]}" \) -exec rm -f {} +
+		rm -f "${REMOVED[@]}"
 	fi
-	find "${PKG_PKGPATH}" -mindepth 1 -type d -empty -delete
+	for FILE in "${REMOVED[@]}"
+	do
+		DIR=${FILE%/*}
+		while [ "${DIR}" != "${PKG_PKGPATH}" ] && rmdir "${DIR}" 2>/dev/null
+		do
+			DIR=${DIR%/*}
+		done
+	done
+	return 0
 }
 
 function host_path_maps () {
