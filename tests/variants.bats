@@ -15,7 +15,7 @@ setup () {
 	### canonical order and one out of order (arch before target) that must be ignored
 	local DIR
 	for DIR in \
-		target/sysroot target/default target/native target/cross target/bootstrap target/native,cross \
+		target/sysroot target/default target/native target/cross target/bootstrap target/native,cross target/cross-stage1 \
 		toolchain/gnu toolchain/llvm \
 		arch/x86_64 arch/aarch64 arch/arm,aarch64 \
 		platform/generic-x64 platform/rpi3-aarch64 \
@@ -70,6 +70,12 @@ setup () {
 	select_target cross
 	run recipe_variants
 	assert_output_lines target/cross target/native,cross toolchain/gnu arch/x86_64 platform/generic-x64 version/1.0
+}
+
+@test "cross-<name> selects the cross class and its own directory, in byte order" {
+	select_target cross-stage1
+	run recipe_variants
+	assert_output_lines target/cross target/cross-stage1 target/native,cross toolchain/gnu arch/x86_64 platform/generic-x64 version/1.0
 }
 
 @test "arch and platform come from the platform configuration" {

@@ -1262,10 +1262,12 @@ function set_target_prefixes () {
 	### set_target_prefixes <target>: PKG_TARGET_ENV, PKG_PKGPATH and the INSTALL_* prefixes of a
 	### build target: native installs into the global toolchain and never records a status, cross
 	### into the platform toolchain, any other name (bootstrap, stage1, a flavour or the empty
-	### default) into the sysroot through the staging directory PKG_PKGPATH.
+	### default) into the sysroot through the staging directory PKG_PKGPATH. native-<name> and
+	### cross-<name> are of the class native and cross, with a name of their own (the stages of the
+	### cross gcc, lfs/gcc:cross-stage1).
 	### Shared by build and by the recipe utilities (pkg_lint, pkg_show).
 	case ${1} in
-		native)
+		native|native-*)
 			PKG_TARGET_ENV=native
 			PKG_PKGPATH=
 			INSTALL_PREFIX=${NATIVE_PREFIX}
@@ -1278,7 +1280,7 @@ function set_target_prefixes () {
 			INSTALL_SHAREDIR=${NATIVE_SHAREDIR}
 			NOSAVESTATUS=1
 		;;
-		cross)
+		cross|cross-*)
 			PKG_TARGET_ENV=cross
 			PKG_PKGPATH=
 			INSTALL_PREFIX=${CROSS_PREFIX}
@@ -1310,7 +1312,8 @@ function recipe_variants () {
 	### ${PKG_RECIPEPATH}/variants that select the current build (paths relative to variants/).
 	### package.env is the default build; a variant directory has the same layout (package.env,
 	### the scripts, files/, patches/), is named after one selector and is applied on top of it:
-	###   target/<native|cross|sysroot>   the install class (sysroot: anything but native and cross)
+	###   target/<native|cross|sysroot>   the install class (sysroot: anything but native, cross,
+	###                                   native-<name> and cross-<name>)
 	###   target/<default|name>           the PKG_TARGET name (default: no target given)
 	###   toolchain/<gnu|llvm>            the toolchain the package is built with (PKG_TOOLCHAIN and
 	###                                   build --toolchain included)
@@ -2912,10 +2915,10 @@ function build () {(
 	ALREADY_BUILT=0
 	if [ -z "${PKG_CHECK}" ]
 	then
-		if [ "${PKG_TARGET}" == "native" ]
+		if [ "${PKG_TARGET_ENV}" == "native" ]
 		then
 			echo
-			trow_error "${ERROR_GENERIC}" "PKG_CHECK is empty and PKG_TARGET is native. Exiting..."
+			trow_error "${ERROR_GENERIC}" "PKG_CHECK is empty and ${PKG_TARGET} is a native target. Exiting..."
 		fi
 		### Check if target package or default package has already built
 		if [ -f "${STATUS_FILE_DEFAULT_TARGET}" ]

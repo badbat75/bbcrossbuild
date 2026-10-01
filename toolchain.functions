@@ -124,11 +124,16 @@ function set_gnu_buildenv () {
 	BLIBC=$(echo "${BARCH}" | cut -d- -f4)
 	BLIBC=${BLIBC:-gnu}
 	CC_FOR_BUILD=$(which gcc)
+	### The programs of the build machine, which recipes read (lfs/dhcp)
+	# shellcheck disable=SC2034
 	CXX_FOR_BUILD=$(which g++)
 	# shellcheck disable=SC2034
 	CPP_FOR_BUILD="$(which gcc) -E"
+	# shellcheck disable=SC2034
 	AR_FOR_BUILD=$(which gcc-ar)
+	# shellcheck disable=SC2034
 	NM_FOR_BUILD=$(which gcc-nm)
+	# shellcheck disable=SC2034
 	RANLIB_FOR_BUILD=$(which gcc-ranlib)
 	### The flags of the host compiler, for the programs of the build machine some recipes make
 	# shellcheck disable=SC2034
@@ -142,8 +147,8 @@ function set_gnu_buildenv () {
 	# shellcheck disable=SC2034
 	INCLUDE_PATH_FOR_BUILD=$(find {/,/usr/} -mindepth 1 -maxdepth 1 -name include -type d)
 
-	GCCURL=https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz
 
+	# shellcheck disable=SC2034
 	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
 	### What the links of the target need from the platform (an erratum the linker works around, as
 	### --fix-cortex-a53-843419): LDFLAGS of every target build, and a -C link-arg of rustc
@@ -195,209 +200,14 @@ function setup_rust () {
 	echo
 }
 
-function relink_library () {
-	local RELATIVE_TO SOURCE DESTINATION
-	RELATIVE_TO=${1}
-	SOURCE=$(realpath -m --relative-to="${RELATIVE_TO}" "${2}")
-	DESTINATION=${RELATIVE_TO}/$(basename "${2}")
-	run_cmd "ln -fsv \"${SOURCE}\" \"${DESTINATION}\""
-}
-export -f relink_library
-
-function relink_la_libraries () {
-	echo "Adapting .la libraries to ${1}" | log_buffer info
-	export LIB_LA_SEDTRANS="s&^dependency_libs=' -L${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/./ld&dependency_libs='&; s&^libdir='${TOOLCHAIN_PATH}&libdir='${TARGET_PREFIX}&"
-	echo "Sed command: ${LIB_LA_SEDTRANS}" | log_buffer info
-	if [ -d "${1}" ]
-	then
-		run_cmd "find \"${1}\" -mindepth 1 -name \"*.la\" -type f | xargs -r -I{} bash -c \
-			\"sed -i \\\"\\\${LIB_LA_SEDTRANS}\\\" {}\""
-	fi
-}
-
 function setup_gcc () {
-	function gcc_download () {
-
-		download_uncompress "${GCCURL}" "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}"
-		### The branch tracking patch lives in the version variant of the gcc recipe (see
-		### utilities/update_patches); an unknown version has none
-		# shellcheck disable=SC2046
-		( cd "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}"; apply_patches $( patch_list "${PKG_PATH}/lfs/gcc/variants/version/${GCC_VER}" ) )
-		run_cmd "sed 's@^#include <limits.h>@#include <linux/limits.h>@' -i \"${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/libsanitizer/asan/asan_linux.cpp\""
-	}
-
-	function gcc_buildenv () {
-		if [ "${MAKEVERBOSE:-0}" -eq 0 ]
-		then
-			local SILENTCONFIG="--enable-silent-rules"
-			build_configargs="${SILENTCONFIG}"
-			host_configargs="${SILENTCONFIG}"
-			target_configargs="${SILENTCONFIG}"
-		fi
-
-		### Config parameters in common with GCC and Binutils
-		COMMON_CONFIG="--with-sysroot=$(gcc_sysroot) --with-system-zlib"
-		COMMON_CONFIG+=" --with-mpc-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-mpc-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
-		COMMON_CONFIG+=" --with-mpfr-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-mpfr-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
-		COMMON_CONFIG+=" --with-gmp-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-gmp-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
-		COMMON_CONFIG+=" --with-isl-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-isl-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
-
-		GCC_CONFIG="--enable-version-specific-runtime-libs --with-gcc-major-version-only --enable-checking=release \
-			$( if [ "${MULTI_ARCH}" -eq 1 ] && [ -z "${HARCH_LIB}" ]; then echo --enable-multiarch; fi ) \
-			--disable-option-checking --disable-nls --disable-multilib --disable-option-checking"
-
-		case "${1}" in
-			--bootstrap) GCC_CONFIG+=" --enable-languages=c --without-headers --disable-shared"
-			;;
-			*) GCC_CONFIG+=" --enable-languages=${GCC_LANGUAGES:-c,c++} --enable-threads=posix --enable-shared \
-				--enable-tls --enable-__cxa_atexit --disable-libunwind-exceptions --enable-gnu-unique-object \
-				--enable-linker-build-id --enable-libstdcxx-backtrace \
-				--with-linker-hash-style=gnu --enable-plugin --enable-initfini-array \
-				--enable-gnu-indirect-function"
-				if [[ "${GCC_LANGUAGES}" =~ "fortran" ]]
-				then
-					GCC_CONFIG+=" --enable-libquadmath --enable-libquadmath-support"
-				fi
-			;;
-		esac
-
-		COMPFLAGS="${GNU_EXTRACOMPFLAGS} -Wno-maybe-uninitialized -Wno-stringop-overflow -Wno-stack-usage -Wno-alloc-size-larger-than"
-		### The run time path of the global toolchain libraries (gmp, mpfr...) is for the host programs:
-		### LDFLAGS_FOR_TARGET goes without it, or libstdc++, libgcc_s and the other target libraries
-		### of the image carry it as RUNPATH
-		LINKERFLAGS="-Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib ${GNU_EXTRALDFLAGS}"
-		### The target libraries (libstdc++, libgomp...) go into the image: the source path maps of a target
-		### build (host_path_maps), or __FILE__ of their assert messages names the build and source trees
-		local PREFIX_MAP
-		TARGET_PREFIXMAP_FLAGS=
-		while read -r PREFIX_MAP
-		do
-			TARGET_PREFIXMAP_FLAGS+=" -ffile-prefix-map=${PREFIX_MAP}"
-		done < <( SYSROOT=$(gcc_sysroot) host_path_maps )
-		LTO_COMPFLAGS=
-		LTO_LINKERFLAGS=
-		if [ "${GCC_LTOENABLE:-0}" -eq 1 ]
-		then
-			LTO_COMPFLAGS=" -flto=${LTOPROCS}"
-			LTO_LINKERFLAGS=" -fuse-linker-plugin"
-		fi
-	}
-	
-	function gcc_configuration () {
-
-		local CONFIG_ARCH_PARAMS="--build=${BARCH} --host=${BARCH} --target=${HARCH}"
-		case ${HM} in
-			x86_64) local PLATFORM_ARCHFLAGS=""
-				;;
-
-			*)	local PLATFORM_ARCHFLAGS=" ${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
-				;;
-		esac
-		# shellcheck disable=SC2153
-		local PLATFORM_ARCHFLAGS="--enable-targets=${HM}-${HOS}-${HLIBC} --with-arch-directory=${HM} ${HMARCH:+ --with-arch=${HMARCH}}${PLATFORM_ARCHFLAGS}"
-		if [ -d "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}" ]
-		then
-			rm -rf "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}"
-		fi
-		run_cmd "mkdir -p \"${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}\""
-		pushd "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}"
-		gcc_buildenv "${1}"
-		run_cmd "CC_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
-				CXX_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
-				AR_FOR_BUILD=\"${AR_FOR_BUILD}\" \\
-				NM_FOR_BUILD=\"${NM_FOR_BUILD}\" \\
-				RANLIB_FOR_BUILD=\"${RANLIB_FOR_BUILD}\" \\
-				CFLAGS_FOR_BUILD=\"${HOST_CSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}\" \\
-				CXXFLAGS_FOR_BUILD=\"${HOST_CXXSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}\" \\
-				LDFLAGS_FOR_BUILD=\"${LINKERFLAGS}\" \\
-				CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
-				CXX=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
-				AR=\"${AR_FOR_BUILD}\" \\
-				NM=\"${NM_FOR_BUILD}\" \\
-				RANLIB=\"${RANLIB_FOR_BUILD}\" \\
-				CFLAGS=\"${HOST_CSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS} -I${GLOBAL_TOOLCHAIN_PATH}/include\" \\
-				CXXFLAGS=\"${HOST_CXXSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS} -I${GLOBAL_TOOLCHAIN_PATH}/include\" \\
-				LDFLAGS=\"${LINKERFLAGS}${LTO_LINKERFLAGS} -L${GLOBAL_TOOLCHAIN_PATH}/lib\" \\
-				CFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}${TARGET_PREFIXMAP_FLAGS}\" \\
-				CXXFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}${TARGET_PREFIXMAP_FLAGS}\" \\
-				LDFLAGS_FOR_TARGET=\"${GNU_EXTRALDFLAGS} ${OPTLINK_FLAGS}\" \\
-				\"${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/configure\" \\
-					${CONFIG_ARCH_PARAMS} ${PLATFORM_ARCHFLAGS} \\
-					${COMMON_CONFIG} ${GCC_CONFIG} \\
-					--prefix=\"${TOOLCHAIN_PATH}\" \\
-					build_configargs='${build_configargs}' \\
-					host_configargs='${host_configargs}' \\
-					target_configargs='${target_configargs}'"
-		popd
-	}
-
-	function create_sccache_wrapper () {
-		### Create sccache_wrapper to work around an issue of not supporting correctly the
-		### -B parameter. It is not able to find the local cc1 executable running xgcc
-		if [[ ${CCWRAPPER} == *sccache ]]
-		then
-			cat <<-EOF > "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper"
-				#!/bin/sh
-
-				set -e
-
-				dir=\$(dirname \$(realpath \$1))
-				cc1=\${dir}/cc1
-
-				if [ -e "\${cc1}"  ]; then
-					export PATH=\${dir}:\${PATH}
-					echo "${CCWRAPPER} \$@" >> \$dir/sccache_wrapper.log
-					eval ${CCWRAPPER} "\$@"
-				else
-					echo "\$@" >> \$dir/sccache_wrapper.log
-					eval "\$@"
-				fi
-			EOF
-			run_cmd "chmod +x \"${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper\""
-			GCC_CCWRAPPER="${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/sccache_wrapper"
-		else
-			GCC_CCWRAPPER="${CCWRAPPER}"
-		fi
-	}
-	
-	function gcc_make_host () {
-
-		if [ ! -d "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}" ]
-		then
-			echo "Downloading... " | log_buffer info
-			gcc_download
-		fi
-		if [ ! -f "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/config.status" ]
-		then
-			echo "Configuration... " | log_buffer info
-			gcc_configuration "${1}"
-		fi
-		pushd "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}"
-		create_sccache_wrapper
-		echo "Making ${1:-final} compiler." | log_buffer info
-		case "${1}" in
-			--bootstrap)
-				run_cmd "make STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" all-gcc"
-				run_cmd "make STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" install-strip-gcc"
-			;;
-			*)
-				run_cmd "make STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" all-host"
-				run_cmd "make STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" install-strip-host"
-			;;
-		esac
-		echo "Finalize the installation of the limits.h header" | log_buffer info
-		run_cmd "${TOOLCHAIN_PATH}/libexec/gcc/${HARCH}/${GCC_MAJVER}/install-tools/mkheaders"
-		echo "Install aclocal files" | log_buffer info
-		run_cmd "mkdir -pv ${TOOLCHAIN_PATH}/share/aclocal"
-
-		if [ ! -d "$(gcc_sysroot)${TARGET_PREFIX}/lib" ] && [ "${HARCH_LIB}" == 64 ]
-		then
-			echo "Workaround for $(gcc_sysroot)${TARGET_PREFIX}/lib/../lib64" | log_buffer info
-			run_cmd "mkdir -pv \"$(gcc_sysroot)${TARGET_PREFIX}/lib\""
-		fi
-		popd
-	}
-
+	### setup_gcc [--main_gcc] [--targets <libraries>]: the cross gcc of the platform toolchain, every
+	### step a target of lfs/gcc: the bootstrap C compiler (cross-stage1) and the headers and start files
+	### of glibc (glibc:stage1) as dependencies of the C and C++ compilers (cross), the libgcc glibc is
+	### built with (cross-libgcc), glibc and libxcrypt into the sysroot, then the target libraries, one
+	### target each, into the platform toolchain and the sysroot (--main_gcc: linked into its library
+	### directory, WITH_MAIN_GCC of the recipe). A sysroot that is the image of a distribution has its
+	### own C library
 	function setup_ldconfig () {
 		if [ ! -f "${DISTOS_PATH}/etc/ld.so.conf" ] && [ ! -f "${BIN_PATH}/etc/ld.so.conf" ]
 		then
@@ -424,136 +234,6 @@ function setup_gcc () {
 				run_cmd "chmod +x \"${TOOLCHAIN_PATH}/bin/ldconfig\"" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
 			fi
 		fi
-	}
-
-	function gcc_make_target_libs () {
-
-		function relink_libraries () {
-			echo "Relinking libraries with their relative paths in ${1}" | log_buffer info
-			[ ! -d "${1}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}" ] && run_cmd "mkdir -v \"${1}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}\""
-			run_cmd "find \"${1}${TARGET_PREFIX}/lib/gcc/${HARCH}\" -type f,l \
-				\\( -name \"*.so*\" -a ! -name \"*.so*.py\" -o -name \"*.a*\" -o -name \"*.la*\" -o -name \"crt*.o\" \\) | xargs -r -I{} bash -c \
-				\"relink_library \\\"${1}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}\\\" {}\""
-		}
-
-		function build_gcc_library () {
-			local OBJECT PKG_NAME GDB_PY
-
-			OBJECT=${1}
-			PKG_NAME="gcc-${OBJECT}_${GCC_VER}${OBJECT_TARGET}"
-			if [ -f "${STATUS_PATH}/${PKG_NAME}" ]
-			then
-				echo "${OBJECT} already built." | log_buffer info
-				return 0
-			fi
-			if [ ! -d "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}" ]
-			then
-				echo "GCC Sources disappeared (${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}). Reconfigure them." | log_buffer info
-				echo "Downloading... " | log_buffer info
-				gcc_download
-			fi
-			if [ ! -f "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/config.status" ]
-			then
-				echo "Configuration... " | log_buffer info				
-				GCC_LTOENABLE=0 gcc_configuration
-			fi
-			pushd "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}"
-			create_sccache_wrapper
-			if [ "${GCC_BOOTSTRAP}" -eq 0 ]
-			then
-				echo "Create a symlink that allows libgcc to be built with posix threads support" | log_buffer info
-				run_cmd "mkdir -pv \"${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${HARCH}/libgcc\""
-				run_cmd "ln -fs \"${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}/libgcc/gthr-posix.h\" \"${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}/${HARCH}/libgcc/gthr-default.h\""
-			fi
-			### libstdc++-v3/python/gdb.py holds pythondir and toolexeclibdir, written once from the
-			### prefix of the make run that creates it: removed before each install, the toolchain copy
-			### gets the toolchain directories and the package copy (prefix=${TARGET_PREFIX}) the image ones
-			GDB_PY="${HARCH}/libstdc++-v3/python/gdb.py"
-			echo "Making target ${OBJECT} libraries." | log_buffer info
-			run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" all-target-${OBJECT}"
-			echo "Installing ${OBJECT} in the toolchain dir" | log_buffer info
-			if [ "${OBJECT}" == "libstdc++-v3" ]
-			then
-				run_cmd "rm -fv \"${GDB_PY}\""
-			fi
-			run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" install-strip-target-${OBJECT}"
-			run_cmd "rm -fv ${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER}/*.la"
-			#relink_la_libraries "${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/${GCC_MAJVER}"
-			if [ "${OBJECT}" != "libsanitizer" ]
-			then
-				echo "Creating package for ${PKG_NAME}" | log_buffer info
-				if [ -d "${PACKAGES_PATH}/${PKG_NAME}" ]
-				then
-					run_cmd "rm -rf \"${PACKAGES_PATH}/gcc-${OBJECT}_${GCC_VER}\""
-				fi
-				if [ "${OBJECT}" == "libstdc++-v3" ]
-				then
-					run_cmd "rm -fv \"${GDB_PY}\""
-				fi
-				run_cmd "make V=${MAKEVERBOSE:-0} STAGE_CC_WRAPPER=\"${GCC_CCWRAPPER}\" DESTDIR=\"${PACKAGES_PATH}/${PKG_NAME}\" prefix=${TARGET_PREFIX} install-strip-target-${OBJECT}"
-				run_cmd "rm -fv ${PACKAGES_PATH}/${PKG_NAME}${TARGET_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}/*.la"
-				#relink_la_libraries "${PACKAGES_PATH}/${PKG_NAME}${TARGET_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}"
-				if [ "${GCC_BOOTSTRAP}" -eq 0 ]
-				then
-					if [ "${GCC_IS_MAIN}" -eq 1 ]
-					then
-						echo "### Linking GCC target libraries in ${TARGET_PREFIX}${TARGET_LIBDIR}${TARGET_LIBSUFFIX} from ${BIN_PATH}${TARGET_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER}" | log_buffer info
-						if [ -d "${PACKAGES_PATH}/${PKG_NAME}${TARGET_PREFIX}/lib/gcc/${HARCH}" ]
-						then
-							relink_libraries "${PACKAGES_PATH}/${PKG_NAME}"
-						fi
-					else
-						run_cmd "mkdir -pv \"${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d\" \"${PACKAGES_PATH}/${PKG_NAME}/postinst_scripts\""
-						run_cmd "echo ${TARGET_PREFIX}/lib/gcc/${HARCH}/${GCC_MAJVER} >${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d/gcc-${GCC_MAJVER}.conf"
-						if [ -d "${TOOLCHAIN_PATH}/lib/gcc/${HARCH}/lib64" ]
-						then
-							run_cmd "echo ${TARGET_PREFIX}/lib/gcc/${HARCH}/lib64 >>${PACKAGES_PATH}/${PKG_NAME}/etc/ld.so.conf.d/gcc-${GCC_MAJVER}.conf"
-						fi
-						run_cmd "echo \"ldconfig -v\" >>${PACKAGES_PATH}/${PKG_NAME}/postinst_scripts/00_gcc-libs_${GCC_MAJVER}"
-					fi
-					if [ "${GCC_INSTALL_TARGETS}" -eq 1 ]
-					then
-						run_cmd "rsync -aK --devices --specials ${PACKAGES_PATH}/${PKG_NAME}/ ${BIN_PATH}"
-					fi
-				fi
-				run_cmd "create_sfx_package ${PACKAGES_PATH}/${PKG_NAME}"
-				run_cmd "rm -rf \"${PACKAGES_PATH}/${PKG_NAME}\""
-			fi
-			if [ "${GCC_BOOTSTRAP}" -eq 1 ]
-			then
-				run_cmd "rm -rf \"${HARCH}/${PKG_NAME}\""
-			fi
-			run_cmd "touch \"${STATUS_PATH}/${PKG_NAME}\""
-			popd
-		}
-
-		local GCC_BOOTSTRAP OBJECT_TARGET
-
-		echo "GCC Libraries targets: ${GCC_TARGETS}" | log_buffer info > "${LOG_PATH}/gcc-${object}_${GCC_VER}${OBJECT_TARGET}.log"
-
-		GCC_BOOTSTRAP=${GCC_BOOTSTRAP:-0}	
-		if [ "${GCC_BOOTSTRAP}" -eq 1 ]
-		then
-			OBJECT_TARGET="-bootstrap"
-		fi
-		if [ "${GCC_TARGETS}" = "all" ]
-		then
-			### libatomic right after libgcc: since gcc 16 the other libraries link against its
-			### libatomic_asneeded.so linker script
-			GCC_TARGETS="libgcc libatomic libstdc++-v3 libgomp libssp libvtv libsanitizer"
-			if [[ "${GCC_LANGUAGES}" =~ "fortran" ]]
-			then
-				GCC_TARGETS+=" libquadmath"
-			fi
-		fi
-		if [ -n "${GCC_TARGETS}" ]
-		then
-			for object in $( echo "${GCC_TARGETS}" | tr ',' ' ' )
-			do
-				echo -n "${object}... "
-				build_gcc_library "${object}" >> "${LOG_PATH}/gcc-${object}_${GCC_VER}${OBJECT_TARGET}.log"
-			done
-		fi		
 	}
 
 	function setup_ldd () {
@@ -602,84 +282,43 @@ function setup_gcc () {
 		fi
 	}
 
-	OPTS="--install --main_gcc" OPTS_WITH_VALUE="--targets" param2value "${@}"
-	
-	echo -n "Setting up gcc"
-	echo "-${GCC_VER}"
+	OPTS="--main_gcc" OPTS_WITH_VALUE="--targets" param2value "${@}"
 
-	local GCC_MAJVER GCC_TARGETS GCC_INSTALL_TARGETS GCC_IS_MAIN SPACES
-
-	GCC_MAJVER=$(cut -d. -f1 <<<"${GCC_VER}")
+	local GCC_TARGETS GCC_MAIN GCC_LIBRARY
 
 	GCC_TARGETS=${_param_targets:-all}
-	GCC_INSTALL_TARGETS=${_param_install:-0}
-	GCC_IS_MAIN=${_param_main_gcc:-0}
+	GCC_MAIN=${_param_main_gcc:-0}
+	if [ "${GCC_TARGETS}" = "all" ]
+	then
+		### libatomic right after libgcc: since gcc 16 the other libraries link against its
+		### libatomic_asneeded.so linker script
+		GCC_TARGETS="libgcc libatomic libstdc++-v3 libgomp libssp libvtv libsanitizer"
+		if [[ "${GCC_LANGUAGES}" =~ "fortran" ]]
+		then
+			GCC_TARGETS+=" libquadmath"
+		fi
+	fi
 
-	SPACES="   "
-	if [ ! -f "${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" ] || [ ! -f "${TOOLCHAIN_PATH}/bin/${HARCH}-g++" ]
-	then
-		echo
-		NUMSPACES=1 build lfs/bison:native
-		NUMSPACES=1 build lfs/flex:native
-		NUMSPACES=1 build lfs/doxygen:native
-		NUMSPACES=1 build lfs/libgmp:native
-		NUMSPACES=1 build lfs/libmpfr:native
-		NUMSPACES=1 build lfs/libmpc:native
-		NUMSPACES=1 build lfs/libisl:native
-		NUMSPACES=1 build --no_gcc_check lfs/kernel:headers
-		if [ ! -f "${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" ]
-		then
-			### Build GCC Stage 1
-			echo -n "${SPACES}Bootstrapping c compiler... "
-			if [ -d "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}" ]
-			then
-				run_cmd "rm -rf \"${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}\"" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}-stage1.log"
-			fi
-			gcc_make_host --bootstrap >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}-stage1.log"
-		fi
-		### Build GLibC Stage 1
-		if [ "$(gcc_sysroot)" == "${BIN_PATH}" ]
-		then
-			NUMSPACES=1 build --temporary --no_gcc_check lfs/glibc:stage1
-		fi
-		echo -n "${SPACES}Building ${GCC_LANGUAGES:-c,c++} compilers... "
-		### Build GCC Stage 2
-		run_cmd "rm -rf \"${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}\"" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
-		gcc_make_host >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
-	echo -e "done.\n"
-	fi
+	### The headers of the kernel before any compiler of the platform: no compiler check
+	build --no_gcc_check lfs/kernel:headers
+	build lfs/gcc:cross
 	setup_gcc_specs >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
-	if [ ! -f "${STATUS_PATH}/gcc-libgcc_${GCC_VER}" ]
-	then
-		echo -n "${SPACES}Building target libraries... "
-		GCC_BOOTSTRAP=1 GCC_TARGETS=libgcc gcc_make_target_libs
-		echo -e "done.\n"
-	fi
 	if [ "$(gcc_sysroot)" == "${BIN_PATH}" ]
 	then
-		### Build & install glibc
-		NUMSPACES=1 build lfs/glibc
-		### Build & install libxcrypt
-		NUMSPACES=1 build --toolchain gnu lfs/libxcrypt
+		build lfs/gcc:cross-libgcc
+		build lfs/glibc
+		build --toolchain gnu lfs/libxcrypt
 	fi
 	setup_ldconfig
 	ldconfig -v >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log" 2>&1
-	if [ ! -f "${STATUS_PATH}/gcc-libsanitizer_${GCC_VER}" ]
-	then
-		echo -n "${SPACES}Building target libraries... "
-		gcc_make_target_libs libgcc
-		echo -e "done.\n"
-	fi
+	for GCC_LIBRARY in ${GCC_TARGETS//,/ }
+	do
+		WITH_MAIN_GCC=${GCC_MAIN} build "lfs/gcc:${GCC_LIBRARY}"
+	done
 	### Again: the target libraries can add the version specific directory of libgcc_s, which the specs
 	### name. The file written before them no longer matches, and in a new data directory every
 	### following target build would lose CC_HOST_PATH_CONFIG
 	setup_gcc_specs >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
-	if [ -d "${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}" ]
-	then
-		run_cmd "rm -rf \"${TOOLCHAIN_SRCPATH}/gcc-${GCC_VER}\"" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
-	fi
-	echo -e "done.\n"
-
 	setup_ldd "$(gcc_sysroot)"
 }
 
@@ -909,34 +548,17 @@ function setup_python () {
 
 function setup_full_toolchain () {
 	set -e
-	OPTS="--with-llvm --with-python --with-gnu-install --with-main-gcc" OPTS_WITH_VALUE="" param2value "${@}"
-	# Deprecated LLVM RT-Builtins
-	#OPTS="--with-llvm --with-python --with-gnu-install --with-main-gcc --with-llvm-install" OPTS_WITH_VALUE="" param2value "${@}"
+	OPTS="--with-llvm --with-python --with-main-gcc" OPTS_WITH_VALUE="" param2value "${@}"
 
-	local WITH_LLVM WITH_PYTHON WITH_GNU_INSTALL WITH_MAIN_GCC SETUP_GCC SETUP_LLVM SETUP_GCC
+	local WITH_LLVM WITH_PYTHON SETUP_GCC
 
 	WITH_LLVM=${_param_with_llvm:-0}
 	WITH_PYTHON=${_param_with_python:-0}
-	WITH_GNU_INSTALL=${_param_with_gnu_install:-0}
-	WITH_MAIN_GCC=${_param_with_main_gcc:-0}
-	# Deprecated LLVM RT-Builtins
-	#local WITH_LLVM_INSTALL=${_param_with_llvm_install:-0}
 	SETUP_GCC=
-	SETUP_LLVM=
-
-	if [ "${WITH_GNU_INSTALL}" -eq 1 ]
+	if [ "${_param_with_main_gcc:-0}" -eq 1 ]
 	then
-		SETUP_GCC="--install"
+		SETUP_GCC="--main_gcc"
 	fi
-	if [ "${WITH_MAIN_GCC}" -eq 1 ]
-	then
-		SETUP_GCC="${SETUP_GCC:+${SETUP_GCC} }--main_gcc"
-	fi
-	# Deprecated LLVM RT-Builtins
-	#if [ "${WITH_LLVM_INSTALL}" -eq 1 ]
-	#then
-	#	SETUP_LLVM="--install"
-	#fi
 
 	### <HARCH>-run, how every build runs a program of the target
 	setup_target_runner
@@ -965,6 +587,7 @@ function setup_full_toolchain () {
 		SCCACHE_LOG=${SCCACHE_LOG:-info} \\
 		SCCACHE_ERROR_LOG=${GLOBAL_LOG_PATH}/toolchain_sccache.log \\
 			\"${GLOBAL_TOOLCHAIN_PATH}\"/bin/sccache" >> "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
+	# shellcheck disable=SC2034
 	CCWRAPPER=${GLOBAL_TOOLCHAIN_PATH}/bin/sccache
 	###
 
@@ -1008,7 +631,7 @@ function setup_full_toolchain () {
 	if [ "${WITH_LLVM}" -eq 1 ] || [ "${TOOLCHAIN}" = llvm ]
 	then
 		# shellcheck disable=SC2086
-		setup_llvm ${SETUP_LLVM}
+		setup_llvm
 		export LIBCLANG_PATH="${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib"
 	fi
 
@@ -1093,9 +716,6 @@ MAKEFLAGS+=" --load-average=${NPROCS}"
 #MAKEFLAGS+=" --output-sync=line"
 export MAKEFLAGS
 
-TOOLCHAIN_SRCPATH=${SRC_PATH}/toolchain
-# shellcheck disable=SC2153
-TOOLCHAIN_BLDPATH=${BLD_PATH}/toolchain
 if [ ! -d "${TOOLCHAIN_PATH}" ]
 then
 	mkdir -p "${TOOLCHAIN_PATH}"

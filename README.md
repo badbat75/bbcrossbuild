@@ -473,9 +473,8 @@ BBCrossBuild provides various functions for use in project files. These are orga
 
 - **setup_full_toolchain**: Set up the complete toolchain
   ```
-  setup_full_toolchain [--with-gnu-install] [--with-main-gcc] [--with-llvm] [--with-python]
+  setup_full_toolchain [--with-main-gcc] [--with-llvm] [--with-python]
   ```
-  - `--with-gnu-install`: Install gcc libraries in binary folder
   - `--with-main-gcc`: Link GCC target libraries
   - `--with-llvm`: Build LLVM toolchain
   - `--with-python`: Build Python
@@ -487,10 +486,10 @@ BBCrossBuild provides various functions for use in project files. These are orga
 
 - **setup_gcc**: Set up GNU C compiler
   ```
-  setup_gcc [--install] [--main_gcc] [--targets <targets>]
+  setup_gcc [--main_gcc] [--targets <targets>]
   ```
-  - `--install`: Install GCC libraries
-  - `--main_gcc`: Link GCC target libraries
+  - Every step is a target of `lfs/gcc`: `cross-stage1` (the bootstrap C compiler) and `glibc:stage1` as dependencies of `cross` (the C and C++ compilers, whose build tree stays for the libraries), `cross-libgcc` (the libgcc glibc is built with), `lfs/glibc` and `lfs/libxcrypt`, then one target per library (`libgcc`, `libatomic`, `libstdc++-v3`, `libgomp`, `libssp`, `libvtv`, `libsanitizer`), installed into the platform toolchain and, but libsanitizer, packaged and installed into the sysroot. With the image of a distribution as sysroot, its C library and no `cross-libgcc`
+  - `--main_gcc`: Link the gcc target libraries into the library directory of the sysroot (`WITH_MAIN_GCC=1` of the library targets); without it they stay in the directory of the version, named by `/etc/ld.so.conf.d/gcc-<major>.conf`
   - `--targets <targets>`: Target libraries to build (all, comma-separated list)
   - Ends the host compiler setup with `setup_gcc_specs`
 
@@ -694,7 +693,7 @@ LTOENABLE=thin
 KERNEL_LTOENABLE=thin
 
 ## Set up the toolchain
-setup_full_toolchain --with-gnu-install --with-llvm --with-python
+setup_full_toolchain --with-llvm --with-python
 
 ## Create a base filesystem
 build lfs/create-base-fs_1.0

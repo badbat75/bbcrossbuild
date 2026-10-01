@@ -33,6 +33,24 @@ load test_helper
 	assert_equal "${INSTALL_LIBSUFFIX}" ""
 }
 
+@test "cross-<name> and native-<name> are of the cross and native class" {
+	load_framework
+	PKG_FULLNAME=gcc_16.2.0
+	unset NOSAVESTATUS
+	set_target_prefixes cross-stage1
+	assert_equal "${PKG_TARGET_ENV}" "cross"
+	assert_equal "${PKG_PKGPATH}" ""
+	[ -z "${NOSAVESTATUS:-}" ]
+	assert_equal "${INSTALL_PREFIX}" "${TOOLCHAIN_PATH}"
+	set_target_prefixes native-stage1
+	assert_equal "${PKG_TARGET_ENV}" "native"
+	assert_equal "${NOSAVESTATUS}" "1"
+	assert_equal "${INSTALL_PREFIX}" "${GLOBAL_TOOLCHAIN_PATH}"
+	### Only the prefix with its dash: a name that merely starts with cross is a sysroot one
+	set_target_prefixes crossenv
+	assert_equal "${PKG_TARGET_ENV}" "target"
+}
+
 @test "the default target installs into the sysroot through a staging directory" {
 	load_framework
 	PKG_FULLNAME=zlib_1.3

@@ -29,7 +29,7 @@ cat <<-EOF >${PRJ_PATH}/test.prj
 
     build --no_save_status lfs/create-base-fs_1.0
 
-    setup_full_toolchain --with-python --with-gnu-install
+    setup_full_toolchain --with-python
 
     # Build bash to test chroot Environment
     build lfs/bash
