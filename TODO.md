@@ -39,11 +39,6 @@ were turned off; each item brings one back with a `:native` recipe.
    is the model). The same RUNPATH would let `libLLVM` load the zlib of `lfs/zlib:native`: today it is
    compiled against it and loads the `libz.so.1` of the system, which the base image always has.
 
-6. **The gnulib translations of man-db.**
-   Workaround: `./bootstrap --skip-po` in `packages/lfs/man-db/prebuild.sh` (bootstrap downloads them
-   with wget). Build from the release tarball of man-db (savannah) instead of the GitLab archive of the
-   tag: it carries the generated `configure` and every `.po`, so no bootstrap at all.
-
 7. **The plain text README of libdaemon.**
    Workaround: the postbuild.sh of `packages/lfs/libdaemon` fixes it only when configure made it, which
    needs lynx; `README.html` is installed. Low value: either a converter of the build machine (lynx,
