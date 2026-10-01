@@ -36,10 +36,3 @@ were turned off; each item brings one back with a `:native` recipe.
    Workaround: the postbuild.sh of `packages/lfs/libdaemon` fixes it only when configure made it, which
    needs lynx; `README.html` is installed. Low value: either a converter of the build machine (lynx,
    w3m) or nothing.
-
-8. **Tk of the cross Python without Xft and bidirectional text.**
-   Workaround: `--disable-xft --disable-bidi` in `packages/lfs/Tk/variants/target/bootstrap/`: libXft
-   and HarfBuzz come far after the cross Python, which only needs tkinter to build. Tk 9.1 compiles
-   its Xft font code even when configure falls back to the classic fonts, so the bootstrap build has to
-   say it. Nothing to do unless a project ships Tk applications: then build the full `lfs/Tk` (Xft,
-   HarfBuzz) after the bootstrap one.
