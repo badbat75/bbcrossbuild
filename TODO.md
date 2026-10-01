@@ -7,8 +7,8 @@ workaround is part of closing the item.
 
 ## What the build lost with the tools of the host
 
-The host now gives only the compiler, what `bbxb` runs before any package is built, util-linux,
-patchelf, dwarves and qemu (October 2026). The features that needed one of the tools it no longer has
+The host now gives only the compiler, what `bbxb` runs before any package is built, util-linux
+and qemu (October 2026). The features that needed one of the tools it no longer has
 were turned off; each item brings one back with a `:native` recipe.
 
 2. **The documentation of wayland** (the man3 pages of the API and the HTML book).
@@ -43,9 +43,3 @@ were turned off; each item brings one back with a `:native` recipe.
    its Xft font code even when configure falls back to the classic fonts, so the bootstrap build has to
    say it. Nothing to do unless a project ships Tk applications: then build the full `lfs/Tk` (Xft,
    HarfBuzz) after the bootstrap one.
-
-9. **patchelf and pahole (dwarves) still come from the host.**
-   Neither has a recipe: `lfs/patchelf:native` (used by the cross glibc and gobject-introspection
-   post-build scripts) and `lfs/dwarves:native` (pahole for the BTF of the kernels, with
-   `lfs/elfutils:native`) would leave the host only the compiler, the bootstrap tools, util-linux and
-   qemu.

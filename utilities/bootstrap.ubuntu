@@ -6,7 +6,7 @@
 
 # Compiler and base tools
 sudo apt-get install -y rsync util-linux fdisk \
-    build-essential dwarves patchelf file curl gawk patch git \
+    build-essential file curl gawk patch git \
     zip unzip debianutils
 
 # For Image emulation

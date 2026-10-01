@@ -6,7 +6,7 @@
 
 # Compiler and base tools
 PACKAGES="rsync util-linux"
-PACKAGES+=" gcc g++ binutils dwarves patchelf"
+PACKAGES+=" gcc g++ binutils"
 PACKAGES+=" file curl gawk patch git which"
 PACKAGES+=" glibc-devel glibc-gconv-extra zip unzip"
 
