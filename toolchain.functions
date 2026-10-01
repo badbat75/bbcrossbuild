@@ -589,6 +589,11 @@ function setup_full_toolchain () {
 
 	setup_python --native-only
 	build lfs/meson:native
+	### lldb of the global LLVM, with the scripting in the python just built and in lua
+	if [ "${WITH_LLVM}" -eq 1 ] || [ "${TOOLCHAIN}" = llvm ]
+	then
+		build lfs/llvm:native-lldb
+	fi
 
 	if [ "${WITH_PYTHON}" -eq 1 ]
 	then

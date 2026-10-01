@@ -9,9 +9,3 @@ image could be built from the sources instead (`x.py`, with the LLVM of `lfs/llv
 of the image: a cross build, first the compiler of the build machine, then the one of the target, with
 cargo, rustfmt and clippy (about an hour, 10-20 GB). The stage 0 compiler of `x.py` stays a binary, and
 the Rust of the build machine too: `setup_rust` runs before sccache and LLVM.
-
-## lldb with lua and python
-
-Off in every target of `lfs/llvm`: `lfs/python3:native` is built after `lfs/llvm:native` (by its clang
-with `TOOLCHAIN=llvm`), and there is no lua for the build machine. An option of `lfs/llvm` once the
-order allows it.
