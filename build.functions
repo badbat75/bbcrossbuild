@@ -1007,8 +1007,8 @@ function split_install () {
 	### patterns (a * also matches a /), in one or more arguments split on blanks, so a recipe variable
 	### goes quoted and none is expanded on the build host. --keep removes from the staging directory
 	### every file (or link) no pattern matches, --drop every one a pattern matches; --keep-dev keeps
-	### what another build compiles and links with, the libraries (in the subdirectories of the library
-	### directory too), the include files, the pc files, the aclocal macros, the cmake package files
+	### what another build compiles and links with, the libraries and the include files of the library
+	### directory (in its subdirectories too: glib-2.0/include/glibconfig.h), the include files, the pc files, the aclocal macros, the cmake package files
 	### and the *-config scripts, and the files of the patterns: the install of a :bootstrap target.
 	### The directories that leaves empty go, the ones the install left empty (a state directory) and
 	### the post install scripts stay. Nothing happens in native and cross builds.
@@ -1021,7 +1021,7 @@ function split_install () {
 		--keep-dev)
 			NOT=( ! )
 			LIBPATH=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
-			set -- "${LIBPATH}/*.so ${LIBPATH}/*.so.* ${LIBPATH}/*.a ${LIBPATH}/pkgconfig/*" \
+			set -- "${LIBPATH}/*.so ${LIBPATH}/*.so.* ${LIBPATH}/*.a ${LIBPATH}/*.h ${LIBPATH}/pkgconfig/*" \
 				"${INSTALL_SHAREDIR}/pkgconfig/* ${INSTALL_INCLUDEDIR}/* ${INSTALL_SHAREDIR}/aclocal/*" \
 				"${LIBPATH}/cmake/* ${INSTALL_SHAREDIR}/cmake/* ${INSTALL_EXECPREFIX}/bin/*-config" "${@}"
 		;;
