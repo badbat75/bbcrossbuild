@@ -1182,6 +1182,33 @@ function setup_clang_config () {
 	fi
 }
 
+function llvm_config_current () {
+	### llvm_config_current <LLVMConfig.cmake>: whether the global LLVM is the one setup_llvm builds
+	### today: no FFI; zlib, zstd, libxml2 and libedit on, and LLVMConfig.cmake finding each of them in
+	### the global toolchain (the <package>_ROOT lines build_llvm writes)
+	local CONFIG=${1} FEATURE LINE
+	local TRUE_VALUE='(1|ON|TRUE|FORCE_ON)'
+	if grep -qE "^set\(LLVM_ENABLE_FFI ${TRUE_VALUE}\)$" "${CONFIG}"
+	then
+		return 1
+	fi
+	for FEATURE in ZLIB ZSTD LIBXML2 LIBEDIT
+	do
+		if ! grep -qE "^set\(LLVM_ENABLE_${FEATURE} ${TRUE_VALUE}\)$" "${CONFIG}"
+		then
+			return 1
+		fi
+	done
+	for LINE in ZLIB zstd LibXml2 LibEdit
+	do
+		if ! grep -qxF "  set(${LINE}_ROOT ${GLOBAL_TOOLCHAIN_PATH})" "${CONFIG}"
+		then
+			return 1
+		fi
+	done
+	return 0
+}
+
 function setup_llvm () {
 	function download_llvm () {
 
@@ -1231,10 +1258,15 @@ function setup_llvm () {
 			run_cmd "sed -i 's/-flto\"/-flto=${LTOPROCS}\"/g' \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm/cmake/modules/HandleLLVMOptions.cmake\""
 		fi
 
-		export LDFLAGS="${LINKER_FLAGS}"
+		### The libraries of the global toolchain through the RUNPATH (zlib, zstd, libxml2, libedit, ncurses,
+		### lzma), after the $ORIGIN ones of LLVM
+		export LDFLAGS="${LINKER_FLAGS} -Wl,-rpath,${GLOBAL_TOOLCHAIN_PATH}/lib"
 
 		### No FFI: only lli calls external functions with it, and the libffi it found was the one of
-		### the build host
+		### the build host. The other libraries are the ones of the global toolchain (CMAKE_PREFIX_PATH,
+		### the native recipes setup_llvm builds first). No lua and python in lldb: the native
+		### Python is built after LLVM (by clang with TOOLCHAIN=llvm), and the debugger of the framework is
+		### the gdb of utilities/crossgdb
 		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/cmake\" -S \"${GLOBAL_TOOLCHAIN_SRCPATH}/llvm-project-${LLVM_VER}/llvm\" -B \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}\" -G Ninja \\
 			-W no-dev \\
 			-DLLVM_PARALLEL_COMPILE_JOBS=${NPROCS} \\
@@ -1262,15 +1294,16 @@ function setup_llvm () {
 			-DBUILD_SHARED_LIBS:BOOL=OFF \\
 			-DLLVM_ENABLE_LTO:BOOL=${LTO} \\
 			-DLLVM_ENABLE_LIBCXX:BOOL=OFF \\
+			-DCMAKE_PREFIX_PATH=\"${GLOBAL_TOOLCHAIN_PATH}\" \\
 			-DLLVM_ENABLE_ZLIB:BOOL=ON \\
 			-DZLIB_ROOT=\"${GLOBAL_TOOLCHAIN_PATH}\" \\
-			-DLLVM_ENABLE_ZSTD:BOOL=OFF \\
-			-DLLVM_ENABLE_LIBXML2:BOOL=OFF \\
-			-DLLVM_ENABLE_LIBEDIT:BOOL=OFF \\
-			-DLLDB_ENABLE_LIBEDIT:BOOL=OFF \\
-			-DLLDB_ENABLE_CURSES:BOOL=OFF \\
-			-DLLDB_ENABLE_LZMA:BOOL=OFF \\
-			-DLLDB_ENABLE_LIBXML2:BOOL=OFF \\
+			-DLLVM_ENABLE_ZSTD=FORCE_ON \\
+			-DLLVM_ENABLE_LIBXML2=FORCE_ON \\
+			-DLLVM_ENABLE_LIBEDIT:BOOL=ON \\
+			-DLLDB_ENABLE_LIBEDIT:BOOL=ON \\
+			-DLLDB_ENABLE_CURSES:BOOL=ON \\
+			-DLLDB_ENABLE_LZMA:BOOL=ON \\
+			-DLLDB_ENABLE_LIBXML2:BOOL=ON \\
 			-DLLDB_ENABLE_LUA:BOOL=OFF \\
 			-DLLDB_ENABLE_PYTHON:BOOL=OFF \\
 			-DLLVM_ENABLE_FFI:BOOL=OFF \\
@@ -1371,6 +1404,9 @@ function setup_llvm () {
 		### Set LD_LBRARY_PATH to find llvm-${VER}.so in ${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/lib
 		# pathadd LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/lib"
 		run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/ninja $( if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -v; fi ) -C \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}\" install/strip"
+		### LLVMConfig.cmake finds zstd, libxml2 and libedit again in every build that imports it: in the
+		### global toolchain, as zlib (ZLIB_ROOT), not on the build host
+		run_cmd "sed -E -i 's#^(  )find_package\((zstd|LibXml2|LibEdit)\)\$#\1set(\2_ROOT ${GLOBAL_TOOLCHAIN_PATH})\n&#' \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/cmake/llvm/LLVMConfig.cmake\""
 		# pathremove LD_LIBRARY_PATH "${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}/lib"
 		# run_cmd "patchelf --set-rpath \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib\" \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/LLVMgold.so\""
 		# run_cmd "patchelf --set-rpath \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib\" \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/LLVMPolly.so\""
@@ -1512,16 +1548,21 @@ function setup_llvm () {
 	### Binutils dependency
 	build lfs/binutils:native
 	echo -n "Setting up clang-${LLVM_VER}... "
-	### The zlib of the global toolchain (ZLIB_ROOT, which LLVMConfig.cmake passes on to every build that
-	### uses it)
-	build --toolchain gnu lfs/zlib:native
-	### An LLVM built with FFI, zstd, libxml2 or libedit links the libraries of the build host (its cmake
-	### package finds them again in every build that uses it), one built before ZLIB_ROOT its zlib:
-	### configured and built again without, with the zlib of lfs/zlib:native
+	### The libraries of the global toolchain LLVM links: zlib and zstd (compressed sections), libxml2
+	### (llvm-mt, the gdb-remote XML of lldb), libedit on ncurses (the line editing of lldb and
+	### clang-repl, the curses GUI of lldb) and lzma (the MiniDebugInfo of lldb). Built by gnu: LLVM may
+	### not be there yet. LLVMConfig.cmake passes their directory on to every build that uses it
+	### (ZLIB_ROOT, <package>_ROOT)
+	local LLVM_NATIVE_LIB
+	for LLVM_NATIVE_LIB in zlib zstd libxml2 xz ncurses libedit
+	do
+		build --toolchain gnu "lfs/${LLVM_NATIVE_LIB}:native"
+	done
+	### An LLVM built with FFI links the libffi of the build host, one built without the libraries above,
+	### or before their directory was in the RUNPATH and in LLVMConfig.cmake, the ones of the build host
+	### or none: configured and built again
 	if [ -f "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/cmake/llvm/LLVMConfig.cmake" ] && \
-		{ grep -qE 'set\(LLVM_ENABLE_(FFI|ZSTD|LIBEDIT) TRUE\)|set\(LLVM_ENABLE_LIBXML2 1\)' \
-			"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/cmake/llvm/LLVMConfig.cmake" || \
-		! grep -qx "  set(ZLIB_ROOT ${GLOBAL_TOOLCHAIN_PATH})" "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/cmake/llvm/LLVMConfig.cmake"; }
+		! llvm_config_current "${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}/lib/cmake/llvm/LLVMConfig.cmake"
 	then
 		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/llvm-project-${LLVM_VER}\" \"${GLOBAL_TOOLCHAIN_PATH}/llvm-${LLVM_VER}\"" > "${GLOBAL_LOG_PATH}/toolchain_llvm-${LLVM_VER}.log"
 	fi
