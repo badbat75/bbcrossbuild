@@ -918,7 +918,7 @@ function create_recipe_source () {
 		done < <( compgen -v | LC_ALL=C sort -u )
 		echo
 		echo "### Framework helpers available to the recipe scripts"
-		declare -f run_cmd log_run log_wait log_buffer stdout_log trow_error test_version download_uncompress tab strip_host_paths || true
+		declare -f run_cmd log_run log_wait log_buffer stdout_log trow_error test_version download_uncompress tab strip_host_paths split_install || true
 	} > "${RECIPE_SOURCE}"
 	echo "Recipe variables snapshot written to ${RECIPE_SOURCE}"
 }
@@ -999,6 +999,40 @@ function strip_host_paths () {
 		EXPRS+=(-e "s#$(strip_host_paths_regex "${ROOT}")(/|${END})#${ROOT_TO}\1#g")
 	done
 	run_cmd "sed -E -i $(printf '%q ' "${EXPRS[@]}" "${@}")"
+}
+
+function split_install () {
+	### split_install --keep|--drop <patterns>...: for the post-build script of a target that installs
+	### part of a build (lfs/bind9:client). The patterns are paths of the image, find -path patterns
+	### (a * also matches a /), in one or more arguments split on blanks, so a recipe variable goes
+	### quoted and none is expanded on the build host. --keep removes from the staging directory
+	### every file (or link) no pattern matches, --drop every one a pattern matches; the empty
+	### directories go, the post install scripts stay. Nothing happens in native and cross builds.
+	local MODE FILE
+	local -a PATTERNS=() MATCH=( -false )
+	MODE=${1}
+	shift
+	case ${MODE} in
+		--keep|--drop) ;;
+		*) trow_error "${ERROR_NOT_VALID_OPTION}" "split_install: --keep or --drop, not ${MODE}." || return ;;
+	esac
+	if [ -z "${PKG_PKGPATH}" ] || [ ! -d "${PKG_PKGPATH}" ]
+	then
+		return 0
+	fi
+	### Up to the end of the text, its lines too: read returns 1 there
+	read -r -d '' -a PATTERNS <<< "${*}" || true
+	for FILE in "${PATTERNS[@]}"
+	do
+		MATCH+=( -o -path "${PKG_PKGPATH}${FILE}" )
+	done
+	if [ "${MODE}" = "--keep" ]
+	then
+		find "${PKG_PKGPATH}" ! -type d ! -path "${PKG_PKGPATH}/postinst_scripts/*" ! \( "${MATCH[@]}" \) -exec rm -f {} +
+	else
+		find "${PKG_PKGPATH}" ! -type d ! -path "${PKG_PKGPATH}/postinst_scripts/*" \( "${MATCH[@]}" \) -exec rm -f {} +
+	fi
+	find "${PKG_PKGPATH}" -mindepth 1 -type d -empty -delete
 }
 
 function host_path_maps () {

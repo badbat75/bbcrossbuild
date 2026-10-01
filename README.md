@@ -318,6 +318,14 @@ BBCrossBuild provides various functions for use in project files. These are orga
   - `--cmake`: the sysroot becomes `${CMAKE_SYSROOT}` instead (cmake config and export files), set by a cross build and empty in the image
   - The source and build trees of the package are left to the recipe; nothing happens in native and cross builds. Available to the recipe scripts through `recipe.source`
 
+- **split_install**: Keep, in the post-build script of a target that installs part of a build, only its files (or remove the ones of the other targets) from the staging directory
+  ```
+  split_install --keep|--drop <patterns>...
+  ```
+  - The patterns are paths of the image, `find -path` patterns (a `*` also matches a `/`), split on blanks: a recipe variable goes quoted (`split_install --keep "${KRB5_LIB_FILES}"`) and nothing is expanded on the build host
+  - `--keep` removes every file or link no pattern matches, `--drop` every one a pattern matches; the empty directories go, `postinst_scripts/` stays
+  - The targets of one recipe share the lists in `package.env` (`lfs/bind9`, `lfs/openldap`, `lfs/krb5`: `:lib`, `:client`, `:server`). Nothing happens in native and cross builds. Available to the recipe scripts through `recipe.source`
+
 - **host_path_maps**: Print the `OLD=NEW` source path maps of a target build, one per line; `settcenv` passes them to the C compilers and to rustc, the gcc setup to the target libraries (`CFLAGS_FOR_TARGET`), so `__FILE__` in assert and log messages, the debug information and the panic locations of Rust name no path of the build host
   ```
   host_path_maps

@@ -4,7 +4,8 @@
 # host_path_maps, the source path maps of the compilers of a target build, gcc_host_path_specs, what
 # the specs file of the cross gcc adds, clang_host_path_config, the configuration file of the clang of
 # the platform toolchain, find_host_paths, the files of a package naming the host, lto_object_files
-# and strip_lto_objects, the LTO objects of a package and what build keeps of them
+# and strip_lto_objects, the LTO objects of a package and what build keeps of them, split_install,
+# the part of an install a target of a split recipe keeps
 # The tests set variables the sourced framework reads:
 # shellcheck disable=SC1091,SC2016,SC2034
 
@@ -262,4 +263,37 @@ setup () {
 		strip_host_paths "${RECORD}"
 		cmp "${RECORD}" "${RECORD}.orig"
 	done
+}
+
+@test "split_install keeps or drops the files of the patterns, never expanded on the build host" {
+	local FILE
+	PKG_PKGPATH="${BATS_TEST_TMPDIR}/pkg"
+	function staging () {
+		rm -rf "${PKG_PKGPATH}"
+		for FILE in usr/bin/dig usr/bin/named-checkconf usr/sbin/named usr/lib/aarch64-linux-gnu/libisc-9.so \
+			usr/lib/aarch64-linux-gnu/bind/filter-a.so usr/share/man/man1/dig.1 postinst_scripts/50_bind9
+		do
+			mkdir -p "${PKG_PKGPATH}/${FILE%/*}"
+			touch "${PKG_PKGPATH}/${FILE}"
+		done
+		ln -s libisc-9.so "${PKG_PKGPATH}/usr/lib/aarch64-linux-gnu/libisc.so"
+	}
+	### A pattern that names a file of the build host stays a pattern: /usr/bin/* is not the host /usr/bin
+	LIST="/usr/bin/dig /usr/share/man/man1/dig*
+		/usr/lib/aarch64-linux-gnu/lib*"
+	staging
+	split_install --keep "${LIST}"
+	run bash -c "cd '${PKG_PKGPATH}' && find . ! -type d | LC_ALL=C sort"
+	assert_output_lines ./postinst_scripts/50_bind9 ./usr/bin/dig ./usr/lib/aarch64-linux-gnu/libisc-9.so \
+		./usr/lib/aarch64-linux-gnu/libisc.so ./usr/share/man/man1/dig.1
+	[ ! -d "${PKG_PKGPATH}/usr/sbin" ]
+	staging
+	split_install --drop "${LIST}" "/usr/bin/named-*"
+	run bash -c "cd '${PKG_PKGPATH}' && find . ! -type d | LC_ALL=C sort"
+	assert_output_lines ./postinst_scripts/50_bind9 ./usr/lib/aarch64-linux-gnu/bind/filter-a.so ./usr/sbin/named
+	run split_install --all "${LIST}"
+	[ "${status}" -ne 0 ]
+	### Nothing to split in a native or cross build
+	PKG_PKGPATH='' run split_install --keep /usr/bin/dig
+	[ "${status}" -eq 0 ]
 }
