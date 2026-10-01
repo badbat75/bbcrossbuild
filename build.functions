@@ -200,7 +200,6 @@ function setllvmpollyenv () {
 	local OPTIONS
 	OPTIONS=${*}
 	#local LIBCLANG_RTBUILTINS
-	#LIBCLANG_RTBUILTINS="${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
 	#if [ ! -z "${OPTIONS}" ] && [ -f ${LIBCLANG_RTBUILTINS} ]
 
 	case x${HMARCH} in
@@ -233,7 +232,7 @@ function setllvmpollyenv () {
 			arm)
 				# Need to add static rtbuiltins libraries to arm link to avoid missing _mulodi4 symbol
 				# but this is not supported in kernel building so we can't set polly for kernel build
-				LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
+				LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${TOOLCHAIN_PATH}/lib/clang/$( package_version lfs/llvm:native )/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
 				LLVM_KERNELPOLLYFLAGS=
 				;;
 			*)
@@ -581,7 +580,7 @@ function settcenv () {
 			fi
 			;;
 		gold)
-			### gold is gone since binutils 2.45: only usable with an older BINUTILS_VER
+			### gold is gone since binutils 2.45: only usable with an older lfs/binutils (BINUTILS_VER)
 			if [ -n "${CC_SYSROOT_FLAGS}" ]
 			then
 				TOOLCHAIN_LINKERFLAGS+=" -Wl,${CC_SYSROOT_FLAGS}"
@@ -1256,6 +1255,37 @@ function recipe_path () {
 function recipe_file () {
 	### recipe_file <group>/<name>: path of the recipe file (<group>/<name>/${RECIPE_FILENAME})
 	echo "${PKG_PATH}/${1}/${RECIPE_FILENAME}"
+}
+
+function package_version () {
+	### package_version <group>/<name>[:<target>]: the version a build of the recipe gets, PKG_VER of its
+	### package.env and selected variants: the default of the recipe, or the <NAME>_VER of the project
+	### (lfs/gcc: GCC_VER) that overrides it. The framework and the recipes that need the version of
+	### another package read it here: the versions live in their recipes, not in setenv
+
+	function package_version_resolve () {
+		### package_version_resolve <recipe>: resolve the recipe the way build does and print PKG_VER;
+		### it sets every variable of the recipe, so package_version runs it in a subshell
+		set +E
+		trap - ERR
+		unset PKG_VER PKG_SUFFIX PKG_DEPS PKG_VARIANTS
+		PKG_FILE=${1%%:*}
+		PKG_TARGET=
+		if [[ ${1} == *:* ]]
+		then
+			PKG_TARGET=${1#*:}
+		fi
+		PKG_NAME=${PKG_FILE##*/}
+		PKG_RECIPEPATH=$(recipe_path "${PKG_FILE}")
+		PKG_FULLNAME="\${PKG_NAME}\${PKG_SUFFIX}\${PKG_VER:+_\${PKG_VER}}"
+		set_target_prefixes "${PKG_TARGET}"
+		# shellcheck source=/dev/null
+		source "$(recipe_file "${PKG_FILE}")" > /dev/null 2>&1
+		apply_recipe_variants > /dev/null 2>&1
+		echo "${PKG_VER}"
+	}
+
+	( package_version_resolve "${1}" )
 }
 
 function set_target_prefixes () {
@@ -2352,7 +2382,8 @@ function kernelbuild () {
 	fi
 
 	KERNEL_RELEASE=$(./make4kern.sh V=0 kernelrelease)
-	add_system_config_variable KERNEL_VER "${KERNEL_VER}"
+	### The version of the kernel built, from its Makefile: the recipes of the kernels name it their own way
+	add_system_config_variable KERNEL_VER "$(./make4kern.sh V=0 kernelversion)"
 	add_system_config_variable KERNEL_RELEASE "${KERNEL_RELEASE}"
 
 	run_cmd "cp -pv .config \"${PKG_PKGPATH}/boot/config-${KERNEL_RELEASE}\""
@@ -2540,7 +2571,7 @@ function perlmodule () {
 	### targets (all,pure_install)
 	local PERL_EXE=${GLOBAL_TOOLCHAIN_PATH}/perl5/bin/perl
 	local PERL_ARCHLIB PERL_CONFIG PERL_TARGET_ARGS
-	PERL_ARCHLIB=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/$( echo "${PERL_VER}" | cut -d. -f1,2 )/core_perl
+	PERL_ARCHLIB=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/$( package_version lfs/perl5 | cut -d. -f1,2 )/core_perl
 	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	if [ "${PKG_TARGET_ENV}" == target ]

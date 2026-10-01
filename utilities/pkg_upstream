@@ -12,14 +12,14 @@
 #   -a              apply: rewrite the PKG_VER line of package.env with the latest version when the
 #                   archive URL of the new version answers; <group>/<name>=<version> forces a version
 #                   (the current version pins the recipe: lfs/BerkeleyDB=5.3.28)
-#   -S              apply (-a) also to the versions of setenv: the VAR=${VAR:-<version>} line of the
-#                   recipe package.env (GDB_VER) or of setenv (LLVM_VER, KERNEL_VER...), kept when
+#   -S              apply (-a) also to the version variables: the VAR=${VAR:-<version>} line of the
+#                   recipe package.env (GCC_VER, LLVM_VER, KERNEL_VER, GDB_VER...), kept when
 #                   the archive of the new version answers; a version with release branch patches
 #                   (variants/version/<version>/) is reported with the update_patches command it needs
 #   -A              do not query release-monitoring.org (Anitya) for a second opinion
 #   -f              refresh: ignore the cached answers (default cache: one day, under ~/.cache/bbxb)
 #   -j <jobs>       recipes surveyed at once (default 8); the report keeps the order of the recipes.
-#                   With -S one: a setenv rewrite is read by every recipe resolved meanwhile
+#                   With -S one: a version variable is read by the recipes that resolve its package
 #   -o <file>       write the tab separated report of every recipe to a file
 #   -v              print every recipe and the failed downloads, not only the updates
 #   without recipes and without -P: every recipe of every group
@@ -57,16 +57,16 @@
 # the commit and, when they follow it, a date suffix (.20260914) or the kernel sublevel (.6). A
 # GitHub archive of a branch (archive/refs/heads/master) follows it and is reported as tracking,
 # unless the branch is named after the version (v5.6.4.2: the newest such branch).
-# Recipes whose PKG_VER comes from setenv (${GCC_VER}...) are reported with the variable name and
-# rewritten only with -S. The GitHub tags and branches come from git ls-remote, which has no rate limit.
+# Recipes whose PKG_VER comes from a version variable (GCC_VER=${GCC_VER:-<version>}, which a project
+# may override) are reported with the variable name and rewritten only with -S. The GitHub tags and branches come from git ls-remote, which has no rate limit.
 #
 # Report columns: recipe, current, latest, backend, anitya, status, url. The status is current,
 # outdated, ahead (the recipe is newer than what the backend sees: a commit pin, a development
 # series), tracking:<branch> (the archive of a branch), local (no PKG_URL nor GIT_URL: the recipe
 # carries its files), unpinned (pip installs the latest PyPI version), unversioned (a PKG_URL
 # without a version), unknown (no version in the URL, no listing, no tags), noversion, with a
-# "/disagree" suffix when Anitya names another latest version, "/setenv:<VAR>" for the framework
-# versions and, in apply mode, "applied" or "url-missing" (the new archive URL does not answer; for
+# "/disagree" suffix when Anitya names another latest version, "/setenv:<VAR>" for the version
+# variables and, in apply mode, "applied" or "url-missing" (the new archive URL does not answer; for
 # a GitHub release without the archive, the archive of its tag is suggested when it answers).
 
 import hashlib

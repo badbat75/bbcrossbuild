@@ -194,7 +194,7 @@ function emulator_cmdline () {
 		KERN_ROOTFS=${KERN_ROOTFS:-${IMAGE_ROOTFS}}
 	fi
 	KERN_ROOTFS=${KERN_ROOTFS:-ext4}
-	### The kernel of the image, not the KERNEL_VER of setenv: in a subshell, which leaves the
+	### The kernel of the image, not the KERNEL_VER of the project: in a subshell, which leaves the
 	### variables of the build as they are
 	EMULATOR_KERNEL_VER=$(
 		# shellcheck source=/dev/null

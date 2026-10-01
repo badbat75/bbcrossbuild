@@ -273,6 +273,11 @@ BBCrossBuild provides various functions for use in project files. These are orga
   - `--toolchain <toolchain>`: Specify toolchain (gnu, llvm)
   - `--with_extra_modules <modules>`: Add kernel modules
   - `<package_name>`: Name of package to build (can include target: package:target)
+
+- **package_version**: Print the version a build of a recipe gets, `PKG_VER` of its `package.env` and selected variants: the default of the recipe or the variable of the project that overrides it (`GCC_VER` for `lfs/gcc`). The versions are in the recipes, not in `setenv`; a recipe that needs the version of another package calls it in its `package.env`
+  ```
+  package_version <group>/<name>[:<target>]
+  ```
   - The dependencies (`PKG_DEPS`) are walked for a package already built too: one whose recipe changed since its build is rebuilt, and the console shows it as `Package <name>, required by <package>`. The status is the checksum of the recipe alone, so the packages built on top of a rebuilt dependency are not rebuilt: that is `--force`. A package found by its probe (`PKG_CHECK`) leaves its dependencies alone, since the host may provide what the probe looks for. A package is checked once per `bbxb` run (the list of the checked ones is `/tmp/bbxb_checked.<pid>`), whatever the number of packages that depend on it
 
 - **setbuildenv**: Set up build environment

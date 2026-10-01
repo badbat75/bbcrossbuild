@@ -229,3 +229,24 @@ setup () {
 	assert_equal "${PKG_VARIANTS}" "target/default arch/x86_64 target/default/arch/x86_64"
 	assert_equal "${ORDER}" "recipe default x86_64 default+x86_64"
 }
+
+@test "package_version: the default of the recipe, the variable of the project, a variant" {
+	make_recipe lfs/compiler <<-'EOF2'
+		COMPILER_VER=${COMPILER_VER:-16.2.0}
+		PKG_VER=${COMPILER_VER}
+	EOF2
+	put "${RECIPE}/variants/target/old/package.env" 'PKG_VER=10.1.0'
+	unset COMPILER_VER
+	PKG_VER=9.9
+	run package_version lfs/compiler
+	assert_equal "${output}" "16.2.0"
+	run package_version lfs/compiler:cross
+	assert_equal "${output}" "16.2.0"
+	run package_version lfs/compiler:old
+	assert_equal "${output}" "10.1.0"
+	COMPILER_VER=15.1.0
+	run package_version lfs/compiler
+	assert_equal "${output}" "15.1.0"
+	### The caller keeps its own variables
+	assert_equal "${PKG_VER}" "9.9"
+}
