@@ -1201,199 +1201,59 @@ function setup_llvm () {
 }
 
 function setup_python () {
-	function download_pyton () {
-
-		local PYTHONURL="https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PYTHON_VER}.tar.xz"
-		download_uncompress "${PYTHONURL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}"
-		run_cmd "curl -LsR -o \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py\" https://bootstrap.pypa.io/get-pip.py"
-	}
-
-	function build_python () {
-
-		if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}" ]
-		then
-			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}\""
-		fi
-		run_cmd "mkdir -p \"${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}\""
-		pushd "${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}" > /dev/null
-		case ${TOOLCHAIN} in
-			gnu)
-				local HOST_AR="${AR_FOR_BUILD}"
-				local HOST_NM="${NM_FOR_BUILD}"
-				local HOST_RANLIB="${RANLIB_FOR_BUILD}"
-				export CC="${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}"
-				export CXX="${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}"
-				export CFLAGS="-march=native"
-				export CXXFLAG="-march=native"
-				export AR="${HOST_AR}"
-				export NM="${HOST_NM}"
-				export RANLIB="${HOST_RANLIB}"
-				export LDFLAGS="-Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib ${GNU_EXTRALDFLAGS} \
-					-fuse-ld=bfd ${OPTLINK_FLAGS}"
-				;;
-			llvm)
-				export CC="${CCWRAPPER:+${CCWRAPPER} }clang"
-				export CFLAGS="-march=native"
-				export AR="llvm-ar"
-				export NM="llvm-nm"
-				export RANLIB="llvm-ranlib"
-				export LDFLAGS="-Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib ${LLVM_EXTRALDFLAGS} \
-					-fuse-ld=lld -Wl,--threads=${NPROCS} ${LLVM_EXTRAPOLLYFLAGSLIBS} ${OPTLINK_FLAGS}"
-				;;
-		esac
-		export LDFLAGS+=" -Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/lib"
-		### openssl, libffi, libuuid, zlib, bzip2, xz and zstd of the global toolchain (built by setup_python
-		### before), not the ones of the build host: their headers and pc files first, their directory in
-		### the RUNPATH (a Python built against the libraries of the host loads these, same sonames).
-		### No Tk there: no _tkinter, which no build uses
-		export CPPFLAGS="-I${GLOBAL_TOOLCHAIN_PATH}/include"
-		### OpenSSL 4 removed the TLSv1.x methods of the deprecated PROTOCOL_TLSv1x paths of _ssl and no
-		### longer defines the macros of their guards (the same flags as lfs/python3)
-		CPPFLAGS+=" -DOPENSSL_NO_SSL3 -DOPENSSL_NO_SSL3_METHOD -DOPENSSL_NO_TLS1 -DOPENSSL_NO_TLS1_METHOD"
-		CPPFLAGS+=" -DOPENSSL_NO_TLS1_1 -DOPENSSL_NO_TLS1_1_METHOD -DOPENSSL_NO_TLS1_2 -DOPENSSL_NO_TLS1_2_METHOD"
-		export LDFLAGS+=" -L${GLOBAL_TOOLCHAIN_PATH}/lib -Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib"
-		export PKG_CONFIG_PATH="${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig"
-		run_cmd "\"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/configure\" \\
-			--prefix=\"${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}\" --enable-shared \\
-			--with-system-ffi --with-ensurepip=yes --disable-test-modules \\
-			--with-lto --enable-ipv6 \\
-			--with-openssl=\"${GLOBAL_TOOLCHAIN_PATH}\" --with-openssl-rpath=\"${GLOBAL_TOOLCHAIN_PATH}/lib\""
-		#--with-address-sanitizer --with-undefined-behavior-sanitizer
-		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/make\""
-		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/make\" install"
-		run_cmd "${PYTHON_FOR_BUILD} \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}/get-pip.py\""
-		popd > /dev/null
-		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/python-${PYTHON_VER}\""
-		run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip\" -v install --upgrade setuptools pip jinja2 docutils"
-	}
-
-	function build_python_crossenv () {
-
-		run_cmd "${PIP_FOR_BUILD} install crossenv"
-		if [ ! -f "${PYTHON_FOR_TARGET}" ]
-		then
-			echo "${PYTHON_FOR_TARGET} not found!!! Run build python to build one." | log_buffer error
-			return 2
-		fi
-		run_cmd "\"${PYTHON_FOR_BUILD}\" -m crossenv \"${PYTHON_FOR_TARGET}\" \"${TOOLCHAIN_PATH}/venv-${HARCH}\""
-		run_cmd "rmdir -v \"${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include\""
-		run_cmd "ln -sfv \"${PYTHON_SEARCHPATH}${TARGET_INCLUDEDIR}\" \"${TOOLCHAIN_PATH}/venv-${HARCH}/cross/include\""
-		cat >"${TOOLCHAIN_PATH}/venv-${HARCH}/cross/bin/python3-config" <<-EOF
-			#!/bin/sh
-			${PYTHON_SEARCHPATH}${TARGET_PREFIX}/bin/python3-config \${@}
-		EOF
-		run_cmd "chmod +x \"${TOOLCHAIN_PATH}/venv-${HARCH}/cross/bin/python3-config\""
-		(
-			set -e
-			#shellcheck source=/dev/null
-			source "${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate"
-			### setuptools stays current: crossenv keeps build-python's site-packages ahead of pip's
-			### isolated build environments, so an old setuptools here would validate every sdist
-			### metadata (PEP 639 licence strings need setuptools >= 77)
-			run_cmd "build-python -m pip install --upgrade cython setuptools wheel"
-			run_cmd "mkdir -p \"${TOOLCHAIN_BLDPATH}/build_python_crossenv\""
-			pushd "${TOOLCHAIN_BLDPATH}/build_python_crossenv" > /dev/null
-			TOOLCHAIN=gnu PKG_BLDPATH=${PWD} create_environment_source
-			#shellcheck source=/dev/null
-			source environment.source
-			run_cmd "cross-pip -v install --upgrade setuptools cython Mako"
-			run_cmd "build-pip -v install --upgrade setuptools jinja2"
-			popd > /dev/null
-			run_cmd "rm -rf \"${TOOLCHAIN_BLDPATH}/build_python_crossenv\""
-			run_cmd "sed -i '1 a PYTHONPATH=\"\${SYSROOT}/usr/lib/python${PYTHONBIN_VER}/site-packages\"' ${TOOLCHAIN_PATH}/venv-${HARCH}/bin/cross-python3"
-			set +e
-		)
-	}
+	### setup_python [--native-only|detect]: the Python of the global toolchain (lfs/python3:native, in
+	### ${GLOBAL_TOOLCHAIN_PATH}/python-<version>) in the PATH and, without --native-only, the python of the
+	### image (lfs/python3, or the one of the image of a distribution, whose version detect guesses) and the
+	### cross environment of the platform (lfs/python3:crossenv). Sets PYTHONBIN_VER, PYTHONBIN_MAJVER,
+	### PYTHON_FOR_BUILD, PIP_FOR_BUILD and PYTHON_FOR_TARGET for the builds that follow
+	local PYTHON_DISTOS=0 ONLY_NATIVE=0 PYTHON_SEARCHPATH SUDO_CMD
 
 	"check_${TOOLCHAIN}_c"
-
-	### The libraries of the extension modules of the native Python, and the CA certificates its ssl
-	### module reads (the cert.pem of the OPENSSLDIR of lfs/openssl:native)
-	build --toolchain gnu lfs/openssl:native
-	build --toolchain gnu lfs/ca-bundle:native
-	build --toolchain gnu lfs/libffi:native
-	build --toolchain gnu lfs/util-linux:native
-	### zlib, _bz2, _lzma and _zstd: the compression libraries of the global toolchain
-	build --toolchain gnu lfs/zlib:native
-	build --toolchain gnu lfs/bzip2:native
-	build --toolchain gnu lfs/xz:native
-	build --toolchain gnu lfs/zstd:native
-
-	local PYTHON_DISTOS ONLY_NATIVE PYTHON_SSL PYTHON_ZMODULES
-	PYTHON_DISTOS=0
-	ONLY_NATIVE=0
 
 	case ${1} in
 		--native-only) ONLY_NATIVE=1 ;;
 	esac
 
-	echo -n "Setting up Python"
 	if [ -d "${DISTOS_PATH}" ]
 	then
-		local PYTHON_SEARCHPATH=${DISTOS_PATH}
+		PYTHON_SEARCHPATH=${DISTOS_PATH}
 	else
-		local PYTHON_SEARCHPATH=${BIN_PATH}
+		PYTHON_SEARCHPATH=${BIN_PATH}
 	fi
 	if [ "${1}" == detect ]
 	then
-		PYTHON_VER=$(find "${PYTHON_SEARCHPATH}/usr/includ"e -maxdepth 1 -name 'python*' -exec grep '#define PY_VERSION ' {}/patchlevel.h \; | awk '{print $3}' | sed 's/\"//g' | sort -u | tail -n1)
+		PYTHON_VER=$(find "${PYTHON_SEARCHPATH}/usr/include" -maxdepth 1 -name 'python*' -exec grep '#define PY_VERSION ' {}/patchlevel.h \; | awk '{print $3}' | sed 's/\"//g' | sort -u | tail -n1)
 		if [ "${PYTHON_VER}" == "" ]
 		then
-			trow_error 2 "...no way to guess its version and not specified. Exiting... "
-		else
-			echo -n "-${PYTHON_VER} (guessed)... "
-			PYTHON_DISTOS=1
+			trow_error 2 "Python of the image: no way to guess its version and not specified. Exiting... "
 		fi
-	else
-		echo -n "-${PYTHON_VER}... "
+		echo "Python of the image: ${PYTHON_VER} (guessed)."
+		PYTHON_DISTOS=1
 	fi
 
 	PYTHONBIN_VER=$( cut -d. -f1,2 <<<"${PYTHON_VER}")
+	### Read by the builds (recipe.source, pythonbuild) and by lfs/python3:crossenv
 	# shellcheck disable=SC2034
 	PYTHONBIN_MAJVER=${PYTHONBIN_VER:-$(cut -d. -f1 <<<"${PYTHON_VER}")}
+	# shellcheck disable=SC2034
 	PYTHON_FOR_BUILD=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/python${PYTHONBIN_VER}
+	# shellcheck disable=SC2034
 	PIP_FOR_BUILD=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip${PYTHONBIN_VER}
+	# shellcheck disable=SC2034
 	PYTHON_FOR_TARGET=${PYTHON_SEARCHPATH}/usr/bin/python${PYTHONBIN_VER}
-	OPTCOMP_FLAGS+="${OPTLEVEL:-2}"
+
+	build lfs/python3:native
 	pathadd PATH "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin"
 	pathadd PYTHONPATH "${GLOBAL_TOOLCHAIN_PATH}/lib/python${PYTHONBIN_VER}/site-packages"
 
-	### A native Python whose ssl module does not have the global toolchain in its RUNPATH links the
-	### libraries of the build host: it is built again
-	PYTHON_SSL=$(find "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib/python${PYTHONBIN_VER}/lib-dynload" -name '_ssl.*.so' 2>/dev/null | head -n1 || true)
-	### A Python without one of the compression modules (a build host without the library) is built
-	### again, with the ones of the global toolchain
-	PYTHON_ZMODULES=$( { find "${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/lib/python${PYTHONBIN_VER}/lib-dynload" \
-		\( -name 'zlib.*.so' -o -name '_bz2.*.so' -o -name '_lzma.*.so' -o -name '_zstd.*.so' \) 2>/dev/null || true; } | wc -l)
-	if [ ! -x "${PYTHON_FOR_BUILD}" ] || [ ! -x "${PIP_FOR_BUILD}" ] || [ -z "${PYTHON_SSL}" ] || \
-		[ "${PYTHON_ZMODULES}" -ne 4 ] || \
-		! readelf -dW "${PYTHON_SSL}" 2>/dev/null | grep "R\(UN\)\{0,1\}PATH.*[:[]${GLOBAL_TOOLCHAIN_PATH}/lib[]:]" > /dev/null
-	then
-		### run_cmd writes its lines already prefixed: the log is the stdout of the steps, not a
-		### log_buffer, which would prefix them twice and hide the log from on_error. The log is
-		### emptied first and then always opened with >>: the log_buffer writers reopen it in
-		### append mode, and a line written straight to a descriptor opened with > would land at
-		### its offset, over the head of the log. build_python exports the compiler of the host:
-		### a subshell keeps it out of the builds that follow
-		local PYTHON_LOG=${GLOBAL_LOG_PATH}/toolchain_python-${PYTHONBIN_VER}.log
-		true > "${PYTHON_LOG}"
-		echo -n "downloading... "
-		download_pyton >> "${PYTHON_LOG}" 2>&1
-		echo -n "building... "
-		( build_python ) >> "${PYTHON_LOG}" 2>&1
-		echo "done."
-		run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/python-${PYTHON_VER}\"" >> "${PYTHON_LOG}"
-	else
-		echo "already there."
-	fi
-
 	if [ "${ONLY_NATIVE}" -eq 0 ]
 	then
+		### The python of the image of a distribution, laid out as the cross environment expects it
 		if [ -d "${DISTOS_PATH}" ]
 		then
 			if [ ! "$(stat -c '%u' "${DISTOS_PATH}")" -eq "$(id -u)" ]
 			then
-				local SUDO_CMD='-s'
+				SUDO_CMD='-s'
 			fi
 			if [ -f "${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/plat-${HARCH}/_sysconfigdata_m.py" ]
 			then
@@ -1404,24 +1264,11 @@ function setup_python () {
 				run_cmd "${SUDO_CMD}" "ln -s \"config-${PYTHONBIN_VER}m-${HARCH}\" \"${DISTOS_PATH}/usr/lib/python${PYTHONBIN_VER}/config-${PYTHONBIN_VER}m\""
 			fi
 		fi
-
 		if [ ! -f "${DISTOS_PATH}/usr/bin/python${PYTHONBIN_VER}" ] && [ "${PYTHON_DISTOS}" -eq 0 ]
 		then
-			NUMSPACES=1 build lfs/python3
+			build lfs/python3
 		fi
-
-		echo -n "Creating virtual cross environment... "
-		if [ ! -d "${TOOLCHAIN_PATH}/venv-${HARCH}" ]
-		then
-			### Emptied, then opened with >> like the log of the build python above
-			true > "${LOG_PATH}/toolchain_python-crossenv.log"
-			build_python_crossenv >> "${LOG_PATH}/toolchain_python-crossenv.log" 2>&1
-			echo "done."
-			echo
-		else
-			echo "already there."
-			echo
-		fi
+		build lfs/python3:crossenv
 	fi
 }
 

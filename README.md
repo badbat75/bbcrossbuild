@@ -526,13 +526,13 @@ BBCrossBuild provides various functions for use in project files. These are orga
   ```
   - clang reads a configuration file only from the directory of its real executable, and only under the normalized triple (`aarch64-unknown-linux-gnu.cfg`, `clang_config_file`): a link to the global clang would read the one of the global llvm, shared by every platform and project. The copy is small, the code of clang is in `libLLVM` and `libclang-cpp`
 
-- **setup_python**: Set up Python
+- **setup_python**: Set up the Python of the global toolchain and the cross environment of the platform
   ```
-  setup_python [<version>|detect|--native-only]
+  setup_python [detect|--native-only]
   ```
-  - `<version>`: Python version (default: PYTHON_VER)
-  - `detect`: Auto-detect from sysroot
-  - `--native-only`: Only build for host
+  - Builds `lfs/python3:native` (`${GLOBAL_TOOLCHAIN_PATH}/python-<version>`, put in the `PATH`), then the python of the image (`lfs/python3`) and the cross environment `${TOOLCHAIN_PATH}/venv-<HARCH>` (`lfs/python3:crossenv`), and sets `PYTHONBIN_VER`, `PYTHON_FOR_BUILD`, `PIP_FOR_BUILD`, `PYTHON_FOR_TARGET`
+  - `detect`: the version of the python of the image of a distribution (`DISTOS_PATH`), which is used instead of `lfs/python3`
+  - `--native-only`: only the Python of the global toolchain
 
 - **prepare_sysroot**: Relink libraries with relative paths
   ```
