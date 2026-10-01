@@ -137,3 +137,20 @@ load test_helper
 	HM=arm HLIBC=gnueabihf
 	assert_equal "$(cargo_target)" "arm-unknown-linux-gnueabihf"
 }
+
+@test "settcenv keeps OPTCOMP_FLAGS and OPTLINK_FLAGS of the configuration and adds the -O of OPTLEVEL to both" {
+	load_framework
+	OPTCOMP_FLAGS="-fno-semantic-interposition" OPTLINK_FLAGS="-Wl,-O1" OPTLEVEL=3 LTOENABLE=thin
+	settcenv --target target
+	[[ " ${OPTCOMP_FLAGS} " == " -fno-semantic-interposition "*" -O3 " ]]
+	[[ " ${OPTLINK_FLAGS} " == " -Wl,-O1 "*" -O3 " ]]
+	### A second call starts again from the configuration: nothing piles up
+	local FIRST_COMP=${OPTCOMP_FLAGS} FIRST_LINK=${OPTLINK_FLAGS}
+	settcenv --target target
+	assert_equal "${OPTCOMP_FLAGS}" "${FIRST_COMP}"
+	assert_equal "${OPTLINK_FLAGS}" "${FIRST_LINK}"
+	### and a debug build has -g apart from the flags of the configuration, at level 2
+	PKG_DEBUG=1 settcenv --target target
+	[[ " ${OPTCOMP_FLAGS} " == *" -g "* ]]
+	[[ " ${OPTCOMP_FLAGS} " == *" -O2 " ]]
+}

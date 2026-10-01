@@ -367,8 +367,8 @@ source "${BB_HOME}/osconfig.functions"
 source "${BB_HOME}/emulator.functions"
 
 echo
-echo "Core parameters:"
-echo "================"
+echo "Core parameters (before the project file, which can change them):"
+echo "=================================================================="
 echo "Project path: ${DATA_PATH}/${PROJECT_NAME}"
 echo "Toolchain: ${TOOLCHAIN}"
 echo "Packages Optimization Level: ${OPTLEVEL:-2}"

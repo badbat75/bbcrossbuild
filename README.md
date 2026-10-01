@@ -14,7 +14,7 @@ A framework to automate cross-compilation of packages through project files.
 ```bash
 $ git clone --recurse-submodules https://github.com/badbat75/bbcrossbuild.git
 $ cd bbcrossbuild
-$ cp bbxb.conf.default bbxb.conf
+$ cp configurations/bbxb.conf bbxb.conf
 $ utilities/bootstrap.<fedora|ubuntu|aws>
 ```
 
@@ -22,7 +22,9 @@ The package groups under `packages/` are git submodules (`packages-lfs`, `packag
 
 **Customization**
 
-Edit your `bbxb.conf` to configure the framework (optional):
+Edit your `bbxb.conf` to configure the framework (optional). `bbxb` reads `./bbxb.conf` only:
+`configurations/bbxb.conf` is the template, every setting commented with the default the framework
+uses without it, so uncomment what you change (`OPTLEVEL=3`, `LTOENABLE=thin`, `CONTAINER_BUILD=1`...):
 
 ```bash
 $ vi bbxb.conf

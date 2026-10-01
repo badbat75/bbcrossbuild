@@ -310,12 +310,18 @@ function settcenv () {
 		TOOLCHAIN_LDFLAGS_FOR_BUILD \
 		TOOLCHAIN_EXTRA_C_CMD \
 		TOOLCHAIN_BINDGENFLAGS \
-		OPTCOMP_FLAGS \
-		OPTLINK_FLAGS \
 		TOOLCHAIN_CARGO_PROFILE_RELEASE_LTO \
 		TOOLCHAIN_CARGO_TARGET
 
 	local TARGET_ENV CC_SYSROOT_FLAGS CC_TARGET_FLAGS
+
+	### OPTCOMP_FLAGS and OPTLINK_FLAGS are settings (bbxb.conf, the project) that every call builds on:
+	### the first one keeps them as they are, every call starts from there, so the flags of a
+	### previous call (LTO, -O) do not pile up and the settings are not lost
+	OPTCOMP_FLAGS_CONF=${OPTCOMP_FLAGS_CONF-${OPTCOMP_FLAGS}}
+	OPTLINK_FLAGS_CONF=${OPTLINK_FLAGS_CONF-${OPTLINK_FLAGS}}
+	OPTCOMP_FLAGS=${OPTCOMP_FLAGS_CONF}
+	OPTLINK_FLAGS=${OPTLINK_FLAGS_CONF}
 
 	OPTS="" OPTS_WITH_VALUE="--target" param2value "${@}"
 	TARGET_ENV="${_PARAM[target]:-target}"
@@ -619,7 +625,7 @@ function settcenv () {
 	if [ "${PKG_DEBUG:-${DEBUG:-0}}" -eq 1 ]
 	then
 		OPTLEVEL=2
-		OPTCOMP_FLAGS+="-g"
+		OPTCOMP_FLAGS+=" -g"
 	fi
 
 	for param in ${TOOLCHAIN_EXTRA_C_CMD} ${SYSROOT_FLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS} ${PLATFORM_LDFLAGS} ${TOOLCHAIN_LINKERFLAGS} ${PKG_LDFLAGS}
@@ -647,6 +653,10 @@ function settcenv () {
 	TOOLCHAIN_LDFLAGS_FOR_BUILD+=" -Wl,-rpath-link -Wl,${TOOLCHAIN_PATH}/lib"
 	TOOLCHAIN_LDFLAGS_FOR_BUILD+=" -Wl,-rpath-link -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib"
 	OPTCOMP_FLAGS+=" -O${OPTLEVEL:-2}"
+	### The level at link time too: the LTO back end (ThinLTO, the LTRANS of gcc) takes it from the
+	### link command line, and clang without one leaves lld its default, O2. meson links without the
+	### c_args, many Makefiles with LDFLAGS alone
+	OPTLINK_FLAGS+=" -O${OPTLEVEL:-2}"
 
 	case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 		1|fat)	TOOLCHAIN_CARGO_PROFILE_RELEASE_LTO=fat ;;
@@ -1988,6 +1998,8 @@ function cmakebuild () {
 		CMAKE_CROSS_FLAGS+=" -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER"
 	fi
 
+	### Release is the build type (NDEBUG, the choices of the projects for it) without its -O3, which
+	### CMake puts after CFLAGS: the level is OPTLEVEL, in CFLAGS
 	### AR, RANLIB and STRIP of a target build are program names (settcenv): CMake would take a name for
 	### a path into the build directory, so the cache gets the program PATH finds. With LTO (IPO) CMake
 	### archives with CMAKE_<LANG>_COMPILER_AR/RANLIB instead, which it looks for next to the compiler:
@@ -2000,6 +2012,8 @@ function cmakebuild () {
 		${CONF_ENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/cmake ${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}} \\
 		   -G "${CMAKE_GENERATOR}" \\
 		   -DCMAKE_BUILD_TYPE="Release" \\
+		   -DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \\
+		   -DCMAKE_CXX_FLAGS_RELEASE="-DNDEBUG" \\
 		   -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \\
 		   -DTOOLCHAIN_PREFIX=${HARCH}- \\
 		   -DCMAKE_SYSROOT=${SYSROOT} \\
@@ -2307,7 +2321,7 @@ function kernelbuild () {
 				READELF="\${READELF}" \\
 				STRIP="\${STRIP}" \\
 				KCFLAGS="\${KCFLAGS}${LLVM_KERNELPOLLYFLAGS:+ ${LLVM_KERNELPOLLYFLAGS}}${PKG_CFLAGS:+ ${PKG_CFLAGS}}" \\
-				KBUILD_LDFLAGS="${KERNEL_OPTLINK_FLAGS}${PKG_LDFLAGS:+ ${PKG_LDFLAGS}}" \\
+				BBXB_KBUILD_LDFLAGS="${KERNEL_LDFLAGS}" \\
 				ARCH=${KERNEL_ARCH} \\
 				CROSS_COMPILE=${HARCH}- \\
 				HOSTCC="\${CC_FOR_BUILD}" \\
@@ -2330,6 +2344,23 @@ function kernelbuild () {
 	cd "${PKG_BLDPATH}"
 
 	sed -e 's/FLAGS=.*/FLAGS=/g' -e 's/PKG_CONFIG\(.*\)=.*/PKG_CONFIG\1=/' -i environment.source
+
+	### The linker flags of the build go into BBXB_KBUILD_LDFLAGS, which the Makefile adds to its
+	### KBUILD_LDFLAGS: KBUILD_LDFLAGS on the command line of make would make it ignore every
+	### "KBUILD_LDFLAGS +=" of the kernel (-m/-EL of the architecture, -z noexecstack, the ThinLTO
+	### --lto-whole-program-visibility). The LTO back end of ld.lld runs at O2 unless told: --lto-O3
+	### with KERNEL_OPTLEVEL 3
+	local KERNEL_LDFLAGS="${KERNEL_OPTLINK_FLAGS}${PKG_LDFLAGS:+ ${PKG_LDFLAGS}}"
+	if [ "${PKG_TOOLCHAIN:-${TOOLCHAIN}}" == llvm ] && [ "${KERNEL_OPTLEVEL:-2}" == 3 ] && \
+		[ "${PKG_OVERRIDELTO:-${KERNEL_LTOENABLE:-0}}" != 0 ]
+	then
+		KERNEL_LDFLAGS+=" --lto-O3"
+	fi
+	run_cmd "sed -i '/^KBUILD_LDFLAGS[[:space:]]*:=/a KBUILD_LDFLAGS += \$(BBXB_KBUILD_LDFLAGS)' Makefile"
+	if ! grep -qxF "KBUILD_LDFLAGS += \$(BBXB_KBUILD_LDFLAGS)" Makefile
+	then
+		trow_error "${ERROR_GENERIC}" "kernelbuild: no KBUILD_LDFLAGS := in the Makefile of ${PKG_FULLNAME}." || return
+	fi
 
 	make4kern
 
