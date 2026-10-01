@@ -11,13 +11,6 @@ The host now gives only the compiler, what `bbxb` runs before any package is bui
 patchelf, dwarves and qemu (October 2026). The features that needed one of the tools it no longer has
 were turned off; each item brings one back with a `:native` recipe.
 
-1. **The manual pages of dracut** (`dracut`, `lsinitrd`, `dracut.conf`, `dracut.cmdline`).
-   Workaround: `--disable-documentation` in `packages/lfs/dracut/build.sh`. The Makefile makes them
-   with asciidoctor (Ruby) or, with `--disable-asciidoctor`, with asciidoc and xsltproc; the second
-   path needs only asciidoc (a Python program on PyPI) next to `lfs/libxslt:native` and the DocBook
-   of `lfs/docbook-xsl:native`, which are there: a `python/asciidoc:native` recipe and
-   `--disable-asciidoctor` in place of `--disable-documentation`.
-
 2. **The documentation of wayland** (the man3 pages of the API and the HTML book).
    Workaround: `-Ddocumentation=false` in `packages/lfs/wayland/package.env`. It needs doxygen,
    xmlto, mdbook (all `:native` already) and dot of graphviz writing PNG, so an
