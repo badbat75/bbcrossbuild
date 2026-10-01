@@ -81,3 +81,15 @@ load test_helper
 	set_target_prefixes ""
 	assert_equal "${INSTALL_LIBSUFFIX}" ""
 }
+
+@test "native and cross builds get the RUNPATH of the toolchains as one -Wl,-rpath, argument" {
+	### meson keeps at install time only the rpaths of LDFLAGS written -Wl,-rpath,<dirs> (or =): the
+	### two arguments -Wl,-rpath -Wl,<dirs> it drops when a dependency lives in the same directory
+	load_framework
+	setbuildenv --target native
+	[[ " ${COMMON_LDFLAGS} " == *" -Wl,-rpath,${GLOBAL_TOOLCHAIN_PATH}/lib "* ]]
+	[[ " ${COMMON_LDFLAGS} " != *" -Wl,-rpath "* ]]
+	setbuildenv --target cross
+	[[ " ${COMMON_LDFLAGS} " == *" -Wl,-rpath,${TOOLCHAIN_PATH}/lib:${GLOBAL_TOOLCHAIN_PATH}/lib "* ]]
+	[[ " ${COMMON_LDFLAGS} " != *" -Wl,-rpath "* ]]
+}
