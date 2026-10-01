@@ -485,11 +485,6 @@ BBCrossBuild provides various functions for use in project files. These are orga
   setup_rust
   ```
 
-- **setup_binutils**: Set up binutils
-  ```
-  setup_binutils
-  ```
-
 - **setup_gcc**: Set up GNU C compiler
   ```
   setup_gcc [--install] [--main_gcc] [--targets <targets>]

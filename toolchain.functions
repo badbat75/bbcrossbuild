@@ -142,7 +142,6 @@ function set_gnu_buildenv () {
 	# shellcheck disable=SC2034
 	INCLUDE_PATH_FOR_BUILD=$(find {/,/usr/} -mindepth 1 -maxdepth 1 -name include -type d)
 
-	BINUTILSURL=https://ftp.gnu.org/gnu/binutils/binutils-${BINUTILS_VER}.tar.bz2
 	GCCURL=https://github.com/gcc-mirror/gcc/archive/releases/gcc-${GCC_VER}.tar.gz
 
 	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
@@ -194,156 +193,6 @@ function setup_rust () {
 	
 	echo "done."
 	echo
-}
-
-function setup_binutils () {
-	function binutils_download () {
-
-		download_uncompress "${BINUTILSURL}" "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}"
-		### The branch tracking patch lives in the version variant of the binutils recipe (see
-		### utilities/update_patches); an unknown version has none
-		# shellcheck disable=SC2046
-		( cd "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}"; apply_patches $( patch_list "${PKG_PATH}/lfs/binutils/variants/version/${BINUTILS_VER}" ) )
-	}
-
-	function binutils_buildenv () {
-		if [ "${MAKEVERBOSE:-0}" -eq 0 ]
-		then
-			local SILENTCONFIG="--enable-silent-rules"
-			build_configargs="${SILENTCONFIG}"
-			host_configargs="${SILENTCONFIG}"
-			target_configargs="${SILENTCONFIG}"
-		fi
-
-		### Config parameters in common with GCC and Binutils
-		### --with-system-zlib: the zlib of lfs/zlib:native (setup_full_toolchain), found through the
-		### CFLAGS, CXXFLAGS and LDFLAGS of the host programs (the top level Makefile passes no CPPFLAGS
-		### to the host directories), not the ones of the target libraries
-		COMMON_CONFIG="--with-sysroot=$(gcc_sysroot) --enable-shared --with-system-zlib"
-		COMMON_CONFIG+=" --with-mpc-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-mpc-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
-		COMMON_CONFIG+=" --with-mpfr-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-mpfr-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
-		COMMON_CONFIG+=" --with-gmp-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-gmp-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
-		COMMON_CONFIG+=" --with-isl-include=${GLOBAL_TOOLCHAIN_PATH}/include --with-isl-lib=${GLOBAL_TOOLCHAIN_PATH}/lib"
-
-		### Workaround for latest patches (--disable-werror)
-		### gprofng is not needed by the cross toolchain and its libcollector does not build against
-		### the _Generic string macros of recent glibc headers before binutils 2.44; gold was removed
-		### in binutils 2.45, ld.bfd is the default linker
-		BINUTILS_CONFIG="--enable-ld=default --enable-gprofng=no --enable-lto \
-			--enable-new-dtags --disable-rpath --enable-threads=yes --enable-plugins --enable-64-bit-bfd \
-			--enable-compressed-debug-sections=all --enable-separate-code=yes --enable-plugins --disable-werror ${SILENTCONFIG}"
-
-		COMPFLAGS="${GNU_EXTRACOMPFLAGS}"
-		LINKERFLAGS="-Wl,-rpath -Wl,${TOOLCHAIN_PATH}/lib -Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib ${GNU_EXTRALDFLAGS} -s"
-		LTO_COMPFLAGS=
-		LTO_LINKERFLAGS=
-		if [ "${GCC_LTOENABLE:-0}" -eq 1 ]
-		then
-			LTO_COMPFLAGS=" -flto=${LTOPROCS}"
-			LTO_LINKERFLAGS=" -fuse-linker-plugin"
-		fi
-	}
-	
-	function binutils_configuration () {
-
-		local CONFIG_ARCH_PARAMS="--build=${BARCH} --host=${BARCH} --target=${HARCH}"
-		case ${HM} in
-			x86_64) local PLATFORM_ARCHFLAGS=""
-				;;
-
-			*)	local PLATFORM_ARCHFLAGS=" ${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
-				;;
-		esac
-		# shellcheck disable=SC2153
-		local PLATFORM_ARCHFLAGS="--enable-targets=${HM}-${HOS}-${HLIBC} --with-arch-directory=${HM} ${HMARCH:+ --with-arch=${HMARCH}}${PLATFORM_ARCHFLAGS}"
-		if [ -d "${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}" ]
-		then
-			rm -rf "${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}"
-		fi
-		run_cmd "mkdir -p \"${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}\""
-		pushd "${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}"
-		binutils_buildenv
-		run_cmd "CC_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
-				CXX_FOR_BUILD=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
-				AR_FOR_BUILD=\"${AR_FOR_BUILD}\" \\
-				NM_FOR_BUILD=\"${NM_FOR_BUILD}\" \\
-				RANLIB_FOR_BUILD=\"${RANLIB_FOR_BUILD}\" \\
-				CFLAGS_FOR_BUILD=\"${HOST_CSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}\" \\
-				CXXFLAGS_FOR_BUILD=\"${HOST_CXXSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}\" \\
-				LDFLAGS_FOR_BUILD=\"${LINKERFLAGS}\" \\
-				CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
-				CXX=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
-				AR=\"${AR_FOR_BUILD}\" \\
-				NM=\"${NM_FOR_BUILD}\" \\
-				RANLIB=\"${RANLIB_FOR_BUILD}\" \\
-				CFLAGS=\"${HOST_CSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS} -I${GLOBAL_TOOLCHAIN_PATH}/include\" \\
-				CXXFLAGS=\"${HOST_CXXSTD} ${COMPFLAGS} -march=native -O${GCC_OPTLEVEL:-2}${LTO_COMPFLAGS} -I${GLOBAL_TOOLCHAIN_PATH}/include\" \\
-				LDFLAGS=\"${LINKERFLAGS}${LTO_LINKERFLAGS} -L${GLOBAL_TOOLCHAIN_PATH}/lib\" \\
-				CFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
-				CXXFLAGS_FOR_TARGET=\"${PLATFORM_CFLAGS} ${COMPFLAGS} ${OPTCOMP_FLAGS}\" \\
-				LDFLAGS_FOR_TARGET=\"${LINKERFLAGS} ${OPTLINK_FLAGS}\" \\
-				\"${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}/configure\" \\
-					${CONFIG_ARCH_PARAMS} ${PLATFORM_ARCHFLAGS} \\
-					${COMMON_CONFIG} ${BINUTILS_CONFIG} \\
-					--prefix=\"${TOOLCHAIN_PATH}\" \\
-					build_configargs='${build_configargs}' \\
-					host_configargs='${host_configargs}' \\
-					target_configargs='${target_configargs}'"
-		popd
-	}
-	
-	function binutils_make () {
-
-		if [ ! -d "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}" ]
-		then
-			echo "Downloading... " | log_buffer info
-			binutils_download
-		fi
-		if [ ! -f "${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}/config.status" ]
-		then
-			echo "Configuration... " | log_buffer info
-			binutils_configuration
-		fi
-		pushd "${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}"
-		echo "Making compiler." | log_buffer info
-		run_cmd "make STAGE_CC_WRAPPER=\"${CCWRAPPER}\" all"
-		run_cmd "make STAGE_CC_WRAPPER=\"${CCWRAPPER}\" install"
-		popd
-	}
-
-	echo -n "Setting up binutils"
-	echo -n "-${BINUTILS_VER}... "
-
-	local SPACES
-
-	SPACES="   "
-
-	if [ ! -f "${TOOLCHAIN_PATH}/bin/${HARCH}-ld.bfd" ]
-	then
-		echo
-		NUMSPACES=1 build lfs/bison:native
-		NUMSPACES=1 build lfs/flex:native
-		NUMSPACES=1 build lfs/doxygen:native
-		NUMSPACES=1 build lfs/libgmp:native
-		NUMSPACES=1 build lfs/libmpfr:native
-		NUMSPACES=1 build lfs/libmpc:native
-		NUMSPACES=1 build lfs/libisl:native
-		echo -n "${SPACES}Building... "
-		# shellcheck disable=SC2153
-		binutils_make "${HARCH}" >> "${LOG_PATH}/toolchain_binutils-${BINUTILS_VER}.log"
-		echo -e "done.\n"
-	else
-		echo -e "already there.\n"
-	fi
-	if [ -d "${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}" ]
-	then
-		run_cmd "rm -rf \"${TOOLCHAIN_BLDPATH}/binutils-${BINUTILS_VER}\"" >> "${LOG_PATH}/toolchain_binutils-${BINUTILS_VER}.log"
-	fi
-	if [ -d "${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}" ]
-	then
-		run_cmd "rm -rf \"${TOOLCHAIN_SRCPATH}/binutils-${BINUTILS_VER}\"" >> "${LOG_PATH}/toolchain_binutils-${BINUTILS_VER}.log"
-	fi
-
 }
 
 function relink_library () {
@@ -444,6 +293,7 @@ function setup_gcc () {
 			*)	local PLATFORM_ARCHFLAGS=" ${HMFPU:+ --with-fpu=${HMFPU}}${HMFLOATABI:+ --with-float=${HMFLOATABI}}"
 				;;
 		esac
+		# shellcheck disable=SC2153
 		local PLATFORM_ARCHFLAGS="--enable-targets=${HM}-${HOS}-${HLIBC} --with-arch-directory=${HM} ${HMARCH:+ --with-arch=${HMARCH}}${PLATFORM_ARCHFLAGS}"
 		if [ -d "${TOOLCHAIN_BLDPATH}/gcc-${GCC_VER}" ]
 		then
@@ -551,6 +401,7 @@ function setup_gcc () {
 	function setup_ldconfig () {
 		if [ ! -f "${DISTOS_PATH}/etc/ld.so.conf" ] && [ ! -f "${BIN_PATH}/etc/ld.so.conf" ]
 		then
+			# shellcheck disable=SC2153
 			run_cmd "mkdir -pv \"${BIN_PATH}/etc\"" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
 			run_cmd "cat > \"${BIN_PATH}/etc/ld.so.conf\"" <<-EOF >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
 				include ld.so.conf.d/*.conf
@@ -1146,7 +997,8 @@ function setup_full_toolchain () {
 	then
 		TOOLCHAIN=gnu build lfs/mold:cross
 	fi
-	TOOLCHAIN=gnu setup_binutils
+	### The cross binutils of the platform toolchain, the assembler and linker of the cross gcc
+	TOOLCHAIN=gnu build lfs/binutils:cross
 	# shellcheck disable=SC2086
 	setup_gcc ${SETUP_GCC}
 	setup_toolchain_wrapper
