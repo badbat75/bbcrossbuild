@@ -411,14 +411,25 @@ BBCrossBuild provides various functions for use in project files. These are orga
 
 - **create_image**: Create a new disk image
   ```
-  create_image <tag_name> [--rootfstype <fs_type>] [--size <size>] [--layout <layout_file>] [--boottype <type>] [--bootdir <dir>]
+  create_image <tag_name> [--rootfstype <fs_type>] [--size <size>] [--layout <layout_file>] [--bootsize <MiB>] [--boottype <type>] [--bootdir <dir>]
   ```
   - `<tag_name>`: Name for the image
   - `--rootfstype <fs_type>`: Filesystem type (ext4, btrfs, etc.)
-  - `--size <size>`: Size of the image (e.g., 2G, 4G)
+  - `--size <size>`: Size of the image (e.g., 2G, 4G; default 2G), `binary_size` computes it from the sysroot
   - `--layout <layout_file>`: Partition layout file
+  - `--bootsize <MiB>`: Size of the FAT boot partition of the default layout (default 256), from 4 MiB; the root partition takes the rest
   - `--boottype <type>`: MBR type of the FAT boot partition (`c`, default; `ef` for an EFI system partition)
   - `--bootdir <dir>`: Mount point of the boot partition in the fstab of the image (`/boot`, default; `/boot/firmware` on the Raspberry Pi)
+
+- **binary_size**: Size of a disk image that holds the sysroot, for `create_image --size`
+  ```
+  binary_size [--path <directory>] [--free <percent>] [--bootsize <MiB>] [--round pow2|<MiB>]
+  ```
+  - `--path <directory>`: What the image holds (default the sysroot, `BIN_PATH`)
+  - `--free <percent>`: Room added to the space the files take (default 30)
+  - `--bootsize <MiB>`: The boot partition, as `--bootsize` of `create_image` (default 256): it is added with the 4 MiB before it
+  - `--round pow2|<MiB>`: Rounding: a power of two (the default when `QEMU_STORAGE=sd-card`, the only sizes the SD card of QEMU takes) or a multiple of `<MiB>` (default 1024)
+  - Prints `<n>G`, or `<n>M` when the size is not a whole number of GiB
 
 - **mount_tag**: Download and mount system image
   ```

@@ -7,6 +7,10 @@
 # core.functions, build.functions and pkgtools.functions: nothing is downloaded or built.
 # shellcheck shell=bash disable=SC2034,SC2154
 
+### The tests use the flags of run (run !, run -<status>), which need bats 1.5.0: without it every
+### file that uses them ends with warning BW02
+bats_require_minimum_version 1.5.0
+
 BB_HOME=$(realpath "${BATS_TEST_DIRNAME}/..")
 export BB_HOME
 

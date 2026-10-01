@@ -54,16 +54,67 @@ function image_fs_tools () {
 	IMAGE_FS_PATH=${GLOBAL_TOOLCHAIN_PATH}/sbin:${GLOBAL_TOOLCHAIN_PATH}/bin:/usr/sbin:/usr/bin:/sbin:/bin
 }
 
+function binary_size () {
+	# binary_size [--path <directory>] [--free <percent>] [--bootsize <MiB>] [--round pow2|<MiB>]
+	### The --size of create_image for an image that holds <directory> (default the sysroot, BIN_PATH):
+	### the MiB its files take (du: the blocks they have, a hard link once), <percent> more (default 30:
+	### the metadata, the journal and the reserved blocks of the file system, what the post install
+	### scripts write, the room of the running system) and what comes before the root partition in the
+	### default layout: the first 4 MiB and the boot partition, --bootsize of create_image (256).
+	### Rounded up to a power of two when QEMU boots the platform from an SD card (QEMU_STORAGE=sd-card:
+	### QEMU refuses an SD card of another size), to a multiple of 1024 MiB otherwise; --round chooses.
+	### Printed as <n>G, <n>M when it is no whole number of GiB
+	OPTS="" OPTS_WITH_VALUE="--path --free --bootsize --round" param2value "${@}"
+
+	local SIZE_PATH FREE BOOT_SIZE ROUND USED SIZE POWER
+
+	SIZE_PATH=${_PARAM[path]:-${BIN_PATH}}
+	FREE=${_PARAM[free]:-30}
+	BOOT_SIZE=${_PARAM[bootsize]:-256}
+	ROUND=${_PARAM[round]:-$( [ "${QEMU_STORAGE}" == sd-card ] && echo pow2 || echo 1024 )}
+
+	if [ ! -d "${SIZE_PATH}" ]
+	then
+		trow_error "${ERROR_PATH_NOT_FOUND}" "binary_size: no directory ${SIZE_PATH}." || return
+	fi
+	if [[ ! ${FREE} =~ ^[0-9]+$ ]] || [[ ! ${BOOT_SIZE} =~ ^[1-9][0-9]*$ ]] || [[ ! ${ROUND} =~ ^(pow2|[1-9][0-9]*)$ ]]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "binary_size: --free takes a percent, --bootsize MiB, --round pow2 or MiB." || return
+	fi
+	USED=$(du -s --block-size=1M "${SIZE_PATH}" | cut -f1)
+	SIZE=$(( USED * (100 + FREE) / 100 + 4 + BOOT_SIZE ))
+	if [ "${ROUND}" == pow2 ]
+	then
+		POWER=1
+		while [ "${POWER}" -lt "${SIZE}" ]
+		do
+			POWER=$(( POWER * 2 ))
+		done
+		SIZE=${POWER}
+	else
+		SIZE=$(( (SIZE + ROUND - 1) / ROUND * ROUND ))
+	fi
+	if (( SIZE % 1024 == 0 ))
+	then
+		echo "$(( SIZE / 1024 ))G"
+	else
+		echo "${SIZE}M"
+	fi
+}
+
 function create_image() {
-	# create_image <tag_name> [--rootfstype <fs_type>] [--size <size_in_KiB> [--layout <layout_file>]
-	#              [--boottype <sfdisk type>] [--bootdir <mount point>]
+	# create_image <tag_name> [--rootfstype <fs_type>] [--size <size>] [--layout <layout_file>]
+	#              [--bootsize <MiB>] [--boottype <sfdisk type>] [--bootdir <mount point>]
+	### --size is what fallocate takes (2G, 8192M; binary_size computes it from the sysroot);
+	### --bootsize the MiB of the FAT boot partition of the default layout (256), which starts at 4 MiB,
+	### the root partition right after it with the rest of the image;
 	### --boottype is the MBR type of the FAT boot partition of the default layout: c (FAT32 LBA),
 	### ef for the EFI system partition the UEFI firmware boots from; --bootdir is where the fstab of
 	### the image mounts it: /boot, /boot/firmware for the firmware of the Raspberry Pi
 
-	OPTS="" OPTS_WITH_VALUE="--rootfstype --size --layout --boottype --bootdir" param2value "${@}"
+	OPTS="" OPTS_WITH_VALUE="--rootfstype --size --layout --bootsize --boottype --bootdir" param2value "${@}"
 
-	local MOUNT_NAME MOUNT_LAYOUT IMAGE_PATH MOUNT_DIR ROOTFS_TYPE SIZEIEC LAYOUT LODEVICE BOOT_TYPE BOOT_DIR IMAGE_FS_PATH
+	local MOUNT_NAME MOUNT_LAYOUT IMAGE_PATH MOUNT_DIR ROOTFS_TYPE SIZEIEC LAYOUT LODEVICE BOOT_SIZE BOOT_TYPE BOOT_DIR IMAGE_FS_PATH
 
 	MOUNT_NAME=${_PARAM[1]}
 	MOUNT_LAYOUT=${_PARAM[layout]}
@@ -71,8 +122,13 @@ function create_image() {
 	MOUNT_DIR=${PLATFORM_PATH}/${MOUNT_NAME}
 	ROOTFS_TYPE=${_PARAM[rootfstype]:-ext4}
 	SIZEIEC=${_PARAM[size]:-2G}
+	BOOT_SIZE=${_PARAM[bootsize]:-256}
 	BOOT_TYPE=${_PARAM[boottype]:-c}
 	BOOT_DIR=${_PARAM[bootdir]:-/boot}
+	if [[ ! ${BOOT_SIZE} =~ ^[1-9][0-9]*$ ]]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "create_image: --bootsize takes MiB." || return
+	fi
 	image_fs_tools
 
 	if [ -z "${MOUNT_LAYOUT}" ]
@@ -82,8 +138,8 @@ function create_image() {
 			unit: sectors
 			sector-size: 512
 
-			start=        8192, size=      524288, type=${BOOT_TYPE}
-			start=      532480, type=83
+			start=8192, size=$(( BOOT_SIZE * 2048 )), type=${BOOT_TYPE}
+			start=$(( 8192 + BOOT_SIZE * 2048 )), type=83
 			EOF
 		)"
 	else

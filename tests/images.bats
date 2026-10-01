@@ -174,6 +174,34 @@ losetup -d /dev/loop0'
 	assert_equal "$(stat -c '%a' "${PLATFORM_PATH}/img/tmp")" 1777
 }
 
+@test "binary_size adds the free share and the boot partition to the sysroot and rounds it for QEMU" {
+	### du says the sysroot takes 101 MiB: 30% more, the first 4 MiB and the boot partition of 256 make 391
+	function du () {
+		printf '101\t%s\n' "${@: -1}"
+	}
+	BIN_PATH=${BATS_TEST_TMPDIR}/binaries
+	mkdir -p "${BIN_PATH}"
+	QEMU_STORAGE=sd-card
+	run binary_size
+	assert_equal "${output}" 512M
+	QEMU_STORAGE=virtio-blk-pci
+	run binary_size
+	assert_equal "${output}" 1G
+	run binary_size --round 100
+	assert_equal "${output}" 400M
+	run binary_size --free 0 --round pow2 --path "${BIN_PATH}"
+	assert_equal "${output}" 512M
+	### A boot partition of 512 MiB: 131 + 4 + 512 = 647
+	run binary_size --bootsize 512 --round pow2
+	assert_equal "${output}" 1G
+	run binary_size --bootsize 512 --round 1
+	assert_equal "${output}" 647M
+	run binary_size --round 0
+	[ "${status}" -eq "${ERROR_NOT_VALID_OPTION}" ]
+	run binary_size --path "${BATS_TEST_TMPDIR}/none"
+	[ "${status}" -eq "${ERROR_PATH_NOT_FOUND}" ]
+}
+
 @test "create_image makes the root with the native mke2fs, mounts the boot partition and names it in the fstab on /boot, or on --bootdir" {
 	### run_cmd records the commands instead of running them, blkid of sudo answers for the partitions
 	RUN_CALLS=${BATS_TEST_TMPDIR}/run.calls
@@ -221,4 +249,13 @@ losetup -d /dev/loop0'
 	grep -qx "mount \"/dev/loop9p1\" \"${PLATFORM_PATH}/lfs/boot/firmware\"" "${RUN_CALLS}"
 	grep -q "PARTUUID=1234-01 /boot/firmware vfat defaults 0 2" "${RUN_CALLS}"
 	grep -q "PARTUUID=1234-02 /     ext4 defaults 0 1" "${RUN_CALLS}"
+	### The default layout: the boot partition of 256 MiB from 4 MiB, or of --bootsize, the root after it
+	grep -q "start=8192, size=524288, type=c" "${RUN_CALLS}"
+	grep -q "start=532480, type=83" "${RUN_CALLS}"
+	: > "${RUN_CALLS}"
+	create_image lfs --bootsize 512 --boottype ef > /dev/null
+	grep -q "start=8192, size=1048576, type=ef" "${RUN_CALLS}"
+	grep -q "start=1056768, type=83" "${RUN_CALLS}"
+	run create_image lfs --bootsize 0
+	[ "${status}" -eq "${ERROR_NOT_VALID_OPTION}" ]
 }
