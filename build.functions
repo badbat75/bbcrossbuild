@@ -1684,19 +1684,28 @@ function target_runner_script () {
 	### and the RUNPATH of the program (the loader would look for its image paths on the host), each
 	### directory inside the sysroot when it is there, as qemu opens it, then the library
 	### directories of the sysroot. Only the default directories of the loader stay the ones of the host,
-	### after all of these. A program without PT_INTERP (static, a script) runs as it is
+	### after all of these. A program without PT_INTERP (static, a script) runs as it is.
+	### Called as <HARCH>-ldd (a link to it, setup_target_runner) it is the ldd of the target, the
+	### ldd wrapper of g-ir-scanner.cross: the same loader lists the libraries of the program
+	### (LD_TRACE_LOADED_OBJECTS, exported at the exec alone, not to the shell and to readelf). The ldd
+	### of the build host would load them with its own C library, older than the one of the sysroot
 	local SYSROOT_LIBS="\${SYSROOT}/lib${HARCH_LIB}${TARGET_LIBSUFFIX}:\${SYSROOT}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}"
 
 	cat <<-EOF
 		#!/bin/sh
 		# ${HARCH}-run <program> [<arguments>]: a program of the target, run by a build (bbxb, target_runner_script)
 		SYSROOT=\${QEMU_LD_PREFIX:-${BIN_PATH}}
+		case \${0##*/} in
+		    *-ldd) TRACE=1 ;;
+		    *) TRACE= ;;
+		esac
 	EOF
 	if [ "${HM}" != "${BM}" ]
 	then
 		cat <<-EOF
 			export QEMU_LD_PREFIX="\${SYSROOT}"
 			export QEMU_CPU="\${QEMU_CPU:-max}"
+			[ -z "\${TRACE}" ] || export LD_TRACE_LOADED_OBJECTS=1
 			exec qemu-${HM}-static "\${@}"
 		EOF
 		return 0
@@ -1722,6 +1731,11 @@ function target_runner_script () {
 		RUNPATH=\$(readelf -dW "\${PROGRAM}" 2> /dev/null | sed -n 's/^.*(R\(UN\)\{0,1\}PATH).*\[\(.*\)\]\$/\2/p' | sed "s#\\\$ORIGIN#\${PROGRAM%/*}#g" | head -n1)
 		if [ -z "\${LOADER}" ]
 		then
+		    if [ -n "\${TRACE}" ]
+		    then
+		        echo "	not a dynamic executable" >&2
+		        exit 1
+		    fi
 		    exec "\${@}"
 		fi
 		shift
@@ -1740,6 +1754,7 @@ function target_runner_script () {
 		    LIBRARY_PATH=\${LIBRARY_PATH}\${DIR}:
 		done
 		unset IFS
+		[ -z "\${TRACE}" ] || export LD_TRACE_LOADED_OBJECTS=1
 		exec "\${SYSROOT}\${LOADER}" --inhibit-cache --library-path "\${LIBRARY_PATH}${SYSROOT_LIBS}" --argv0 "\${PROGRAM}" "\${PROGRAM}" "\${@}"
 	EOF
 	return 0

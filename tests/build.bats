@@ -404,7 +404,7 @@ function calls () {
 	libtool_sysroot /sys/root "${BATS_TEST_TMPDIR}/none"
 }
 
-@test "target_runner_script: the loader of the sysroot on the machine of the build host, qemu across machines" {
+@test "target_runner_script: the loader of the sysroot on the machine of the build host, qemu across machines, the ldd of the target" {
 	local SYSROOT=${BATS_TEST_TMPDIR}/sysroot RUNNER=${BATS_TEST_TMPDIR}/run LOADER
 	### BM comes from toolchain.functions, which the suite does not source
 	BM=$( uname -m )
@@ -447,6 +447,16 @@ echo "script ${*}"'
 	chmod +x "${BATS_TEST_TMPDIR}/script"
 	run "${RUNNER}" "${BATS_TEST_TMPDIR}/script" a b
 	assert_output_lines "script a b"
+	### Called as <HARCH>-ldd the exec gets LD_TRACE_LOADED_OBJECTS and the runner does not (traced,
+	### its readelf would find no loader): the stub loader, a script, has the libraries of its shell
+	### listed instead of running; a program without a loader is no dynamic one
+	ln -s run "${BATS_TEST_TMPDIR}/${BM}-linux-gnu-ldd"
+	run env -u QEMU_LD_PREFIX -u LD_TRACE_LOADED_OBJECTS LD_LIBRARY_PATH= QEMU_LD_LIBRARY_PATH= \
+		"${BATS_TEST_TMPDIR}/${BM}-linux-gnu-ldd" true
+	[ "${status}" -eq 0 ]
+	[[ ${output} == *"libc.so."* ]]
+	[[ ${output} != *--inhibit-cache* ]]
+	run -1 "${BATS_TEST_TMPDIR}/${BM}-linux-gnu-ldd" "${BATS_TEST_TMPDIR}/script"
 	### Across machines: qemu-<HM>-static with the sysroot and the CPU of every extension
 	HM=riscv64 HARCH=riscv64-linux-gnu BIN_PATH=${SYSROOT} target_runner_script > "${RUNNER}"
 	put "${BATS_TEST_TMPDIR}/bin/qemu-riscv64-static" '#!/bin/sh
@@ -454,6 +464,13 @@ echo "${QEMU_LD_PREFIX} ${QEMU_CPU} ${*}"'
 	chmod +x "${BATS_TEST_TMPDIR}/bin/qemu-riscv64-static"
 	run env -u QEMU_LD_PREFIX -u QEMU_CPU PATH="${BATS_TEST_TMPDIR}/bin:${PATH}" "${RUNNER}" /bin/prog x
 	assert_output_lines "${SYSROOT} max /bin/prog x"
+	### and as <HARCH>-ldd qemu, which hands its environment to the loader of the target, gets
+	### LD_TRACE_LOADED_OBJECTS (the stub, a script: its shell is listed)
+	ln -s run "${BATS_TEST_TMPDIR}/riscv64-linux-gnu-ldd"
+	run env -u QEMU_LD_PREFIX -u LD_TRACE_LOADED_OBJECTS PATH="${BATS_TEST_TMPDIR}/bin:${PATH}" \
+		"${BATS_TEST_TMPDIR}/riscv64-linux-gnu-ldd" /bin/prog
+	[[ ${output} == *"libc.so."* ]]
+	[[ ${output} != *"/bin/prog"* ]]
 }
 
 @test "unresolved_needed: the libraries neither the package nor the sysroot has, where the loader of the image looks" {
