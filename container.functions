@@ -60,7 +60,6 @@ container_docker () {
 	return 0
 }
 
-# shellcheck disable=SC2120
 container_image () {
 	### container_image [--force] [--cache-export]: build the image when docker does not have it
 	### or when the label with the checksum of the Dockerfile does not match the Dockerfile of the
@@ -76,15 +75,13 @@ container_image () {
 
 	DOCKERFILE_SUM=$(md5sum "${BB_HOME}/Dockerfile" | awk '{print $1}')
 	IMAGE_SUM=$(docker image inspect --format '{{index .Config.Labels "bbxb.dockerfile"}}' "${CONTAINER_NAME}" 2> /dev/null || true)
-	# shellcheck disable=SC2154
-	if [ "${_param_force:-0}" -eq 0 ] && [ "${IMAGE_SUM}" == "${DOCKERFILE_SUM}" ]
+	if [ "${_PARAM[force]:-0}" -eq 0 ] && [ "${IMAGE_SUM}" == "${DOCKERFILE_SUM}" ]
 	then
 		return 0
 	fi
 
 	BUILD_OPTS="--build-arg BBXB_DOCKERFILE_SUM=${DOCKERFILE_SUM} --tag ${CONTAINER_NAME}"
-	# shellcheck disable=SC2154
-	if [ "${_param_cache_export:-0}" -eq 1 ]
+	if [ "${_PARAM[cache_export]:-0}" -eq 1 ]
 	then
 		BUILD_OPTS+=" --cache-to type=local,dest=${CONTAINER_CACHE_PATH}"
 	elif [ -f "${CONTAINER_CACHE_PATH}/index.json" ]
@@ -128,7 +125,6 @@ container_run () {
 		trow_error "${ERROR_GENERIC}" "${PROJECT_NAME} ${PLATFORM_NAME} is already building in the container ${RUN_NAME} (./bbxb container stop ${PROJECT_NAME} ${PLATFORM_NAME})."
 	fi
 
-	# shellcheck disable=SC2119
 	container_image
 
 	if [ ! -d "${DATA_PATH}" ]
@@ -426,7 +422,7 @@ container_purge () {
 	local ASSUME_YES RUNNING IMAGES IDS ID CONTAINERS ANSWER
 
 	OPTS="--yes" OPTS_WITH_VALUE="" param2value "${@}"
-	ASSUME_YES=${_param_yes:-0}
+	ASSUME_YES=${_PARAM[yes]:-0}
 	container_docker || return
 
 	RUNNING=$(container_running)
@@ -504,7 +500,6 @@ container_push () {
 	then
 		trow_error "${ERROR_NOT_VALID_OPTION}" "No registry: set CONTAINER_REGISTRY in bbxb.conf (e.g. ghcr.io/<user>) and run docker login once." || return
 	fi
-	# shellcheck disable=SC2119
 	container_image || return
 	TARGET=${CONTAINER_REGISTRY%/}/${CONTAINER_NAME}
 	run_cmd "docker tag \"${CONTAINER_NAME}\" \"${TARGET}\"" || return

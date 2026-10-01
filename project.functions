@@ -86,8 +86,7 @@ function create_sfx_package () {
 	OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
 
 	local PKG_OBJ PKG_POSTINST=0
-	# shellcheck disable=SC2154
-	PKG_OBJ="${_param_1}"
+	PKG_OBJ="${_PARAM[1]}"
 
 	if [ -d "${PKG_OBJ}/postinst_scripts" ]
 	then

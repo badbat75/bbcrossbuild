@@ -1,7 +1,6 @@
 # seterr: the exit codes of trow_error. Sourced by bbxb and by the recipe utilities.
-# shellcheck shell=bash disable=SC2034
+# shellcheck shell=bash
 ERROR_NOT_VALID_OPTION=9
 ERROR_FILE_NOT_FOUND=10
 ERROR_PATH_NOT_FOUND=11
-ERROR_NOT_ENOUGH_MEMORY=101
 ERROR_GENERIC=255

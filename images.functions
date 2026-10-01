@@ -47,7 +47,7 @@ function image_fs_tools () {
 	### use (their check makes it a test when they are there), not the ones of the build host.
 	### IMAGE_FS_PATH is the PATH sudo runs them with: those sbin and bin first, then the system
 	### directories of fsck (util-linux), which runs the fsck.<type> it finds in the PATH. It calls
-	### build, whose param2value unsets the _param_ variables: the caller has read them before
+	### build, whose param2value empties _PARAM: the caller has read them before
 	build lfs/e2fsprogs:native
 	build lfs/btrfs-progs:native
 	build lfs/dosfstools:native
@@ -65,18 +65,14 @@ function create_image() {
 
 	local MOUNT_NAME MOUNT_LAYOUT IMAGE_PATH MOUNT_DIR ROOTFS_TYPE SIZEIEC LAYOUT LODEVICE BOOT_TYPE BOOT_DIR IMAGE_FS_PATH
 
-	# shellcheck disable=SC2154
-	MOUNT_NAME=${_param_1}
-	# shellcheck disable=SC2154
-	MOUNT_LAYOUT=${_param_layout}
+	MOUNT_NAME=${_PARAM[1]}
+	MOUNT_LAYOUT=${_PARAM[layout]}
 	IMAGE_PATH=${DISKIMAGES_PATH}/${MOUNT_NAME}.img
 	MOUNT_DIR=${PLATFORM_PATH}/${MOUNT_NAME}
-	ROOTFS_TYPE=${_param_rootfstype:-ext4}
-	SIZEIEC=${_param_size:-2G}
-	# shellcheck disable=SC2154
-	BOOT_TYPE=${_param_boottype:-c}
-	# shellcheck disable=SC2154
-	BOOT_DIR=${_param_bootdir:-/boot}
+	ROOTFS_TYPE=${_PARAM[rootfstype]:-ext4}
+	SIZEIEC=${_PARAM[size]:-2G}
+	BOOT_TYPE=${_PARAM[boottype]:-c}
+	BOOT_DIR=${_PARAM[bootdir]:-/boot}
 	image_fs_tools
 
 	if [ -z "${MOUNT_LAYOUT}" ]
@@ -164,16 +160,11 @@ function mount_tag () {
 	local MOUNT_NAME RESIZE URL IMGFILE IMAGE_PATH IMAGEFILE_PATH MOUNT_DIR PARTNO IMGSIZE PARTINFO PARTNO MPOINT ROOTREADY
 	local MOUNTLIST IMAGE_FS_PATH
 
-	# shellcheck disable=SC2154
-	MOUNT_NAME=${_param_1}
-	# shellcheck disable=SC2154
-	RESIZE=${_param_resize}
-	# shellcheck disable=SC2154
-	URL=${_param_url}
-	# shellcheck disable=SC2154
-	IMGFILE=${_param_imgfile}
-	# shellcheck disable=SC2154
-	MOUNTLIST=${_param_mountlist}
+	MOUNT_NAME=${_PARAM[1]}
+	RESIZE=${_PARAM[resize]}
+	URL=${_PARAM[url]}
+	IMGFILE=${_PARAM[imgfile]}
+	MOUNTLIST=${_PARAM[mountlist]}
 	IMAGE_PATH=${DISKIMAGES_PATH}/${MOUNT_NAME}
 	IMAGEFILE_PATH=${DISKIMAGES_PATH}/${MOUNT_NAME}.img
 	MOUNT_DIR=${PLATFORM_PATH}/${MOUNT_NAME}
@@ -299,15 +290,15 @@ function unmount_tag () {
 	local ALL KILL WHAT2UNMOUNT MOUNT_NAME MOUNT_DIR IMAGEFILE_PATH PROC STATUS ACTIVE_MOUNTS LOOPDEV UNMOUNT_TRIES UNMOUNT_FAILED
 	UNMOUNT_FAILED=0
 
-	ALL=${_param_all:-0}
-	FINALIZE=${_param_finalize:-0}
-	KILL=${_param_kill:-0}
+	ALL=${_PARAM[all]:-0}
+	FINALIZE=${_PARAM[finalize]:-0}
+	KILL=${_PARAM[kill]:-0}
 
 	if [ "${ALL}" -eq 1 ]
 	then
 		WHAT2UNMOUNT=${MOUNTED_IMAGES[*]}
 	else
-		WHAT2UNMOUNT=${_param_1}
+		WHAT2UNMOUNT=${_PARAM[1]}
 	fi
 
 	for MOUNT_NAME in ${WHAT2UNMOUNT}
@@ -416,13 +407,11 @@ function mount_from () {
 	OPTS="" OPTS_WITH_VALUE="--url --imgfile --tag --mountlist --resize" param2value "${@}"
 
 	local TAG IMGFILE MOUNTLIST RESIZE
-	# shellcheck disable=SC2154
-	TAG=${_param_tag}
-	IMGFILE=${_param_imgfile}
-	URL=${_param_url}
-	# shellcheck disable=SC2154
-	MOUNTLIST=${_param_mountlist}
-	RESIZE=${_param_resize}
+	TAG=${_PARAM[tag]}
+	IMGFILE=${_PARAM[imgfile]}
+	URL=${_PARAM[url]}
+	MOUNTLIST=${_PARAM[mountlist]}
+	RESIZE=${_PARAM[resize]}
 
 	if [ ! -d "${DISKIMAGES_PATH}" ] ; then run_cmd "mkdir -pv ${DISKIMAGES_PATH}" >> "${LOG_PATH}/images_${TAG}.log" ; fi
 	if [ ! -f "${DISKIMAGES_PATH}/${TAG}.img" ]
@@ -449,16 +438,11 @@ function run_on_root_dir () {
 
 	local CHROOT_DIR CHROOT_USER CHROOT_CMD CHROOT_PWD CHROOT_PROMPT
 
-	# shellcheck disable=SC2154
-	CHROOT_DIR=${_param_1}
-	# shellcheck disable=SC2154
-	CHROOT_USER=${_param_2}
-	# shellcheck disable=SC2154
-	CHROOT_CMD=${_param_3}
-	# shellcheck disable=SC2154
-	ALLOCATE_PTY=${_param_allocate_pty:-0}
+	CHROOT_DIR=${_PARAM[1]}
+	CHROOT_USER=${_PARAM[2]}
+	CHROOT_CMD=${_PARAM[3]}
+	ALLOCATE_PTY=${_PARAM[allocate_pty]:-0}
 
-	# shellcheck disable=SC2329
 	function chroot_cmd () {
 		### Runs under log_run, that is in a || list where the ERR trap is off: every step
 		### returns its own status
@@ -497,12 +481,12 @@ function inject_into_mount_tag () {
 
 	local ROOT_DIR OBJECT TARGET_DIR TARGET_OWNER TARGET_PATH SOURCE_PATH TARGET_FILE REMOVE_DEVFILES DEV_BIND
 
-	ROOT_DIR=${_param_1}
-	OBJECT=${_param_2}
-	TARGET_DIR=${_param_3}
-	TARGET_OWNER=${_param_4:-"root:root"}
+	ROOT_DIR=${_PARAM[1]}
+	OBJECT=${_PARAM[2]}
+	TARGET_DIR=${_PARAM[3]}
+	TARGET_OWNER=${_PARAM[4]:-"root:root"}
 	TARGET_PATH=${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}
-	REMOVE_DEVFILES=${_param_remove_devfiles:-0}
+	REMOVE_DEVFILES=${_PARAM[remove_devfiles]:-0}
 
 	case ${OBJECT} in
 		binaries)
@@ -565,17 +549,17 @@ function run_postinstall_scripts () {
 
 	local MOUNT_NAME
 
-	MOUNT_NAME=${_param_1}
+	MOUNT_NAME=${_PARAM[1]}
 
 	{
-		echo "Running post install scripts on ${_param_1}... " | log_buffer info
+		echo "Running post install scripts on ${_PARAM[1]}... " | log_buffer info
 		export PLATFORM_PATH LOG_PATH
 		export -f param2value run_on_root_dir
 		### A failing post install script does not stop the image (it never did): it is reported in the log
-		find "${PLATFORM_PATH}/${_param_1}/postinst_scripts" -type f -printf '%P\0' | sort -nz | xargs -0 -I{} bash -c "run_on_root_dir \"${MOUNT_NAME}\" root 'set -x; source /postinst_scripts/{}' || echo \"Post install script {} failed [status \${?}]\" | log_buffer error"
-		run_cmd -s "rm -rfv ${PLATFORM_PATH}/${_param_1}/postinst_scripts"
+		find "${PLATFORM_PATH}/${_PARAM[1]}/postinst_scripts" -type f -printf '%P\0' | sort -nz | xargs -0 -I{} bash -c "run_on_root_dir \"${MOUNT_NAME}\" root 'set -x; source /postinst_scripts/{}' || echo \"Post install script {} failed [status \${?}]\" | log_buffer error"
+		run_cmd -s "rm -rfv ${PLATFORM_PATH}/${_PARAM[1]}/postinst_scripts"
 		echo "Done." | log_buffer info 
-	} >> "${LOG_PATH}/images_${_param_1}.log"
+	} >> "${LOG_PATH}/images_${_PARAM[1]}.log"
 }
 
 function image_mount_dir () {
@@ -676,9 +660,9 @@ function image_mount () {
 	local -a MOUNT_OPTS LOSETUP_OPTS
 
 	OPTS="--ro" OPTS_WITH_VALUE="" param2value "${@}"
-	RO=${_param_ro:-0}
-	IMAGE=${_param_1}
-	DIR=${_param_2}
+	RO=${_PARAM[ro]:-0}
+	IMAGE=${_PARAM[1]}
+	DIR=${_PARAM[2]}
 	if [ ! -f "${IMAGE}" ]
 	then
 		trow_error "${ERROR_FILE_NOT_FOUND}" "No image ${IMAGE}." || return

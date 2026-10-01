@@ -13,7 +13,7 @@ function check_build_functions () {
 
 function setbuildenv () {
 	OPTS="" OPTS_WITH_VALUE="--target" param2value "${@}"
-	local TARGET_ENV=${_param_target:-target}
+	local TARGET_ENV=${_PARAM[target]:-target}
 	CC_HOST_PATH_CONFIG=0
 	case ${TARGET_ENV} in
 		native)
@@ -172,7 +172,7 @@ function setbuildenv () {
 							#COMMON_CXXFLAGS+=" $(gcc_toolchain_libraries_compilerflags) $(gcc_toolchain_libraries_compilerflags)/c++ $(gcc_toolchain_libraries_compilerflags)/c++/${HARCH}"
 							if [ "${CC_HOST_PATH_CONFIG}" -eq 0 ]
 							then
-								COMMON_LDFLAGS+=" $(gcc_toolchain_libraries_linkerflags)"
+								COMMON_LDFLAGS+=" $(gcc_toolchain_libraries_linkerflags cross)"
 							fi
 						;;
 					esac
@@ -318,7 +318,7 @@ function settcenv () {
 	local TARGET_ENV CC_SYSROOT_FLAGS CC_TARGET_FLAGS
 
 	OPTS="" OPTS_WITH_VALUE="--target" param2value "${@}"
-	TARGET_ENV="${_param_target:-target}"
+	TARGET_ENV="${_PARAM[target]:-target}"
 	setbuildenv --target "${TARGET_ENV}"
 	### The sysroot flags of the compiler command lines: none for a compiler that has the sysroot in its
 	### own configuration (CC_HOST_PATH_CONFIG, see setbuildenv)
@@ -622,7 +622,6 @@ function settcenv () {
 		OPTCOMP_FLAGS+="-g"
 	fi
 
-	# shellcheck disable=SC2153
 	for param in ${TOOLCHAIN_EXTRA_C_CMD} ${SYSROOT_FLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS} ${PLATFORM_LDFLAGS} ${TOOLCHAIN_LINKERFLAGS} ${PKG_LDFLAGS}
 	do
 		TOOLCHAIN_RUSTFLAGS+="-C link-arg=${param} "
@@ -668,7 +667,7 @@ function create_environment_source () {
 	###		cross:	Build Arch_A = Host Arch_A / Target Arch_B - Installed in Project Toolchain
 	###		target:	Build Arch_A / Host Arch_B = Target Arch_B - Installed in SYSROOT (Default)
 	OPTS="" OPTS_WITH_VALUE="--target" param2value "${@}"
-	local TARGET_ENV=${_param_target:-target}
+	local TARGET_ENV=${_PARAM[target]:-target}
 	settcenv --target "${TARGET_ENV}"
 	if [ ! -d "${PKG_BLDPATH}" ]
 	then
@@ -692,7 +691,7 @@ function create_environment_source () {
 		### Tool chain: ${PKG_TOOLCHAIN:-${TOOLCHAIN}}
 		### C Wrapper: ${ENV_CCWRAPPER}
 		### Build type: ${BUILD_PROCESS}
-		### Target: ${TARGET_ENV} [${_param_target}]
+		### Target: ${TARGET_ENV} [${_PARAM[target]}]
 		###### Other environment variables:
 		DISTOS_PATH=${DISTOS_PATH}
 		BIN_PATH=${BIN_PATH}
@@ -743,7 +742,6 @@ function create_environment_source () {
 	EOF
 	if [ -n "${TOOLCHAIN_CC}" ]
 	then
-		# shellcheck disable=SC2153
 		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 		export CC='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_CC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 		export CC_EXE='${TOOLCHAIN_CC}'
@@ -754,7 +752,6 @@ function create_environment_source () {
 	fi
 	if [ -n "${TOOLCHAIN_CXX}" ]
 	then
-		# shellcheck disable=SC2153
 		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 			export CXX='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_CXX}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 			export CXX_EXE='${TOOLCHAIN_CXX}'
@@ -763,7 +760,6 @@ function create_environment_source () {
 	fi
 	if [ -n "${TOOLCHAIN_FC}" ]
 	then
-		# shellcheck disable=SC2153
 		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 			export FC='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_FC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 			export FFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
@@ -1362,8 +1358,7 @@ function recipe_variants () {
 	then
 		return 0
 	fi
-	# shellcheck disable=SC2154
-	RECIPE_TOOLCHAIN=${_param_toolchain:-${PKG_TOOLCHAIN:-${TOOLCHAIN}}}
+	RECIPE_TOOLCHAIN=${_PARAM[toolchain]:-${PKG_TOOLCHAIN:-${TOOLCHAIN}}}
 
 	function variant_matches () {
 		### variant_matches <axis> <directory name>: succeeds when one of the comma separated
@@ -2045,7 +2040,7 @@ function mesonninja () {
 			local FIRST=1
 			for flag in ${1}
 			do
-				if [ ${FIRST} -ne 1 ]
+				if [ "${FIRST}" -ne 1 ]
 				then
 					echo -n ", "
 				fi
@@ -2190,7 +2185,6 @@ function cargobuild () {
 
 	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 	cd "${PKG_BLDPATH}"
-	# shellcheck disable=SC2034
 	cat >runmake.sh <<-EOF
 		#!/bin/bash
 		source recipe.source
@@ -2210,13 +2204,13 @@ function cargobuild () {
 			$(
 				# shellcheck source=/dev/null
 				source environment.source
-				for file in ${CARGO_BINLIST}
+				for CARGO_FILE in ${CARGO_BINLIST}
 				do
-					echo "    cp -fpv \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${INSTALL_EXECPREFIX}/bin/${file}\""
+					echo "    cp -fpv \"target/${CARGO_TARGET}/release/${CARGO_FILE}\" \"${PKG_PKGPATH}${INSTALL_EXECPREFIX}/bin/${CARGO_FILE}\""
 				done
-				for file in ${CARGO_LIBLIST}
+				for CARGO_FILE in ${CARGO_LIBLIST}
 				do
-					echo "    cp -fpv \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/${file}\""
+					echo "    cp -fpv \"target/${CARGO_TARGET}/release/${CARGO_FILE}\" \"${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/${CARGO_FILE}\""
 				done
 			)
 		  ;;
@@ -2253,8 +2247,7 @@ function kernelmodbuild () {
 	fi
 
 	run_cmd "KCFLAGS=\"${PKG_CFLAGS}\" ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} modules"
-	# shellcheck disable=SC2153
-	run_cmd "eval ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} INSTALL_MOD_PATH=${PKG_PKGPATH} INSTALL_MOD_DIR=${PKG_KERNEL_MODPATH} modules_install"
+	run_cmd "eval ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} INSTALL_MOD_PATH=${PKG_PKGPATH} INSTALL_MOD_DIR=${PKG_KERNEL_MODPATH:-} modules_install"
 	run_cmd "rm -f ${PKG_PKGPATH}/lib/modules/*/modules.*"
 
 	run_cmd "mkdir -pv ${PKG_PKGPATH}/postinst_scripts"
@@ -2680,17 +2673,17 @@ function builddir_key () {
 	### configuration variables of the recipe, the function of BUILD_PROCESS (it writes
 	### runconfig.sh) and size and time of the compilers of the environment: a build system does not
 	### see a compiler rebuilt with the same version
-	local VAR EXE
+	local KEY_VAR EXE
 	{
 		sed -n -e '/^export ENVIRONMENT_SOURCE_PATH=/d' -e '/^export PATH=/d' -e '/^export /p' "${1}" 2>/dev/null || true
-		for VAR in CONF_CMD CONF_ENV CONF_FLAGS CONF_PATH CONF_VARS CMAKE_GENERATOR STD_CONF_FLAGS \
+		for KEY_VAR in CONF_CMD CONF_ENV CONF_FLAGS CONF_PATH CONF_VARS CMAKE_GENERATOR STD_CONF_FLAGS \
 			PKG_AUTOCONF PKG_COPYSRC PKG_TOOLCHAIN \
 			PKG_OVERRIDELD PKG_OVERRIDELTO PKG_OVERRIDESHARED PKG_OVERRIDESTATIC \
 			BUILD_LIBSHARED BUILD_LIBSTATIC LTOENABLE \
 			INSTALL_PREFIX INSTALL_EXECPREFIX INSTALL_LIBDIR INSTALL_LIBSUFFIX INSTALL_INCLUDEDIR \
 			INSTALL_SYSCONFDIR INSTALL_LOCALSTATEDIR INSTALL_SHAREDIR
 		do
-			printf '%s=%s\n' "${VAR}" "${!VAR}"
+			printf '%s=%s\n' "${KEY_VAR}" "${!KEY_VAR}"
 		done
 		declare -f "${BUILD_PROCESS:-none}" 2>/dev/null || true
 		(
@@ -2841,17 +2834,16 @@ function build () {(
 		STATUS_FILE_DEFAULT_TARGET \
 		TEMPORARY_STATUS
 
-	# shellcheck disable=SC2154
-	PKG_FILE=$(cut -d':' -f1 <<<"${_param_1}")
-	PKG_TARGET=$(cut -s -d':' -f2 <<<"${_param_1}")
-	GCC_CHECK=${_param_no_gcc_check:-0}
-	FORCE=${_param_force:-0}
-	NOSAVESTATUS=${_param_no_save_status:-0}
-	KEEPBUILDDIR=${_param_keep_builddir:-0}
-	CLEANBUILDDIR=${_param_clean_builddir:-0}
+	PKG_FILE=$(cut -d':' -f1 <<<"${_PARAM[1]}")
+	PKG_TARGET=$(cut -s -d':' -f2 <<<"${_PARAM[1]}")
+	GCC_CHECK=${_PARAM[no_gcc_check]:-0}
+	FORCE=${_PARAM[force]:-0}
+	NOSAVESTATUS=${_PARAM[no_save_status]:-0}
+	KEEPBUILDDIR=${_PARAM[keep_builddir]:-0}
+	CLEANBUILDDIR=${_PARAM[clean_builddir]:-0}
 	TEMPORARY_STATUS=
 
-	if [ "${_param_temporary:-0}" -eq 1 ]
+	if [ "${_PARAM[temporary]:-0}" -eq 1 ]
 	then
 		TEMPORARY_STATUS=.tmp
 	fi
@@ -2893,10 +2885,10 @@ function build () {(
 	### and options of this build (see recipe_variants)
 	apply_recipe_variants
 
-	PKG_TOOLCHAIN=${_param_toolchain:-${PKG_TOOLCHAIN}}
-	PKG_KERNEL_BUILD_MODULES="${_param_with_extra_modules:-${PKG_KERNEL_BUILD_MODULES}}"
+	PKG_TOOLCHAIN=${_PARAM[toolchain]:-${PKG_TOOLCHAIN}}
+	PKG_KERNEL_BUILD_MODULES="${_PARAM[with_extra_modules]:-${PKG_KERNEL_BUILD_MODULES}}"
 
-	eval PKG_FULLNAME=${PKG_FULLNAME}
+	eval PKG_FULLNAME="${PKG_FULLNAME}"
 	eval PKG_SRCPATH="${SRC_PATH}/${PKG_SRCDIR}"
 	eval PKG_BLDPATH="${PKG_BLDPATH}"
 	eval PKG_PKGPATH="${PKG_PKGPATH}"

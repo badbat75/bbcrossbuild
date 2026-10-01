@@ -33,12 +33,10 @@ function data_purge () {
 	local ASSUME_YES PROJECT PLATFORM TARGETS ENTRY SUB MOUNTED ANSWER
 
 	OPTS="--yes" OPTS_WITH_VALUE="" param2value "${@}"
-	ASSUME_YES=${_param_yes:-0}
-	# shellcheck disable=SC2154
-	PROJECT=${_param_1}
-	# shellcheck disable=SC2154
-	PLATFORM=${_param_2}
-	if [ -n "${_param_3}" ]
+	ASSUME_YES=${_PARAM[yes]:-0}
+	PROJECT=${_PARAM[1]}
+	PLATFORM=${_PARAM[2]}
+	if [ -n "${_PARAM[3]}" ]
 	then
 		trow_error "${ERROR_NOT_VALID_OPTION}" "Too many arguments: bbxb purge [--yes] [<project> [<platform>]]." || return
 	fi

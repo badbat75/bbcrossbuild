@@ -97,7 +97,6 @@ rm -f "${TMPDIR:-/tmp}/bbxb_error.${$}"
 ### can give the new run the pid of the old one
 BUILD_CHECKED_FILE="${TMPDIR:-/tmp}/bbxb_checked.${$}"
 rm -f "${BUILD_CHECKED_FILE}"
-# shellcheck disable=SC2034
 exec {BBXB_CONSOLE_FD}>&2
 trap 'on_error ${?}' ERR
 trap 'on_interrupt' SIGINT
@@ -159,9 +158,8 @@ fi
 if [[ ${1} == @(mount|umount) ]]
 then
 	OPTS="--ro" OPTS_WITH_VALUE="" param2value "${@:2}"
-	# shellcheck disable=SC2154
-	MOUNT_ARGS=("${_param_1}" "${_param_2}" "${_param_3}")
-	MOUNT_RO=${_param_ro:+--ro}
+	MOUNT_ARGS=("${_PARAM[1]}" "${_PARAM[2]}" "${_PARAM[3]}")
+	MOUNT_RO=${_PARAM[ro]:+--ro}
 	if [ "${1}" == mount ] && [ "${MOUNT_ARGS[0]}" == list ] && [ -z "${MOUNT_ARGS[1]}" ]
 	then
 		# shellcheck source=/dev/null
@@ -191,25 +189,24 @@ EMULATOR_OPTS=()
 if [ "${1}" == emulator ]
 then
 	OPTS="--quiet" OPTS_WITH_VALUE="--batchtype --rootdev --rootfs --rootpart --firmware --savecmd" param2value "${@:2}"
-	EMULATOR_COMMAND=${_param_1}
+	EMULATOR_COMMAND=${_PARAM[1]}
 	if [[ ${EMULATOR_COMMAND} != @(cmdgen|run) ]]
 	then
 		trow_error "${ERROR_NOT_VALID_OPTION}" "Unknown emulator command ${EMULATOR_COMMAND} (bbxb help)."
 	fi
-	if [ -n "${_param_quiet}" ]
+	if [ -n "${_PARAM[quiet]}" ]
 	then
 		EMULATOR_OPTS+=(--quiet)
 	fi
 	for EMULATOR_OPT in batchtype rootdev rootfs rootpart firmware savecmd
 	do
-		EMULATOR_VALUE=_param_${EMULATOR_OPT}
-		if [ -n "${!EMULATOR_VALUE}" ]
+		if [ -n "${_PARAM[${EMULATOR_OPT}]:-}" ]
 		then
-			EMULATOR_OPTS+=("--${EMULATOR_OPT}" "${!EMULATOR_VALUE}")
+			EMULATOR_OPTS+=("--${EMULATOR_OPT}" "${_PARAM[${EMULATOR_OPT}]}")
 		fi
 	done
-	unset EMULATOR_OPT EMULATOR_VALUE
-	set -- emulator "${_param_2}" "${_param_3}"
+	unset EMULATOR_OPT
+	set -- emulator "${_PARAM[2]}" "${_PARAM[3]}"
 fi
 
 OPTS="--container --no-container --ro" OPTS_WITH_VALUE="" param2value "${@}"
@@ -217,17 +214,13 @@ OPTS="--container --no-container --ro" OPTS_WITH_VALUE="" param2value "${@}"
 ### bbxb [--container|--no-container] <command> <project> <platform>: build runs the project file,
 ### logtail follows the logs of the project on the platform (the native, cross and target builds,
 ### the new ones as they appear) while a build runs, from another terminal
-# shellcheck disable=SC2154
-BBXB_COMMAND="${_param_1}"
-# shellcheck disable=SC2154
-PROJECT_NAME="${_param_2}"
-# shellcheck disable=SC2154
-PLATFORM_NAME="${_param_3}"
+BBXB_COMMAND="${_PARAM[1]}"
+PROJECT_NAME="${_PARAM[2]}"
+PLATFORM_NAME="${_PARAM[3]}"
 
 ### mount: the directory after the platform, --ro (only for mount)
-# shellcheck disable=SC2154
-MOUNT_DIR=${_param_4}
-if [ -n "${_param_ro}" ] && [ "${BBXB_COMMAND}" != mount ]
+MOUNT_DIR=${_PARAM[4]}
+if [ -n "${_PARAM[ro]}" ] && [ "${BBXB_COMMAND}" != mount ]
 then
 	trow_error "${ERROR_NOT_VALID_OPTION}" "--ro is an option of mount (bbxb help)."
 fi
@@ -345,13 +338,11 @@ fi
 ### --container (CONTAINER_BUILD of bbxb.conf, --no-container to turn it off): the same command
 ### line runs inside the container of this checkout, which is built first when it is missing.
 ### Inside it BBXB_IN_CONTAINER is set and the build runs here, as on the host
-# shellcheck disable=SC2154
-if [ "${BBXB_CONTAINER}" == --container ] || [ -n "${_param_container}" ]
+if [ "${BBXB_CONTAINER}" == --container ] || [ -n "${_PARAM[container]}" ]
 then
 	CONTAINER_BUILD=1
 fi
-# shellcheck disable=SC2154
-if [ "${BBXB_CONTAINER}" == --no-container ] || [ -n "${_param_no_container}" ]
+if [ "${BBXB_CONTAINER}" == --no-container ] || [ -n "${_PARAM[no_container]}" ]
 then
 	CONTAINER_BUILD=0
 fi

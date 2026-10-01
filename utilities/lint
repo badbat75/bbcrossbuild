@@ -1,0 +1,70 @@
+#!/bin/bash
+# lint: shellcheck of the checkout, the linter of the framework (there is no CI: run it by hand).
+#
+# The framework is one program: bbxb sources seterr, core.functions, container.functions, setenv and
+# the other .functions into one shell, and a variable set in one file is read in another (setenv
+# sets what build.functions reads, toolchain.functions what the recipes read). shellcheck checks a
+# file by itself and does not follow a source whose path is a variable, so file by file every
+# such variable looks unassigned in one file and unused in the other. The framework is checked as
+# one file instead: its files in the order bbxb sources them, joined, the messages mapped back to
+# the file and line they come from. The utilities and the bats suite are checked file by file.
+#
+# Usage: utilities/lint [<shellcheck option>...]   (default output format gcc: <file>:<line>:<col>)
+# Exits with 1 when shellcheck reports anything.
+set -o pipefail
+
+BB_HOME=$(realpath "$(dirname "${BASH_SOURCE[0]}")/..")
+cd "${BB_HOME}" || exit 2
+
+### The order of bbxb: what a file reads is set by one before it or by itself. A platform
+### configuration sets the target and its tuning (HM, HOS, HLIBC, HMARCH...) before setenv: the
+### reference one, rpi3-aarch64, which sets them all
+FRAMEWORK=(seterr core.functions container.functions platforms/rpi3-aarch64.conf setenv build.functions
+	project.functions toolchain.functions images.functions data.functions osconfig.functions
+	emulator.functions bbxb)
+UTILITIES=(utilities/pkgtools.functions utilities/pkg_lint utilities/pkg_show utilities/update_patches
+	utilities/lint)
+TESTS=(tests/test_helper.bash tests/*.bats)
+
+TMP_DIR=$(mktemp -d)
+trap 'rm -rf "${TMP_DIR}"' EXIT
+PROGRAM=${TMP_DIR}/framework
+
+### The program: the first line of every file but the first (its #!) left empty, so that the line
+### numbers stay; the first line of each file in the program, for the mapping
+awk -v map="${TMP_DIR}/map" '
+	FNR == 1 { print FILENAME "\t" NR > map }
+	FNR == 1 && NR > 1 && /^#!/ { print ""; next }
+	{ print }' "${FRAMEWORK[@]}" > "${PROGRAM}"
+
+STATUS=0
+### gcc format: <file>:<line>:<column>: <level>: <message> [SC<code>]. Not SC2329 (a function never
+### invoked): the functions of the framework are its interface, called by the project files
+REPORT=$( shellcheck -x -f gcc -e SC2329 "${@}" "${PROGRAM}" | awk -F: -v OFS=: -v map="${TMP_DIR}/map" '
+	BEGIN {
+		while ((getline entry < map) > 0) {
+			split(entry, field, "\t")
+			count++
+			name[count] = field[1]
+			first[count] = field[2]
+		}
+	}
+	{
+		line = $2
+		for (i = count; i > 1 && first[i] > line; i--) { }
+		### The platform configuration is an input of the program, not code of the framework
+		if (name[i] ~ /^platforms\//) next
+		$1 = name[i]
+		$2 = line - first[i] + 1
+		print
+	}' )
+### The status is what is left once the messages of the platform configuration are out
+if [ -n "${REPORT}" ]
+then
+	echo "${REPORT}"
+	STATUS=1
+fi
+
+shellcheck -x -f gcc "${@}" "${UTILITIES[@]}" || STATUS=1
+shellcheck -x -f gcc "${@}" "${TESTS[@]}" || STATUS=1
+exit "${STATUS}"

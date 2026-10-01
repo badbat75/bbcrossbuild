@@ -53,21 +53,21 @@ setup () {
 	assert_equal "${MYPATH}" ""
 }
 
-@test "param2value parses flags, valued options and positionals into _param_ variables" {
+@test "param2value parses flags, valued options and positionals into _PARAM" {
 	OPTS="--force --keep_builddir" OPTS_WITH_VALUE="--toolchain" \
 		param2value --force --toolchain llvm lfs/zlib:native second
-	assert_equal "${_param_force}" "1"
-	assert_equal "${_param_toolchain}" "llvm"
-	assert_equal "${_param_1}" "lfs/zlib:native"
-	assert_equal "${_param_2}" "second"
-	[ -z "${_param_keep_builddir:-}" ]
+	assert_equal "${_PARAM[force]}" "1"
+	assert_equal "${_PARAM[toolchain]}" "llvm"
+	assert_equal "${_PARAM[1]}" "lfs/zlib:native"
+	assert_equal "${_PARAM[2]}" "second"
+	[ -z "${_PARAM[keep_builddir]:-}" ]
 }
 
-@test "param2value forgets the _param_ variables of the previous call" {
+@test "param2value forgets the values of the previous call" {
 	OPTS="--force" param2value --force lfs/zlib
 	OPTS="--force" param2value lfs/bison
-	assert_equal "${_param_1}" "lfs/bison"
-	[ -z "${_param_force:-}" ]
+	assert_equal "${_PARAM[1]}" "lfs/bison"
+	[ -z "${_PARAM[force]:-}" ]
 }
 
 @test "param_list prints the positional parameters of the last param2value call" {

@@ -4,7 +4,6 @@ check_core_functions
 check_build_functions
 
 function check_gnu_c () {
-	# shellcheck disable=SC2153
 	if ! "${HARCH}-gcc" -v > /dev/null 2>&1
 	then
 		echo "The GNU toolchain for cross-compile does not exist."
@@ -117,44 +116,21 @@ function set_gnu_buildenv () {
 		exit 1
 	fi
 	BARCH=$(gcc -dumpmachine)
-	# shellcheck disable=SC2034
 	BM=$(echo "${BARCH}" | cut -d- -f1)
-	# shellcheck disable=SC2034
 	BOS=$(echo "${BARCH}" | cut -d- -f3)
 	BLIBC=$(echo "${BARCH}" | cut -d- -f4)
 	BLIBC=${BLIBC:-gnu}
 	CC_FOR_BUILD=$(which gcc)
-	### The programs of the build machine, which recipes read (lfs/dhcp)
-	# shellcheck disable=SC2034
-	CXX_FOR_BUILD=$(which g++)
-	# shellcheck disable=SC2034
-	CPP_FOR_BUILD="$(which gcc) -E"
-	# shellcheck disable=SC2034
-	AR_FOR_BUILD=$(which gcc-ar)
-	# shellcheck disable=SC2034
-	NM_FOR_BUILD=$(which gcc-nm)
-	# shellcheck disable=SC2034
-	RANLIB_FOR_BUILD=$(which gcc-ranlib)
-	### The flags of the host compiler, for the programs of the build machine some recipes make
-	# shellcheck disable=SC2034
-	CFLAGS_FOR_BUILD="${HOST_CSTD} -O3 -march=native -flto=${LTOPROCS}"
-	# shellcheck disable=SC2034
-	CXXFLAGS_FOR_BUILD="-O3 -march=native -flto=${LTOPROCS}"
-	# shellcheck disable=SC2034
-	LDFLAGS_FOR_BUILD="-fuse-ld=bfd -fuse-linker-plugin${OPTLINK_FLAGS:+ ${OPTLINK_FLAGS}}"
+	### The library and header directories of the build host, for the native pkgconf (read by its recipe)
 	# shellcheck disable=SC2034
 	LIBRARY_PATH_FOR_BUILD=$(gcc_toolchain_print_searchdirs build 5)
 	# shellcheck disable=SC2034
 	INCLUDE_PATH_FOR_BUILD=$(find {/,/usr/} -mindepth 1 -maxdepth 1 -name include -type d)
 
-
-	# shellcheck disable=SC2034
 	PLATFORM_CFLAGS="${HMARCH:+-march=${HMARCH}}${HMCPU:+ -mtune=${HMCPU}}${HMFPU:+ -mfpu=${HMFPU}}${HMFLOATABI:+ -mfloat-abi=${HMFLOATABI}}${HMGCCPARAMS:+ ${HMGCCPARAMS}}"
 	### What the links of the target need from the platform (an erratum the linker works around, as
 	### --fix-cortex-a53-843419): LDFLAGS of every target build, and a -C link-arg of rustc
-	# shellcheck disable=SC2034
 	PLATFORM_LDFLAGS="${HMLDPARAMS}"
-	# shellcheck disable=SC2034
 	PLATFORM_RUSTFLAGS="${HMCPU:+-C target-cpu=${HMCPU}}${HMARCH_RUST:+ -C target-feature=${HMARCH_RUST} }"
 }
 
@@ -211,7 +187,6 @@ function setup_gcc () {
 	function setup_ldconfig () {
 		if [ ! -f "${DISTOS_PATH}/etc/ld.so.conf" ] && [ ! -f "${BIN_PATH}/etc/ld.so.conf" ]
 		then
-			# shellcheck disable=SC2153
 			run_cmd "mkdir -pv \"${BIN_PATH}/etc\"" >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
 			run_cmd "cat > \"${BIN_PATH}/etc/ld.so.conf\"" <<-EOF >> "${LOG_PATH}/toolchain_gcc-${GCC_VER}.log"
 				include ld.so.conf.d/*.conf
@@ -288,8 +263,8 @@ function setup_gcc () {
 
 	### The version of the logs of the steps that are not builds
 	GCC_VER=$( package_version lfs/gcc:cross )
-	GCC_TARGETS=${_param_targets:-all}
-	GCC_MAIN=${_param_main_gcc:-0}
+	GCC_TARGETS=${_PARAM[targets]:-all}
+	GCC_MAIN=${_PARAM[main_gcc]:-0}
 	if [ "${GCC_TARGETS}" = "all" ]
 	then
 		### libatomic right after libgcc: since gcc 16 the other libraries link against its
@@ -486,7 +461,7 @@ function setup_python () {
 	### ${GLOBAL_TOOLCHAIN_PATH}/python-<version>) in the PATH and, without --native-only, the python of the
 	### image (lfs/python3, or the one of the image of a distribution, whose version detect guesses) and the
 	### cross environment of the platform (lfs/python3:crossenv). Sets PYTHONBIN_VER, PYTHONBIN_MAJVER,
-	### PYTHON_FOR_BUILD, PIP_FOR_BUILD and PYTHON_FOR_TARGET for the builds that follow
+	### PYTHON_FOR_BUILD and PYTHON_FOR_TARGET for the builds that follow
 	local PYTHON_DISTOS=0 ONLY_NATIVE=0 PYTHON_SEARCHPATH SUDO_CMD
 
 	"check_${TOOLCHAIN}_c"
@@ -517,12 +492,9 @@ function setup_python () {
 	PYTHON_VER=$( package_version lfs/python3:native )
 	PYTHONBIN_VER=$( cut -d. -f1,2 <<<"${PYTHON_VER}")
 	### Read by the builds (recipe.source, pythonbuild) and by lfs/python3:crossenv
-	# shellcheck disable=SC2034
 	PYTHONBIN_MAJVER=${PYTHONBIN_VER:-$(cut -d. -f1 <<<"${PYTHON_VER}")}
-	# shellcheck disable=SC2034
 	PYTHON_FOR_BUILD=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/python${PYTHONBIN_VER}
-	# shellcheck disable=SC2034
-	PIP_FOR_BUILD=${GLOBAL_TOOLCHAIN_PATH}/python-${PYTHON_VER}/bin/pip${PYTHONBIN_VER}
+	### The python of the image, which lfs/python3:crossenv wraps (read by its recipe)
 	# shellcheck disable=SC2034
 	PYTHON_FOR_TARGET=${PYTHON_SEARCHPATH}/usr/bin/python${PYTHONBIN_VER}
 
@@ -562,10 +534,10 @@ function setup_full_toolchain () {
 
 	local WITH_LLVM WITH_PYTHON SETUP_GCC
 
-	WITH_LLVM=${_param_with_llvm:-0}
-	WITH_PYTHON=${_param_with_python:-0}
+	WITH_LLVM=${_PARAM[with_llvm]:-0}
+	WITH_PYTHON=${_PARAM[with_python]:-0}
 	SETUP_GCC=
-	if [ "${_param_with_main_gcc:-0}" -eq 1 ]
+	if [ "${_PARAM[with_main_gcc]:-0}" -eq 1 ]
 	then
 		SETUP_GCC="--main_gcc"
 	fi
@@ -597,7 +569,6 @@ function setup_full_toolchain () {
 		SCCACHE_LOG=${SCCACHE_LOG:-info} \\
 		SCCACHE_ERROR_LOG=${GLOBAL_LOG_PATH}/toolchain_sccache.log \\
 			\"${GLOBAL_TOOLCHAIN_PATH}\"/bin/sccache" >> "${GLOBAL_LOG_PATH}/toolchain_sccache.log"
-	# shellcheck disable=SC2034
 	CCWRAPPER=${GLOBAL_TOOLCHAIN_PATH}/bin/sccache
 	###
 

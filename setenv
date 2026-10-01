@@ -1,6 +1,6 @@
 # setenv: every path and version default, computed from what bbxb.conf and the platform set.
 # Sourced by bbxb (and by utilities/pkgtools.functions): the variables are read by the libraries.
-# shellcheck shell=bash disable=SC2034
+# shellcheck shell=bash
 NPROCS=$(nproc --ignore=1)
 LTOPROCS=$(( $(nproc) / 4 ))
 
@@ -19,8 +19,6 @@ HARCH=${HM}-${HOS}-${HLIBC}
 
 DATA_PATH=${DATA_PATH:-/mnt/bbcrossbuild/datadir}
 
-GLOBAL_SRC_PATH=${DATA_PATH}/${SRC_DIR:-sources}
-GLOBAL_BLD_PATH=${DATA_PATH}/${BLD_DIR:-builds}
 GLOBAL_LOG_PATH=${DATA_PATH}/${LOG_DIR:-logs}
 GLOBAL_TOOLCHAIN_PATH=${DATA_PATH}/${TOOLCHAIN_DIR:-toolchain}
 GLOBAL_CACHE_PATH=${DATA_PATH}/${CACHE_DIR:-cache}
@@ -40,7 +38,6 @@ TOOLCHAIN_PATH=${PLATFORM_PATH}/${TOOLCHAIN_DIR:-toolchain}
 DISKIMAGES_PATH=${PLATFORM_PATH}/${DISKIMAGES_DIR:-diskimages}
 USERDATA_PATH=${PROJECT_PATH}/${USERDATA_DIR:-data}
 PACKAGES_PATH=${PLATFORM_PATH}/${PACKAGES_DIR:-packages}
-CACHE_PATH=${PLATFORM_PATH}/${CACHE_DIR:-cache}
 export DISTOS_PATH BIN_PATH TOOLCHAIN_PATH
 
 # The projects: the projects/ submodule, or any directory given as PRJ_PATH (absolute, or relative to

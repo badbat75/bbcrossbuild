@@ -27,7 +27,7 @@ setup () {
 		mkdir -p "${RECIPE}/variants/${DIR}"
 	done
 	PKG_VER=1.0
-	unset PKG_TOOLCHAIN _param_toolchain WITH_DOCS WITH_BACKEND
+	unset PKG_TOOLCHAIN '_PARAM[toolchain]' WITH_DOCS WITH_BACKEND
 }
 
 @test "no variants directory selects nothing" {
@@ -103,7 +103,7 @@ setup () {
 	run recipe_variants
 	[[ ${output} == *"toolchain/llvm"* ]]
 	[[ ${output} != *"toolchain/gnu"* ]]
-	_param_toolchain=gnu
+	_PARAM[toolchain]=gnu
 	run recipe_variants
 	[[ ${output} == *"toolchain/gnu"* ]]
 	[[ ${output} != *"toolchain/llvm"* ]]

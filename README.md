@@ -519,7 +519,7 @@ BBCrossBuild provides various functions for use in project files. These are orga
   ```
   setup_python [detect|--native-only]
   ```
-  - Builds `lfs/python3:native` (`${GLOBAL_TOOLCHAIN_PATH}/python-<version>`, put in the `PATH`), then the python of the image (`lfs/python3`) and the cross environment `${TOOLCHAIN_PATH}/venv-<HARCH>` (`lfs/python3:crossenv`), and sets `PYTHONBIN_VER`, `PYTHON_FOR_BUILD`, `PIP_FOR_BUILD`, `PYTHON_FOR_TARGET`
+  - Builds `lfs/python3:native` (`${GLOBAL_TOOLCHAIN_PATH}/python-<version>`, put in the `PATH`), then the python of the image (`lfs/python3`) and the cross environment `${TOOLCHAIN_PATH}/venv-<HARCH>` (`lfs/python3:crossenv`), and sets `PYTHONBIN_VER`, `PYTHON_FOR_BUILD`, `PYTHON_FOR_TARGET`
   - `detect`: the version of the python of the image of a distribution (`DISTOS_PATH`), which is used instead of `lfs/python3`
   - `--native-only`: only the Python of the global toolchain
 
@@ -1079,6 +1079,7 @@ BBCrossBuild includes several utility scripts to help with development:
   utilities/aws_create_infrastructure [run|terminate|destroy|show]
   ```
 
+- `lint`: shellcheck of the checkout: the framework as one program (its files joined in the order `bbxb` sources them, after a platform configuration, the messages mapped back to file and line; SC2329 off, the functions are the interface of the project files), the recipe utilities and the bats suite file by file. Extra arguments go to shellcheck; the exit status is 1 when it reports anything
 - `pkg_lint`: Check the package directories (layout, variants tree, patches/ content, syntax, shellcheck, removed variables, BUILD_PROCESS and PKG_DEPS resolution for every target that has a variant, with both toolchains)
   ```
   utilities/pkg_lint [<platform>] [packages/<group>/<name> ...]
@@ -1110,4 +1111,4 @@ bats tests/variants.bats   # one file
 
 `tests/test_helper.bash` provides `load_framework` (platform from `PLATFORM_NAME`, default `generic-x64`), `make_recipe`, `put`, `select_target`, `assert_output_lines` and `assert_equal`; a new test for a pure function is a fixture recipe plus a `run` of the function.
 
-There is no CI for now (the GitHub Actions were removed): run `shellcheck` on the framework and on the recipe utilities, the bats suite, and `pkg_lint` on the package groups by hand before committing. A change to `build.functions` or `core.functions` should keep the three green; `utilities/bbxb_test` remains the build smoke test.
+There is no CI for now (the GitHub Actions were removed): run `utilities/lint` (shellcheck of the framework as the one program it is, and of the recipe utilities and the tests), the bats suite, and `pkg_lint` on the package groups by hand before committing. A change to `build.functions` or `core.functions` should keep the three green; `utilities/bbxb_test` remains the build smoke test.

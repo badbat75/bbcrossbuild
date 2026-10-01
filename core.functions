@@ -9,18 +9,24 @@ check_core_functions () {
 	fi
 }
 
+### The values param2value parsed, by option name (no dashes, - as _) and by position: the
+### array is global and every param2value call empties it
+declare -gA _PARAM=()
+
 param2value () {
 	
 	# Requires at least one OPTS or OPTS_WITH_VALUE to run
 	# OPTS="-a -b -c" OPTS_WITH_VALUE="-d" param2value "${@}"
+	# The values go into _PARAM: ${_PARAM[d]} the value of -d, ${_PARAM[a]} 1 when -a is given,
+	# ${_PARAM[1]}... the positional parameters
 
 	local NUM OPTION OPTS PARAMETER
 
 	OPTS+=" -v "
 	NUM=0
 
-	# shellcheck disable=SC2046
-	unset $( ( set -o posix ; set ) | ( grep ^_param_ || : ) | sed 's/=.*$//g' | xargs )
+	unset _PARAM
+	declare -gA _PARAM=()
 
 	while(($#)) ; do
 		if [[ ${1} == -* ]]
@@ -34,24 +40,24 @@ param2value () {
 						shift
 						if [ ! "${1}" == "" ]
 						then 
-							eval "_param_${PARAMETER}='${1}'"
+							_PARAM[${PARAMETER}]=${1}
 						else
 							trow_error "${ERROR_NOT_VALID_OPTION}" "${OPTION} unset, no assigned value."
 						fi
 					else
-						eval "_param_${PARAMETER}=1"
+						_PARAM[${PARAMETER}]=1
 					fi
 			else
 				trow_error "${ERROR_NOT_VALID_OPTION}" "Unrecognized option: ${1}"
 			fi
 		else
 				NUM=$((NUM+1))
-				eval "_param_${NUM}='${1}'"
+				_PARAM[${NUM}]=${1}
 				PARAMETER=${NUM}
 		fi
-		if [ "${_param_v:-0}" -eq 1 ]
+		if [ "${_PARAM[v]:-0}" -eq 1 ]
 		then
-			eval echo "_param_${PARAMETER}=\$_param_${PARAMETER}"
+			echo "_PARAM[${PARAMETER}]=${_PARAM[${PARAMETER}]}"
 		fi
 		shift
 	done
@@ -62,18 +68,16 @@ param_list () {
 	### param_list [<first index>]: print the positional parameters of the last param2value call,
 	### one per line, from <first index> (default 1) on. For a function that takes a list of them
 	### (the units of enable_service): mapfile -t UNITS < <(param_list). param2value unsets the
-	### _param_ variables at every call, so the list ends at the first index it did not set.
+	### array at every call, so the list ends at the first index it did not set.
 
-	local PARAM_INDEX PARAM_NAME
+	local PARAM_INDEX
 
 	PARAM_INDEX=${1:-1}
-	PARAM_NAME=_param_${PARAM_INDEX}
 
-	while [ -n "${!PARAM_NAME}" ]
+	while [ -n "${_PARAM[${PARAM_INDEX}]:-}" ]
 	do
-		echo "${!PARAM_NAME}"
+		echo "${_PARAM[${PARAM_INDEX}]}"
 		PARAM_INDEX=$((PARAM_INDEX+1))
-		PARAM_NAME=_param_${PARAM_INDEX}
 	done
 }
 
@@ -528,7 +532,6 @@ on_error () {
 			if [ -z "${ERROR_LOG}" ]
 			then
 				### The log of the package, when the failure is inside build
-				# shellcheck disable=SC2153
 				ERROR_LOG=${LOG_FILE}
 			fi
 		fi
@@ -633,7 +636,7 @@ log_tail () {
 	local -A OFFSET=() PENDING=()
 
 	OPTS="" OPTS_WITH_VALUE="--interval" param2value "${@}"
-	INTERVAL=${_param_interval:-2}
+	INTERVAL=${_PARAM[interval]:-2}
 	mapfile -t DIRS < <(param_list)
 
 	if ! command -v inotifywait > /dev/null
@@ -641,7 +644,6 @@ log_tail () {
 		trow_error "${ERROR_FILE_NOT_FOUND}" "log_tail needs inotifywait: install inotify-tools" || return
 	fi
 
-	# shellcheck disable=SC2317,SC2329
 	function log_tail_stop () {
 		if [ -n "${WATCH_PID}" ]
 		then
@@ -650,7 +652,6 @@ log_tail () {
 		trap - INT TERM
 		exit 0
 	}
-	# shellcheck disable=SC2317,SC2329
 	function log_tail_read () {
 		### log_tail_read <log>...: print what the logs gained since their offset
 		local LOG_SIZE LOG_FILE LOG_OFFSET LOG_LENGTH LOG_LAST
@@ -685,7 +686,6 @@ log_tail () {
 			OFFSET[${LOG_FILE}]=$(( LOG_OFFSET + LOG_LENGTH ))
 		done < <(stat -c '%s %n' -- "${@}" 2> /dev/null || true)
 	}
-	# shellcheck disable=SC2317,SC2329
 	function log_tail_watch () {
 		### log_tail_watch: (re)start inotifywait on the directories that exist, then read what
 		### their logs gained before the watches were in place

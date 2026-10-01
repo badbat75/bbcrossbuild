@@ -49,7 +49,9 @@ function recipe_resolve () {
 	PKG_FILE=$(realpath --relative-to="${PKG_PATH}" "${PKG_RECIPEPATH}")
 	PKG_NAME=$(basename "${PKG_FILE}")
 	PKG_TARGET=${2}
-	_param_toolchain=${3}
+	### _PARAM, the associative array of param2value (core.functions), as build --toolchain fills it
+	declare -gA _PARAM
+	_PARAM[toolchain]=${3}
 	PKG_FULLNAME="\${PKG_NAME}\${PKG_SUFFIX}\${PKG_VER:+_\${PKG_VER}}"
 	PKG_SRCDIR=${PKG_FULLNAME}
 	PKG_BLDPATH=${BLD_PATH}/pkgtools
@@ -57,7 +59,7 @@ function recipe_resolve () {
 	# shellcheck source=/dev/null
 	source "${PKG_RECIPEPATH}/${RECIPE_FILENAME}" > /dev/null || STATUS=1
 	apply_recipe_variants > /dev/null || STATUS=1
-	PKG_TOOLCHAIN=${_param_toolchain:-${PKG_TOOLCHAIN}}
+	PKG_TOOLCHAIN=${_PARAM[toolchain]:-${PKG_TOOLCHAIN}}
 	eval PKG_FULLNAME="${PKG_FULLNAME}"
 	eval PKG_PKGPATH="${PKG_PKGPATH}"
 	return "${STATUS}"

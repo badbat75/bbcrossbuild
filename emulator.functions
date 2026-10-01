@@ -510,7 +510,6 @@ function emulator_script () {
 	return 0
 }
 
-# shellcheck disable=SC2154 # the _param_ variables of param2value (eval)
 function emulator_cmdgen () {
 	### emulator_cmdgen [--quiet] [--batchtype linux|win|all] [--rootdev <device>] [--rootfs <fs>]
 	###                 [--rootpart <n>] [--firmware bios|efi] [--savecmd <file>]: print the QEMU command line of the image
@@ -522,13 +521,13 @@ function emulator_cmdgen () {
 	local IS_QUIET BATCH_TYPES BATCH_TYPE KERN_ROOTDEV KERN_ROOTFS KERN_ROOTPARTITION FIRMWARE SAVECMD
 
 	OPTS="--quiet" OPTS_WITH_VALUE="--batchtype --rootdev --rootfs --rootpart --firmware --savecmd" param2value "${@}"
-	IS_QUIET=${_param_quiet}
-	BATCH_TYPES=${_param_batchtype:-linux}
-	KERN_ROOTDEV=${_param_rootdev}
-	KERN_ROOTFS=${_param_rootfs}
-	KERN_ROOTPARTITION=${_param_rootpart}
-	FIRMWARE=${_param_firmware}
-	SAVECMD=${_param_savecmd}
+	IS_QUIET=${_PARAM[quiet]}
+	BATCH_TYPES=${_PARAM[batchtype]:-linux}
+	KERN_ROOTDEV=${_PARAM[rootdev]}
+	KERN_ROOTFS=${_PARAM[rootfs]}
+	KERN_ROOTPARTITION=${_PARAM[rootpart]}
+	FIRMWARE=${_PARAM[firmware]}
+	SAVECMD=${_PARAM[savecmd]}
 
 	case ${BATCH_TYPES} in
 		linux|win) ;;
@@ -557,7 +556,6 @@ function emulator_cmdgen () {
 	return 0
 }
 
-# shellcheck disable=SC2154 # the _param_ variables of param2value (eval)
 function emulator_run () {
 	### emulator_run [--rootdev <device>] [--rootfs <fs>] [--rootpart <n>] [--firmware bios|efi]: run
 	### the image of the project in QEMU of this host (as root, with sudo), the root and the firmware
@@ -567,10 +565,10 @@ function emulator_run () {
 	local KERN_ROOTDEV KERN_ROOTFS KERN_ROOTPARTITION FIRMWARE QEMU_EXE QEMU_VERSION OVMF
 
 	OPTS="" OPTS_WITH_VALUE="--rootdev --rootfs --rootpart --firmware" param2value "${@}"
-	KERN_ROOTDEV=${_param_rootdev}
-	KERN_ROOTFS=${_param_rootfs}
-	KERN_ROOTPARTITION=${_param_rootpart}
-	FIRMWARE=${_param_firmware}
+	KERN_ROOTDEV=${_PARAM[rootdev]}
+	KERN_ROOTFS=${_PARAM[rootfs]}
+	KERN_ROOTPARTITION=${_PARAM[rootpart]}
+	FIRMWARE=${_PARAM[firmware]}
 
 	emulator_cmdline linux "${KERN_ROOTDEV}" "${KERN_ROOTFS}" "${KERN_ROOTPARTITION}" "${FIRMWARE}" || return
 	if [ "${EMULATOR_FIRMWARE}" == efi ]
@@ -599,7 +597,8 @@ function emulator_run () {
 	(
 		KERNEL_VER=${EMULATOR_KERNEL_VER}
 		OVMF_CODE=${OVMF%%:*}
-		# shellcheck disable=SC2034 # read by the eval below
+		### Read by the eval of the command line, which names ${EFIVARS}
+		# shellcheck disable=SC2034
 		EFIVARS=${EMULATOR_EFIVARS}
 		emulator_ports
 		eval sudo "${EMULATOR_CMDLINE}"

@@ -18,7 +18,7 @@ check_core_functions
 ### toolchain (host_on_target), not in its chroot under emulation.
 ###
 ### Every function copies what param2value parsed into its own variables before it calls anything
-### else: the _param_ variables are global and the next param2value of any function unsets them.
+### else: _PARAM is global and the next param2value of any function empties it.
 
 ### The post install script of the project, under ${BIN_PATH}/postinst_scripts. The name carries
 ### the priority run_postinstall_scripts sorts on (sort -n), 99 so it runs after the packages.
@@ -155,8 +155,7 @@ function enable_service () {
 	local TARGET_TAG OSCONFIG_UNITS
 	OPTS="" OPTS_WITH_VALUE="--tag" param2value "${@}"
 
-	# shellcheck disable=SC2154
-	TARGET_TAG=${_param_tag}
+	TARGET_TAG=${_PARAM[tag]}
 	mapfile -t OSCONFIG_UNITS < <(param_list)
 
 	systemctl_on_target "${TARGET_TAG}" enable "${OSCONFIG_UNITS[@]}"
@@ -168,7 +167,7 @@ function disable_service () {
 	local TARGET_TAG OSCONFIG_UNITS
 	OPTS="" OPTS_WITH_VALUE="--tag" param2value "${@}"
 
-	TARGET_TAG=${_param_tag}
+	TARGET_TAG=${_PARAM[tag]}
 	mapfile -t OSCONFIG_UNITS < <(param_list)
 
 	systemctl_on_target "${TARGET_TAG}" disable "${OSCONFIG_UNITS[@]}"
@@ -180,7 +179,7 @@ function mask_service () {
 	local TARGET_TAG OSCONFIG_UNITS
 	OPTS="" OPTS_WITH_VALUE="--tag" param2value "${@}"
 
-	TARGET_TAG=${_param_tag}
+	TARGET_TAG=${_PARAM[tag]}
 	mapfile -t OSCONFIG_UNITS < <(param_list)
 
 	systemctl_on_target "${TARGET_TAG}" mask "${OSCONFIG_UNITS[@]}"
@@ -192,7 +191,7 @@ function preset_service () {
 	local TARGET_TAG OSCONFIG_UNITS
 	OPTS="" OPTS_WITH_VALUE="--tag" param2value "${@}"
 
-	TARGET_TAG=${_param_tag}
+	TARGET_TAG=${_PARAM[tag]}
 	mapfile -t OSCONFIG_UNITS < <(param_list)
 
 	systemctl_on_target "${TARGET_TAG}" preset "${OSCONFIG_UNITS[@]}"
@@ -209,8 +208,7 @@ function set_service_preset () {
 	local PRESET_VERB PRESET_FILE OSCONFIG_UNITS OSCONFIG_UNIT
 	OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
 
-	# shellcheck disable=SC2154
-	PRESET_VERB=${_param_1}
+	PRESET_VERB=${_PARAM[1]}
 	mapfile -t OSCONFIG_UNITS < <(param_list 2)
 
 	case ${PRESET_VERB} in
@@ -241,8 +239,8 @@ function set_default_target () {
 	local TARGET_TAG DEFAULT_TARGET
 	OPTS="" OPTS_WITH_VALUE="--tag" param2value "${@}"
 
-	TARGET_TAG=${_param_tag}
-	DEFAULT_TARGET=${_param_1}
+	TARGET_TAG=${_PARAM[tag]}
+	DEFAULT_TARGET=${_PARAM[1]}
 
 	if [ -z "${DEFAULT_TARGET}" ]
 	then
@@ -268,9 +266,8 @@ function add_unit_dropin () {
 	local OSCONFIG_UNIT DROPIN_NAME
 	OPTS="" OPTS_WITH_VALUE="" param2value "${@}"
 
-	OSCONFIG_UNIT=${_param_1}
-	# shellcheck disable=SC2154
-	DROPIN_NAME=${_param_2}
+	OSCONFIG_UNIT=${_PARAM[1]}
+	DROPIN_NAME=${_PARAM[2]}
 
 	if [ -z "${OSCONFIG_UNIT}" ] || [ -z "${DROPIN_NAME}" ]
 	then
@@ -292,9 +289,8 @@ function set_hostname () {
 	local HOST_NAME HOST_DOMAIN HOSTS_FILE
 	OPTS="" OPTS_WITH_VALUE="--domain" param2value "${@}"
 
-	HOST_NAME=${_param_1}
-	# shellcheck disable=SC2154
-	HOST_DOMAIN=${_param_domain}
+	HOST_NAME=${_PARAM[1]}
+	HOST_DOMAIN=${_PARAM[domain]}
 
 	if [ -z "${HOST_NAME}" ]
 	then
@@ -320,9 +316,8 @@ function set_locale () {
 	local OSCONFIG_LOCALE OSCONFIG_KEYMAP
 	OPTS="" OPTS_WITH_VALUE="--keymap" param2value "${@}"
 
-	OSCONFIG_LOCALE=${_param_1}
-	# shellcheck disable=SC2154
-	OSCONFIG_KEYMAP=${_param_keymap}
+	OSCONFIG_LOCALE=${_PARAM[1]}
+	OSCONFIG_KEYMAP=${_PARAM[keymap]}
 
 	if [ -z "${OSCONFIG_LOCALE}" ]
 	then
@@ -360,19 +355,13 @@ function configure_network () {
 		NETWORK_NODOMAINS OSCONFIG_ADDRESS
 	OPTS="--nodomains" OPTS_WITH_VALUE="--address --gateway --dns --domains --file" param2value "${@}"
 
-	NETWORK_DEVICE=${_param_1}
-	# shellcheck disable=SC2154
-	NETWORK_ADDRESS=${_param_address}
-	# shellcheck disable=SC2154
-	NETWORK_GATEWAY=${_param_gateway}
-	# shellcheck disable=SC2154
-	NETWORK_DNS=${_param_dns}
-	# shellcheck disable=SC2154
-	NETWORK_DOMAINS=${_param_domains}
-	# shellcheck disable=SC2154
-	NETWORK_NODOMAINS=${_param_nodomains:-0}
-	# shellcheck disable=SC2154
-	NETWORK_FILE=${_param_file:-${NETWORK_DEVICE}}
+	NETWORK_DEVICE=${_PARAM[1]}
+	NETWORK_ADDRESS=${_PARAM[address]}
+	NETWORK_GATEWAY=${_PARAM[gateway]}
+	NETWORK_DNS=${_PARAM[dns]}
+	NETWORK_DOMAINS=${_PARAM[domains]}
+	NETWORK_NODOMAINS=${_PARAM[nodomains]:-0}
+	NETWORK_FILE=${_PARAM[file]:-${NETWORK_DEVICE}}
 
 	if [ -z "${NETWORK_DEVICE}" ]
 	then
@@ -428,12 +417,9 @@ function set_network_wait_online () {
 	local WAIT_ONLINE_ARGS WAIT_ONLINE_ALL WAIT_ONLINE_INTERFACE WAIT_ONLINE_TIMEOUT
 	OPTS="--any --all" OPTS_WITH_VALUE="--interface --timeout" param2value "${@}"
 
-	# shellcheck disable=SC2154
-	WAIT_ONLINE_ALL=${_param_all:-0}
-	# shellcheck disable=SC2154
-	WAIT_ONLINE_INTERFACE=${_param_interface}
-	# shellcheck disable=SC2154
-	WAIT_ONLINE_TIMEOUT=${_param_timeout}
+	WAIT_ONLINE_ALL=${_PARAM[all]:-0}
+	WAIT_ONLINE_INTERFACE=${_PARAM[interface]}
+	WAIT_ONLINE_TIMEOUT=${_PARAM[timeout]}
 
 	WAIT_ONLINE_ARGS=
 	if [ -n "${WAIT_ONLINE_INTERFACE}" ]
@@ -476,17 +462,12 @@ function configure_wireless () {
 		WLAN_PSK WLAN_KEYFILE_SSID
 	OPTS="--noservice --networkmanager" OPTS_WITH_VALUE="--ssid --country --passphrase-file" param2value "${@}"
 
-	WLAN_DEVICE=${_param_1}
-	# shellcheck disable=SC2154
-	WLAN_SSID=${_param_ssid}
-	# shellcheck disable=SC2154
-	WLAN_COUNTRY=${_param_country}
-	# shellcheck disable=SC2154
-	WLAN_PASSPHRASE_FILE=${_param_passphrase_file}
-	# shellcheck disable=SC2154
-	WLAN_NOSERVICE=${_param_noservice:-0}
-	# shellcheck disable=SC2154
-	WLAN_NM=${_param_networkmanager:-0}
+	WLAN_DEVICE=${_PARAM[1]}
+	WLAN_SSID=${_PARAM[ssid]}
+	WLAN_COUNTRY=${_PARAM[country]}
+	WLAN_PASSPHRASE_FILE=${_PARAM[passphrase_file]}
+	WLAN_NOSERVICE=${_PARAM[noservice]:-0}
+	WLAN_NM=${_PARAM[networkmanager]:-0}
 
 	if [ -z "${WLAN_DEVICE}" ] || [ -z "${WLAN_SSID}" ]
 	then
@@ -599,10 +580,8 @@ function configure_networkmanager () {
 	local NM_DNS NM_CONF
 	OPTS_WITH_VALUE="--dns --file" param2value "${@}"
 
-	# shellcheck disable=SC2154
-	NM_DNS=${_param_dns:-systemd-resolved}
-	# shellcheck disable=SC2154
-	NM_CONF=${_param_file:-00-${PROJECT_NAME}}
+	NM_DNS=${_PARAM[dns]:-systemd-resolved}
+	NM_CONF=${_PARAM[file]:-00-${PROJECT_NAME}}
 
 	echo "NetworkManager: DNS through ${NM_DNS}"
 	NM_CONF=$(osconfig_file "${TARGET_SYSCONFDIR}/NetworkManager/conf.d/${NM_CONF}.conf")
@@ -619,10 +598,8 @@ function configure_ssh () {
 	local SSH_UNIT SSH_NOKEYS
 	OPTS="--nokeys" OPTS_WITH_VALUE="--unit" param2value "${@}"
 
-	# shellcheck disable=SC2154
-	SSH_UNIT=${_param_unit:-sshd}
-	# shellcheck disable=SC2154
-	SSH_NOKEYS=${_param_nokeys:-0}
+	SSH_UNIT=${_PARAM[unit]:-sshd}
+	SSH_NOKEYS=${_PARAM[nokeys]:-0}
 
 	echo "Enabling the ssh daemon"
 	enable_service "${SSH_UNIT}"
@@ -649,20 +626,19 @@ function generate_ssh_keys () {
 	build lfs/openssh:native
 	run_cmd "\"${GLOBAL_TOOLCHAIN_PATH}/bin/ssh-keygen\" -A -v -f \"${USERDATA_PATH}\""
 	run_cmd "find \"${USERDATA_PATH}/etc/ssh\" -name \"ssh_host_*.pub\" -print0 | xargs -0 sed -i \"s/\$(id -un)@\$(uname -n)/${PROJECT_NAME}/\""
-	# shellcheck disable=SC2154
-	if [ -n "${_param_install}" ]
+	if [ -n "${_PARAM[install]}" ]
 	then
-		if [ -d "${PLATFORM_PATH}/${_param_install}" ]
+		if [ -d "${PLATFORM_PATH}/${_PARAM[install]}" ]
 		then
-			if [ ! "$(stat -c '%u' "${PLATFORM_PATH}/${_param_install}")" -eq "$(id -u)" ]
+			if [ ! "$(stat -c '%u' "${PLATFORM_PATH}/${_PARAM[install]}")" -eq "$(id -u)" ]
 			then
 				IS_SUDO='-s'
 			fi
 		fi
 		echo -e "Done.\n"
-		echo "Installing SSH keys in ${PLATFORM_PATH}/${_param_install}"
-		run_cmd ${IS_SUDO} "mkdir -pv \"${PLATFORM_PATH}/${_param_install}/etc/ssh\""
-		run_cmd ${IS_SUDO} "cp -fpv \"${USERDATA_PATH}/etc/ssh/\"* \"${PLATFORM_PATH}/${_param_install}/etc/ssh/\""
+		echo "Installing SSH keys in ${PLATFORM_PATH}/${_PARAM[install]}"
+		run_cmd ${IS_SUDO:+-s} "mkdir -pv \"${PLATFORM_PATH}/${_PARAM[install]}/etc/ssh\""
+		run_cmd ${IS_SUDO:+-s} "cp -fpv \"${USERDATA_PATH}/etc/ssh/\"* \"${PLATFORM_PATH}/${_PARAM[install]}/etc/ssh/\""
 		echo -e "Done.\n"
 	fi
 	) >> "${LOG_PATH}/sshkeys.log" 2>&1
@@ -677,12 +653,10 @@ function add_user () {
 	local TARGET_TAG USER_NAME USER_GROUPS USER_PASSWORD USERADD_CMD
 	OPTS="--nohome --system" OPTS_WITH_VALUE="--tag --groups --password --shell --uid --home" param2value "${@}"
 
-	TARGET_TAG=${_param_tag}
-	USER_NAME=${_param_1}
-	# shellcheck disable=SC2154
-	USER_GROUPS=${_param_groups}
-	# shellcheck disable=SC2154
-	USER_PASSWORD=${_param_password}
+	TARGET_TAG=${_PARAM[tag]}
+	USER_NAME=${_PARAM[1]}
+	USER_GROUPS=${_PARAM[groups]}
+	USER_PASSWORD=${_PARAM[password]}
 
 	if [ -z "${USER_NAME}" ]
 	then
@@ -691,32 +665,27 @@ function add_user () {
 	fi
 
 	USERADD_CMD="useradd"
-	# shellcheck disable=SC2154
-	if [ "${_param_system:-0}" -eq 1 ]
+	if [ "${_PARAM[system]:-0}" -eq 1 ]
 	then
 		USERADD_CMD="${USERADD_CMD} --system"
 	fi
-	# shellcheck disable=SC2154
-	if [ -n "${_param_uid}" ]
+	if [ -n "${_PARAM[uid]}" ]
 	then
-		USERADD_CMD="${USERADD_CMD} -u ${_param_uid}"
+		USERADD_CMD="${USERADD_CMD} -u ${_PARAM[uid]}"
 	fi
 	if [ -n "${USER_GROUPS}" ]
 	then
 		USERADD_CMD="${USERADD_CMD} -G ${USER_GROUPS}"
 	fi
-	# shellcheck disable=SC2154
-	if [ -n "${_param_shell}" ]
+	if [ -n "${_PARAM[shell]}" ]
 	then
-		USERADD_CMD="${USERADD_CMD} -s ${_param_shell}"
+		USERADD_CMD="${USERADD_CMD} -s ${_PARAM[shell]}"
 	fi
-	# shellcheck disable=SC2154
-	if [ -n "${_param_home}" ]
+	if [ -n "${_PARAM[home]}" ]
 	then
-		USERADD_CMD="${USERADD_CMD} -d ${_param_home}"
+		USERADD_CMD="${USERADD_CMD} -d ${_PARAM[home]}"
 	fi
-	# shellcheck disable=SC2154
-	if [ "${_param_nohome:-0}" -eq 0 ]
+	if [ "${_PARAM[nohome]:-0}" -eq 0 ]
 	then
 		USERADD_CMD="${USERADD_CMD} -m"
 	fi
@@ -745,9 +714,9 @@ function set_password () {
 	local TARGET_TAG USER_NAME USER_PASSWORD PASSWORD_METHOD
 	OPTS="" OPTS_WITH_VALUE="--tag" param2value "${@}"
 
-	TARGET_TAG=${_param_tag}
-	USER_NAME=${_param_1}
-	USER_PASSWORD=${_param_2}
+	TARGET_TAG=${_PARAM[tag]}
+	USER_NAME=${_PARAM[1]}
+	USER_PASSWORD=${_PARAM[2]}
 
 	if [ -z "${USER_NAME}" ] || [ -z "${USER_PASSWORD}" ]
 	then
