@@ -130,8 +130,12 @@ function set_gnu_buildenv () {
 	AR_FOR_BUILD=$(which gcc-ar)
 	NM_FOR_BUILD=$(which gcc-nm)
 	RANLIB_FOR_BUILD=$(which gcc-ranlib)
+	### The flags of the host compiler, for the programs of the build machine some recipes make
+	# shellcheck disable=SC2034
 	CFLAGS_FOR_BUILD="${HOST_CSTD} -O3 -march=native -flto=${LTOPROCS}"
+	# shellcheck disable=SC2034
 	CXXFLAGS_FOR_BUILD="-O3 -march=native -flto=${LTOPROCS}"
+	# shellcheck disable=SC2034
 	LDFLAGS_FOR_BUILD="-fuse-ld=bfd -fuse-linker-plugin${OPTLINK_FLAGS:+ ${OPTLINK_FLAGS}}"
 	# shellcheck disable=SC2034
 	LIBRARY_PATH_FOR_BUILD=$(gcc_toolchain_print_searchdirs build 5)
@@ -189,226 +193,6 @@ function setup_rust () {
 	run_cmd "rustup -v target add \"${CARGO_TARGET}\"" >> "${GLOBAL_LOG_PATH}/toolchain_rust.log"
 	
 	echo "done."
-	echo
-}
-
-function setup_autotools () {
-	function download_autotools () {
-
-		local AUTOCONF_URL AUTOMAKE_URL LIBTOOL_URL GETTEXT_URL
-
-		AUTOCONF_URL="https://ftp.gnu.org/gnu/autoconf/autoconf-${AUTOCONF_VER}.tar.gz"
-		AUTOMAKE_URL="https://ftp.gnu.org/gnu/automake/automake-${AUTOMAKE_VER}.tar.gz"
-		LIBTOOL_URL="https://ftp.gnu.org/gnu/libtool/libtool-${LIBTOOL_VER}.tar.gz"
-		GETTEXT_URL="https://ftp.gnu.org/pub/gnu/gettext/gettext-${GETTEXT_VER}.tar.gz"
-		{
-			download_uncompress "${AUTOCONF_URL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}"
-			download_uncompress "${AUTOMAKE_URL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}"
-			download_uncompress "${LIBTOOL_URL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}"
-			download_uncompress "${GETTEXT_URL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}"
-		} > "${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log"
-	}
-
-	function download_autotools_support () {
-
-		local AUTOCONFARCHIVE_URL
-		AUTOCONFARCHIVE_URL="http://mirror.kumi.systems/gnu/autoconf-archive/autoconf-archive-${AUTOCONFARCHIVE_VER}.tar.xz"
-
-		download_uncompress "${AUTOCONFARCHIVE_URL}" "${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" >> "${GLOBAL_LOG_PATH}/toolchain_autoconf-${AUTOCONFARCHIVE_VER}.log"
-	}
-
-	# shellcheck disable=SC2329 # exported: configmake runs it through xargs bash -c
-	function smart_autoreconf () {
-		local WORK_DIR AUTOCONF_CMD ACINCLUDE AUTOMAKE_MAJVER ACINCLUDE
-		WORK_DIR=${1}
-		AUTOCONF_CMD=
-		ACINCLUDE=
-		### If PATH include a AUTOTOOLS build or PKG_AUTOCONF is a particular version
-		[ -d "${BIN_PATH}${TARGET_PREFIX}/share/aclocal" ] && local ACINCLUDE+=" --include=${BIN_PATH}${TARGET_PREFIX}/share/aclocal"
-		[ -d "${GLOBAL_TOOLCHAIN_PATH}/share/acloca"l ] && local ACINCLUDE+=" --include=${GLOBAL_TOOLCHAIN_PATH}/share/aclocal"
-		[ -d "${TOOLCHAIN_PATH}/share/aclocal" ] && local ACINCLUDE+=" --include=${TOOLCHAIN_PATH}/share/aclocal"
-		if [ -n "${AUTOTOOLS_PATH}" ] && [ -d "${AUTOTOOLS_PATH}" ]
-		then
-			AUTOMAKE_MAJVER=$(cut -d. -f 1,2 <<<"${PKG_AUTOMAKE:-${AUTOMAKE_VER}}")
-			ACINCLUDE+=" --include=${AUTOTOOLS_PATH}/share/autoconf --include=${AUTOTOOLS_PATH}/share/aclocal-${AUTOMAKE_MAJVER}"
-			AUTOCONF_CMD="${AUTOTOOLS_PATH}/bin/autoreconf"
-		else
-			AUTOCONF_CMD=autoreconf
-		fi
-		pushd "${WORK_DIR}"
-		run_cmd "mkdir -pv m4"
-		run_cmd "rm -rfv autom4te.cache aclocal.m4 configure libtool ltmain.sh lt-main.sh"
-		export PATH="${AUTOTOOLS_PATH}/bin:${PATH}";
-		if [ -f po/update-potfiles ]
-		then
-			run_cmd "./po/update-potfiles"
-		fi
-		MAX_RETRIES=5 run_cmd "${AUTOCONF_CMD} -f -i ${ACINCLUDE}"
-		popd
-		return ${?}
-	}
-	export -f smart_autoreconf
-
-	OPTS="--default" OPTS_WITH_VALUE="" param2value "${@}"
-
-	local FILETOPATCH
-
-	AUTOCONF_VER=${_param_1:-${AUTOCONF_VER}}
-	AUTOMAKE_VER=${_param_2:-${AUTOMAKE_VER}}
-	LIBTOOL_VER=${_param_3:-${LIBTOOL_VER}}
-	GETTEXT_VER=${_param_4:-${GETTEXT_VER}}
-
-	AUTOTOOLS_VER=${AUTOCONF_VER}-${AUTOMAKE_VER}-${LIBTOOL_VER}-${GETTEXT_VER}
-	AUTOTOOLS_PATH=${GLOBAL_TOOLCHAIN_PATH}/autotools-${AUTOTOOLS_VER}
-	export AUTOTOOLS_PATH
-
-	echo -n "Setting up autotools... "
-	### autom4te records the m4 autoconf was configured with, and autoconf and automake the perl of their
-	### hashbang: the ones of lfs/m4:native and lfs/perl5:native, built before by setup_full_toolchain;
-	### autotools built with others (the ones of the build host) are built again
-	if [ ! -f "${AUTOTOOLS_PATH}/bin/autoconf" ] || [ ! -f "${AUTOTOOLS_PATH}/bin/automake" ] || [ ! -f "${AUTOTOOLS_PATH}/bin/libtoolize" ] || [ ! -f "${AUTOTOOLS_PATH}/bin/autopoint" ] || \
-		! grep -q "'${GLOBAL_TOOLCHAIN_PATH}/bin/m4'" "${AUTOTOOLS_PATH}/bin/autom4te" 2> /dev/null || \
-		! head -n1 "${AUTOTOOLS_PATH}/bin/autom4te" | grep -q "^#! *${GLOBAL_TOOLCHAIN_PATH}/perl5/bin/perl" || \
-		! head -n1 "${AUTOTOOLS_PATH}/bin/automake" | grep -q "^#! *${GLOBAL_TOOLCHAIN_PATH}/perl5/bin/perl"
-	then
-		pathadd PATH "${AUTOTOOLS_PATH}/bin"
-		#### Download all auto tools
-		download_autotools
-		#### Build libtool
-		echo -n "libtool-${LIBTOOL_VER}... "
-		{
-			pushd "${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}"
-			FILETOPATCH="$(find . -name ltmain.sh)"
-			run_cmd "sed -i '/^      -64|-mips\[0-9\]/ i## BBXB change ##' \"${FILETOPATCH}\""
-			run_cmd "sed -i '/^      -64|-mips\[0-9\]/,/*)\$/d' \"${FILETOPATCH}\""
-			run_cmd "sed -i '/^## BBXB change ##/a\\       -64|-mips[0-9]|-r[0-9][0-9]*|-xarch=*|-xtarget=*|+DA*|+DD*|-q*|-m*|-t[45]*|-txscale*|-p|-pg|--coverage|-fprofile-*|-F*|@*|-tp=*|--sysroot=*|-O*|-g*|-flto*|-fwhopr*|-fuse-linker-plugin|-fstack-protector*|-stdlib=*|-specs=*|-fsanitize=*|-fuse-ld=*|-Wa,*|--target=*|-B*)' \"${FILETOPATCH}\""
-			popd 2>&1
-			if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}" ]
-			then
-				run_cmd "rm -rfv \"${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}\""
-			fi
-			run_cmd "mkdir -pv \"${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}\""
-			pushd "${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}"
-			run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \
-				CXX=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \
-				AR=\"${AR_FOR_BUILD}\" \
-				NM=\"${NM_FOR_BUILD}\" \
-				RANLIB=\"${RANLIB_FOR_BUILD}\" \
-				CFLAGS=\"${CFLAGS_FOR_BUILD}\" \
-				CXXFLAGS=\"${CXXFLAGS_FOR_BUILD}\" \
-				LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \
-					${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}/configure --prefix=\"${AUTOTOOLS_PATH}\""
-			run_cmd "make V=${MAKEVERBOSE:-0}"
-			run_cmd "make V=${MAKEVERBOSE:-0} install"
-			popd 2>&1
-			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/libtool-${LIBTOOL_VER}\""
-			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/libtool-${LIBTOOL_VER}\""
-		} >> "${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log"
-		#### Build autoconf
-		echo -n "autoconf-${AUTOCONF_VER}... "
-		{
-			pushd "${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}"
-			#run_cmd "autoreconf -fiv" >> ${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log
-			popd 2>&1
-			if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}" ]
-			then
-				run_cmd "rm -rfv \"${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}\""
-			fi
-			run_cmd "mkdir -pv \"${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}\""
-			pushd "${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}"
-			run_cmd "\"${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}/configure\" --prefix=\"${AUTOTOOLS_PATH}\" M4=\"${GLOBAL_TOOLCHAIN_PATH}/bin/m4\""
-			run_cmd "make V=${MAKEVERBOSE:-0}"
-			run_cmd "make V=${MAKEVERBOSE:-0} install"
-			popd 2>&1
-			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-${AUTOCONF_VER}\""
-			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-${AUTOCONF_VER}\""
-			#### Build automake
-			echo -n "automake-${AUTOMAKE_VER}... "
-			pushd "${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}"
-			#run_cmd "AUTOCONF=${AUTOTOOLS_PATH}/bin/autoconf LIBTOOLIZE=${AUTOTOOLS_PATH}/bin/libtoolize ${AUTOTOOLS_PATH}/bin/autoreconf -fiv"
-			popd 2>&1
-			if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}" ]
-			then
-				run_cmd "rm -rfv \"${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}\""
-			fi
-			run_cmd "mkdir -pv \"${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}\""
-			pushd "${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}"
-			run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
-				CXX=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
-				AR=\"${AR_FOR_BUILD}\" \\
-				NM=\"${NM_FOR_BUILD}\" \\
-				RANLIB=\"${RANLIB_FOR_BUILD}\" \\
-				CFLAGS=\"${CFLAGS_FOR_BUILD}\" \\
-				CXXFLAGS=\"${CXXFLAGS_FOR_BUILD}\" \\
-				LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
-					\"${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}/configure\" --prefix=\"${AUTOTOOLS_PATH}\""
-			run_cmd "make V=${MAKEVERBOSE:-0}"
-			run_cmd "make V=${MAKEVERBOSE:-0} install"
-			popd 2>&1
-			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/automake-${AUTOMAKE_VER}\""
-			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/automake-${AUTOMAKE_VER}\""
-		} >> "${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log"
-		#### Build gettext
-		echo -n "gettext-${GETTEXT_VER}... "
-		{
-			### The release tarball has its configure: autoreconf would run the autopoint of the build host
-			### (the one of these autotools is what this step builds)
-			if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}" ]
-			then
-				run_cmd "rm -rfv \"${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}\""
-			fi
-			run_cmd "mkdir -pv \"${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}\""
-			pushd "${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}"
-			run_cmd "CC=\"${CCWRAPPER:+${CCWRAPPER} }${CC_FOR_BUILD}\" \\
-				CXX=\"${CCWRAPPER:+${CCWRAPPER} }${CXX_FOR_BUILD}\" \\
-				AR=\"${AR_FOR_BUILD}\" \\
-				NM=\"${NM_FOR_BUILD}\" \\
-				RANLIB=\"${RANLIB_FOR_BUILD}\" \\
-				CFLAGS=\"${CFLAGS_FOR_BUILD} -Wno-incompatible-pointer-types\" \\
-				CXXFLAGS=\"${CXXFLAGS_FOR_BUILD}\" \\
-				LDFLAGS=\"${LDFLAGS_FOR_BUILD}\" \\
-					\"${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}/configure\" --prefix=\"${AUTOTOOLS_PATH}\""
-			run_cmd "make V=${MAKEVERBOSE:-0} NM=\"${NM_FOR_BUILD}\""
-			run_cmd "make V=${MAKEVERBOSE:-0} install"
-			popd 2>&1
-			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/gettext-${GETTEXT_VER}\""
-			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/gettext-${GETTEXT_VER}\""
-		} >> "${GLOBAL_LOG_PATH}/toolchain_autotools-${AUTOTOOLS_VER}.log"
-		echo -n "done. "
-		pathremove PATH "${AUTOTOOLS_PATH}/bin"
-	else
-		echo -n "already there. "
-	fi
-
-	echo -n "Checking support tools... "
-	if [ ! -f "${GLOBAL_TOOLCHAIN_PATH}/share/info/autoconf-archive.info" ]
-	then
-		#### Download all auto tools support tools
-		download_autotools_support
-		#### Build autoconf-archive
-		echo -n "autoconf-archive-${AUTOCONFARCHIVE_VER}... "
-		{
-			if [ -d "${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}" ]
-			then
-				run_cmd "rm -rfv \"${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}\""
-			fi
-			run_cmd "mkdir -pv \"${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}\""
-			pushd "${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}"
-			run_cmd "\"${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}/configure\" --prefix=\"${GLOBAL_TOOLCHAIN_PATH}\""
-			run_cmd "make V=${MAKEVERBOSE:-0}"
-			run_cmd "make V=${MAKEVERBOSE:-0} install"
-			popd 2>&1
-			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_BLDPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}\""
-			run_cmd "rm -rf \"${GLOBAL_TOOLCHAIN_SRCPATH}/autoconf-archive-${AUTOCONFARCHIVE_VER}\"" 
-		} >> "${GLOBAL_LOG_PATH}/toolchain_autoconf-archive-${AUTOCONFARCHIVE_VER}.log"
-		echo "done."
-	else
-		echo "already there."
-	fi
-	if [ "${_param_default:-0}" -eq 0 ]
-	then
-		pathadd PATH "${AUTOTOOLS_PATH}/bin"
-	fi
 	echo
 }
 
@@ -1344,7 +1128,12 @@ function setup_full_toolchain () {
 	### binutils and gcc touch
 	TOOLCHAIN=gnu build lfs/texinfo:native
 	TOOLCHAIN=gnu build lfs/help2man:native
-	setup_autotools --default
+	### The autotools of the builds with PKG_AUTOCONF (smart_autoreconf): libtool, autoconf (with the
+	### macros of autoconf-archive), automake, the autopoint of gettext
+	TOOLCHAIN=gnu build lfs/libtool:native
+	TOOLCHAIN=gnu build lfs/autoconf:native
+	TOOLCHAIN=gnu build lfs/automake:native
+	TOOLCHAIN=gnu build lfs/gettext:native
 	# shellcheck disable=SC2030
 	TOOLCHAIN=gnu build lfs/pkgconf:native
 	TOOLCHAIN=gnu build lfs/pkgconf:cross
@@ -1459,8 +1248,6 @@ if [ ! -d "${TOOLCHAIN_PATH}" ]
 then
 	mkdir -p "${TOOLCHAIN_PATH}"
 fi
-GLOBAL_TOOLCHAIN_SRCPATH="${GLOBAL_SRC_PATH}"
-GLOBAL_TOOLCHAIN_BLDPATH="${GLOBAL_BLD_PATH}"
 if [ ! -d "${GLOBAL_TOOLCHAIN_PATH}" ]
 then
 	mkdir -p "${GLOBAL_TOOLCHAIN_PATH}"

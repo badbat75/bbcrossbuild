@@ -1717,15 +1717,36 @@ function libtool_sysroot () {
 	done < <(grep -rlx --include=libtool 'lt_sysroot=' "${2}" 2>/dev/null || true)
 }
 
+function smart_autoreconf () {
+	### smart_autoreconf <dir>: autoreconf -fi in <dir> with the autotools of the global toolchain
+	### (lfs/{libtool,autoconf,automake,gettext}:native, first in the PATH), the aclocal directories of
+	### the sysroot and of the platform toolchain included. configmake runs it through xargs bash -c
+	local WORK_DIR=${1}
+	local ACINCLUDE=
+	if [ -d "${BIN_PATH}${TARGET_PREFIX}/share/aclocal" ]
+	then
+		ACINCLUDE+=" --include=${BIN_PATH}${TARGET_PREFIX}/share/aclocal"
+	fi
+	if [ -d "${TOOLCHAIN_PATH}/share/aclocal" ]
+	then
+		ACINCLUDE+=" --include=${TOOLCHAIN_PATH}/share/aclocal"
+	fi
+	pushd "${WORK_DIR}"
+	run_cmd "mkdir -pv m4"
+	run_cmd "rm -rfv autom4te.cache aclocal.m4 configure libtool ltmain.sh lt-main.sh"
+	export PATH="${GLOBAL_TOOLCHAIN_PATH}/bin:${PATH}"
+	if [ -f po/update-potfiles ]
+	then
+		run_cmd "./po/update-potfiles"
+	fi
+	MAX_RETRIES=5 run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/autoreconf -f -i ${ACINCLUDE}"
+	popd
+}
+export -f smart_autoreconf
+
 function configmake () {
 	if [ "${PKG_AUTOCONF:-0}" != 0 ]
 	then
-		if [ "${PKG_AUTOCONF:-0}" == 1 ]
-		then
-			PKG_AUTOCONF=${AUTOCONF_VER}
-		fi
-		echo "# Setting up ${PKG_AUTOCONF:-${AUTOCONF_VER}} ${PKG_AUTOMAKE:-${AUTOMAKE_VER}} ${PKG_LIBTOOL:-${LIBTOOL_VER}} ${PKG_GETTEXT:-${GETTEXT_VER}}"
-		setup_autotools "${PKG_AUTOCONF:-${AUTOCONF_VER}}" "${PKG_AUTOMAKE:-${AUTOMAKE_VER}}" "${PKG_LIBTOOL:-${LIBTOOL_VER}}" "${PKG_GETTEXT:-${GETTEXT_VER}}"
 		if [ "${AUTOCONF_PATH}" == "autoscan" ]
 		then
 			if [ "${PKG_COPYSRC:-0}" -eq 0 ]
@@ -1739,7 +1760,7 @@ function configmake () {
 			popd
 		fi
 		#### Multi process autoreconf 
-		echo -n "${AUTOCONF_PATH:-.}" | xargs --verbose -P"${AUTOCONF_THREADS:-${NPROCS}}" -d',' -I{} bash -c "PKG_AUTOMAKE=${PKG_AUTOMAKE} smart_autoreconf ${PKG_SRCPATH}/{} || exit 255"
+		echo -n "${AUTOCONF_PATH:-.}" | xargs --verbose -P"${AUTOCONF_THREADS:-${NPROCS}}" -d',' -I{} bash -c "smart_autoreconf ${PKG_SRCPATH}/{} || exit 255"
 	fi
 	if [ "${PKG_COPYSRC:-0}" -eq 1 ] 
 	then
@@ -2629,7 +2650,7 @@ function builddir_key () {
 	{
 		sed -n -e '/^export ENVIRONMENT_SOURCE_PATH=/d' -e '/^export PATH=/d' -e '/^export /p' "${1}" 2>/dev/null || true
 		for VAR in CONF_CMD CONF_ENV CONF_FLAGS CONF_PATH CONF_VARS CMAKE_GENERATOR STD_CONF_FLAGS \
-			PKG_AUTOCONF PKG_AUTOMAKE PKG_LIBTOOL PKG_GETTEXT PKG_COPYSRC PKG_TOOLCHAIN \
+			PKG_AUTOCONF PKG_COPYSRC PKG_TOOLCHAIN \
 			PKG_OVERRIDELD PKG_OVERRIDELTO PKG_OVERRIDESHARED PKG_OVERRIDESTATIC \
 			BUILD_LIBSHARED BUILD_LIBSTATIC LTOENABLE \
 			INSTALL_PREFIX INSTALL_EXECPREFIX INSTALL_LIBDIR INSTALL_LIBSUFFIX INSTALL_INCLUDEDIR \
@@ -2694,7 +2715,6 @@ function build () {(
 		MAKEDIR \
 		PATCHDEB \
 		PKG_AUTOCONF \
-		PKG_AUTOMAKE \
 		PKG_CFLAGS \
 		PKG_CHECK \
 		PKG_COPYSRC \
@@ -2705,7 +2725,6 @@ function build () {(
 		PKG_DISABLECCWRAPPER \
 		PKG_FAULTYCFLAGS \
 		PKG_FCFLAGS \
-		PKG_GETTEXT \
 		PKG_KEEPBUILDDIR \
 		PKG_KERNEL_BUILD_MODULES \
 		PKG_KERNEL_INITRAMFS \
@@ -2715,7 +2734,6 @@ function build () {(
 		PKG_KERNEL_MODPATH \
 		PKG_LDFLAGS \
 		PKG_LD_LIBRARY_PATH \
-		PKG_LIBTOOL \
 		PKG_LLVMPOLLYFEATURES \
 		PKG_MAKEENV \
 		PKG_MAKETARGETS \

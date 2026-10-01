@@ -485,16 +485,6 @@ BBCrossBuild provides various functions for use in project files. These are orga
   setup_rust
   ```
 
-- **setup_autotools**: Set up autotools
-  ```
-  setup_autotools [<autoconf_ver>] [<automake_ver>] [<libtool_ver>] [<gettext_ver>] [--default]
-  ```
-  - `[<autoconf_ver>]`: Autoconf version (default: AUTOCONF_VER)
-  - `[<automake_ver>]`: Automake version (default: AUTOMAKE_VER)
-  - `[<libtool_ver>]`: Libtool version (default: LIBTOOL_VER)
-  - `[<gettext_ver>]`: Gettext version (default: GETTEXT_VER)
-  - `--default`: Use default versions
-
 - **setup_binutils**: Set up binutils
   ```
   setup_binutils
@@ -818,20 +808,8 @@ Not a variable: every `*.patch` and `*.diff` file of the `patches/` directory of
 Script sourced in the source directory before autoreconf and configuration (replaces the former `PKG_PREBUILD` string).
 
 **PKG_AUTOCONF:**  
-By default "autoreconf -fi" is not run before configure process (0). 1 to enable it.  
+By default "autoreconf -fi" is not run before configure process (0). 1 to enable it: `smart_autoreconf` runs the autotools of the global toolchain (`lfs/libtool:native`, `lfs/autoconf:native`, `lfs/automake:native`, `lfs/gettext:native`, built by `setup_full_toolchain`), with the aclocal directories of the sysroot and of the platform toolchain. There is one version of each, the one of its recipe (`PKG_AUTOMAKE`, `PKG_LIBTOOL` and `PKG_GETTEXT` are gone).  
 `PKG_AUTOCONF=0|1`
-
-**PKG_AUTOMAKE:**  
-Override automake version.  
-`PKG_AUTOMAKE="1.16.5"`
-
-**PKG_LIBTOOL:**  
-Override libtool version.  
-`PKG_LIBTOOL="2.4.7"`
-
-**PKG_GETTEXT:**  
-Override gettext version.  
-`PKG_GETTEXT="0.21.1"`
 
 **AUTOCONF_PATH:**  
 Specify source subdirectory where to run autoreconf.  
