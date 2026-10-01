@@ -3045,7 +3045,7 @@ function build () {(
 		### A kept build directory configured with another environment is emptied (builddir_key): CMake
 		### and meson would keep the compilers and the flags of their cache. A directory without the
 		### stamp (left by --keep_builddir, or by a build before PKG_KEEPBUILDDIR) has an unknown
-		### environment: emptied too. A flavor that configures nothing (lfs/llvm:sources, none) leaves
+		### environment: emptied too. A flavor that configures nothing (lfs/llvm:libclc, none) leaves
 		### the tree and the stamp to the ones that do: its key, with another BUILD_PROCESS, would
 		### empty the tree at every build of the other flavors
 		BUILDDIR_STAMP="${PKG_BLDPATH}/.bbxb-environment"
