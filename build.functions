@@ -1130,6 +1130,41 @@ function find_host_paths () {
 	done | LC_ALL=C sort -u
 }
 
+function elf_machine () {
+	### elf_machine: the Machine of the ELF header (readelf -h) of the platform (HM), empty for one it
+	### does not know: the checks of the files of a package read only the ELF files of the platform,
+	### not the firmware files of other processors
+	case ${HM} in
+		x86_64) echo "Advanced Micro Devices X86-64" ;;
+		i?86) echo "Intel 80386" ;;
+		aarch64) echo "AArch64" ;;
+		arm*) echo "ARM" ;;
+		riscv*) echo "RISC-V" ;;
+	esac
+}
+
+function executable_stack_files () {
+	### executable_stack_files <dir>: the programs and libraries of the target under <dir> whose stack
+	### is executable (PT_GNU_STACK RWE), relative to <dir>, in byte order. bfd gives a file an
+	### executable stack when one of its objects has no .note.GNU-stack (an assembler source that does
+	### not declare it, built without -Wa,--noexecstack), and glibc refuses to load such a library
+	### into a process whose stack is not executable: build stops on it. Only the ELF files of the
+	### machine of the platform count, the static libraries, objects and kernel modules not
+	local DIR=${1%/}
+	if [ ! -d "${DIR}" ]
+	then
+		return 0
+	fi
+	### One readelf for every file, as in unresolved_needed: /dev/null makes it name each one
+	{ find "${DIR}" -type f ! -name '*.a' ! -name '*.o' ! -name '*.ko' ! -name '*.ko.*' -print0 2> /dev/null || true; } | \
+		{ xargs -0 -r readelf -hlW /dev/null 2> /dev/null || true; } | \
+		awk -v machine="$( elf_machine )" -v dir="${DIR}/" '
+			/^File: / { file = substr($0, 7); skip = 0; next }
+			/^  Machine:/ { sub(/^  Machine: +/, ""); skip = (machine != "" && $0 != machine); next }
+			skip { next }
+			/^ +GNU_STACK / && / RWE / { print substr(file, length(dir) + 1) }' | LC_ALL=C sort -u
+}
+
 function unresolved_needed () {
 	### unresolved_needed <dir> <sysroot>: the libraries the programs and libraries of the target under
 	### <dir> need (NEEDED) that neither <dir> nor <sysroot> has, as "<file>: <library>" with the file
@@ -1151,14 +1186,7 @@ function unresolved_needed () {
 	then
 		return 0
 	fi
-	case ${HM} in
-		x86_64) MACHINE="Advanced Micro Devices X86-64" ;;
-		i?86) MACHINE="Intel 80386" ;;
-		aarch64) MACHINE="AArch64" ;;
-		arm*) MACHINE="ARM" ;;
-		riscv*) MACHINE="RISC-V" ;;
-		*) MACHINE= ;;
-	esac
+	MACHINE=$( elf_machine )
 	for LIBDIR in /lib /usr/lib "/lib${HARCH_LIB}" "${TARGET_LIBDIR}"
 	do
 		LIBDIRS+=( "${LIBDIR}" "${LIBDIR}${TARGET_LIBSUFFIX}" )
@@ -3337,6 +3365,12 @@ function build () {(
 			if [ -n "${UNRESOLVED_FILES}" ]
 			then
 				trow_error "${ERROR_GENERIC}" "Libraries neither ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}} nor the sysroot has, taken from the build host: $(tr '\n' ' ' <<< "${UNRESOLVED_FILES}")"
+			fi
+			### No program or library asks for an executable stack, which glibc refuses to load
+			EXECSTACK_FILES=$( executable_stack_files "${PKG_PKGPATH}" )
+			if [ -n "${EXECSTACK_FILES}" ]
+			then
+				trow_error "${ERROR_GENERIC}" "Executable stack in $(tr '\n' ' ' <<< "${EXECSTACK_FILES}")of ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}: an object without .note.GNU-stack (assembler sources), build them with -Wa,--noexecstack"
 			fi
 			if [ "${NOSAVESTATUS}" -eq 0 ] && [ -z "${TEMPORARY_STATUS}" ]
 			then

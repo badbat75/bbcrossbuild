@@ -473,6 +473,36 @@ echo "${QEMU_LD_PREFIX} ${QEMU_CPU} ${*}"'
 	[[ ${output} != *"/bin/prog"* ]]
 }
 
+@test "executable_stack_files: the programs and libraries of the platform with an executable stack" {
+	command -v cc > /dev/null || skip "no C compiler on this host"
+	local STAGE=${BATS_TEST_TMPDIR}/stage SRC=${BATS_TEST_TMPDIR}/src
+	HM=$( uname -m )
+	mkdir -p "${SRC}" "${STAGE}/usr/bin" "${STAGE}/usr/lib64/mod"
+	put "${SRC}/f.c" 'int f(void) { return 0; }'
+	put "${SRC}/main.c" 'int main(void) { return 0; }'
+	### What bfd makes of an object without .note.GNU-stack: the stack of the file is RWE
+	cc -shared -fPIC -Wl,-z,execstack -o "${STAGE}/usr/lib64/libexec.so.1" "${SRC}/f.c"
+	cc -shared -fPIC -Wl,-z,execstack -o "${STAGE}/usr/lib64/mod/legacy.so" "${SRC}/f.c"
+	cc -shared -fPIC -Wl,-z,noexecstack -o "${STAGE}/usr/lib64/libfine.so.1" "${SRC}/f.c"
+	cc -Wl,-z,noexecstack -o "${STAGE}/usr/bin/app" "${SRC}/main.c"
+	### An object and a static library are not linked yet: not read
+	cc -c -o "${STAGE}/usr/lib64/f.o" "${SRC}/f.c"
+	put "${STAGE}/usr/share/doc/README" text
+	run executable_stack_files "${STAGE}/"
+	[ "${status}" -eq 0 ]
+	assert_output_lines "usr/lib64/libexec.so.1" "usr/lib64/mod/legacy.so"
+	### Under the ERR trap of bbxb (set -E): readelf always fails on /dev/null, which is no error
+	run bash -c "set -E -o pipefail; trap 'echo ERR' ERR; $( declare -f elf_machine executable_stack_files )
+		HM=${HM} executable_stack_files '${STAGE}'"
+	assert_output_lines "usr/lib64/libexec.so.1" "usr/lib64/mod/legacy.so"
+	### The ELF files of another machine are not the ones of the platform
+	HM=riscv64
+	run executable_stack_files "${STAGE}"
+	assert_output_lines
+	run executable_stack_files "${BATS_TEST_TMPDIR}/none"
+	assert_output_lines
+}
+
 @test "unresolved_needed: the libraries neither the package nor the sysroot has, where the loader of the image looks" {
 	command -v cc > /dev/null || skip "no C compiler on this host"
 	local STAGE=${BATS_TEST_TMPDIR}/stage ROOT=${BATS_TEST_TMPDIR}/root SRC=${BATS_TEST_TMPDIR}/src
@@ -500,7 +530,7 @@ echo "${QEMU_LD_PREFIX} ${QEMU_CPU} ${*}"'
 	[ "${status}" -eq 0 ]
 	assert_output_lines "usr/bin/app: libhost.so.3"
 	### Under the ERR trap of bbxb (set -E): readelf always fails on /dev/null, which is no error
-	run bash -c "set -E -o pipefail; trap 'echo ERR' ERR; $( declare -f unresolved_needed )
+	run bash -c "set -E -o pipefail; trap 'echo ERR' ERR; $( declare -f elf_machine unresolved_needed )
 		HM=${HM} HARCH_LIB=64 TARGET_LIBSUFFIX='' TARGET_LIBDIR=/usr/lib64 unresolved_needed '${STAGE}' '${ROOT}'"
 	assert_output_lines "usr/bin/app: libhost.so.3"
 	### The ELF files of another machine are not the ones of the platform
