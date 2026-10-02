@@ -112,10 +112,11 @@ load test_helper
 	[[ " ${COMMON_LDFLAGS} " != *" -Wl,-rpath "* ]]
 }
 
-@test "the environment of a native build reads the pc files of the global toolchain only, a cross one the platform toolchain first" {
+@test "the environment of a native build reads the pc files of the global toolchain only, a cross one the platform toolchain first; the flags of the build machine" {
 	load_framework
 	PKG_FULLNAME=zlib_1.3
 	PKG_BLDPATH="${BATS_TEST_TMPDIR}/build"
+	OPTCOMP_FLAGS="-fno-semantic-interposition"
 	### pkgtools.functions stubs create_environment_source out: the real one here
 	eval "$( source "${BB_HOME}/build.functions" > /dev/null; declare -f create_environment_source )"
 	run_cmd () { eval "${1}" > /dev/null; }
@@ -127,6 +128,9 @@ load test_helper
 	create_environment_source --target cross
 	run grep '^export PKG_CONFIG_LIBDIR=' "${PKG_BLDPATH}/environment.source"
 	assert_equal "${output}" "export PKG_CONFIG_LIBDIR='${TOOLCHAIN_PATH}/lib/pkgconfig:${TOOLCHAIN_PATH}/share/pkgconfig:${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig:${GLOBAL_TOOLCHAIN_PATH}/share/pkgconfig'"
+	### The flags of the build machine keep -march=native apart from the OPTCOMP_FLAGS of the configuration
+	run bash -c "source '${PKG_BLDPATH}/environment.source'; echo \"\${CFLAGS_FOR_BUILD}\""
+	[[ " ${output} " == " -march=native -fno-semantic-interposition "* ]]
 }
 
 @test "cargo_target: the Rust target of the platform, or of the build machine" {
