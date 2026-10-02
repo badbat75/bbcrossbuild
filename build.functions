@@ -591,12 +591,12 @@ function settcenv () {
 			then
 				TOOLCHAIN_LINKERFLAGS+=" -Wl,${CC_SYSROOT_FLAGS}"
 			fi
-			TOOLCHAIN_LINKERFLAGS+=" -Wl,--threads -Wl,--thread-count,${NPROCS}"
-			TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--threads -Wl,--thread-count,${NPROCS}"
+			TOOLCHAIN_LINKERFLAGS+=" -Wl,--threads -Wl,--thread-count,${LINKPROCS}"
+			TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--threads -Wl,--thread-count,${LINKPROCS}"
 			;;
 		lld)
-			TOOLCHAIN_LINKERFLAGS+=" -Wl,--thinlto-jobs=${NPROCS}"
-			TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--thinlto-jobs=${NPROCS}"
+			TOOLCHAIN_LINKERFLAGS+=" -Wl,--thinlto-jobs=${LINKPROCS}"
+			TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--thinlto-jobs=${LINKPROCS}"
 			;;
 		mold)
 			### lfs/mold:cross, built by setup_full_toolchain. clang hands it LLVMgold.so for LTO, whose
@@ -605,20 +605,20 @@ function settcenv () {
 			then
 				TOOLCHAIN_LINKERFLAGS+=" -Wl,${CC_SYSROOT_FLAGS}"
 			fi
-			TOOLCHAIN_LINKERFLAGS+=" -Wl,--thread-count=${NPROCS}"
+			TOOLCHAIN_LINKERFLAGS+=" -Wl,--thread-count=${LINKPROCS}"
 			if [ "${TOOLCHAIN}" == llvm ]
 			then
-				TOOLCHAIN_LINKERFLAGS+=" -Wl,--plugin-opt=jobs=${NPROCS}"
+				TOOLCHAIN_LINKERFLAGS+=" -Wl,--plugin-opt=jobs=${LINKPROCS}"
 			fi
 			;;
 	esac
 	### The linker of the build machine can be bfd while mold is not built yet (linker_for_build)
 	if [ "${TOOLCHAIN_LINKER_FOR_BUILD}" == mold ]
 	then
-		TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--thread-count=${NPROCS}"
+		TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--thread-count=${LINKPROCS}"
 		if [ "${TOOLCHAIN}" == llvm ]
 		then
-			TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--plugin-opt=jobs=${NPROCS}"
+			TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--plugin-opt=jobs=${LINKPROCS}"
 		fi
 	fi
 			
@@ -861,6 +861,15 @@ function create_environment_source () {
 			
 			# sccache parameters
 			export RUSTC_WRAPPER='${ENV_CCWRAPPER}'
+		EOF
+	fi
+	### MOLD_JOBS=1 (bbxb.conf): one mold at a time, the others wait for it (the peak memory of the links
+	### make -j runs together); mold reads no other value
+	if [ -n "${MOLD_JOBS}" ]
+	then
+		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
+			
+			export MOLD_JOBS='${MOLD_JOBS}'
 		EOF
 	fi
 	cat <<-EOF >> "${PKG_BLDPATH}/environment.source"

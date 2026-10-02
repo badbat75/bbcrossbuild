@@ -131,6 +131,12 @@ load test_helper
 	### The flags of the build machine keep -march=native apart from the OPTCOMP_FLAGS of the configuration
 	run bash -c "source '${PKG_BLDPATH}/environment.source'; echo \"\${CFLAGS_FOR_BUILD}\""
 	[[ " ${output} " == " -march=native -fno-semantic-interposition "* ]]
+	### MOLD_JOBS travels to the builds only when it is set
+	run grep -c '^export MOLD_JOBS=' "${PKG_BLDPATH}/environment.source"
+	assert_equal "${output}" 0
+	MOLD_JOBS=1 create_environment_source --target cross
+	run grep '^export MOLD_JOBS=' "${PKG_BLDPATH}/environment.source"
+	assert_equal "${output}" "export MOLD_JOBS='1'"
 }
 
 @test "cargo_target: the Rust target of the platform, or of the build machine" {
@@ -157,4 +163,18 @@ load test_helper
 	PKG_DEBUG=1 settcenv --target target
 	[[ " ${OPTCOMP_FLAGS} " == *" -g "* ]]
 	[[ " ${OPTCOMP_FLAGS} " == *" -O2 " ]]
+}
+
+@test "the threads of one mold are LINKPROCS, for the target and for the build machine" {
+	load_framework
+	assert_equal "${LINKPROCS}" "$(( $(nproc) / 4 > 0 ? $(nproc) / 4 : 1 ))"
+	LINKPROCS=5
+	PATH="${BATS_TEST_TMPDIR}/bin:${PATH}"
+	mkdir -p "${BATS_TEST_TMPDIR}/bin"
+	ln -s /bin/true "${BATS_TEST_TMPDIR}/bin/ld.mold"
+	### the cross gcc the target branch of settcenv looks for
+	ln -s /bin/true "${BATS_TEST_TMPDIR}/bin/${HARCH}-gcc"
+	TOOLCHAIN=gnu GCC_DEFAULT_LD=mold settcenv --target target
+	[[ " ${TOOLCHAIN_LINKERFLAGS} " == *" -fuse-ld=mold "*" -Wl,--thread-count=5 "* ]]
+	[[ " ${TOOLCHAIN_LINKERFLAGS_FOR_BUILD} " == *" -Wl,--thread-count=5 "* ]]
 }
