@@ -10,6 +10,21 @@ of the image: a cross build, first the compiler of the build machine, then the o
 cargo, rustfmt and clippy (about an hour, 10-20 GB). The stage 0 compiler of `x.py` stays a binary, and
 the Rust of the build machine too: `setup_rust` runs before sccache and LLVM.
 
+## systemd, lvm2, efivar, binutils and GRUB with mold and LTO
+
+`PKG_OVERRIDELD=bfd` keeps five recipes off mold with `GCC_DEFAULT_LD=mold`: `lfs/binutils`,
+`lfs/efivar`, `lfs/GRUB` (and `lfs/GRUB-EFI`) always, `lfs/systemd` and `lfs/lvm2` in their
+`variants/toolchain/gnu`. No comment says why, and the lines are older than mold in the framework
+(they came through the moves to `package.env` and to the variant directories, from the time of gold):
+no mold failure is on record. glibc (bfd or lld only) and the kernels (kbuild with gcc: bfd only) keep
+theirs for a known reason. To do, one recipe at a time on rpi3-aarch64 (generic-x64 for efivar and the
+two GRUB): drop the override, build with mold, check the `.comment` of what it installs and run
+board_check in QEMU; GRUB and efivar link with linker scripts of their own and may really need bfd.
+Check as well that each one really builds with LTO: none sets `PKG_OVERRIDELTO`, but with `MAKEVERBOSE=0`
+the logs of systemd (meson) showed no compile line; the `-flto` of every object is in the verbose logs
+(`MAKEVERBOSE=1` since October 2026), and a target of GRUB (the modules, built with its own
+`TARGET_CFLAGS`) may not take the flags of the framework at all.
+
 ## gnutls with mold
 
 `GCC_DEFAULT_LD=mold`, rpi3-aarch64, October 2026: `lfs/gnutls` 3.8.13 builds and links with mold
