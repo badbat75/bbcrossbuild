@@ -3,9 +3,9 @@
 # shellcheck shell=bash
 NPROCS=$(nproc --ignore=1)
 LTOPROCS=$(( $(nproc) / 4 ))
-# The threads of one link (mold, gold, the ThinLTO jobs of lld and of LLVMgold), a quarter of the CPUs
-# as the ltrans of gcc (LTOPROCS): make -j runs several links at once, each would take every CPU
-LINKPROCS=${LINKPROCS:-$(( $(nproc) / 4 > 0 ? $(nproc) / 4 : 1 ))}
+# The threads of one link (mold, gold, the ThinLTO jobs of lld and of LLVMgold), half of the CPUs:
+# make -j runs several links at once, each would take every CPU, and a quarter made the big links slow
+LINKPROCS=${LINKPROCS:-$(( $(nproc) / 2 > 0 ? $(nproc) / 2 : 1 ))}
 
 # C standard for everything compiled with the host compiler (native builds, *_FOR_BUILD flags,
 # toolchain bootstrap). GCC 15 and later default to C23, where "int f ()" is a prototype with no

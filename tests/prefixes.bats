@@ -167,7 +167,7 @@ load test_helper
 
 @test "the threads of one mold are LINKPROCS, for the target and for the build machine" {
 	load_framework
-	assert_equal "${LINKPROCS}" "$(( $(nproc) / 4 > 0 ? $(nproc) / 4 : 1 ))"
+	assert_equal "${LINKPROCS}" "$(( $(nproc) / 2 > 0 ? $(nproc) / 2 : 1 ))"
 	LINKPROCS=5
 	PATH="${BATS_TEST_TMPDIR}/bin:${PATH}"
 	mkdir -p "${BATS_TEST_TMPDIR}/bin"
