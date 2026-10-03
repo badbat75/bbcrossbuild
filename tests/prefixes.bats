@@ -178,3 +178,20 @@ load test_helper
 	[[ " ${TOOLCHAIN_LINKERFLAGS} " == *" -fuse-ld=mold "*" -Wl,--thread-count=5 "* ]]
 	[[ " ${TOOLCHAIN_LINKERFLAGS_FOR_BUILD} " == *" -Wl,--thread-count=5 "* ]]
 }
+
+@test "with clang the -flto of LTOENABLE is on the link too: mold gets LLVMgold.so only with it" {
+	load_framework
+	PATH="${BATS_TEST_TMPDIR}/bin:${PATH}"
+	mkdir -p "${BATS_TEST_TMPDIR}/bin"
+	local TOOL
+	for TOOL in ld.mold clang clang++ llvm-ar llvm-as llvm-nm llvm-ranlib llvm-strip llvm-objcopy llvm-objdump llvm-readelf
+	do
+		ln -s /bin/true "${BATS_TEST_TMPDIR}/bin/${TOOL}"
+	done
+	TOOLCHAIN=llvm LLVM_DEFAULT_LD=mold LTOENABLE=thin settcenv --target target
+	[[ " ${OPTLINK_FLAGS} " == *" -flto=thin "* ]]
+	TOOLCHAIN=llvm LLVM_DEFAULT_LD=mold LTOENABLE=fat settcenv --target target
+	[[ " ${OPTLINK_FLAGS} " == *" -flto=full "* ]]
+	TOOLCHAIN=llvm LLVM_DEFAULT_LD=mold LTOENABLE=0 settcenv --target target
+	[[ " ${OPTLINK_FLAGS} " != *" -flto"* ]]
+}

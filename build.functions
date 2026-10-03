@@ -466,12 +466,17 @@ function settcenv () {
 			echo "Linker for build: ${TOOLCHAIN_LINKER_FOR_BUILD}"
 			TOOLCHAIN_LINKER_EXE_FOR_BUILD=$(which "ld.${TOOLCHAIN_LINKER_FOR_BUILD}")
 			TOOLCHAIN_LINKERFLAGS_FOR_BUILD="-fuse-ld=${TOOLCHAIN_LINKER_FOR_BUILD}"
+			### -flto on the link too: clang hands a linker other than lld (mold) LLVMgold.so only
+			### with it, and a link that leaves out CFLAGS (the shlib/Makefile of readline) then
+			### fails on the bitcode objects
 			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 				1|fat)
 					TOOLCHAIN_COMPFLAGS+=" -flto=full"
+					OPTLINK_FLAGS+=" -flto=full"
 					;;
 				2|thin)
 					TOOLCHAIN_COMPFLAGS+=" -flto=thin"
+					OPTLINK_FLAGS+=" -flto=thin"
 					;;
 			esac
 
