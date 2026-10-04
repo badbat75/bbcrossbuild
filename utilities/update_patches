@@ -1,4 +1,10 @@
 #!/bin/bash -e
+# update_patches <package> <ver1> [<ver2..n>]: regenerate the release branch patch of gcc,
+# binutils, glibc or gdb for the given versions. For every version it writes
+# packages/lfs/<package>/variants/version/<ver>/patches/00-<package>_<ver>+<sha>.patch, replacing
+# the patch of a previous branch head; the version variant selects it when PKG_VER matches and
+# toolchain.functions applies the same directory to the toolchain sources. Other patches of the
+# variant (the 10-glibc-<ver>-fhs-1.patch of glibc) are kept.
 
 url4pkg () {
 	case ${PACKAGE} in
@@ -42,33 +48,28 @@ head4pkg () {
 	esac
 }
 
-generate_patch_and_print () {
-	local LAST_COMMIT PATCH_FILE LINK_FILE
+generate_patch () {
+	### generate_patch: write the patch into the version variant of the recipe, replacing the
+	### one of a previous branch head
+	local LAST_COMMIT PATCH_FILE PATCHES_PATH
 	LAST_COMMIT=$(git -C "/tmp/$(gitrepo4pkg)" rev-parse --short -1 "$(head4pkg)")
-	PATCH_FILE=${PACKAGE}_${PKG_VER}+${LAST_COMMIT}.patch
-	LINK_FILE=${PACKAGE}_${PKG_VER}.patch
+	PATCH_FILE="00-${PACKAGE}_${PKG_VER}+${LAST_COMMIT}.patch"
+	PATCHES_PATH="${RECIPE_PATH}/variants/version/${PKG_VER}/patches"
 	git -C "/tmp/$(gitrepo4pkg)" branch -m "$(head4pkg)"
-	mkdir -p "${BBXB_PATH}/patches/${PACKAGE}"
+	mkdir -p "${PATCHES_PATH}"
+	rm -f "${PATCHES_PATH}/00-${PACKAGE}_${PKG_VER}+"*.patch
 	# shellcheck disable=SC2046
-	git -C "/tmp/$(gitrepo4pkg)" diff "$(rel4pkg)..${LAST_COMMIT}" $(gitrepo_additional_params) > "${BBXB_PATH}/patches/${PACKAGE}/${PATCH_FILE}"
-	ln -fs "${PATCH_FILE}" "${BBXB_PATH}/patches/${PACKAGE}/${LINK_FILE}"
-	# shellcheck disable=SC2028
-	echo -n "\\\t${PKG_VER})\n"
-	# shellcheck disable=SC2028
-	echo -n "\\t\\tPKG_VER=${PKG_VER}+${LAST_COMMIT}\n"
-	# shellcheck disable=SC2028
-	echo -n "\\t\\tPATCHES=${PACKAGE}/${PATCH_FILE}\n"
-	# shellcheck disable=SC2028
-	echo -n "\\t\\t;;"
+	git -C "/tmp/$(gitrepo4pkg)" diff "$(rel4pkg)..${LAST_COMMIT}" $(gitrepo_additional_params) > "${PATCHES_PATH}/${PATCH_FILE}"
+	echo -n "${PATCH_FILE} "
 }
 
-BBXB_PATH=$(realpath "$(dirname ${0})/..")
+BBXB_PATH=$(realpath "$(dirname "${0}")/..")
 echo "bbxbuild path: ${BBXB_PATH}"
 PACKAGE=${1}
 shift
 VERSIONS=${*}
 
-if [ -z "${VERSIONS}" ] && [ -z ${PACKAGE} ]
+if [ -z "${VERSIONS}" ] || [ -z "${PACKAGE}" ]
 then
 	echo "No package and versions has been specified"
 	echo
@@ -83,7 +84,7 @@ case ${PACKAGE} in
 	gcc|binutils|glibc|gdb)
 	;;
 	*)
-		echo "Only gcc binutils and glibc supported."
+		echo "Only gcc, binutils, glibc and gdb are supported."
 		echo
 		exit 1
 	;;
@@ -97,17 +98,12 @@ then
 fi
 git -C "/tmp/$(gitrepo4pkg)" fetch
 
-if [ -f "${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak" ] && [ "${SAFE:-1}" -eq 1 ]
-then
-	echo "Please remove or restore ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak before update"
-else
-	cp "${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg" "${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg.bak"
-	for PKG_VER in ${VERSIONS}
-	do
-		PKG_MAJVER=$(echo "${PKG_VER}" | cut -d'.' -f1)
-		PKG_USCOREVER=${PKG_VER//./_}
-		echo -n "Generating patch for ${PACKAGE}_${PKG_VER}... "
-		eval "sed -i '/^\t${PKG_VER})/,/\t\t;;/c $(generate_patch_and_print)' ${BBXB_PATH}/packages/lfs/${PACKAGE}.pkg"
-		echo "done."
-	done
-fi
+RECIPE_PATH="${BBXB_PATH}/packages/lfs/${PACKAGE}"
+for PKG_VER in ${VERSIONS}
+do
+	PKG_MAJVER=$(echo "${PKG_VER}" | cut -d'.' -f1)
+	PKG_USCOREVER=${PKG_VER//./_}
+	echo -n "Generating patch for ${PACKAGE}_${PKG_VER}... "
+	generate_patch
+	echo "done."
+done

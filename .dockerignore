@@ -1,0 +1,6 @@
+# The image carries the host dependencies only: the checkout is mounted into the container by
+# "bbxb --container" (container.functions), never copied. Nothing of it belongs to the build
+# context, and the files of the user that .gitignore keeps out of the repository (bbxb.conf,
+# projects/*.conf, gitignored by the projects submodule, which carry passwords such as
+# LFS_WLANPSK) least of all.
+*

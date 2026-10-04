@@ -1,0 +1,305 @@
+#!/bin/bash
+# pkg_lint: static checks on the recipe directories under packages/.
+#
+# Usage: utilities/pkg_lint [<platform>] [packages/<group>/<name> ...]
+#
+# For every recipe directory (all of them by default) it checks that:
+#   - it contains package.env and nothing but package.env, prebuild.sh, postbuild.sh,
+#     build.sh, postinstall.sh, files/, patches/ and variants/;
+#   - variants/ only holds the axes target, toolchain, arch, platform, version and option, each
+#     value directory has a valid name (toolchain gnu|llvm, arch and platform from platforms/,
+#     option <name> or <name>=<value>; package.env is the default, there is no "other"), has
+#     the layout of a recipe and nests only the axes that follow its own in that order;
+#   - package.env and every *.sh, in the recipe and in the variants, parse (bash -n) and
+#     pass shellcheck when it is installed; a package.env with control flow (case, if, for,
+#     while) gets a warning, variants are the way to express it;
+#   - resolved the way build does (targets "", native, cross and every target that has a
+#     variant, with both toolchains), the recipe does not assign the removed variables
+#     (PKG_PREBUILD, PKG_POSTBUILD, PKG_BUILDSCRIPT, PKG_POSTINSTALL and the dead ones),
+#     BUILD_PROCESS names a build process, BUILD_PROCESS=custom comes with a build.sh and
+#     PKG_DEPS point to existing recipes;
+#   - every patches/ directory holds only regular *.patch or *.diff files (and a README.md),
+#     and when more than one patch applies to a build every name has a NN- ordering prefix.
+# Exit status is 1 when at least one error was reported.
+
+BB_HOME=$(realpath "$(dirname "${BASH_SOURCE[0]}")/..")
+if [ -n "${1}" ] && [ -f "${BB_HOME}/platforms/${1}.conf" ]
+then
+	PLATFORM_NAME=${1}
+	shift
+fi
+PROJECT_NAME=pkg_lint
+DATA_PATH=${DATA_PATH:-/tmp/pkg_lint}
+# shellcheck source=utilities/pkgtools.functions
+source "${BB_HOME}/utilities/pkgtools.functions"
+
+REMOVED_VARS="PKG_PREBUILD PKG_POSTBUILD PKG_BUILDSCRIPT PKG_POSTINSTALL PATCHES INST_CMD PKG_DPES PKG_POST_BUILD CONF_ENVS PKG_SEPS PKG_TWOSTEPSBUILD PKG_SKIPINSTALL CONF_COPYRSC PKG_AUTOMAKE PKG_LIBTOOL PKG_GETTEXT"
+ALLOWED_FILES="${RECIPE_ENTRIES} variants"
+PLATFORM_NAMES=$(find "${BB_HOME}/platforms" -name '*.conf' -printf '%f\n' | sed 's|\.conf$||' | sort | tr '\n' ' ')
+ARCH_NAMES=$(sed -n 's/^HM=\([^ #]*\).*/\1/p' "${BB_HOME}"/platforms/*.conf | sort -u | tr '\n' ' ')
+
+ERRORS=0
+WARNINGS=0
+
+function report () {
+	# report <error|warning> <recipe> <message>
+	case ${1} in
+		error) ERRORS=$((ERRORS+1)) ;;
+		warning) WARNINGS=$((WARNINGS+1)) ;;
+	esac
+	echo "${1}: ${2}: ${3}"
+}
+
+function source_recipe () {
+	### source_recipe <recipe dir> <target> <toolchain>: resolve the recipe the way build does
+	### and print the checks that only a resolved recipe allows. Runs in a subshell.
+	(
+		local VAR DEP PATCH PATCH_COUNT UNORDERED SOURCE_ERRORS WHERE
+		WHERE="target '${2}', toolchain ${TOOLCHAIN}"
+		### A failing command inside the recipe does not change the status of source, so anything
+		### printed on stderr while sourcing (an unquoted PKG_DEPS list run as a command, a missing
+		### file...) is reported as an error as well.
+		SOURCE_ERRORS=$(mktemp)
+		recipe_resolve "${1}" "${2}" "${3}" 2> "${SOURCE_ERRORS}" ||
+			echo "error: sourcing the recipe returned an error (${WHERE})"
+		if [ -s "${SOURCE_ERRORS}" ]
+		then
+			echo "error: sourcing the recipe printed: $(head -n 1 "${SOURCE_ERRORS}" | sed "s|^${PKG_RECIPEPATH}/||") (${WHERE})"
+		fi
+		rm -f "${SOURCE_ERRORS}"
+		for VAR in ${REMOVED_VARS}
+		do
+			if [ -n "${!VAR}" ]
+			then
+				echo "error: assigns the removed variable ${VAR} (${WHERE})"
+			fi
+		done
+		case " ${BUILD_PROCESSES} " in
+			*" ${BUILD_PROCESS:-none} "*) ;;
+			*) echo "error: BUILD_PROCESS=${BUILD_PROCESS} is not a build process (${WHERE})" ;;
+		esac
+		if [ "${BUILD_PROCESS}" = custom ] && [ -z "$(recipe_script build.sh)" ]
+		then
+			echo "error: BUILD_PROCESS=custom without build.sh (${WHERE})"
+		fi
+		PATCH_COUNT=0
+		UNORDERED=
+		for PATCH in $(recipe_patches)
+		do
+			PATCH_COUNT=$((PATCH_COUNT+1))
+			[[ $(basename "${PATCH}") =~ ^[0-9][0-9]- ]] || UNORDERED+=" $(basename "${PATCH}")"
+		done
+		if [ "${PATCH_COUNT}" -gt 1 ] && [ -n "${UNORDERED}" ]
+		then
+			echo "warning: ${PATCH_COUNT} patches apply in name order, give every one a NN- prefix:${UNORDERED} (${WHERE})"
+		fi
+		for DEP in ${PKG_DEPS}
+		do
+			if [ ! -f "$(recipe_file "${DEP/:*/}")" ]
+			then
+				echo "warning: dependency ${DEP/:*/} does not exist (${WHERE})"
+			fi
+		done
+	)
+}
+
+function lint_scripts () {
+	### lint_scripts <recipe dir> <directory>: bash -n and shellcheck on package.env and the
+	### scripts of one directory (the recipe or a variant)
+	local SCRIPT LINE REL
+	REL=${2#"${1}"}
+	REL=${REL#/}
+	for SCRIPT in "${2}/${RECIPE_FILENAME}" "${2}"/*.sh
+	do
+		[ -f "${SCRIPT}" ] || continue
+		if ! bash -n "${SCRIPT}" 2> /dev/null
+		then
+			report error "${1}" "${REL:+${REL}/}$(basename "${SCRIPT}") does not parse: $(bash -n "${SCRIPT}" 2>&1 | head -n 1)"
+		fi
+		if [ -n "${SHELLCHECK}" ]
+		then
+			while IFS= read -r LINE
+			do
+				report warning "${1}" "shellcheck: ${LINE}"
+			done < <(shellcheck -s bash -f gcc -e SC2148,SC2154,SC2034,SC2164,SC2086,SC2046,SC2016 "${SCRIPT}" 2> /dev/null | sed "s|^${BB_HOME}/||")
+		fi
+	done
+	if [ -f "${2}/${RECIPE_FILENAME}" ] && grep -qE '^[[:space:]]*(case|if|for|while)[[:space:]]' "${2}/${RECIPE_FILENAME}"
+	then
+		report warning "${1}" "${REL:+${REL}/}${RECIPE_FILENAME} contains control flow (case, if, for or while): a variant directory is the way to select values"
+	fi
+}
+
+function lint_patches () {
+	### lint_patches <recipe dir> <directory>: the patches/ directory of the recipe or of a
+	### variant holds only regular *.patch and *.diff files (and a README.md)
+	local ENTRY NAME REL
+	REL=${2#"${1}"}
+	REL=${REL#/}
+	[ -d "${2}/patches" ] || return 0
+	for ENTRY in "${2}"/patches/* "${2}"/patches/.[!.]*
+	do
+		[ -e "${ENTRY}" ] || [ -L "${ENTRY}" ] || continue
+		NAME=$(basename "${ENTRY}")
+		if [ -L "${ENTRY}" ] || [ ! -f "${ENTRY}" ]
+		then
+			report error "${1}" "${REL:+${REL}/}patches/${NAME} is not a regular file"
+			continue
+		fi
+		case ${NAME} in
+			*.patch|*.diff|README.md) ;;
+			*) report error "${1}" "${REL:+${REL}/}patches/${NAME}: unexpected entry, only *.patch and *.diff files are applied" ;;
+		esac
+	done
+}
+
+function lint_variant () {
+	### lint_variant <recipe dir> <variant dir> <axis index>: check the layout of one variant
+	### directory, then the axes it nests (only those after <axis index>)
+	local ENTRY NAME INDEX AXIS VALUE VALUEDIR REL
+	REL=${2#"${1}"/}
+	for ENTRY in "${2}"/* "${2}"/.[!.]*
+	do
+		[ -e "${ENTRY}" ] || continue
+		NAME=$(basename "${ENTRY}")
+		case " ${RECIPE_ENTRIES} " in
+			*" ${NAME} "*) continue ;;
+		esac
+		INDEX=0
+		for AXIS in ${VARIANT_AXES_LIST}
+		do
+			INDEX=$((INDEX+1))
+			if [ "${AXIS}" = "${NAME}" ]
+			then
+				break
+			fi
+		done
+		if [ "${AXIS}" != "${NAME}" ]
+		then
+			report error "${1}" "${REL}: unexpected entry ${NAME}"
+		elif [ "${INDEX}" -le "${3}" ]
+		then
+			report error "${1}" "${REL}/${NAME}: axes nest in the order ${VARIANT_AXES_LIST// /, }"
+		elif [ ! -d "${ENTRY}" ]
+		then
+			report error "${1}" "${REL}/${NAME} is not a directory"
+		else
+			for VALUEDIR in "${ENTRY}"/* "${ENTRY}"/.[!.]*
+			do
+				[ -e "${VALUEDIR}" ] || continue
+				VALUE=$(basename "${VALUEDIR}")
+				if [ ! -d "${VALUEDIR}" ]
+				then
+					report error "${1}" "${REL}/${NAME}/${VALUE} is not a directory"
+					continue
+				fi
+				lint_variant_name "${1}" "${REL}/${NAME}" "${AXIS}" "${VALUE}"
+				if [ -z "$(ls -A "${VALUEDIR}")" ]
+				then
+					report warning "${1}" "${REL}/${NAME}/${VALUE} is empty"
+				fi
+				lint_scripts "${1}" "${VALUEDIR}"
+				lint_patches "${1}" "${VALUEDIR}"
+				lint_variant "${1}" "${VALUEDIR}" "${INDEX}"
+			done
+		fi
+	done
+}
+
+function lint_variant_name () {
+	### lint_variant_name <recipe dir> <relative axis dir> <axis> <directory name>
+	local VALUE
+	case ${4} in
+		*,,*|,*|*,) report error "${1}" "${2}/${4}: malformed value list"; return ;;
+	esac
+	for VALUE in ${4//,/ }
+	do
+		if [ "${VALUE}" = other ]
+		then
+			report error "${1}" "${2}/${4}: there is no other selector, the default build is ${RECIPE_FILENAME}"
+			continue
+		fi
+		case ${3} in
+			target)
+				[[ ${VALUE} =~ ^[A-Za-z0-9_.+-]+$ ]] || report error "${1}" "${2}/${4}: invalid target name ${VALUE}"
+			;;
+			toolchain)
+				case ${VALUE} in
+					gnu|llvm) ;;
+					*) report error "${1}" "${2}/${4}: toolchain must be gnu or llvm" ;;
+				esac
+			;;
+			arch)
+				case " ${ARCH_NAMES} " in
+					*" ${VALUE} "*) ;;
+					*) report error "${1}" "${2}/${4}: ${VALUE} is not the HM of any platform (${ARCH_NAMES% })" ;;
+				esac
+			;;
+			platform)
+				case " ${PLATFORM_NAMES} " in
+					*" ${VALUE} "*) ;;
+					*) report error "${1}" "${2}/${4}: ${VALUE} is not a platform under platforms/" ;;
+				esac
+			;;
+			version)
+				[[ ${VALUE} =~ ^[A-Za-z0-9_.+~-]+$ ]] || report error "${1}" "${2}/${4}: invalid version ${VALUE}"
+			;;
+			option)
+				[[ ${VALUE} =~ ^[a-z0-9][a-z0-9-]*(=[A-Za-z0-9_.+-]+)?$ ]] || report error "${1}" "${2}/${4}: option must be <name> or <name>=<value>, lowercase name (selected by WITH_<NAME>)"
+			;;
+		esac
+	done
+}
+
+function lint_recipe () {
+	### lint_recipe <recipe dir>
+	local DIR ENTRY TARGET TOOLCHAIN_NAME LINE
+	DIR=${1%/}
+	if [ ! -f "${DIR}/${RECIPE_FILENAME}" ]
+	then
+		report error "${DIR}" "${RECIPE_FILENAME} is missing"
+		return
+	fi
+	for ENTRY in "${DIR}"/* "${DIR}"/.[!.]*
+	do
+		[ -e "${ENTRY}" ] || continue
+		case " ${ALLOWED_FILES} " in
+			*" $(basename "${ENTRY}") "*) ;;
+			*) report error "${DIR}" "unexpected entry $(basename "${ENTRY}")" ;;
+		esac
+	done
+	lint_scripts "${DIR}" "${DIR}"
+	lint_patches "${DIR}" "${DIR}"
+	if [ -d "${DIR}/variants" ]
+	then
+		lint_variant "${DIR}" "${DIR}/variants" 0
+	fi
+	for TARGET in "" native cross $(recipe_targets "${DIR}")
+	do
+		for TOOLCHAIN_NAME in gnu llvm
+		do
+			while IFS= read -r LINE
+			do
+				report "${LINE%%:*}" "${DIR}" "${LINE#*: }"
+			done < <(TOOLCHAIN=${TOOLCHAIN_NAME} source_recipe "${DIR}" "${TARGET}" "" | sort -u)
+		done
+	done
+}
+
+SHELLCHECK=$(command -v shellcheck || true)
+if [ "${#}" -gt 0 ]
+then
+	RECIPES=("${@}")
+else
+	mapfile -t RECIPES < <(find "${PKG_PATH}" -mindepth 2 -maxdepth 2 -type d -not -path "${PKG_PATH}/template*" | sort)
+fi
+LINT_OUT=$(mktemp)
+for RECIPE in "${RECIPES[@]}"
+do
+	lint_recipe "$(realpath "${RECIPE}")"
+done | sed "s|${BB_HOME}/||" | sort -u | tee "${LINT_OUT}"
+ERRORS=$(grep -c '^error:' "${LINT_OUT}")
+WARNINGS=$(grep -c '^warning:' "${LINT_OUT}")
+rm -f "${LINT_OUT}"
+echo "pkg_lint: ${#RECIPES[@]} recipe(s), ${ERRORS} error(s), ${WARNINGS} warning(s)"
+[ "${ERRORS}" -eq 0 ]

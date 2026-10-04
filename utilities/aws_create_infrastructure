@@ -135,7 +135,7 @@ prepare-instance () {
 	echo " ok."
 	echo -n "Configuring bbcrossbuild..."
 	${SSH_CMD} "[ ! -f \"\${HOME}/bbcrossbuild/bbxb.conf\" ] && \
-		( sed 's@^DATA_PATH=.*@DATA_PATH=/mnt/bbcrossbuild@' \"\${HOME}/bbcrossbuild/configurations/bbxb.conf\" > \"\${HOME}/bbcrossbuild/bbxb.conf\") || :"
+		( sed 's@^# DATA_PATH=.*@DATA_PATH=/mnt/bbcrossbuild@' \"\${HOME}/bbcrossbuild/configurations/bbxb.conf\" > \"\${HOME}/bbcrossbuild/bbxb.conf\") || :"
 	${SSH_CMD} "\${HOME}/bbcrossbuild/utilities/bootstrap.aws"
 	echo " ok."
 }

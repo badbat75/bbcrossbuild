@@ -1,94 +1,796 @@
-# bbcrossbuild 3.1.0
-This is a framework to automate the cross-compilation of packages through a project file.
+# BBCrossBuild 4.0.0
+
+A framework to automate cross-compilation of packages through project files.
+
 ## Current Limitations
 
- - Tested only ARM and ARM64 cross-compile projects and x86_64 straight compile projects. Other platforms would need
-   adjustments and integrations
+- Tested primarily with ARM, ARM64 cross-compile projects and x86_64 straight compile projects
+- Other platforms may require adjustments and integrations
 
 ## QuickStart
+
 **Prepare your environment**
 
-    $ git clone https://github.com/badbat75/bbcrossbuild.git
-    $ cd bbcrossbuild
-    $ cp bbxb.conf.default bbxb.conf
-    $ utilities/bootstrap.<fedora|ubuntu>
-`bootstrap`  installs all the dependencies on the build host *(the script is not complete, yet)*.
+```bash
+$ git clone --recurse-submodules https://github.com/badbat75/bbcrossbuild.git
+$ cd bbcrossbuild
+$ cp configurations/bbxb.conf bbxb.conf
+$ utilities/bootstrap.<fedora|ubuntu|aws>
+```
+
+The package groups under `packages/` are git submodules (`packages-lfs`, `packages-moode`... next to this repository), and so are the project files under `projects/` (`bbcrossbuild-projects`): the framework itself names no project. An existing checkout gets them with `git submodule update --init`, and `bbxb` refuses to run while a group directory is empty or the project it is asked for is missing from an empty `projects/`. The `bootstrap` script installs all required dependencies on the build host.
 
 **Customization**
 
-Edit your bbxb.conf and change the behaviour of the framework if you need (optional).
+Edit your `bbxb.conf` to configure the framework (optional). `bbxb` reads `./bbxb.conf` only:
+`configurations/bbxb.conf` is the template, every setting commented with the default the framework
+uses without it, so uncomment what you change (`OPTLEVEL=3`, `LTOENABLE=thin`, `CONTAINER_BUILD=1`...):
 
-    $ vi bbxb.conf
+```bash
+$ vi bbxb.conf
+```
 
 **Run**
 
-Run your build using the predefined projects
+Build using predefined projects:
 
-    $ ./bbxb <project> <platform>
- 
+```bash
+$ ./bbxb build <project> <platform>
+```
+
+Follow the logs of the build from another terminal: every package log of the platform (native,
+cross and target builds) and the global ones of the native toolchain, each line behind the name of
+its log, the logs that appear during the build included (Ctrl-C to stop):
+
+```bash
+$ ./bbxb logtail <project> <platform>
+```
+
+Mount the image of a project (`<platform>/<project>.img`, where the build leaves it), or any disk
+image, to look into it or change it: the partition with `/etc/fstab` is the root, the others go
+where that fstab says (`/boot`), an image without a system has each partition on `p<n>`:
+
+```bash
+$ ./bbxb mount [--ro] <project> <platform> [<directory>]   # default: <project>.mnt next to the image
+$ ./bbxb mount [--ro] <image> [<directory>]                # default: <image>.mnt
+$ ./bbxb mount list                                        # the images mounted, by bbxb mount or by a build
+$ ./bbxb umount <project> <platform> | <image> | <directory>
+```
+
+Run the image of a project in QEMU, with the `QEMU_*` settings of the platform (see Platform
+Configuration), or write the command line as a script for Linux and a batch for Windows:
+
+```bash
+$ ./bbxb emulator run [--rootdev <device>] [--rootfs <fs>] [--rootpart <n>] <project> <platform>
+$ ./bbxb emulator cmdgen [--quiet] [--batchtype linux|win|all] [--savecmd <file>] [--rootdev <device>] [--rootfs <fs>] [--rootpart <n>] <project> <platform>
+```
+
+Start again from scratch: `bbxb purge` empties the data directory (`DATA_PATH`) but the downloads,
+the cache of sccache and the data of the projects (`<project>/data`), the global toolchain included;
+with a project it removes its platforms and sources, with a platform that platform only. It lists
+what goes and asks first (`--yes` does not), and refuses while an image is mounted there or a build
+runs in a container. It runs on the host, the root files of the sysroot through `sudo`:
+
+```bash
+$ ./bbxb purge [--yes] [<project> [<platform>]]
+$ ./bbxb purge --yes && ./bbxb build lfs rpi3-aarch64    # a whole build from scratch
+```
+
+`./bbxb` without arguments, or `./bbxb help`, prints every command.
+
 **Output**
- 
-Get your package here: `.bbxb/<project>/<platform>/<project>.tar.xz`
 
-## Create your own project
+Find your package at: `.bbxb/<project>/<platform>/<project>.tar.xz`
 
-### Define your project
+## Deployment Options
 
-#### Directives
+### Docker
 
-**mount_tag:**  
-Download and mount system image.   
-`mount_tag <tag_name> --url "<image_url>" --imgfile "<image_filename>" --mountlist "<partition_list>" [--resize <resize_options>]`
-+ `tag_name:` tag name of the image. If "distos", it will be used as sysroot for build packages. If "binaries", it will be used as destination for built packages.
-+ `image_url:` URL where to download the image
-+ `image_filename:` image file name to extract from archive
-+ `partition_list:` how the build system should interpret the partitions of the images with following format "partno:mountpoint [partno:mountpoint] ..."
-+ `resize_options:` resize the last partition using the following format "partno:size"
+The same command line builds on the host and in a container:
 
-**unmount_tag:**  
-Unmount image mounted with "tag_name". Always remember to unmount images before closing the project.   
-`unmount_tag <tag_name>`   
-+ `tag_name:` tag name of the image
+```bash
+$ ./bbxb --container build <project> <platform>
+```
 
-**prepare_sysroot:**  
-Relink (soft links) all the libraries with relative paths on DISTOS path.   
-`prepare_sysroot`  
+`bbxb` builds the image of the checkout (named after its branch) when docker does not have it or
+when the `Dockerfile` has changed since, then runs the build inside it. The image carries the host
+dependencies only: the checkout and the data directory are mounted at the paths they have on the
+host, so a recipe edit is one run away, the log files the console names are the ones of the host,
+and the data directory keeps its owner (the build runs inside as the user who started `bbxb`, with
+`sudo` for the steps that need root, as on the host). The environment overrides travel with it
+(`DATA_PATH=... TOOLCHAIN=llvm ./bbxb --container ...`), and `bbxb.conf` and `projects/*.conf` come
+with the checkout (a `PRJ_PATH` outside it is not mounted). `CONTAINER_BUILD=1` in `bbxb.conf` makes it the default, `--no-container` turns
+it off again for one run.
 
-**run_on_root_dir:**  
-Execute a command like the system is running. A specified command will be executed in a chroot-ed environment inside the tag image.   
-`run_on_root_dir <tag_name> <as_user> "<command>" `
-+ `tag_name:` tag name of the image
-+ `as_user:` target user that is running the command
-+ `command:` command to run
+The images and the containers of bbxb are managed with `bbxb container`, on the host:
 
-**setup_full_toolchain:**  
-Set up toolchain (gcc, llvm, rust, python, make, autotools, cmake, meson, ninja). If no DISTOS is present it will bootstrap a SYSROOT using lfs packages (kernel, glibc and libxcrypt).   
-`setup_full_toolchain [--with-gnu-install] [--with-main-gcc] [--with-llvm  [--with-llvm-install]] [--with-python]`
-+ `--with-gnu-install:` install gcc libraries (libgcc, libstdc++...) in the binary folder
-+ `--with-main-gcc:` links GCC target libraries in <PREFIX><LIBDIR><LIBSUFFIX> from <PREFIX>/lib/gcc/<HARCH>/<GCC_VER>
-+ `--with-llvm:` build also llvm toolchain (Clang + LLVM)
-+ `--with-llvm-install:` install clang and rt libraries in the binary folders
-+ `--with-python:` build pyhton and install it in the binary folders
+```bash
+$ ./bbxb container build                       # rebuild the image of the checkout, export its build cache
+$ ./bbxb container list                        # the images of bbxb, the one of the checkout marked with *
+$ ./bbxb container ps                          # the builds running in a container
+$ ./bbxb container stop <project> <platform>   # interrupt a build as Ctrl-C does: the images are unmounted
+$ ./bbxb container rm [<image>]                # remove an image (default: the one of the checkout)
+$ ./bbxb container purge [--yes]               # remove every image of bbxb and the build cache
+$ ./bbxb container push                        # push the image to CONTAINER_REGISTRY
+```
 
-**build**  
-build the package.   
-`[optional_env_vars] build [--keep_builddir] [--no_save_status] [--no_gcc_check] <package_name>`   
+A build runs in the container `bbxb-<project>-<platform>`: a second build of the same project and
+platform is refused while the first one runs. `rm` and `purge` touch only the images of bbxb
+(`bbcrossbuild-*`) and refuse while a build uses them; `purge` asks before removing, `--yes` does
+not. `push` needs `CONTAINER_REGISTRY` in `bbxb.conf` (e.g. `ghcr.io/<user>`) and a `docker login
+<registry>` done once: bbxb never reads a password.
 
-Options:   
-+ `--keep_builddir:` Specify to not delete the build directory after build
-+ `--no_save_status:` Don't save the build status. The package will be built even if it has been built in a previous build
-+ `--no_gcc_check:` Don't check if there's a gcc toolchain available (useful during bootstrap)
+The user who runs `bbxb` has to be in the `docker` group; the host keeps docker and the binfmt
+handlers of `qemu-user-static` (registered by the package the bootstrap scripts install, see
+`ls /proc/sys/fs/binfmt_misc/`), which the container shares with it.
 
-### Define your package
+```bash
+# Rebuild the image and export the build cache to /var/cache/bbcrossbuild-docker (BBXB_CACHE_DIR),
+# which survives the "docker system prune" that closes the run and which every later build imports
+$ ./bbxb container build
+```
 
-#### Package definition
+### AWS
+
+You can set up and run builds on an EC2 instance:
+
+```bash
+# Create and configure an EC2 instance
+$ utilities/aws_create_infrastructure run
+
+# Check status
+$ utilities/aws_create_infrastructure show
+
+# Terminate the instance
+$ utilities/aws_create_infrastructure terminate
+
+# Clean up resources
+$ utilities/aws_create_infrastructure destroy
+```
+
+## Creating Custom Projects
+
+Projects are defined in `.prj` files that specify build steps and package dependencies. To create a new project:
+
+1. Create a new file in the `projects/` directory with a `.prj` extension (the `bbcrossbuild-projects`
+   submodule, committed there), or in a directory of your own named by `PRJ_PATH` (absolute, or
+   relative to the checkout: `PRJ_PATH=~/my-projects ./bbxb build <project> <platform>`)
+2. Configure build options and specify packages to build
+
+Settings that belong to the machine rather than to the project (a toolchain, a WiFi passphrase) go
+into `<project>.conf` next to the `.prj`, a user file that the `.gitignore` of the projects
+repository keeps out of it: `bbxb` sources it right after `setenv`, before the project file, so it
+overrides `bbxb.conf`, the platform and the `setenv` defaults, and the parameters `bbxb` prints are
+the ones of the build. `projects/lfs.conf.template` is the template of the one `projects/lfs.prj`
+expects.
+
+### Project Directives
+
+BBCrossBuild provides various functions for use in project files. These are organized into separate function files:
+
+#### Core Functions (core.functions)
+
+- **param2value**: Process command line parameters
+  ```
+  OPTS="option1 option2" OPTS_WITH_VALUE="option3 option4" param2value "${@}"
+  ```
+  - `OPTS`: Space-separated list of boolean options (without values)
+  - `OPTS_WITH_VALUE`: Space-separated list of options that require values
+  - `"${@}"`: Pass all command-line arguments
+
+- **param_list**: Print the positional parameters of the last `param2value` call, one per line
+  ```
+  mapfile -t UNITS < <(param_list [<first index>])
+  ```
+  - `<first index>`: Index to start from (default 1); the list ends at the first index `param2value` did not set
+
+- **download_uncompress**: Download and extract archives
+  ```
+  download_uncompress <URL> <destination> [files_to_extract]
+  ```
+  - `<URL>`: URL to download from
+  - `<destination>`: Directory where to extract files
+  - `[files_to_extract]`: Optional list of specific files to extract
+  - Environment variables:
+    - `STRIPCOMPONENTS=<n>`: Strip n leading components from paths
+    - `ARCHIVEDIRS=<dirs>`: Specify directories to extract
+    - `NODELETEDESTDIR=1`: Don't delete destination directory before extracting
+
+- **test_version**: Compare version strings 
+  ```
+  test_version <version1> <operator> <version2>
+  ```
+  - `<version1>`: First version to compare
+  - `<operator>`: Comparison operator (-gt, -ge, -lt, -le, -eq, -ne)
+  - `<version2>`: Second version to compare
+
+- **pause**: Pause execution until user presses a key
+  ```
+  pause
+  ```
+
+- **pathadd**: Add path to environment variable
+  ```
+  pathadd <PATH|LD_LIBRARY_PATH> <path-name>
+  ```
+  - `<PATH|LD_LIBRARY_PATH>`: Environment variable to modify
+  - `<path-name>`: Path to add
+
+- **pathremove**: Remove path from environment variable
+  ```
+  pathremove <PATH|LD_LIBRARY_PATH> <path-name>
+  ```
+  - `<PATH|LD_LIBRARY_PATH>`: Environment variable to modify
+  - `<path-name>`: Path to remove
+
+- **log_buffer**: Log messages to a buffer
+  ```
+  log_buffer [log_type] [log_file]
+  ```
+  - `[log_type]`: Type of log entry (cmd, info, log, status, error)
+  - `[log_file]`: File to log to (default: /dev/stdout)
+
+- **run_cmd**: Run commands with logging
+  ```
+  run_cmd [-S|-s] "command string"
+  ```
+  - `-S`: Run with sudo/bash
+  - `-s`: Run with sudo
+  - `"command string"`: Command to execute
+  - Returns the status of the command once its whole output is in the log; `MAX_RETRIES=<n>` repeats a failing command
+
+- **log_run**: Run a command or a function with stdout and stderr logged through `log_buffer`
+  ```
+  log_run <log_file> <command> [<argument>...]
+  ```
+  - `<log_file>`: File to log to (empty: the current stdout)
+  - Waits for the log writers (`LOG_WAIT_TIMEOUT` seconds at most, default 10) and returns the status of the command. The command runs in a `||` list: a function passed here has to return its own status
+
+- **trow_error**: Throw an error with message
+  ```
+  trow_error <error_code> <error_message>
+  ```
+  - `<error_code>`: Numeric error code
+  - `<error_message>`: Error message text
+
+- **on_error**, **on_interrupt**: The ERR and SIGINT traps of `bbxb`
+  ```
+  trap 'on_error ${?}' ERR
+  trap 'on_interrupt' SIGINT
+  ```
+  - A failure inside nested builds is reported once, by the innermost shell: message, package, call stack, log file and its last `ERROR_LOG_LINES` (default 20) error lines, preceded by half as many output lines (meson and cmake explain a failure on stdout). The parent shells pass the status on, the main shell unmounts the images and prints `Build stopped [status <n>]`
+
+#### Build Functions (build.functions)
+
+- **build**: Build a package with given options
+  ```
+  build [--force] [--keep_builddir] [--clean_builddir] [--no_save_status] [--no_gcc_check] [--temporary] [--toolchain <toolchain>] [--with_extra_modules <modules>] <package_name>
+  ```
+  - `--force`: Force rebuild even if already built
+  - `--keep_builddir`: Keep build directory after build
+  - `--clean_builddir`: With `PKG_KEEPBUILDDIR=1`, remove the kept build directory and prepare the sources again before the build
+  - `--no_save_status`: Don't save build status
+  - `--no_gcc_check`: Skip GCC toolchain check
+  - `--temporary`: Create temporary status file
+  - `--toolchain <toolchain>`: Specify toolchain (gnu, llvm)
+  - `--with_extra_modules <modules>`: Add kernel modules
+  - `<package_name>`: Name of package to build (can include target: package:target)
+
+- **cargo_target**: Print the Rust target of the platform, `<HM>-unknown-<HOS>-<HLIBC>`, or of the build machine with `build`: the `--target` of cargo (`CARGO_TARGET`) and the standard library of `lfs/rust:native-std`
+  ```
+  cargo_target [build]
+  ```
+
+- **package_version**: Print the version a build of a recipe gets, `PKG_VER` of its `package.env` and selected variants: the default of the recipe or the variable of the project that overrides it (`GCC_VER` for `lfs/gcc`). The versions are in the recipes, not in `setenv`; a recipe that needs the version of another package calls it in its `package.env`
+  ```
+  package_version <group>/<name>[:<target>]
+  ```
+  - The dependencies (`PKG_DEPS`) are walked for a package already built too: one whose recipe changed since its build is rebuilt, and the console shows it as `Package <name>, required by <package>`. The status is the checksum of the recipe alone, so the packages built on top of a rebuilt dependency are not rebuilt: that is `--force`. A package found by its probe (`PKG_CHECK`) leaves its dependencies alone, since the host may provide what the probe looks for. A package is checked once per `bbxb` run (the list of the checked ones is `/tmp/bbxb_checked.<pid>`), whatever the number of packages that depend on it
+
+- **setbuildenv**: Set up build environment
+  ```
+  setbuildenv [--target <env>]
+  ```
+  - `--target <env>`: Target environment (native, cross, target)
+
+- **settcenv**: Set up toolchain environment
+  ```
+  settcenv [--target <env>]
+  ```
+  - `--target <env>`: Target environment (native, cross, target)
+  - A target build gets the source path maps of `host_path_maps`: `-ffile-prefix-map` in the C, C++ and preprocessor flags, `--remap-path-scope=object` and `--remap-path-prefix` in `RUSTFLAGS`
+  - The programs of a target build (`CC`, `CXX`, `AR`..., the compiler wrapper) go by name, found through the `PATH` of `environment.source`
+  - A target build with LTO that makes static libraries (`PKG_OVERRIDESTATIC`, `BUILD_LIBSTATIC`) compiles with `-ffat-lto-objects`: `build` keeps only the machine code of its objects (`strip_lto_objects`)
+  - When the compiler of a target build has the sysroot in a configuration of its own (`CC_HOST_PATH_CONFIG=1`, computed by `setbuildenv`), the build leaves out of `CFLAGS`, `CPPFLAGS` and `LDFLAGS` what the compiler finds by itself: `--sysroot`, `-Wl,--sysroot`, the source path maps, the `-Wl,-rpath-link` of the multiarch directory and the `-L` of the gcc library directories. For gnu that is a cross gcc with `BIN_PATH` as its default sysroot and the specs file of `setup_gcc_specs`; for llvm the `<triple>-clang` and `<triple>-clang++` of `setup_clang_config`, which also take the target from their name (no `--target`). The command lines, which configure scripts and build systems copy into binaries (`openssl version -a`, vim `:version`, `lsof -v`, icu, `sudo -V`), name no host path; `BINDGEN_EXTRA_CLANG_ARGS` keeps `--sysroot` (libclang reads neither file). With such a compiler `configmake` passes a bare `--with-sysroot` to gcc builds (libtool asks gcc) and none to clang builds, whose generated `libtool` scripts get the sysroot after configure (`lt_sysroot`, which the relink at install time needs), and `cmakebuild` keeps `CMAKE_SYSROOT` (the find commands, the exported targets of the sysroot) but empties the `--sysroot` option CMake would add (`CMAKE_USER_MAKE_RULES_OVERRIDE`)
+  - A program of the target that a build runs (a generator, the introspection dumper, a `try_run` check) goes through `${TOOLCHAIN_PATH}/bin/<HARCH>-run <program> [<arguments>]`, written by `setup_full_toolchain` (`setup_target_runner`, content from `target_runner_script`): the `exe_wrapper` of the meson cross file, the `--use-binary-wrapper` of `g-ir-scanner.cross`, the `CMAKE_CROSSCOMPILING_EMULATOR` of `cmakebuild`, which also passes `CMAKE_SYSTEM_NAME` and `CMAKE_SYSTEM_PROCESSOR` to a target build so that CMake treats it as a cross build on a host of the same machine too. For another machine it runs `qemu-<HM>-static` with the sysroot (`QEMU_LD_PREFIX`) and `QEMU_CPU=max`; for the machine of the build host (generic-x64) the dynamic loader of the sysroot, without the cache of the host, with `LD_LIBRARY_PATH` (each directory inside the sysroot when it is there) and the library directories of the sysroot
+
+- **create_environment_source**: Create environment source file
+  ```
+  create_environment_source [--target <env>]
+  ```
+  - `--target <env>`: Target environment (native, cross, target)
+
+- **strip_host_paths**: Rewrite, in the post-build script of a target build, the installed files that record how the package was built (`*-config` scripts, `Makefile.inc`, `Config.pm`, the sysconfigdata of Python...) into what the image has
+  ```
+  strip_host_paths [--cmake] <file>...
+  ```
+  - The compiler wrapper goes, by path or by name; `--sysroot` and `-Wl,--sysroot` of the sysroot, `-Wl,-rpath-link` into it, the `-I`/`-L` of its system directories and every `-I`/`-L` into a toolchain go; the source path maps (`-f*-prefix-map`, `--remap-path-prefix`, `--remap-path-scope`) go; a program of a toolchain keeps its name only; the sysroot in front of any other path goes
+  - `--cmake`: the sysroot becomes `${CMAKE_SYSROOT}` instead (cmake config and export files), set by a cross build and empty in the image
+  - The source and build trees of the package are left to the recipe; nothing happens in native and cross builds. Available to the recipe scripts through `recipe.source`
+
+- **split_install**: Keep, in the post-build script of a target that installs part of a build, only its files (or remove the ones of the other targets) from the staging directory
+  ```
+  split_install --keep|--keep-dev|--drop <patterns>...
+  ```
+  - The patterns are paths of the image, `find -path` patterns (a `*` also matches a `/`), split on blanks: a recipe variable goes quoted (`split_install --keep "${KRB5_LIB_FILES}"`) and nothing is expanded on the build host
+  - `--keep` removes every file or link no pattern matches, `--drop` every one a pattern matches; `--keep-dev` keeps what another build compiles and links with (the libraries, also in the subdirectories of the library directory, the include files, the pc files, the aclocal macros, the cmake package files, the `*-config` scripts) and the files of the patterns: the install of a `:bootstrap` target, which breaks a dependency cycle and goes into the image as well; the directories that leaves empty go, the ones the install left empty (a state directory) and `postinst_scripts/` stay
+  - The targets of one recipe share the lists in `package.env` (`lfs/bind9`, `lfs/openldap`, `lfs/krb5`: `:lib`, `:client`, `:server`). Nothing happens in native and cross builds. Available to the recipe scripts through `recipe.source`
+
+- **host_path_maps**: Print the `OLD=NEW` source path maps of a target build, one per line; `settcenv` passes them to the C compilers and to rustc, the gcc setup to the target libraries (`CFLAGS_FOR_TARGET`), so `__FILE__` in assert and log messages, the debug information and the panic locations of Rust name no path of the build host
+  ```
+  host_path_maps
+  ```
+  - `DATA_PATH` (sources, build trees, toolchains, cargo registry) becomes `/usr/src/bbxb`, then `BIN_PATH` and `SYSROOT` become the path in the image; gcc and rustc apply the last matching map, clang the longest
+
+- **gcc_host_path_specs**: Print the specs `setup_gcc_specs` appends to the builtin specs of the cross gcc
+  ```
+  gcc_host_path_specs [<libgcc_s dir>]
+  ```
+  - `*cc1`: the maps of `host_path_maps` as `-ffile-prefix-map` (the spec also reaches C++, Fortran, the preprocessor and LTO); `*asm`: the same maps as `--debug-prefix-map`; `*link`: `-rpath-link %R<multiarch directory>` and `-L<libgcc_s dir>` when given
+  - A map given on the command line comes after the spec ones and wins
+
+- **clang_host_path_config**: Print the configuration file `setup_clang_config` puts next to the clang of the platform toolchain
+  ```
+  clang_host_path_config [<library dir>...]
+  ```
+  - One option per line: `--sysroot=${SYSROOT}`, the maps of `host_path_maps` as `-ffile-prefix-map`, `-Wl,-rpath-link` of the multiarch directory of the sysroot, then `-L<library dir>` for each argument
+  - clang reports no option of a configuration file as unused, so all of them apply to compiling, preprocessing and linking; a map given on the command line wins when it is longer
+
+- **find_host_paths**: Print the files under a directory that name the data directory or the framework checkout (regular files by content, symbolic links by target), relative to it and sorted
+  ```
+  find_host_paths <dir>
+  ```
+  - `build` runs it on the staging directory of every target build and logs `WARNING: host paths in <n> files of <package>:` followed by the list: after a build, `grep "host paths in" <platform>/logs/*.log` names the packages that still leak host paths into the image, and each log lists their files
+  - The objects and static libraries (`*.o`, `*.a`) with gcc LTO bytecode (`.gnu.lto_` sections) are listed too: their compressed streams always name a host path, which no search of the content finds
+
+- **unresolved_needed**: Print the libraries the ELF files of the machine of the platform under a directory need (NEEDED) that neither the directory nor the sysroot has, as `<file>: <library>` lines in byte order
+  ```
+  unresolved_needed <dir> <sysroot>
+  ```
+  - A library is looked for where the loader of the image looks: the RUNPATH or RPATH of the file (`$ORIGIN` is its directory), the directory of the file, the directories of `etc/ld.so.conf.d` and `/lib`, `/usr/lib`, `/lib<HARCH_LIB>`, `TARGET_LIBDIR` with the multiarch suffix; static libraries, objects, kernel modules and the ELF files of other machines (firmware) are not read
+  - `build` runs it on the staging directory of every target build and stops on any line: a library the build took from the build host has another name in the sysroot (`libxml2.so.2` of the host, `libxml2.so.16` of the sysroot), and a host of the machine of the target links it without complaint
+
+- **lto_object_files**: Print the objects and static libraries under a directory that hold LTO bytecode, as `<kind> <path>` lines in byte order
+  ```
+  lto_object_files <dir>
+  ```
+  - `fat`: machine code and bytecode (gcc `.gnu.lto_*` sections, clang `.llvm.lto`); `slim`: bytecode only (gcc `__gnu_lto_slim`, a clang bitcode file, which `${HARCH}-readelf` does not read as ELF)
+  - The slim marker of gcc is a symbol, confirmed in the symbol table readelf prints: a file that names it, or names a section of LTO, in its own data is not one (the sources of a compiler do, `libLLVMipo.a`)
+  - `readelf_prints` reads the output of readelf instead of piping it: readelf fails on a bitcode file, which is the answer itself, and a build runs with `pipefail`
+  - `target_tool <name>` gives the program of the target by path when the platform toolchain holds it: the `PATH` of a build with llvm names the llvm programs, and `<HARCH>-readelf` is not always on it
+
+- **strip_lto_objects**: Keep only the machine code of the LTO objects of the staging directory of a target build
+  ```
+  strip_lto_objects <dir>
+  ```
+  - The LTO bytecode names the build host whatever the source path maps: gcc streams the working directory unmapped for a source file named by a relative path and the name of one named by an absolute path ([GCC PR 108534](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=108534), open for gcc 16), clang the name of an absolute source file (`source_filename`)
+  - When the build makes no static libraries (`PKG_OVERRIDESTATIC`, `BUILD_LIBSTATIC`) a `lib<name>.a` with LTO bytecode next to its `lib<name>.so` is removed, as a `--disable-static` the build system ignores would have done
+  - The fat objects lose the bytecode (`${HARCH}-objcopy --wildcard -R '.gnu.lto_*' -R '.gnu.debuglto_*' -R .llvm.lto`, then `${HARCH}-ranlib` on archives): ordinary objects any compiler links
+  - `build` runs it before `find_host_paths` and stops on the slim objects left (`lto_object_files`): a recipe removes them in `postbuild.sh` or builds them as fat objects with `PKG_OVERRIDESTATIC=1` (the stub libraries of lfs/Tcl)
+  - The bytecode part can go once the compilers map those paths
+
+#### Project Functions (project.functions)
+
+- **clean_project**: Clean up project directories
+  ```
+  clean_project
+  ```
+
+- **root_project**: Change ownership of project files to root
+  ```
+  root_project
+  ```
+
+- **remove_devfiles**: Remove development files from binaries
+  ```
+  remove_devfiles [no-exitstatus]
+  ```
+  - `no-exitstatus`: Optional flag to suppress exit status output
+
+- **resume_devfiles**: Restore development files to binaries
+  ```
+  resume_devfiles [no-exitstatus]
+  ```
+  - `no-exitstatus`: Optional flag to suppress exit status output
+
+- **create_sfx_package**: Create a self-extracting package
+  ```
+  create_sfx_package <package_directory>
+  ```
+  - `<package_directory>`: Directory containing package files
+  - The installer `<package_directory>.sfx` extracts into `/` without the development files and `/etc` (`--with-dev`, `--with-conf`, `--dest <dir>`, `--test`, `-v`, `-d`, `-h`). On `/` it runs the `postinst_scripts/` of the package in numeric order from a temporary directory, as `run_postinstall_scripts` does in an image, and exits 1 when one of them fails; with `--dest` they are extracted into `<dir>/postinst_scripts` for `run_postinstall_scripts`; `--no-postinst` skips them.
+
+- **add_system_config_variable**: Add a variable to system configuration
+  ```
+  add_system_config_variable <variable_name> <value>
+  ```
+  - `<variable_name>`: Name of the variable
+  - `<value>`: Value to assign to the variable
+
+#### Images Functions (images.functions)
+
+- **create_image**: Create a new disk image
+  ```
+  create_image <tag_name> [--rootfstype <fs_type>] [--size <size>] [--layout <layout_file>] [--bootsize <MiB>] [--boottype <type>] [--bootdir <dir>]
+  ```
+  - `<tag_name>`: Name for the image
+  - `--rootfstype <fs_type>`: Filesystem type (ext4, btrfs, etc.)
+  - `--size <size>`: Size of the image (e.g., 2G, 4G; default 2G), `binary_size` computes it from the sysroot
+  - `--layout <layout_file>`: Partition layout file
+  - `--bootsize <MiB>`: Size of the FAT boot partition of the default layout (default 256), from 4 MiB; the root partition takes the rest
+  - `--boottype <type>`: MBR type of the FAT boot partition (`c`, default; `ef` for an EFI system partition)
+  - `--bootdir <dir>`: Mount point of the boot partition in the fstab of the image (`/boot`, default; `/boot/firmware` on the Raspberry Pi)
+
+- **binary_size**: Size of a disk image that holds the sysroot, for `create_image --size`
+  ```
+  binary_size [--path <directory>] [--free <percent>] [--bootsize <MiB>] [--round pow2|<MiB>]
+  ```
+  - `--path <directory>`: What the image holds (default the sysroot, `BIN_PATH`)
+  - `--free <percent>`: Room added to the space the files take (default 30)
+  - `--bootsize <MiB>`: The boot partition, as `--bootsize` of `create_image` (default 256): it is added with the 4 MiB before it
+  - `--round pow2|<MiB>`: Rounding: a power of two (the default when `QEMU_STORAGE=sd-card`, the only sizes the SD card of QEMU takes) or a multiple of `<MiB>` (default 1024)
+  - Prints `<n>G`, or `<n>M` when the size is not a whole number of GiB
+
+- **mount_tag**: Download and mount system image
+  ```
+  mount_tag <tag_name> [--url <image_url>] [--imgfile <image_filename>] --mountlist "<partition_list>" [--resize <resize_options>]
+  ```
+  - `<tag_name>`: Tag name of the image
+  - `--url <image_url>`: URL where to download the image
+  - `--imgfile <image_filename>`: Image file name to extract from archive
+  - `--mountlist "<partition_list>"`: Partitions to mount (format: "partno:mountpoint [partno:mountpoint]")
+  - `--resize <resize_options>`: Resize partition (format: "partno:size")
+
+- **unmount_tag**: Unmount image
+  ```
+  unmount_tag [--all] [--finalize] [--kill] <tag_name>
+  ```
+  - `<tag_name>`: Tag name of the image to unmount
+  - `--all`: Unmount all mounted images
+  - `--finalize`: Create .dd file for direct writing to SD/media
+  - `--kill`: Force kill processes using the mount point
+
+- **mount_from**: Mount from downloaded image
+  ```
+  mount_from --url <URL> --imgfile <Image2Mount> --tag <MountPointName> --resize <partnumber:size> --mountlist "<partnumber1:/> [partnumber2:mountpoint2]"
+  ```
+  - `--url <URL>`: URL to download image from
+  - `--imgfile <Image2Mount>`: Image filename in archive
+  - `--tag <MountPointName>`: Mount point name
+  - `--resize <partnumber:size>`: Resize partition
+  - `--mountlist "<partition_list>"`: Partitions to mount
+
+- **prepare_sysroot**: Relink libraries with relative paths
+  ```
+  prepare_sysroot
+  ```
+
+- **run_on_root_dir**: Execute commands in chroot environment
+  ```
+  run_on_root_dir <tag_name> <as_user> "<command>" [--allocate_pty]
+  ```
+  - `<tag_name>`: Tag name of the image
+  - `<as_user>`: User to run the command as
+  - `"<command>"`: Command to execute
+  - `--allocate_pty`: Allocate a pseudo-terminal
+
+- **inject_into_mount_tag**: Copy content into mounted image
+  ```
+  inject_into_mount_tag <mount_tag> <object> <directory> [<owner>] [--remove_devfiles]
+  ```
+  - `<mount_tag>`: Tag name of the mounted image
+  - `<object>`: Object to inject (binaries or specific file)
+  - `<directory>`: Directory under mount point
+  - `[<owner>]`: Owner for the files (default: "root:root"), given by rsync while it copies: the modes of the sysroot (setuid, setgid, sticky) reach the image as they are
+  - `--remove_devfiles`: Remove development files
+
+- **run_postinstall_scripts**: Run post-installation scripts
+  ```
+  run_postinstall_scripts <mount_tag>
+  ```
+  - `<mount_tag>`: Tag name of the mounted image
+
+#### Toolchain Functions (toolchain.functions)
+
+- **setup_full_toolchain**: Set up the complete toolchain
+  ```
+  setup_full_toolchain [--with-main-gcc] [--with-llvm] [--with-python]
+  ```
+  - `--with-main-gcc`: Link GCC target libraries
+  - `--with-llvm`: Build LLVM toolchain
+  - `--with-python`: Build Python
+
+- **setup_rust**: Set up Rust compiler
+  ```
+  setup_rust
+  ```
+  - Builds `lfs/rust:native` (rustc, cargo and rustfmt of the build machine from the standalone installers of static.rust-lang.org, no rustup, in `${GLOBAL_TOOLCHAIN_PATH}/rust-<version>`, put in the `PATH`) and `lfs/rust:native-std` (the standard library of the platform, `cargo_target`); `CARGO_HOME` is the global toolchain (the crates cargo downloads). The version is `RUST_VER` of the recipe; the Rust of the image is `lfs/rust`
+
+- **setup_gcc**: Set up GNU C compiler
+  ```
+  setup_gcc [--main_gcc] [--targets <targets>]
+  ```
+  - Every step is a target of `lfs/gcc`: `cross-stage1` (the bootstrap C compiler) and `glibc:stage1` as dependencies of `cross` (the C and C++ compilers, whose build tree stays for the libraries), `cross-libgcc` (the libgcc glibc is built with), `lfs/glibc` and `lfs/libxcrypt`, then one target per library (`libgcc`, `libatomic`, `libstdc++-v3`, `libgomp`, `libssp`, `libvtv`, `libsanitizer`), installed into the platform toolchain and, but libsanitizer, packaged and installed into the sysroot. With the image of a distribution as sysroot, its C library and no `cross-libgcc`
+  - `--main_gcc`: Link the gcc target libraries into the library directory of the sysroot (`WITH_MAIN_GCC=1` of the library targets); without it they stay in the directory of the version, named by `/etc/ld.so.conf.d/gcc-<major>.conf`
+  - `--targets <targets>`: Target libraries to build (all, comma-separated list)
+  - Ends the host compiler setup with `setup_gcc_specs`
+
+- **setup_gcc_specs**: Write the specs file of the cross gcc (`lib/gcc/<triple>/<version>/specs`, which replaces the builtin specs) when it is missing or differs: the output of `-dumpspecs` followed by `gcc_host_path_specs`. Only for a gcc whose sysroot is `BIN_PATH`; the target libraries of gcc are built with the specs of the gcc build tree
+  ```
+  setup_gcc_specs
+  ```
+
+- **setup_llvm**: Set up the LLVM of the global toolchain and the clang of the platform toolchain
+  ```
+  setup_llvm
+  ```
+  - Builds `lfs/llvm:native` (`${GLOBAL_TOOLCHAIN_PATH}/llvm-<version>`, put in the `PATH`), links its `LLVMgold.so` into the `bfd-plugins` of the platform toolchain, runs `setup_clang_config`, then builds `lfs/llvm:compiler-rt`, the profile runtime of compiler-rt for the target with that clang (`libclang_rt.profile.a`, which clang links for `--coverage` and `-fprofile-*` whatever the runtime library is) in the resource directory of the global clang, under the normalized triple: nothing else of compiler-rt is built, the runtime library of every build is libgcc
+
+- **setup_clang_config**: Give the platform toolchain the clang of the target builds, when the sysroot is `BIN_PATH`: in `${TOOLCHAIN_PATH}/llvm-<version>/bin` a copy of the clang of the global llvm as `<HARCH>-clang` and `<HARCH>-clang++` (the name sets the target and the driver), `lib` as a link to the lib directory of the global llvm (shared libraries, resource directory), and the configuration file `<triple>.cfg` with the output of `clang_host_path_config` for the library directories of the cross gcc. The directory goes into the `PATH`; everything is rewritten when missing or different (`clang_config_installed`)
+  ```
+  setup_clang_config
+  ```
+  - clang reads a configuration file only from the directory of its real executable, and only under the normalized triple (`aarch64-unknown-linux-gnu.cfg`, `clang_config_file`): a link to the global clang would read the one of the global llvm, shared by every platform and project. The copy is small, the code of clang is in `libLLVM` and `libclang-cpp`
+
+- **setup_python**: Set up the Python of the global toolchain and the cross environment of the platform
+  ```
+  setup_python [detect|--native-only]
+  ```
+  - Builds `lfs/python3:native` (`${GLOBAL_TOOLCHAIN_PATH}/python-<version>`, put in the `PATH`), then the python of the image (`lfs/python3`) and the cross environment `${TOOLCHAIN_PATH}/venv-<HARCH>` (`lfs/python3:crossenv`), and sets `PYTHONBIN_VER`, `PYTHON_FOR_BUILD`, `PYTHON_FOR_TARGET`
+  - `detect`: the version of the python of the image of a distribution (`DISTOS_PATH`), which is used instead of `lfs/python3`
+  - `--native-only`: only the Python of the global toolchain
+
+- **prepare_sysroot**: Relink libraries with relative paths
+  ```
+  prepare_sysroot
+  ```
+
+- **create_sysroot**: Create sysroot from archive
+  ```
+  create_sysroot <archive_url_or_file>
+  ```
+  - `<archive_url_or_file>`: URL or local file containing root filesystem
+
+#### Data Functions (data.functions)
+
+- **create_key_sscertificate**: Create a self-signed certificate
+  ```
+  create_key_sscertificate
+  ```
+
+#### OS Configuration Functions (osconfig.functions)
+
+What the project decides about the system it builds. A file is written into the target sysroot (`${BIN_PATH}`), where the image, the chroot and the packages built from it find it; a command that only the target can run (`systemctl`, `useradd`, `chpasswd`) is written into the post install script of the project, `${BIN_PATH}/postinst_scripts/99_osconfig`, which `run_postinstall_scripts` runs as root inside the image after the ones of the packages. The functions that write a command take `--tag <mount tag>` and then act at once on a mounted image: that is what a project needs after `inject_into_mount_tag`, when the post install scripts have already run. The command then runs on the build host, as root, against the root of the image (`systemctl --root`, `useradd --prefix`, `chpasswd --prefix`), with the programs of the global toolchain (`lfs/systemd:native`, `lfs/shadow:native`, built on first use), not in its chroot under emulation; without the tag the post install script runs the programs the system has installed. `generate_ssh_keys` runs the `ssh-keygen` of `lfs/openssh:native`. The post install script and the preset file of the project are rewritten at every run of `bbxb`.
+
+- **set_hostname**: Host name of the system, in `/etc/hostname` and in the `127.0.1.1` line of `/etc/hosts`
+  ```
+  set_hostname <hostname> [--domain <domain>]
+  ```
+  - `<hostname>`: Name of the system
+  - `--domain <domain>`: Domain that completes it into a fully qualified name
+
+- **set_locale**: Locale of every session, and the keymap of the text consoles
+  ```
+  set_locale <locale> [--keymap <keymap>]
+  ```
+  - `<locale>`: Value of `LANG` in `/etc/locale.conf`
+  - `--keymap <keymap>`: Value of `KEYMAP` in `/etc/vconsole.conf`
+
+- **configure_network**: The `.network` file of systemd-networkd for one link
+  ```
+  configure_network <device> [--address <address/prefix>] [--gateway <address>] [--dns <address>[,<address>]] [--domains <list>] [--nodomains] [--file <name>]
+  ```
+  - `<device>`: Name of the link (the `Name=` of the `[Match]` section)
+  - `--address <address/prefix>`: Static address; without it the link asks DHCP for everything
+  - `--gateway <address>`: Default route of a static link
+  - `--dns <address>[,<address>]`: One `DNS=` line per address
+  - `--domains <list>`: `Domains=` of the link
+  - `--nodomains`: Do not take the search domain from the DHCP lease (`UseDomains=yes` is the default)
+  - `--file <name>`: Name of the file, when it must differ from the device
+
+- **set_network_wait_online**: What `systemd-networkd-wait-online` waits for, as a drop-in of its unit
+  ```
+  set_network_wait_online [--any|--all] [--interface <device>] [--timeout <seconds>]
+  ```
+  - `--any`: One link online is enough (default)
+  - `--all`: Every link networkd manages
+  - `--interface <device>`: That link and no other
+  - `--timeout <seconds>`: How long it waits
+
+- **configure_wireless**: The wpa_supplicant configuration of one wireless link, and its `wpa_supplicant@<device>` unit
+  ```
+  <passphrase source> | configure_wireless <device> --ssid <name> [--country <code>] [--passphrase-file <file>] [--noservice] [--networkmanager]
+  ```
+  - `<device>`: Wireless interface
+  - `--ssid <name>`: Name of the network
+  - `--country <code>`: ISO 3166 code of the regulatory domain
+  - `--passphrase-file <file>`: File holding the passphrase; without it the passphrase is read from stdin
+  - `--noservice`: Do not enable the unit
+  - `--networkmanager`: Write the NetworkManager keyfile profile `/etc/NetworkManager/system-connections/<device>.nmconnection` (mode 600, DHCP) instead, and no unit; `--country` goes to `/etc/modprobe.d/cfg80211.conf`
+  - The image gets only the key `wpa_passphrase` derives: the passphrase never reaches a command line or a log
+
+- **configure_networkmanager**: The configuration of NetworkManager decided by the project, `/etc/NetworkManager/conf.d/<name>.conf`
+  ```
+  configure_networkmanager [--dns <mode>] [--file <name>]
+  ```
+  - `--dns <mode>`: `dns=` of `[main]` (default `systemd-resolved`)
+  - `--file <name>`: Name of the file (default `00-<project>`)
+  - A wired link needs no profile: NetworkManager gives every Ethernet device a DHCP connection of its own
+
+- **configure_ssh**: Enable the ssh daemon and install the host keys of the project
+  ```
+  configure_ssh [--unit <unit>] [--nokeys]
+  ```
+  - `--unit <unit>`: Name of the unit (default `sshd`)
+  - `--nokeys`: Leave the host keys alone
+
+- **generate_ssh_keys**: Generate the ssh host keys in the data directory of the project, once, and install them
+  ```
+  generate_ssh_keys [--install <destination>]
+  ```
+  - `--install <destination>`: Directory under the platform to copy them into (`binaries` for the sysroot)
+
+- **add_unit_dropin**: A drop-in of a systemd unit, read from stdin
+  ```
+  add_unit_dropin <unit> <name>
+  ```
+  - `<unit>`: Unit to extend (a name without a type is a `.service`)
+  - `<name>`: Name of the file, `/etc/systemd/system/<unit>.d/<name>.conf`
+
+- **enable_service**, **disable_service**, **mask_service**, **preset_service**: The state of units in the target
+  ```
+  enable_service [--tag <mount tag>] <unit>...
+  ```
+  - `<unit>...`: Units to enable, disable, mask or preset
+  - `--tag <mount tag>`: Run it now on that mounted image, from the host, instead of at install time
+
+- **set_service_preset**: Rules of the preset file of the project, `/etc/systemd/system-preset/00-<project>.preset`
+  ```
+  set_service_preset <enable|disable|mask> <unit pattern>...
+  ```
+  - `<unit pattern>...`: Units or globs the rule answers for, what `systemctl preset` and `preset-all` apply
+
+- **set_default_target**: What the system boots into
+  ```
+  set_default_target [--tag <mount tag>] <target>
+  ```
+  - `<target>`: Default target (`multi-user.target`, `graphical.target`...)
+
+- **add_user**: Create a user inside the target
+  ```
+  add_user [--tag <mount tag>] <name> [--groups <group>[,<group>]] [--password <password>] [--shell <shell>] [--uid <uid>] [--home <directory>] [--nohome] [--system]
+  ```
+  - `<name>`: User name
+  - `--groups <list>`: Supplementary groups
+  - `--password <password>`: First password of the account
+  - `--system`, `--uid`, `--shell`, `--home`, `--nohome`: The matching options of `useradd`
+
+- **set_password**: Password of a user of the target
+  ```
+  set_password [--tag <mount tag>] <user> <password>
+  ```
+
+- **add_postinstall_command**: Any other command that has to run as root inside the target
+  ```
+  add_postinstall_command "<command>"...
+  ```
+
+- **run_on_target**: Any command as root in the chroot of a mounted image, or in the post install script when the tag is empty
+  ```
+  run_on_target <mount tag> "<command>"...
+  ```
+
+- **host_on_target**: The way the functions above act on a mounted image: the commands run on the build host as root, with the programs the native recipe installs into the global toolchain (built on first use); `target_root <mount tag>` names the root of the image in them
+  ```
+  host_on_target <mount tag> <native recipe> "<command>"...
+  ```
+
+#### Emulator Functions (emulator.functions)
+
+QEMU for the image of the project, `<platform>/<project>.img` (where `unmount_tag --finalize` leaves it), from the `QEMU_*` settings of the platform: the kernel and the initramfs of the sysroot, named after `KERNEL_VER` and `KERNEL_RELEASE` of `status/system_config`, the device tree `QEMU_DTB` with the overlays of `QEMU_DTBO` merged by the `fdtoverlay` of `lfs/dtc:native` into `<platform>/<project>.dtb`. `bbxb emulator cmdgen|run <project> <platform>` calls them with the environment of the project.
+
+- **emulator_cmdgen**: Print the QEMU command line of the image and write it as scripts
+  ```
+  emulator_cmdgen [--quiet] [--batchtype linux|win|all] [--savecmd <file>] [--rootdev <device>] [--rootfs <fs>] [--rootpart <n>]
+  ```
+  - `--batchtype`: `linux` (default) a `sh` script in `<file>`, `win` a batch in `<file>.bat`, `all` both, by default `<platform>/<project>.qemu` and `<project>.qemu.bat` next to the image (`lfs.prj` writes them). The Windows batch names the files of WSL as `\\wsl$\<WSL_DISTRO_NAME>\...`, runs QEMU on a qcow2 snapshot of the image in `%SystemRoot%\TEMP` (created on first use, named after the modification time of the image, so a rebuilt image gets a new one) and asks whether to delete it when QEMU exits. `QEMU_EXE_PREFIX` is the directory of `qemu-system-*.exe` and `qemu-img.exe`, `%ProgramFiles%\qemu\` when it is unset and QEMU is installed there
+  - `--rootdev <device>`: The root of the kernel command line; default: the `PARTUUID` of partition `--rootpart` (2) of the image, read from its partition table with `sfdisk` (MBR: `<label-id>-<nn>`, GPT: the uuid of the partition), and when the image has none that partition of the disk `QEMU_STORAGE` gives the guest
+  - `--rootfs <fs>`: Its file system; default: the one `blkid` finds on that partition of the image, ext4 when it finds none
+
+- **emulator_run**: Run the image in the QEMU of the build host, with sudo (`QEMU_EXE_PREFIX` of the environment is the directory of `qemu-system-*`, otherwise `PATH`)
+  ```
+  emulator_run [--rootdev <device>] [--rootfs <fs>] [--rootpart <n>]
+  ```
+
+Here's a simple example of how to create a project file:
+
+```bash
+#!/bin/bash
+# Example project file: example.prj
+
+## Configuration options
+BUILD_LIBSHARED=1
+BUILD_LIBSTATIC=0
+LTOENABLE=thin
+KERNEL_LTOENABLE=thin
+
+## Set up the toolchain
+setup_full_toolchain --with-llvm --with-python
+
+## Create a base filesystem
+build lfs/create-base-fs_1.0
+
+## Create and mount an image
+create_image myimage --rootfstype ext4 --size 2G
+mount_tag myimage --mountlist "2:/ 1:/boot"
+
+## Build some packages
+build package1
+build package2
+
+## Configure the system being built
+set_hostname myboard
+configure_network eth0
+enable_service service1
+
+## Run post-installation commands
+run_on_root_dir myimage root "echo 'custom config' > /etc/config"
+
+## Unmount the image
+unmount_tag myimage
+
+## Write the QEMU scripts of the image unmount_tag --finalize left (<project>.qemu, <project>.qemu.bat)
+emulator_cmdgen --quiet --batchtype all
+
+## Create self-extracting package
+create_sfx_package ${PACKAGES_PATH}/my_package
+```
+
+### Package Layout
+
+Every package is a directory under `packages/<group>/<name>/` (the directory name is the package name used by `build <group>/<name>`). Each group is a git submodule with its own repository (`packages-<group>`, `.gitmodules` lists them with URLs relative to this one), so a recipe change is committed in the group repository and the new commit is then recorded here; `packages/template/` belongs to this repository.
+
+```
+packages/<group>/<name>/
+  package.env       # the recipe: variable assignments, sourced by build with PKG_TARGET, TOOLCHAIN, HARCH, INSTALL_* set
+  prebuild.sh       # optional, runs in the source directory before autoreconf/configure (set -x, no -e)
+  build.sh          # optional, the whole build when BUILD_PROCESS=custom (bash -ex, build directory)
+  postbuild.sh      # optional, runs in the build directory after the build process (set -ex)
+  postinstall.sh    # optional, copied into the sysroot and sourced as root inside the target image
+  files/            # optional, static files referenced as ${PKG_RECIPEPATH}/files/<name>
+  patches/          # optional, *.patch and *.diff files applied in name order (00-first.patch, 10-second.patch)
+  variants/         # optional, what differs for a target, toolchain, arch, platform, version or option
+    target/<native|cross|sysroot|default|name>/   # same layout as the recipe: package.env, scripts, files/, patches/
+    toolchain/<gnu|llvm>/  arch/<HM>/  platform/<PLATFORM_NAME>/  version/<PKG_VER>/
+    option/<name>/  option/<name>=<value>/         # selected by WITH_<NAME>
+```
+
+`package.env` describes the default build; nothing in it needs a `case`. After sourcing it, `build` applies on top of it the `package.env` of every variant directory whose selector matches, in a fixed order: the target class (`native`, `cross` or `sysroot` for anything else), the target name (`default` when no `:<target>` was given), the toolchain the package is really built with (`PKG_TOOLCHAIN` and `build --toolchain` included), the platform `HM`, the platform name, `PKG_VER`, the options (`option/<name>` when `WITH_<NAME>` is set and not 0/no/false/off, `option/<name>=<value>` when `<value>` is one of the words of `WITH_<NAME>`), then the nested conjunctions by depth (`target/default/arch/aarch64`, axes nest in that order). A directory name may list several values separated by commas (`target/native,cross`). A variant replaces (`=`) or extends (`+=`) what `package.env` set, so a target that must not have a default dependency restates `PKG_DEPS`; a value the default computes and a variant overrides is best kept in a recipe variable used through single quotes (`OPENSSL_TARGET` in `packages/lfs/openssl`), expanded when `runconfig.sh` runs. A script in a selected variant replaces the recipe one, the files of its `patches/` directory are applied together with the recipe ones in name order (a file with the same name replaces the recipe one, an empty file cancels it), and `PKG_VARIANTS` lists the selected directories inside the scripts. `utilities/pkg_show <group>/<name>[:<target>]` prints what a build would get.
+
+The scripts are plain Bash: build writes a snapshot of every ALL_CAPS variable visible to `package.env` into `recipe.source` and every generated runner sources it before `environment.source`, so `INSTALL_PREFIX`, `PKG_PKGPATH`, `HARCH` or `SYSROOT` are simply `${VAR}` inside them (no escaping). `postinstall.sh` only sees the image-safe values (`INSTALL_*`, `PKG_NAME`, `PKG_VER`, `PKG_FULLNAME`, `PKG_TARGET`, `HARCH`, `HM`, `HOS`, `HLIBC`, `HARCH_LIB`, `PLATFORM_NAME`, `TOOLCHAIN`) and is ignored for native and cross builds. The build status is the checksum of the whole directory: editing any file rebuilds the package. `packages/template/` is an annotated starting point and `utilities/pkg_lint` checks the directories.
+
+### Package Parameters
+
+The following parameters can be assigned in `package.env`:
+
+#### Package Definition
 
 **PKG_URL: (*)**  
-URL where download the sources.   
+URL where to download the sources.   
 `PKG_URL="http://packages.org/package"`
 
 **GIT_URL:**  
-URL where clone the sources via git.  
+URL where to clone the sources via git.  
 `GIT_URL="http://git.repo/user/repo"`
 
 **GIT_COMMIT:**  
@@ -96,211 +798,344 @@ Tag or commit hash.
 `GIT_COMMIT="tags/v.1.5"`
 
 **PKG_DEPS:**  
-define dependencies to build and install before building this.  
+Define dependencies to build and install before building this. They are checked on every run, also when this package is already built: a dependency whose recipe changed is rebuilt.  
 `PKG_DEPS="dir1/package1 dir1/package2 dir2/package3"`
 
-#### Prebuild process
+**PKG_SRCDIR:**  
+Specify source directory name.  
+`PKG_SRCDIR="package-1.0"`
+
+**PKG_KEEPBUILDDIR:**  
+Keep the build directory and the prepared sources of the package between builds (1, default 0). The sources are extracted and patched only once: a marker in the sources directory (`.bbxb-sources`) carries their key (archives or repository, Debian patches, patch files of the recipe and of the selected variants), so other patches (another target or platform) or a new extraction (another target of the same sources) prepare them again, while a change of a script or of a variable does not. The build directory is not removed before or after the build, so an incremental build system (cmake/ninja) rebuilds only what changed: flavors of the same package that share the directory (a `PKG_BLDPATH` without the target suffix, as `lfs/llvm`) compile only once. A stamp in the build directory (`.bbxb-environment`) carries the key of its configuration (the exported environment, the `CONF_*` and install variables, the build process, size and time of the compilers): CMake and meson read the compilers and flags of the environment only when they configure an empty directory, so a kept directory with another key, or without the stamp, is emptied; a flavor that configures nothing (`BUILD_PROCESS` `none` or `downloadonly`, as `lfs/llvm:libclc`) leaves the directory and its stamp alone. The kept directories of the other versions of the package are removed. `build --clean_builddir` starts from scratch. A `prebuild.sh` that runs on the kept sources has to be idempotent.  
+`PKG_KEEPBUILDDIR=0|1`
+
+**PKG_SUFFIX:**  
+Add a suffix to the package name.  
+`PKG_SUFFIX="-custom"`
+
+**PKG_VER:**  
+Specify package version.  
+`PKG_VER="1.0"`
+
+**PKG_CHECK:**  
+Command to check if package is already installed. It replaces the status file, and native builds need one. Try it on the installed program: a probe that never succeeds (a version option printing something else, a version with a `+build` suffix) rebuilds the package every time a package depending on it is checked.  
+`PKG_CHECK="command arg1 arg2"`
+
+#### Prebuild Process
 
 **PATCHDEB:**  
 URL where to download Debian package that contains patches.  
 `PATCHDEB="http://packages.org/debian_patches"`
 
-**PATCHES:**  
-Patch filename under bbxb/patches directory or URL.  
-`PATCHES="[patch1.patch] [url]"`
+**patches/:**  
+Not a variable: every `*.patch` and `*.diff` file of the `patches/` directory of the package and of the selected variants is applied with `patch -f -p1`, in the byte order of the file names (`00-first.patch`, `10-second.patch`). `utilities/pkg_show` prints the resolved list.
 
-**PKG_PREBUILD:**  
-Runs commands on source files before autoreconf and configuration on source directory
-`PKG_PREBUILD="command1; command2 && command3"`  
-#### Build process
-
-**PKG_COPYSRC:**  
-Copy sources in the build directory (often needed for buggy build processes). Not enabled by default on configmake (0), enabled on other build processes (1).  
-`PKG_COPYSRC=1`
-
-**BUILD_PROCESS: (*)**  
-Define what build process to use:  
-`downloadonly`: it only downloads the package and creates the source directory  
-`configmake`: it downloads, creates source directory and run a standard configure/make build process  
-`cmakebuild`: it downloads, creates source directory and run a standard cmake/make build process  
-`mesonninja`: it downloads, creates source directory and run a standard meson/ninja build process  
-`cargobuild`: it downloads, creates source directory and run a standard Rust cargo build process  
-`simplemake`: it downloads, creates source directory, copy to build directory and run a standard make process  
-`pythonbuild`: it downloads, creates source directory and run a standard python module build  
-`kernelbuild`: it downloads, creates source directory and run a standard kernel build process using configuration provided in platform directory configuration file. 
-`custombuild`: it downloads, creates source directory and run a custim build process using PKG_BUILDSCRIPT variable to build package.
-`BUILD_PROCESS=downloadonly|configmake|mesonninja|simplemake|pythonbuild|kernelbuild`
+**prebuild.sh:**  
+Script sourced in the source directory before autoreconf and configuration (replaces the former `PKG_PREBUILD` string).
 
 **PKG_AUTOCONF:**  
-*[configmake]*  
-By default "autoreconf -fi" is not run before configure process (0). 1 to enable it.  
-`AUTOCONF=0|1`
+By default "autoreconf -fi" is not run before configure process (0). 1 to enable it: `smart_autoreconf` runs the autotools of the global toolchain (`lfs/libtool:native`, `lfs/autoconf:native`, `lfs/automake:native`, `lfs/gettext:native`, built by `setup_full_toolchain`), with the aclocal directories of the sysroot and of the platform toolchain. There is one version of each, the one of its recipe (`PKG_AUTOMAKE`, `PKG_LIBTOOL` and `PKG_GETTEXT` are gone).  
+`PKG_AUTOCONF=0|1`
 
 **AUTOCONF_PATH:**  
-*[configmake]*  
-Specify source subdirectory where to run autoreconf:  
+Specify source subdirectory where to run autoreconf.  
 `AUTOCONF_PATH={subdir1/subdir2[,subdir3[,subdir1/subdir2/subdir4]],autoscan}`
-+ `autoscan:` Scan for configure.ac inside source directory
+
+**AUTOCONF_THREADS:**  
+Number of threads to use for autoreconf.  
+`AUTOCONF_THREADS=4`
+
+#### Build Process
+
+**BUILD_PROCESS: (*)**  
+Define what build process to use.  
+`BUILD_PROCESS=downloadonly|configmake|cmakebuild|mesonninja|cargobuild|simplemake|pythonbuild|kernelbuild|kernelmodbuild|custom|perlmodule|none`
+
+Available build processes:
+- `downloadonly`: Only downloads the package and creates the source directory
+- `configmake`: Downloads, creates source directory and runs a standard configure/make build process
+- `cmakebuild`: Downloads, creates source directory and runs a standard cmake/make build process
+- `mesonninja`: Downloads, creates source directory and runs a standard meson/ninja build process
+- `cargobuild`: Downloads, creates source directory and runs a standard Rust cargo build process
+- `simplemake`: Downloads, creates source directory, copies to build directory and runs a standard make process
+- `pythonbuild`: Downloads, creates source directory and runs a standard python module build. A target build installs with `--no-compile` and byte-compiles afterwards (`compileall -s <staging dir> -p /`), so the `pyc` name the path of the image and not the staging directory of the host
+- `kernelbuild`: Downloads, creates source directory and runs a standard kernel build process using platform configuration
+- `kernelmodbuild`: Builds an out of tree kernel module against the kernel built by `kernelbuild`
+- `custom`: Downloads, creates source directory and runs the `build.sh` script of the package
+- `perlmodule`: Downloads and builds a Perl module with a `Makefile.PL` (ExtUtils::MakeMaker), run by the native perl of `lfs/perl5:native` (the recipe depends on it). The native target installs the module into that perl (configuration tools such as `perl/File-ShareDir-Install:native`); a target build makes it for the perl of the image (`lfs/perl5`, same `PERL_VER`): the `Config.pm`, `Config_heavy.pl`, `Config_git.pl` and `Errno.pm` of the image come first in `PERL5LIB`, with their `archlibexp` and `privlibexp` in the sysroot (the headers of `CORE`), the compiler, the archiver and their flags are the ones of the build, and the module goes into `site_perl` with `pure_install` (`PKG_MAKETARGETS` default `all,pure_install`, `CONF_FLAGS` more `Makefile.PL` arguments), without `.packlist`. See `perl/XML-Parser`
+- `none`: Runs only the package scripts, no download and no build
+
+**PKG_COPYSRC:**  
+Copy sources in the build directory (often needed for buggy build processes).  
+`PKG_COPYSRC=1`
+
+**PKG_TARGET:**  
+Read only: the `:<target>` given to `build` (empty by default). `native` and `cross` select the toolchain prefixes, any other name (`bootstrap`, `stage1`, a flavour) is a separate package of the sysroot. Per target values live in `variants/target/<name>/`.  
+`PKG_TARGET="native|cross|<name>"`
+
+**PKG_TARGET_ENV:**  
+Read only: the install class of the target.  
+`PKG_TARGET_ENV="native|cross|target"`
+
+**PKG_VARIANTS:**  
+Read only: the variant directories selected for this build, relative to `variants/`, in application order.  
+`PKG_VARIANTS="target/bootstrap toolchain/llvm"`
+
+**PKG_DISABLECROSSPYTHON:**  
+Disable cross-python environment.  
+`PKG_DISABLECROSSPYTHON=1`
+
+**PKG_DISABLECCWRAPPER:**  
+Disable compiler wrapper.  
+`PKG_DISABLECCWRAPPER=1`
 
 **CONF_CMD:**  
-*[configmake]*  
-Override configure command. "configure" by default  
+Override configure command. "configure" by default.  
 `CONF_CMD="configure_new"`
 
+**CONF_ENV:**  
+Environment variables for configure command.  
+`CONF_ENV="VAR1=value1 VAR2=value2"`
+
 **CONF_FLAGS:**  
-*[configmake,cmakebuild,mesonninja,cargobuild,kernelbuild]*  
-Specify configure, cmake or meson parameters. For kernel enable, disable or build as module, following the scripts/config syntax (-e enable, -d disable, -m module)
+Specify configure, cmake or meson parameters. For kernel: -e enable, -d disable, -m module.  
 `CONF_FLAGS="--disable-feature or -DENABLE_FEATURE"`
 
 **CONF_PATH:**  
-*[configmake,simplemake,cmake,custom]*  
-Specify source subdirectory where to run the build  
+Specify source subdirectory where to run the build.  
 `CONF_PATH=subdir1/subdir2`
 
+**CONF_VARS:**  
+Variables to pass to configure.  
+`CONF_VARS="VAR1=value1 VAR2=value2"`
+
 **STD_CONF_FLAGS:**  
-*[configmake]*  
-Use standard conf flags used by bbxb (i.e. --prefix, --exec-prefix etc), default to 1, set to 0 to override it
+Use standard conf flags used by bbxb (--prefix, --exec-prefix, etc). Default: 1.  
 `STD_CONF_FLAGS=1`
 
+**CMAKE_GENERATOR:**  
+Specify CMake generator.  
+`CMAKE_GENERATOR="Ninja"`
+
 **PKG_TOOLCHAIN:**  
-*[common]*  
-Define what toolchain to use when building this package
+Define what toolchain to use when building this package.  
 `PKG_TOOLCHAIN=gnu|llvm`
 
+**PKG_LLVMPOLLYFEATURES:**  
+Specify LLVM Polly features.  
+`PKG_LLVMPOLLYFEATURES="polly vectorizer parallel"`
+
 **PKG_CFLAGS/PKG_CXXFLAGS/PKG_LDFLAGS/PKG_FCFLAGS:**  
-*[common]*  
-Permits to specify additional c/c++/ld compiler flags to build with:  
-`PKG_CFLAGS="-f<parameter> -W<parameter>"`
-`PKG_CXXFLAGS="-f<parameter> -W<parameter>"`
-`PKG_LDFLAGS="-l<library>"`
+Specify additional compiler flags.  
+`PKG_CFLAGS="-f<parameter> -W<parameter>"`  
+`PKG_CXXFLAGS="-f<parameter> -W<parameter>"`  
+`PKG_LDFLAGS="-l<library>"`  
+`PKG_FCFLAGS="-f<parameter>"`
 
 **PKG_FAULTYCFLAGS:**  
-*[common]*  
-Move compiler FLAGS from xFLAGS to CC/CXX/CPP in order to override some faulty build scripts (i.e.: old versions of libtool). Disabled (0) by default.
+Move compiler FLAGS from xFLAGS to CC/CXX/CPP for faulty build scripts.  
 `PKG_FAULTYCFLAGS=0`
 
 **PKG_CONFIG_SYSROOT_DIR:**  
-*[common]*  
-Override PKG_CONFIG_SYSROOT_DIR variable that is by default set on DISTOS path  
+Override PKG_CONFIG_SYSROOT_DIR variable. Target builds use the FDO sysroot rules of pkgconf: the sysroot is prepended to the `-I` and `-L` flags only, a variable read with `--variable` is the path in the image. The include and library directories of the sysroot are the system directories of the cross pkgconf, left out of `--cflags` and `--libs`. A pc file whose variable names a program or a file that later builds read writes it as `${pc_sysrootdir}${bindir}/...`.  
 `PKG_CONFIG_SYSROOT_DIR=${BIN_PATH}`
 
+**PKG_LD_LIBRARY_PATH:**  
+Additional LD_LIBRARY_PATH.  
+`PKG_LD_LIBRARY_PATH="/path/to/lib"`
+
+**PKG_MAKEENV:**  
+Environment variables for make.  
+`PKG_MAKEENV="VAR1=value1 VAR2=value2"`
+
+**PKG_MAKETARGETS:**  
+Make targets to build.  
+`PKG_MAKETARGETS="all,install"`
+
 **PKG_MAKEVARS:**  
-*[configmake,simplemake,cmakebuild,mesonninja,kernelbuild]*  
-Define make parameters or variabes to pass to Makefile  
+Make parameters or variables.  
 `PKG_MAKEVARS="-j1 VARIABLE1=value VARIABLE2=value2"`
 
-**CARGO_BIN/CARGO_LIB/CARGO_BINLIST/CARGO_STRIP:**  
-*[cargobuild]*  
-Override installation path for binary  
+**CARGO_BIN:**  
+Override installation path for binary.  
 `CARGO_BIN=${INSTALL_EXECPREFIX}/sbin`
 
-Override installation path for library  
+**CARGO_LIB:**  
+Override installation path for library.  
 `CARGO_LIB=${INSTALL_EXECPREFIX}/lib64`
 
-Define the list of binaries to build and install  
+**CARGO_BINLIST:**  
+Define binaries to build and install.  
 `CARGO_BINLIST="binary1 binary2 binary3"`
 
-Define the list of libraries to build and install  
+**CARGO_LIBLIST:**  
+Define libraries to build and install.  
 `CARGO_LIBLIST="lib1 lib2 lib3"`
 
-Specify if the binaries should be stripped out of unneeded symbols  
+**CARGO_STRIP:**  
+Specify if binaries should be stripped.  
 `CARGO_STRIP=1`
 
-**PKG_BUILDSCRIPT:**  
-*[custombuild]*  
-Run commands in the variable to build package  
-`PKG_BUILDSCRIPT="command1; command2 && command3"`
+**build.sh:**  
+Script sourced in the build directory to build and install the package when `BUILD_PROCESS=custom` (replaces the former `PKG_BUILDSCRIPT` string).
+
+**PKG_KERNEL_MOD:**  
+Kernel module name.  
+`PKG_KERNEL_MOD="mymodule"`
+
+**PKG_KERNEL_MODPATH:**  
+Kernel module path.  
+`PKG_KERNEL_MODPATH="extra"`
 
 **PKG_KERNEL_INITRAMFS:**  
-*[kernelbuild]*  
-Create initramfs for the kernel (default: 0)  
-`PKG_KERNEL_INITRAMFS="{0|1}`
+A variable of the kernel recipes, not of `kernelbuild` (default: 0): their `postbuild.sh` (lfs/kernel, raspberrypi/rpi-kernel) runs the dracut of the sysroot on the host through `dracut-sysroot` of `lfs/dracut:native` and puts `boot/initramfs-<release>.img` into the package, with the file systems of `PKG_KERNEL_INITRAMFS_DRIVERS`: the recipe depends on `lfs/dracut` and `lfs/dracut:native`, whose dependencies give the programs dracut runs on the host (`systemctl` and libsystemd of `lfs/systemd:native`, `depmod` of `lfs/kmod:native`, `cpio`, `zstd`).  
+`PKG_KERNEL_INITRAMFS=1`
 
 **PKG_KERNEL_INITRAMFS_DRIVERS:**  
-*[kernelbuild]*  
-Specify what drivers to install during initramfs initialization without .ko  
-`PKG_KERNEL_INITRAMFS_DRIVERS="[driver1 [driver2 [drivern]]]`
+Drivers to install during initramfs initialization.  
+`PKG_KERNEL_INITRAMFS_DRIVERS="driver1 driver2 driver3"`
+
+**PKG_KERNEL_BUILD_MODULES:**  
+Additional kernel modules to build.  
+`PKG_KERNEL_BUILD_MODULES="mod1,mod2,mod3"`
 
 **PKG_OVERRIDELTO:**  
-*[common]*  
-Override LTOENABLE environment variable that can be specified at bbxb.conf, project or package level by default (1) if not specified anywhere  
-`PKG_OVERRIDELTO=0`
+Override LTOENABLE environment variable.  
+`PKG_OVERRIDELTO=0|1|2|thin|fat`
 
 **PKG_OVERRIDELD:**  
-*[common]*  
-Override default linker environment variable that can be specified at bbxb.conf, project or package level by default (gold) if not specified anywhere  
-`PKG_OVERRIDELLD={gold,ld,lld}`
+Override default linker.  
+`PKG_OVERRIDELD=bfd|lld|mold` (`gold` only with a binutils older than 2.45; the default is `GCC_DEFAULT_LD`, `bfd`, with gnu and `LLVM_DEFAULT_LD`, `lld`, with llvm; `mold` is `lfs/mold:cross`, which `setup_full_toolchain` builds when one of the two defaults is `mold`, and the native and cross builds link with `bfd` or `lld` until it is there)
 
 **PKG_OVERRIDESHARED:**  
-*[common]*  
-Override BUILD_SHARED environment variable that can be specified at bbxb.conf, project or package level by default (1) if not specified anywhere  
-`PKG_OVERRIDESHARED=1`
+Override BUILD_SHARED environment variable.  
+`PKG_OVERRIDESHARED=0|1`
 
 **PKG_OVERRIDESTATIC:**  
-*[common]*  
-Override BUILD_STATIC environment variable that can be specified at bbxb.conf, project or package level by default (0) if not specified anywhere  
-`PKG_OVERRIDESTATIC=0`
+Override BUILD_STATIC environment variable.  
+`PKG_OVERRIDESTATIC=0|1`  
+With LTO, `1` also builds the objects of the package as fat LTO objects, whose bytecode `build` removes (`strip_lto_objects`): the setting of a package that installs static libraries in any case, such as stub libraries.
+
+**PKG_RUSTFLAGS:**  
+Rust compiler flags.  
+`PKG_RUSTFLAGS="-C target-feature=+crt-static"`
 
 #### Post build process
 
-**PKG_POSTBUILD:**  
-Runs commands on source files after build and installation on build directory:  
-`PKG_POSTBUILD="command1; command2 && command3"`
+**postbuild.sh:**  
+Script sourced in the build directory after the build process, with the package staged in `${PKG_PKGPATH}` (replaces the former `PKG_POSTBUILD` string).
 
-**PKG_POSTINSTALL:**
-Runs commands after package installation or image finalization in a sysrooted environment:  
-`PKG_POSTINSTALL="command1; command2 && command3"`
+**postinstall.sh:**  
+Script copied into the sysroot as `postinst_scripts/<prio>_<name>` and sourced as root inside the target image by `run_postinstall_scripts` (replaces the former `PKG_POSTINSTALL` string). The `.sfx` installer of the package runs it too when it installs on `/`, so it may run again on a live system: keep it idempotent.
 
 **PKG_POSTINSTALL_PRIO:**  
-Define in what postition the postinstall script should be run:  
+Define the priority of postinstall.sh among the post install scripts.  
 `PKG_POSTINSTALL_PRIO=50`
 
-#### Environment variables
-The following environemnt variables can be used to create your package and default values are:
+**VAR_INSTALL_LIBDIR:**  
+Override INSTALL_LIBDIR.  
+`VAR_INSTALL_LIBDIR="/usr/lib64"`
 
-`BIN_PATH`: ${HOME}/.bbxb/< projectname >/< platformname >/binaries (destination of build)  
-`DISTOS_PATH`: ${HOME}/.bbxb/< projectname >/< platformname >/distos (source of distribution libraries)  
-`INSTALL_PREFIX`: /usr  
-`INSTALL_EXECPREFIX`: /usr  
-`INSTALL_INCLUDEDIR`: /usr/include  
-`INSTALL_LIBDIR`: /usr/lib or /usr/lib/(MULTIARCH suffix)  
-`INSTALL_SYSCONFDIR`: /usr/etc  
-`INSTALL_LOCALSTATEDIR`:/var  
+**VAR_INSTALL_LIBSUFFIX:**  
+Override INSTALL_LIBSUFFIX.  
+`VAR_INSTALL_LIBSUFFIX="64"`
 
-**: mandatory information*
+**VAR_INSTALL_INCDIR:**  
+Override INSTALL_INCLUDEDIR.  
+`VAR_INSTALL_INCDIR="/usr/include"`
 
-### Define your platform
+**VAR_INSTALL_CONFDIR:**  
+Override INSTALL_SYSCONFDIR.  
+`VAR_INSTALL_CONFDIR="/etc"`
 
-`HOS=<OS_Name>`: Operating system name  
-`HM=<CPU_Architecture>`: CPU Architecture (arm, aarch64, x86_64, ...)  
-`HLIBC=<C_Library>`: C Library type (gnu, gnueabi, gnueabihf, ...)  
-`HARCH_LIB=[64]`: Set to add 64 to lib directory  
-`HARCH_BITWIDTH={32|64}`: Architecture bit width  
+## Platform Configuration
 
-`HMARCH=<C_Comp_MARCH>`: Compiler architecure definition (-march)  
-`HMCPU=<C_Comp_MCPU>`: Compiler CPU definition (-mtune)  
-`HMFPU=<C_Comp_MFPU>`: Compiler FPU definition (-mfpu only for arm)  
-`HMFLOATABI={hard|soft}`: Compiler Float type (hard or soft)  
-`HMENDIAN={little|big}`: Compiler endianess  
-`HMGCCPARAMS="<Add_C_Comp_Flags>`: Additional C Compiler Flags  
-`HMARCH_RUST="<Add_Rust_Comp_Flags>"`: RUST Flags for architecture (i.e. "+neon,+crypto")  
+Platform files (`.conf`) define architecture settings:
 
-`KERNEL_ARCH=<Arch_Subdir>`: Kernel architecture subdirectory (arm, arm64, x86, ...)  
-`KERNEL_DEFCONFIG=<Kern_Config>`: What configuration file to use under (arch/[Arch_subdir]/config, i.e.: bcmrpi3_defconfig)  
-`KERNEL_EXTRAVERSION=<String>`: String to append to kernel version  
-`KERNEL_IMAGE=<Kern_Image>`: Name of the kernel image filename generated by kernel build process (i.e.: Image.gz, zImage, bzImage)  
-`KERNEL_NAME=<Boot_Kern_Image>`: Name of the kernel image filename to put in /boot directory  
-`KERNEL_DTBS={0|1}`: Specify the need of dtbs files  
+```bash
+HOS=linux            # Operating system name
+HM=aarch64           # CPU Architecture
+HLIBC=gnu            # C Library type
+HARCH_LIB=64         # Set to add 64 to lib directory
+HARCH_BITWIDTH=64    # Architecture bit width
 
-`QEMU_MACHINE=<machine>`: QEMU Machine name for emulator (i.e virt or q35)  
-`QEMU_CPU=<cpu>`: QEMU CPU type for emulator (i.e cortex-a53)  
-`QEMU_SMP=<smp>`: QEMU CPU numbers for emulator (i.e. 2)  
-`QEMU_RAM=<memory>`: QEMU RAM amount in M for emulator (i.e. 2048)  
-`QEMU_STORAGE=<storage_device>`: QEMU device for storage (i.e. virtio-blk-pci)  
-`QEMU_NETWORK=<netowrk_device>`: QEMU device for network (i.e. virtio-net-pci)  
-`QEMU_GRAPHIC=<graphic_device>`: QEMU device for graphic adapter (i.e. virtio-gpu-pci,xres=1600,yres=900)  
-`QEMU_INPUT="<input devices>"`: QEMU devices for inputa (i.e. "virtio-keyboard-pci virtio-mouse-pci")  
-`QEMU_CONSOLE=<tty_device>`: Specify where to output the console as a kernel_append parameter for emulator (i.e. ttyS0)  
-`QEMU_DTB=<DTB_Name>`: Specify what DTB to use (i.e. bcm2710-rpi-3-b.dtb)  
-`QEMU_OTHERDEVICES="<other_devices>"`: QEMU other needed devices (i.e. "virtio-balloon-pci virtio-rng-pci")  
-`QEMU_KERNCONFIG="<kernel_append_params"`: Further kernel_append parameters for emulator (i.e. "net.ifnames=0 video=1600x900-32")  
+HMARCH=armv8-a+crypto # Compiler architecture definition
+HMCPU=cortex-a53     # Compiler CPU definition
+HMENDIAN=little      # Compiler endianness
+
+KERNEL_ARCH=arm64    # Kernel architecture subdirectory
+KERNEL_DEFCONFIG=bcmrpi3_defconfig # Kernel configuration
+KERNEL_IMAGE=Image.gz # Kernel image name
+KERNEL_DTBS=1        # Enable device tree binaries
+
+# QEMU settings for emulation
+QEMU_MACHINE=raspi3b
+QEMU_CPU=cortex-a53
+QEMU_SMP=4
+QEMU_RAM=1024
+QEMU_STORAGE=sd-card
+QEMU_NETWORK=usb-net,mac=b8:27:eb:12:34:56 # Device of -device, with its options: usbnet names it usb0 with a local MAC, eth0 with a global one
+QEMU_CONSOLE=ttyAMA0 # Console of the kernel, the first serial port: -serial ${QEMU_SERIAL} (default tcp::5021,server=on,wait=off)
+QEMU_DTB=firmware/bcm2710-rpi-3-b.dtb
+QEMU_DTBO=disable-bt # Overlays bbxb emulator applies to QEMU_DTB (fdtoverlay of lfs/dtc:native), as dtoverlay= on the board
+```
+
+## Utilities
+
+BBCrossBuild includes several utility scripts to help with development:
+
+- `deptool`: Analyze package dependencies
+  ```
+  utilities/deptool search <directory> <library>   # Search for libraries
+  utilities/deptool show <file>                    # Show dependencies
+  utilities/deptool showall <directory>            # Show all dependencies
+  ```
+
+- `crossgdb`: Debug cross-compiled binaries
+  ```
+  utilities/crossgdb <executable> [args]
+  ```
+
+- `crossldd`: Show shared library dependencies
+  ```
+  utilities/crossldd <executable>
+  ```
+
+- `aws_create_infrastructure`: Manage AWS EC2 instances
+  ```
+  utilities/aws_create_infrastructure [run|terminate|destroy|show]
+  ```
+
+- `lint`: shellcheck of the checkout: the framework as one program (its files joined in the order `bbxb` sources them, after a platform configuration, the messages mapped back to file and line; SC2329 off, the functions are the interface of the project files), the recipe utilities and the bats suite file by file. Extra arguments go to shellcheck; the exit status is 1 when it reports anything
+- `pkg_lint`: Check the package directories (layout, variants tree, patches/ content, syntax, shellcheck, removed variables, BUILD_PROCESS and PKG_DEPS resolution for every target that has a variant, with both toolchains)
+  ```
+  utilities/pkg_lint [<platform>] [packages/<group>/<name> ...]
+  ```
+
+- `pkg_show`: Resolve a package the way `build` does and print the selected variants, the effective scripts and the recipe variables (`-d` dumps them as `declare` lines for diffing)
+  ```
+  utilities/pkg_show [-p <platform>] [-t gnu|llvm] [-d] <group>/<name>[:<target>] ...
+  ```
+
+- `pkg_upstream`: Find the latest upstream version of the recipes (the tags of the GitHub repository or the parent directory of the archive named by `PKG_URL`, release-monitoring.org as a second opinion) and report `current`, `outdated`, `ahead` or `unknown` per recipe. A recipe without `PKG_VER` has the version of its name and `PKG_SUFFIX` (`rpi-firmware_1` with `.20260915`); a GitHub archive of a commit is compared with the head of its branch (`git ls-remote`, no API rate limit: the default branch, or `rpi-7.2.y` for `rpi-kernel_7.2`, whose Makefile gives the kernel version), and a newer branch series than every recipe of the same name is reported. SourceForge archives are compared with the RSS feed of the project, a PyPI sdist (`files.pythonhosted.org/packages/source/`) with the releases of the PyPI JSON API, a cgit snapshot (`<repo>.git/snapshot/`) with the tags of its repository, a Launchpad archive with the `+download` page of the project, a `GIT_URL` with its tags or, checked out at a commit, with the head of its branch; the archive of a branch is reported as `tracking`, a recipe without sources as `local`, a pip package without version as `unpinned`. `-P <project>` surveys what a project builds in build order, dependencies first; `-a` rewrites `PKG_VER` in `package.env` (or `PKG_SUFFIX`, and the commit of `PKG_URL`) when the archive of the new version answers (`<group>/<name>=<version>` forces a version). Versions taken from `setenv` (`GCC_VER`, `KERNEL_VER`...) are reported and rewritten only by `-S` (apply to the `VAR=${VAR:-<version>}` line of the recipe or of `setenv`, kept when the new archive answers; for gcc, binutils, glibc and gdb it names the `update_patches` command the new version needs). Only the recipes with an update are printed, the one being surveyed on a line of the terminal that is cleared afterwards; `-v` prints every recipe and the failed downloads, `-o <file>` writes the tab separated report of every recipe. `-j <jobs>` is the number of recipes surveyed at once (8 by default, one with `-S`, whose `setenv` rewrite every recipe resolved meanwhile would read); the report keeps the order of the recipes.
+  ```
+  utilities/pkg_upstream [-p <platform>] [-P <project>] [-g <group>[,<group>]] [-a] [-S] [-A] [-f] [-v] [-j <jobs>] [-o <report.tsv>] [<group>/<name>[=<version>] ...]
+  ```
+
+- `update_patches`: Regenerate the branch tracking patches of gcc, binutils, glibc or gdb under `packages/lfs/<pkg>/variants/version/<ver>/patches/`
+  ```
+  utilities/update_patches <package> <ver1> [<ver2>...]
+  ```
+
+## Tests and checks
+
+The pure functions of the framework (variant selection and application, patch lists, recipe scripts, the recipe checksum, the install prefixes of the three targets, recipe resolution and the helpers of `core.functions`) have a [bats-core](https://github.com/bats-core/bats-core) suite under `tests/`. It sources the framework through `utilities/pkgtools.functions`, with every build step stubbed out, and works on fixture recipes created in a temporary directory: nothing is downloaded or built and the whole suite runs in seconds. Install `bats` from the distribution (`dnf install bats`, `apt install bats`) and run:
+
+```
+bats tests                 # the whole suite
+bats tests/variants.bats   # one file
+```
+
+`tests/test_helper.bash` provides `load_framework` (platform from `PLATFORM_NAME`, default `generic-x64`), `make_recipe`, `put`, `select_target`, `assert_output_lines` and `assert_equal`; a new test for a pure function is a fixture recipe plus a `run` of the function.
+
+There is no CI for now (the GitHub Actions were removed): run `utilities/lint` (shellcheck of the framework as the one program it is, and of the recipe utilities and the tests), the bats suite, and `pkg_lint` on the package groups by hand before committing. A change to `build.functions` or `core.functions` should keep the three green; `utilities/bbxb_test` remains the build smoke test.

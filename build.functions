@@ -13,38 +13,49 @@ function check_build_functions () {
 
 function setbuildenv () {
 	OPTS="" OPTS_WITH_VALUE="--target" param2value "${@}"
-	local TARGET_ENV=${_param_target:-target}
+	local TARGET_ENV=${_PARAM[target]:-target}
+	CC_HOST_PATH_CONFIG=0
 	case ${TARGET_ENV} in
 		native)
-			unset QEMU_LD_PREFIX COMMON_CPPFLAGS SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH
+			unset QEMU_LD_PREFIX COMMON_CPPFLAGS SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH PLATFORM_LDFLAGS
 			PLATFORM_CFLAGS="-march=native"
 			PLATFORM_RUSTFLAGS="-C target-cpu=native"
-			COMMON_CFLAGS="-I${GLOBAL_TOOLCHAIN_PATH}/include"
+			### -isystem: after the -I of the package, whose own headers a header of the global toolchain
+			### with the same name must not shadow (crypt.h of libxcrypt for the minizip of lfs/Tcl, the
+			### tcl*.h of an installed Tcl), and still before the ones of the build host
+			COMMON_CFLAGS="-isystem ${GLOBAL_TOOLCHAIN_PATH}/include"
 			COMMON_CXXFLAGS="${COMMON_CFLAGS}"
 			COMMON_FCFLAGS="${COMMON_CFLAGS}"
+			# C only: the host compiler builds this package (see HOST_CSTD in setenv)
+			COMMON_CFLAGS+=" ${HOST_CSTD}"
 			COMMON_LDFLAGS="-L${GLOBAL_TOOLCHAIN_PATH}/lib"
-			COMMON_LDFLAGS+=" -Wl,-rpath -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib"
+			### One argument, -Wl,-rpath,<dirs>: the only form meson recognizes as an rpath of LDFLAGS and
+			### keeps at install time (it strips the directories of the libraries it linked otherwise)
+			COMMON_LDFLAGS+=" -Wl,-rpath,${GLOBAL_TOOLCHAIN_PATH}/lib"
 			COMMON_LDFLAGS+=" -Wl,-rpath-link -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib"
 			COMMON_PKG_CONFIG_LIBDIR="${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig"
 			COMMON_PKG_CONFIG_LIBDIR+=":${GLOBAL_TOOLCHAIN_PATH}/share/pkgconfig"
 		;;
 		cross)
-			unset QEMU_LD_PREFIX COMMON_CPPFLAGS SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH
+			unset QEMU_LD_PREFIX COMMON_CPPFLAGS SYSROOT_GCCVER QEMU_LD_LIBRARY_PATH PLATFORM_LDFLAGS
 			PLATFORM_CFLAGS="-march=native"
 			PLATFORM_RUSTFLAGS="-C target-cpu=native"
 			COMMON_CFLAGS="-I${GLOBAL_TOOLCHAIN_PATH}/include"
 			COMMON_CFLAGS+=" -I${TOOLCHAIN_PATH}/include"
 			COMMON_CXXFLAGS="${COMMON_CFLAGS}"
 			COMMON_FCFLAGS="${COMMON_CFLAGS}"
+			# C only: the host compiler builds this package (see HOST_CSTD in setenv)
+			COMMON_CFLAGS+=" ${HOST_CSTD}"
 			COMMON_LDFLAGS="-L${TOOLCHAIN_PATH}/lib"
 			COMMON_LDFLAGS+=" -L${GLOBAL_TOOLCHAIN_PATH}/lib"
-			COMMON_LDFLAGS+=" -Wl,-rpath -Wl,${TOOLCHAIN_PATH}/lib:${GLOBAL_TOOLCHAIN_PATH}/lib"
+			COMMON_LDFLAGS+=" -Wl,-rpath,${TOOLCHAIN_PATH}/lib:${GLOBAL_TOOLCHAIN_PATH}/lib"
 			COMMON_LDFLAGS+=" -Wl,-rpath-link -Wl,${TOOLCHAIN_PATH}/lib"
 			COMMON_LDFLAGS+=" -Wl,-rpath-link -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib"
-			COMMON_PKG_CONFIG_LIBDIR="${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig"
-			COMMON_PKG_CONFIG_LIBDIR+=":${GLOBAL_TOOLCHAIN_PATH}/share/pkgconfig"
-			COMMON_PKG_CONFIG_LIBDIR+=":${TOOLCHAIN_PATH}/lib/pkgconfig"
+			### The libraries of the platform toolchain first (lfs/<name>:cross), then the global ones
+			COMMON_PKG_CONFIG_LIBDIR="${TOOLCHAIN_PATH}/lib/pkgconfig"
 			COMMON_PKG_CONFIG_LIBDIR+=":${TOOLCHAIN_PATH}/share/pkgconfig"
+			COMMON_PKG_CONFIG_LIBDIR+=":${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig"
+			COMMON_PKG_CONFIG_LIBDIR+=":${GLOBAL_TOOLCHAIN_PATH}/share/pkgconfig"
 		;;
 		target)
 			if [ "${HARCH}" != "${BARCH}" ]
@@ -106,6 +117,34 @@ function setbuildenv () {
 				fi
 			else
 				SYSROOT="${BIN_PATH}"
+				### CC_HOST_PATH_CONFIG=1: the compiler of the build has a configuration of its own with this
+				### sysroot, the -rpath-link and -L below and the source path maps: the cross gcc has this
+				### sysroot as its default and the specs file of setup_gcc_specs, the clang of the platform
+				### toolchain (setup_clang_config) takes the target from its name and the rest from its
+				### configuration file. The command lines, which configure scripts and build systems copy
+				### into binaries (openssl, vim, lsof, icu), carry no host path: settcenv leaves those flags out
+				case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
+					gnu)
+						if [ "$( "${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" -print-sysroot 2>/dev/null || true )" == "${SYSROOT}" ] && \
+							gcc_specs_installed
+						then
+							CC_HOST_PATH_CONFIG=1
+						fi
+					;;
+					llvm)
+						if clang_config_installed
+						then
+							CC_HOST_PATH_CONFIG=1
+						fi
+					;;
+				esac
+				### ld.bfd resolves the DT_NEEDED entries of a library only in the -rpath-link dirs and in
+				### <sysroot>/lib and <sysroot>/usr/lib: the multiarch directory needs the hint (gold and
+				### lld also searched the -L dirs, so libX11 -> libxcb resolved without it)
+				if [ "${CC_HOST_PATH_CONFIG}" -eq 0 ]
+				then
+					COMMON_LDFLAGS+=" -Wl,-rpath-link,${BIN_PATH}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}"
+				fi
 				if "${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" -dumpversion >/dev/null 2>&1
 				then
 					SYSROOT_GCCVER=$("${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" -dumpversion 2>/dev/null)
@@ -123,7 +162,7 @@ function setbuildenv () {
 					#fi			
 					case ${PKG_TOOLCHAIN:-${TOOLCHAIN}} in
 						gnu)
-							if [ -n "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ] && [ -d "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ]
+							if [ "${CC_HOST_PATH_CONFIG}" -eq 0 ] && [ -n "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ] && [ -d "${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}" ]
 							then
 								COMMON_LDFLAGS+=" -L${GCC_SPECIFIC_RUN_TIME_LIBS_ISSUE}"
 							fi
@@ -131,7 +170,10 @@ function setbuildenv () {
 						llvm)
 							#COMMON_CFLAGS+=" $(gcc_toolchain_libraries_compilerflags)"
 							#COMMON_CXXFLAGS+=" $(gcc_toolchain_libraries_compilerflags) $(gcc_toolchain_libraries_compilerflags)/c++ $(gcc_toolchain_libraries_compilerflags)/c++/${HARCH}"
-							COMMON_LDFLAGS+=" $(gcc_toolchain_libraries_linkerflags)"
+							if [ "${CC_HOST_PATH_CONFIG}" -eq 0 ]
+							then
+								COMMON_LDFLAGS+=" $(gcc_toolchain_libraries_linkerflags cross)"
+							fi
 						;;
 					esac
 				fi
@@ -158,7 +200,6 @@ function setllvmpollyenv () {
 	local OPTIONS
 	OPTIONS=${*}
 	#local LIBCLANG_RTBUILTINS
-	#LIBCLANG_RTBUILTINS="${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
 	#if [ ! -z "${OPTIONS}" ] && [ -f ${LIBCLANG_RTBUILTINS} ]
 
 	case x${HMARCH} in
@@ -191,7 +232,7 @@ function setllvmpollyenv () {
 			arm)
 				# Need to add static rtbuiltins libraries to arm link to avoid missing _mulodi4 symbol
 				# but this is not supported in kernel building so we can't set polly for kernel build
-				LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${TOOLCHAIN_PATH}/lib/clang/${LLVM_VER}/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
+				LLVM_EXTRAPOLLYFLAGSLIBS="-Wl,${TOOLCHAIN_PATH}/lib/clang/$( package_version lfs/llvm:native )/lib/${HOS}/libclang_rt.builtins-${LLVM_ARCH}.a"
 				LLVM_KERNELPOLLYFLAGS=
 				;;
 			*)
@@ -268,16 +309,30 @@ function settcenv () {
 		TOOLCHAIN_CPPFLAGS_FOR_BUILD \
 		TOOLCHAIN_LDFLAGS_FOR_BUILD \
 		TOOLCHAIN_EXTRA_C_CMD \
-		OPTCOMP_FLAGS \
-		OPTLINK_FLAGS \
+		TOOLCHAIN_BINDGENFLAGS \
 		TOOLCHAIN_CARGO_PROFILE_RELEASE_LTO \
 		TOOLCHAIN_CARGO_TARGET
 
-	local TARGET_ENV
+	local TARGET_ENV CC_SYSROOT_FLAGS CC_TARGET_FLAGS
+
+	### OPTCOMP_FLAGS and OPTLINK_FLAGS are settings (bbxb.conf, the project) that every call builds on:
+	### the first one keeps them as they are, every call starts from there, so the flags of a
+	### previous call (LTO, -O) do not pile up and the settings are not lost
+	OPTCOMP_FLAGS_CONF=${OPTCOMP_FLAGS_CONF-${OPTCOMP_FLAGS}}
+	OPTLINK_FLAGS_CONF=${OPTLINK_FLAGS_CONF-${OPTLINK_FLAGS}}
+	OPTCOMP_FLAGS=${OPTCOMP_FLAGS_CONF}
+	OPTLINK_FLAGS=${OPTLINK_FLAGS_CONF}
 
 	OPTS="" OPTS_WITH_VALUE="--target" param2value "${@}"
-	TARGET_ENV="${_param_target:-target}"
+	TARGET_ENV="${_PARAM[target]:-target}"
 	setbuildenv --target "${TARGET_ENV}"
+	### The sysroot flags of the compiler command lines: none for a compiler that has the sysroot in its
+	### own configuration (CC_HOST_PATH_CONFIG, see setbuildenv)
+	CC_SYSROOT_FLAGS=${SYSROOT_FLAGS}
+	if [ "${CC_HOST_PATH_CONFIG}" -eq 1 ]
+	then
+		CC_SYSROOT_FLAGS=
+	fi
 
 	local TOOLCHAIN="${PKG_TOOLCHAIN:-${TOOLCHAIN}}"
 	echo "Toolchain: ${TOOLCHAIN}"
@@ -314,7 +369,8 @@ function settcenv () {
 			TOOLCHAIN_OBJCOPY_FOR_BUILD=$(which objcopy)
 			TOOLCHAIN_OBJDUMP_FOR_BUILD=$(which objdump)
 			TOOLCHAIN_READELF_FOR_BUILD=$(which readelf)
-			TOOLCHAIN_LINKER_FOR_BUILD=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
+			TOOLCHAIN_LINKER_FOR_BUILD=$( linker_for_build "${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-bfd}}" bfd )
+			echo "Linker for build: ${TOOLCHAIN_LINKER_FOR_BUILD}"
 			TOOLCHAIN_LINKER_EXE_FOR_BUILD=$(which "ld.${TOOLCHAIN_LINKER_FOR_BUILD}")
 			TOOLCHAIN_LINKERFLAGS_FOR_BUILD="-fuse-ld=${TOOLCHAIN_LINKER_FOR_BUILD}"
 
@@ -350,40 +406,42 @@ function settcenv () {
 					TOOLCHAIN_LINKERFLAGS="-fuse-ld=${TOOLCHAIN_LINKER} ${GNU_EXTRALDFLAGS}"
 				;;
 				target)
+					### The programs of a target build go by name, found through the PATH of environment.source:
+					### the build systems that copy CC, AR... into the image copy no toolchain directory
 					if "${HARCH}-gcc" --version > /dev/null 2>&1
 					then
-						TOOLCHAIN_CC=$(which "${HARCH}-gcc")
-						TOOLCHAIN_CPP="$(which "${HARCH}-gcc") -E"
+						TOOLCHAIN_CC="${HARCH}-gcc"
+						TOOLCHAIN_CPP="${HARCH}-gcc -E"
 						if "${HARCH}-g++" --version > /dev/null 2>&1
 						then
-							TOOLCHAIN_CXX=$(which "${HARCH}-g++")
+							TOOLCHAIN_CXX="${HARCH}-g++"
 						fi
 						if "${HARCH}-gfortran" --version > /dev/null 2>&1
 						then
-							TOOLCHAIN_FC=$(which "${HARCH}-gfortran")
-							TOOLCHAIN_F90=$(which "${HARCH}-gfortran")
+							TOOLCHAIN_FC="${HARCH}-gfortran"
+							TOOLCHAIN_F90="${HARCH}-gfortran"
 						fi
-						TOOLCHAIN_AR=$(which "${HARCH}-gcc-ar")
-						TOOLCHAIN_AS=$(which "${HARCH}-as")
-						TOOLCHAIN_NM=$(which "${HARCH}-gcc-nm")
-						TOOLCHAIN_RANLIB=$(which "${HARCH}-gcc-ranlib")
-						TOOLCHAIN_STRIP=$(which "${HARCH}-strip")
-						TOOLCHAIN_OBJCOPY=$(which "${HARCH}-objcopy")
-						TOOLCHAIN_OBJDUMP=$(which "${HARCH}-objdump")
-						TOOLCHAIN_READELF=$(which "${HARCH}-readelf")
-						TOOLCHAIN_LINKER=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-gold}}
-						TOOLCHAIN_LINKER_EXE=$(which "${HARCH}-ld.${TOOLCHAIN_LINKER}")
+						TOOLCHAIN_AR="${HARCH}-gcc-ar"
+						TOOLCHAIN_AS="${HARCH}-as"
+						TOOLCHAIN_NM="${HARCH}-gcc-nm"
+						TOOLCHAIN_RANLIB="${HARCH}-gcc-ranlib"
+						TOOLCHAIN_STRIP="${HARCH}-strip"
+						TOOLCHAIN_OBJCOPY="${HARCH}-objcopy"
+						TOOLCHAIN_OBJDUMP="${HARCH}-objdump"
+						TOOLCHAIN_READELF="${HARCH}-readelf"
+						TOOLCHAIN_LINKER=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-bfd}}
+						TOOLCHAIN_LINKER_EXE="${HARCH}-ld.${TOOLCHAIN_LINKER}"
 					fi
 					if [ "${PKG_FAULTYCFLAGS:-0}" -eq 1 ]
 					then
 						TOOLCHAIN_COMPFLAGS="${GNU_EXTRAGCCFLAGS}"
-						TOOLCHAIN_EXTRA_C_CMD="${SYSROOT_FLAGS}"
-				
+						TOOLCHAIN_EXTRA_C_CMD="${CC_SYSROOT_FLAGS}"
+
 					else
-						TOOLCHAIN_COMPFLAGS="${SYSROOT_FLAGS} ${GNU_EXTRAGCCFLAGS}"
+						TOOLCHAIN_COMPFLAGS="${CC_SYSROOT_FLAGS} ${GNU_EXTRAGCCFLAGS}"
 						TOOLCHAIN_EXTRA_C_CMD=""
 					fi
-					TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LINKER} ${GNU_EXTRALDFLAGS}"
+					TOOLCHAIN_LINKERFLAGS="${CC_SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LINKER} ${GNU_EXTRALDFLAGS}"
 				;;
 			esac
 			;;
@@ -404,15 +462,21 @@ function settcenv () {
 			TOOLCHAIN_OBJCOPY_FOR_BUILD=$(which llvm-objcopy)
 			TOOLCHAIN_OBJDUMP_FOR_BUILD=$(which llvm-objdump)
 			TOOLCHAIN_READELF_FOR_BUILD=$(which llvm-readelf)
-			TOOLCHAIN_LINKER_FOR_BUILD=${PKG_OVERRIDELD:-${GCC_DEFAULT_LD:-lld}}
+			TOOLCHAIN_LINKER_FOR_BUILD=$( linker_for_build "${PKG_OVERRIDELD:-${LLVM_DEFAULT_LD:-lld}}" lld )
+			echo "Linker for build: ${TOOLCHAIN_LINKER_FOR_BUILD}"
 			TOOLCHAIN_LINKER_EXE_FOR_BUILD=$(which "ld.${TOOLCHAIN_LINKER_FOR_BUILD}")
 			TOOLCHAIN_LINKERFLAGS_FOR_BUILD="-fuse-ld=${TOOLCHAIN_LINKER_FOR_BUILD}"
+			### -flto on the link too: clang hands a linker other than lld (mold) LLVMgold.so only
+			### with it, and a link that leaves out CFLAGS (the shlib/Makefile of readline) then
+			### fails on the bitcode objects
 			case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 				1|fat)
 					TOOLCHAIN_COMPFLAGS+=" -flto=full"
+					OPTLINK_FLAGS+=" -flto=full"
 					;;
 				2|thin)
 					TOOLCHAIN_COMPFLAGS+=" -flto=thin"
+					OPTLINK_FLAGS+=" -flto=thin"
 					;;
 			esac
 
@@ -447,71 +511,142 @@ function settcenv () {
 					TOOLCHAIN_LINKERFLAGS="-fuse-ld=${TOOLCHAIN_LINKER} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
 				;;
 				target)
-					TOOLCHAIN_CC=$(which clang)
-					TOOLCHAIN_CPP="$(which clang) -E"
-					TOOLCHAIN_CXX=$(which clang++)
-					if flang --version > /dev/null 2>&1
+					### By name, as for gnu. The clang of the platform toolchain when it has the configuration
+					### file of setup_clang_config (CC_HOST_PATH_CONFIG): its name gives the target, the file
+					### the sysroot. It has no Fortran driver (setup_llvm builds no flang)
+					if [ "${CC_HOST_PATH_CONFIG}" -eq 1 ]
 					then
-						TOOLCHAIN_FC=$(which flang)
-						TOOLCHAIN_F90=$(which flang)
+						TOOLCHAIN_CC="${HARCH}-clang"
+						TOOLCHAIN_CPP="${HARCH}-clang -E"
+						TOOLCHAIN_CXX="${HARCH}-clang++"
+						CC_TARGET_FLAGS=
+					else
+						TOOLCHAIN_CC=clang
+						TOOLCHAIN_CPP="clang -E"
+						TOOLCHAIN_CXX=clang++
+						if flang --version > /dev/null 2>&1
+						then
+							TOOLCHAIN_FC=flang
+							TOOLCHAIN_F90=flang
+						fi
+						CC_TARGET_FLAGS="--target=${HARCH} ${CC_SYSROOT_FLAGS}"
 					fi
-					TOOLCHAIN_AR=$(which llvm-ar)
-					TOOLCHAIN_AS=$(which llvm-as)
-					TOOLCHAIN_NM=$(which llvm-nm)
-					TOOLCHAIN_RANLIB=$(which llvm-ranlib)
-					TOOLCHAIN_STRIP=$(which llvm-strip)
-					TOOLCHAIN_OBJCOPY=$(which llvm-objcopy)
-					TOOLCHAIN_OBJDUMP=$(which llvm-objdump)
-					TOOLCHAIN_READELF=$(which llvm-readelf)
+					TOOLCHAIN_AR=llvm-ar
+					TOOLCHAIN_AS=llvm-as
+					TOOLCHAIN_NM=llvm-nm
+					TOOLCHAIN_RANLIB=llvm-ranlib
+					TOOLCHAIN_STRIP=llvm-strip
+					TOOLCHAIN_OBJCOPY=llvm-objcopy
+					TOOLCHAIN_OBJDUMP=llvm-objdump
+					TOOLCHAIN_READELF=llvm-readelf
 					TOOLCHAIN_LINKER=${PKG_OVERRIDELD:-${LLVM_DEFAULT_LD:-lld}}
-					TOOLCHAIN_LINKER_EXE=$(which "ld.${TOOLCHAIN_LINKER}")
+					TOOLCHAIN_LINKER_EXE="ld.${TOOLCHAIN_LINKER}"
 					if [ "${PKG_FAULTYCFLAGS:-0}" -eq 1 ]
 					then
 						TOOLCHAIN_COMPFLAGS+=" ${LLVM_EXTRACLANGFLAGS}"
-						TOOLCHAIN_EXTRA_C_CMD="--target=${HARCH} ${SYSROOT_FLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
+						TOOLCHAIN_EXTRA_C_CMD="${CC_TARGET_FLAGS:+${CC_TARGET_FLAGS} }${LLVM_EXTRAPOLLYFLAGS}"
 					else
-						TOOLCHAIN_COMPFLAGS+=" ${SYSROOT_FLAGS} ${LLVM_EXTRACLANGFLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
-						TOOLCHAIN_EXTRA_C_CMD="--target=${HARCH}"
+						TOOLCHAIN_COMPFLAGS+=" ${CC_TARGET_FLAGS:+${CC_TARGET_FLAGS} }${LLVM_EXTRACLANGFLAGS} ${LLVM_EXTRAPOLLYFLAGS}"
+						TOOLCHAIN_EXTRA_C_CMD=""
 					fi
-					TOOLCHAIN_LINKERFLAGS="${SYSROOT_FLAGS} -fuse-ld=${TOOLCHAIN_LINKER} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
+					### --target also at link time: meson links without the c_args, and clang would link
+					### for the build machine (no crti.o, no -lc in the sysroot of another architecture)
+					TOOLCHAIN_LINKERFLAGS="${CC_TARGET_FLAGS:+${CC_TARGET_FLAGS} }-fuse-ld=${TOOLCHAIN_LINKER} ${LLVM_EXTRALDFLAGS} ${LLVM_EXTRAPOLLYFLAGSLIBS}"
 				;;
 			esac
 			;;
 	esac
+	### The static libraries of a target build with LTO are made of fat objects: build keeps only their
+	### machine code (strip_lto_objects), because the LTO bytecode names the build host
+	if [ "${TARGET_ENV}" == target ] && [ "${PKG_OVERRIDESTATIC:-${BUILD_LIBSTATIC}}" -eq 1 ]
+	then
+		case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
+			1|2|fat|thin)
+				OPTCOMP_FLAGS+=" -ffat-lto-objects"
+				;;
+		esac
+	fi
+	### The source paths a target build records in its binaries (__FILE__ of the assert and log messages,
+	### the debug information, the panic locations of Rust) are not the ones of the build host. A compiler
+	### with CC_HOST_PATH_CONFIG applies the maps itself
+	local PREFIX_MAP RUST_PREFIX_MAPS
+	RUST_PREFIX_MAPS=
+	if [ "${TARGET_ENV}" == target ]
+	then
+		RUST_PREFIX_MAPS="--remap-path-scope=object"
+		while read -r PREFIX_MAP
+		do
+			if [ "${CC_HOST_PATH_CONFIG}" -eq 0 ]
+			then
+				TOOLCHAIN_COMPFLAGS+=" -ffile-prefix-map=${PREFIX_MAP}"
+			fi
+			RUST_PREFIX_MAPS+=" --remap-path-prefix=${PREFIX_MAP}"
+		done < <( host_path_maps )
+	fi
 	case ${TOOLCHAIN_LINKER} in
 		bfd)
-			if [ -n "${SYSROOT_FLAGS}" ]
+			if [ -n "${CC_SYSROOT_FLAGS}" ]
 			then
-				TOOLCHAIN_LINKERFLAGS+=" -Wl,${SYSROOT_FLAGS}"
+				TOOLCHAIN_LINKERFLAGS+=" -Wl,${CC_SYSROOT_FLAGS}"
 			fi
 			;;
 		gold)
-			if [ -n "${SYSROOT_FLAGS}" ]
+			### gold is gone since binutils 2.45: only usable with an older lfs/binutils (BINUTILS_VER)
+			if [ -n "${CC_SYSROOT_FLAGS}" ]
 			then
-				TOOLCHAIN_LINKERFLAGS+=" -Wl,${SYSROOT_FLAGS}"
+				TOOLCHAIN_LINKERFLAGS+=" -Wl,${CC_SYSROOT_FLAGS}"
 			fi
-			TOOLCHAIN_LINKERFLAGS+=" -Wl,--threads -Wl,--thread-count,${NPROCS}"
-			TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--threads -Wl,--thread-count,${NPROCS}"
+			TOOLCHAIN_LINKERFLAGS+=" -Wl,--threads -Wl,--thread-count,${LINKPROCS}"
+			TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--threads -Wl,--thread-count,${LINKPROCS}"
 			;;
 		lld)
-			TOOLCHAIN_LINKERFLAGS+=" -Wl,--thinlto-jobs=${NPROCS}"
-			TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--thinlto-jobs=${NPROCS}"
+			TOOLCHAIN_LINKERFLAGS+=" -Wl,--thinlto-jobs=${LINKPROCS}"
+			TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--thinlto-jobs=${LINKPROCS}"
+			;;
+		mold)
+			### lfs/mold:cross, built by setup_full_toolchain. clang hands it LLVMgold.so for LTO, whose
+			### jobs are a plugin option
+			if [ -n "${CC_SYSROOT_FLAGS}" ]
+			then
+				TOOLCHAIN_LINKERFLAGS+=" -Wl,${CC_SYSROOT_FLAGS}"
+			fi
+			TOOLCHAIN_LINKERFLAGS+=" -Wl,--thread-count=${LINKPROCS}"
+			if [ "${TOOLCHAIN}" == llvm ]
+			then
+				TOOLCHAIN_LINKERFLAGS+=" -Wl,--plugin-opt=jobs=${LINKPROCS}"
+			fi
 			;;
 	esac
+	### The linker of the build machine can be bfd while mold is not built yet (linker_for_build)
+	if [ "${TOOLCHAIN_LINKER_FOR_BUILD}" == mold ]
+	then
+		TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--thread-count=${LINKPROCS}"
+		if [ "${TOOLCHAIN}" == llvm ]
+		then
+			TOOLCHAIN_LINKERFLAGS_FOR_BUILD+=" -Wl,--plugin-opt=jobs=${LINKPROCS}"
+		fi
+	fi
 			
 	if [ "${PKG_DEBUG:-${DEBUG:-0}}" -eq 1 ]
 	then
 		OPTLEVEL=2
-		OPTCOMP_FLAGS+="-g"
+		OPTCOMP_FLAGS+=" -g"
 	fi
 
-	for param in ${TOOLCHAIN_EXTRA_C_CMD} ${SYSROOT_FLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS} ${TOOLCHAIN_LINKERFLAGS} ${PKG_LDFLAGS}
+	for param in ${TOOLCHAIN_EXTRA_C_CMD} ${SYSROOT_FLAGS} ${OPTLINK_FLAGS} ${COMMON_LDFLAGS} ${PLATFORM_LDFLAGS} ${TOOLCHAIN_LINKERFLAGS} ${PKG_LDFLAGS}
 	do
 		TOOLCHAIN_RUSTFLAGS+="-C link-arg=${param} "
 	done
-	TOOLCHAIN_RUSTFLAGS+="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}"
-	
-	TOOLCHAIN_CFLAGS_FOR_BUILD="-I${GLOBAL_TOOLCHAIN_PATH}/include"
+	TOOLCHAIN_RUSTFLAGS+="${PLATFORM_RUSTSYSROOT} ${PLATFORM_RUSTFLAGS} ${OPTCOMP_RUSTFLAGS} -C linker=${TOOLCHAIN_CC}${RUST_PREFIX_MAPS:+ ${RUST_PREFIX_MAPS}}"
+	### libclang reads neither the gcc specs nor the configuration file of clang: bindgen gets the sysroot
+	### the command lines leave out (the target comes from bindgen)
+	TOOLCHAIN_BINDGENFLAGS=${TOOLCHAIN_COMPFLAGS}
+	if [ "${CC_HOST_PATH_CONFIG}" -eq 1 ]
+	then
+		TOOLCHAIN_BINDGENFLAGS="${SYSROOT_FLAGS} ${TOOLCHAIN_COMPFLAGS}"
+	fi
+
+	TOOLCHAIN_CFLAGS_FOR_BUILD="${HOST_CSTD} -I${GLOBAL_TOOLCHAIN_PATH}/include"
 	TOOLCHAIN_CFLAGS_FOR_BUILD+=" -I${TOOLCHAIN_PATH}/include"
 	TOOLCHAIN_CXXFLAGS_FOR_BUILD="-I${GLOBAL_TOOLCHAIN_PATH}/include"
 	TOOLCHAIN_CXXFLAGS_FOR_BUILD+=" -I${TOOLCHAIN_PATH}/include"
@@ -519,10 +654,14 @@ function settcenv () {
 	TOOLCHAIN_FCFLAGS_FOR_BUILD=
 	TOOLCHAIN_LDFLAGS_FOR_BUILD="-L${GLOBAL_TOOLCHAIN_PATH}/lib"
 	TOOLCHAIN_LDFLAGS_FOR_BUILD+=" -L${TOOLCHAIN_PATH}/lib"
-	TOOLCHAIN_LDFLAGS_FOR_BUILD+=" -Wl,-rpath -Wl,${TOOLCHAIN_PATH}/lib:${GLOBAL_TOOLCHAIN_PATH}/lib"
+	TOOLCHAIN_LDFLAGS_FOR_BUILD+=" -Wl,-rpath,${TOOLCHAIN_PATH}/lib:${GLOBAL_TOOLCHAIN_PATH}/lib"
 	TOOLCHAIN_LDFLAGS_FOR_BUILD+=" -Wl,-rpath-link -Wl,${TOOLCHAIN_PATH}/lib"
 	TOOLCHAIN_LDFLAGS_FOR_BUILD+=" -Wl,-rpath-link -Wl,${GLOBAL_TOOLCHAIN_PATH}/lib"
 	OPTCOMP_FLAGS+=" -O${OPTLEVEL:-2}"
+	### The level at link time too: the LTO back end (ThinLTO, the LTRANS of gcc) takes it from the
+	### link command line, and clang without one leaves lld its default, O2. meson links without the
+	### c_args, many Makefiles with LDFLAGS alone
+	OPTLINK_FLAGS+=" -O${OPTLEVEL:-2}"
 
 	case ${PKG_OVERRIDELTO:-${LTOENABLE:-0}} in
 		1|fat)	TOOLCHAIN_CARGO_PROFILE_RELEASE_LTO=fat ;;
@@ -531,9 +670,21 @@ function settcenv () {
 	esac
 
 	case ${PKG_TARGET_ENV} in
-		native|cross)	TOOLCHAIN_CARGO_TARGET=${BM}-unknown-${BOS}-${BLIBC} ;;
-		target) 		TOOLCHAIN_CARGO_TARGET=${HM}-unknown-${HOS}-${HLIBC} ;;
+		native|cross)	TOOLCHAIN_CARGO_TARGET=$( cargo_target build ) ;;
+		target) 		TOOLCHAIN_CARGO_TARGET=$( cargo_target ) ;;
 	esac
+}
+
+function cargo_target () {
+	### cargo_target [build]: the Rust target of the platform, <HM>-unknown-<HOS>-<HLIBC>
+	### (aarch64-unknown-linux-gnu), or of the build machine with build: the --target of cargo and the
+	### standard library of lfs/rust:native-std
+	if [ "${1}" == build ]
+	then
+		echo "${BM}-unknown-${BOS}-${BLIBC}"
+	else
+		echo "${HM}-unknown-${HOS}-${HLIBC}"
+	fi
 }
 
 function create_environment_source () {
@@ -543,7 +694,7 @@ function create_environment_source () {
 	###		cross:	Build Arch_A = Host Arch_A / Target Arch_B - Installed in Project Toolchain
 	###		target:	Build Arch_A / Host Arch_B = Target Arch_B - Installed in SYSROOT (Default)
 	OPTS="" OPTS_WITH_VALUE="--target" param2value "${@}"
-	local TARGET_ENV=${_param_target:-target}
+	local TARGET_ENV=${_PARAM[target]:-target}
 	settcenv --target "${TARGET_ENV}"
 	if [ ! -d "${PKG_BLDPATH}" ]
 	then
@@ -553,6 +704,13 @@ function create_environment_source () {
 		0) local ENV_CCWRAPPER=${CCWRAPPER} ;;
 		1) local ENV_CCWRAPPER= ;;
 	esac
+	### The compiler wrapper of a target build by name, like the compilers (settcenv), when the PATH of
+	### the build finds that same program
+	if [ "${TARGET_ENV}" == target ] && [ -n "${ENV_CCWRAPPER}" ] && \
+		[ "$( command -v "${ENV_CCWRAPPER##*/}" || true )" == "${ENV_CCWRAPPER}" ]
+	then
+		ENV_CCWRAPPER=${ENV_CCWRAPPER##*/}
+	fi
 	cat <<-EOF > "${PKG_BLDPATH}/environment.source"
 		#################################################################################
 		###### ${PKG_FULLNAME}
@@ -560,7 +718,7 @@ function create_environment_source () {
 		### Tool chain: ${PKG_TOOLCHAIN:-${TOOLCHAIN}}
 		### C Wrapper: ${ENV_CCWRAPPER}
 		### Build type: ${BUILD_PROCESS}
-		### Target: ${TARGET_ENV} [${_param_target}]
+		### Target: ${TARGET_ENV} [${_PARAM[target]}]
 		###### Other environment variables:
 		DISTOS_PATH=${DISTOS_PATH}
 		BIN_PATH=${BIN_PATH}
@@ -569,30 +727,31 @@ function create_environment_source () {
 		PKG_PKGPATH=${PKG_PKGPATH}
 		###
 		PLATFORM_CFLAGS='${PLATFORM_CFLAGS}'
+		PLATFORM_LDFLAGS='${PLATFORM_LDFLAGS}'
 		OPTCOMP_FLAGS='${OPTCOMP_FLAGS}'
 		OPTLINK_FLAGS='${OPTLINK_FLAGS}'
 		#################################################################################
 
 		export SYSROOT='${SYSROOT}'
 		export CC_FOR_BUILD='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_CC_FOR_BUILD}'
-		export CFLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS} ${TOOLCHAIN_CFLAGS_FOR_BUILD}'
+		export CFLAGS_FOR_BUILD='-march=native ${OPTCOMP_FLAGS} ${TOOLCHAIN_CFLAGS_FOR_BUILD}'
 		export CPP_FOR_BUILD='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_CPP_FOR_BUILD}'
-		export CPPFLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS} ${TOOLCHAIN_CPPFLAGS_FOR_BUILD}'
+		export CPPFLAGS_FOR_BUILD='-march=native ${OPTCOMP_FLAGS} ${TOOLCHAIN_CPPFLAGS_FOR_BUILD}'
 	EOF
 	if [ -n "${TOOLCHAIN_CXX_FOR_BUILD}" ]
 	then
 		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 			export CXX_FOR_BUILD='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_CXX_FOR_BUILD}'
-			export CXXFLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS} ${TOOLCHAIN_CXXFLAGS_FOR_BUILD}'
+			export CXXFLAGS_FOR_BUILD='-march=native ${OPTCOMP_FLAGS} ${TOOLCHAIN_CXXFLAGS_FOR_BUILD}'
 		EOF
 	fi
 	if [ -n "${TOOLCHAIN_FC_FOR_BUILD}" ]
 	then
 		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 			export FC_FOR_BUILD='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_FC_FOR_BUILD}'
-			export FFLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS} ${TOOLCHAIN_FCFLAGS_FOR_BUILD}'
+			export FFLAGS_FOR_BUILD='-march=native ${OPTCOMP_FLAGS} ${TOOLCHAIN_FCFLAGS_FOR_BUILD}'
 			export F90_FOR_BUILD='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_F90_FOR_BUILD}'
-			export F90FLAGS_FOR_BUILD='-march=native${OPTCOMP_FLAGS} ${TOOLCHAIN_FCFLAGS_FOR_BUILD}'
+			export F90FLAGS_FOR_BUILD='-march=native ${OPTCOMP_FLAGS} ${TOOLCHAIN_FCFLAGS_FOR_BUILD}'
 		EOF
 	fi
 	cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
@@ -610,7 +769,6 @@ function create_environment_source () {
 	EOF
 	if [ -n "${TOOLCHAIN_CC}" ]
 	then
-		# shellcheck disable=SC2153
 		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 		export CC='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_CC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 		export CC_EXE='${TOOLCHAIN_CC}'
@@ -621,7 +779,6 @@ function create_environment_source () {
 	fi
 	if [ -n "${TOOLCHAIN_CXX}" ]
 	then
-		# shellcheck disable=SC2153
 		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 			export CXX='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_CXX}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 			export CXX_EXE='${TOOLCHAIN_CXX}'
@@ -630,7 +787,6 @@ function create_environment_source () {
 	fi
 	if [ -n "${TOOLCHAIN_FC}" ]
 	then
-		# shellcheck disable=SC2153
 		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 			export FC='${ENV_CCWRAPPER:+${ENV_CCWRAPPER} }${TOOLCHAIN_FC}${TOOLCHAIN_EXTRA_C_CMD:+ ${TOOLCHAIN_EXTRA_C_CMD}}'
 			export FFLAGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_FCFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_FCFLAGS}'
@@ -641,7 +797,7 @@ function create_environment_source () {
 	cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 		export RUSTFLAGS='${TOOLCHAIN_RUSTFLAGS}'
 		export LINKER_EXE='${TOOLCHAIN_LINKER_EXE}'
-		export LDFLAGS='${TOOLCHAIN_LINKERFLAGS} ${COMMON_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}'
+		export LDFLAGS='${TOOLCHAIN_LINKERFLAGS} ${COMMON_LDFLAGS} ${PLATFORM_LDFLAGS} ${OPTLINK_FLAGS} ${PKG_LDFLAGS}'
 
 		export AR='${TOOLCHAIN_AR}'
 		export AS='${TOOLCHAIN_AS}'
@@ -652,7 +808,7 @@ function create_environment_source () {
 		export OBJDUMP='${TOOLCHAIN_OBJDUMP}'
 		export READELF='${TOOLCHAIN_READELF}'
 
-		export LD_LIBRARY_PATH='${LD_LIBRARY_PATH}${PKG_LD_LIBRARY_PATH:+:${PKG_LD_LIBRARY_PATH}}'
+		export LD_LIBRARY_PATH='${LD_LIBRARY_PATH}${LD_LIBRARY_PATH:+${PKG_LD_LIBRARY_PATH:+:}}${PKG_LD_LIBRARY_PATH}'
 		export PATH='${PATH}'
 	EOF
 
@@ -660,16 +816,21 @@ function create_environment_source () {
 		cross|native)
 			cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 				export PKG_CONFIG='$(which pkg-config 2>/dev/null || :)'
-				export PKG_CONFIG_LIBDIR=${TOOLCHAIN_PATH}/lib/pkgconfig:${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig:/usr/lib64/pkgconfig
+				export PKG_CONFIG_LIBDIR='${COMMON_PKG_CONFIG_LIBDIR}'
 				export PKG_CONFIG_SYSROOT_DIR=
 				export PKG_CONFIG_ALLOW_CROSS=
 			EOF
 		;;
 		target)
+			### The FDO sysroot rules: pkgconf prepends the sysroot to the -I and -L flags only, a variable
+			### keeps the value it has in the image (install directories, run time paths baked into
+			### binaries). A pc variable naming a program or a file the build reads carries
+			### ${pc_sysrootdir} instead (lfs/GLib, lfs/gobject-introspection, lfs/wayland...)
 			cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 				export PKG_CONFIG='$(which "${HARCH}-pkg-config" 2>/dev/null || :)'
 				export PKG_CONFIG_LIBDIR='${COMMON_PKG_CONFIG_LIBDIR}'
 				export PKG_CONFIG_SYSROOT_DIR='${PKG_CONFIG_SYSROOT_DIR:-${COMMON_PKG_CONFIG_SYSROOT}}'
+				export PKG_CONFIG_FDO_SYSROOT_RULES='1'
 				export PKG_CONFIG_ALLOW_CROSS='${PKG_CONFIG_ALLOW_CROSS}'
 			EOF
 			if [ -f "${TOOLCHAIN_PATH}/venv-${HARCH}/bin/activate" ] && [ "${PKG_DISABLECROSSPYTHON:-0}" -eq 0 ]
@@ -688,11 +849,14 @@ function create_environment_source () {
 		export CARGO_PROFILE_RELEASE_OPT_LEVEL=${OPTLEVEL:-2}
 		export CARGO_PROFILE_RELEASE_LTO=${TOOLCHAIN_CARGO_PROFILE_RELEASE_LTO}
 		export CARGO_TARGET='${TOOLCHAIN_CARGO_TARGET}'
-		export RUSTUP_HOME='${RUSTUP_HOME}'
-		export BINDGEN_EXTRA_CLANG_ARGS='${TOOLCHAIN_COMPFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}'
+		export BINDGEN_EXTRA_CLANG_ARGS='${TOOLCHAIN_BINDGENFLAGS} ${COMMON_CFLAGS} ${PLATFORM_CFLAGS} ${OPTCOMP_FLAGS} ${PKG_CFLAGS}'
 
 		export QEMU_LD_PREFIX='${SYSROOT}'
 		export QEMU_LD_LIBRARY_PATH='${QEMU_LD_LIBRARY_PATH}'
+		### The CPU qemu-user emulates for the programs of the target the build runs (exe_wrapper,
+		### binfmt): its default lacks what HMARCH may grant (qemu64 has no SSE4.2 for x86-64-v2).
+		### Not the QEMU_CPU of the platform, which is the machine of emulator.functions
+		export QEMU_CPU=max
 
 		export ENVIRONMENT_SOURCE_PATH='${PWD}'
 	EOF
@@ -704,6 +868,15 @@ function create_environment_source () {
 			export RUSTC_WRAPPER='${ENV_CCWRAPPER}'
 		EOF
 	fi
+	### MOLD_JOBS=1 (bbxb.conf): one mold at a time, the others wait for it (the peak memory of the links
+	### make -j runs together); mold reads no other value
+	if [ -n "${MOLD_JOBS}" ]
+	then
+		cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
+			
+			export MOLD_JOBS='${MOLD_JOBS}'
+		EOF
+	fi
 	cat <<-EOF >> "${PKG_BLDPATH}/environment.source"
 	
 		export LC_ALL=POSIX
@@ -711,10 +884,856 @@ function create_environment_source () {
 	EOF
 }
 
-function preparesources () {
+function create_recipe_source () {
+	### Snapshot of the recipe-visible shell state into ${PKG_BLDPATH}/recipe.source.
+	### Every runner script sources it before environment.source, so prebuild.sh, postbuild.sh,
+	### build.sh and the generated runconfig.sh/runmake.sh see every variable as a plain ${VAR}.
+	### Only ALL_CAPS names are exported: lowercase names are framework loop variables or recipe
+	### placeholders (${libdir}, ${srcdir}...) that must keep expanding to nothing.
+	### Names owned by environment.source are skipped so the two files stay disjoint
+	### (kernelbuild blanks the flags in environment.source in place).
+	### Every command is guarded because the whole run is under the ERR trap.
+	local NAME DEF ATTRS REST RESERVED RECIPE_SOURCE
+	RECIPE_SOURCE="${PKG_BLDPATH}/recipe.source"
+	RESERVED=" $( sed -n 's/^[[:space:]]*export[[:space:]]\{1,\}\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' \
+		"${PKG_BLDPATH}/environment.source" 2>/dev/null | tr '\n' ' ' ) \
+		DISTOS_PATH BIN_PATH PKG_SRCPATH PKG_BLDPATH PKG_PKGPATH PLATFORM_CFLAGS PLATFORM_LDFLAGS OPTCOMP_FLAGS OPTLINK_FLAGS "
+	{
+		echo "#################################################################################"
+		echo "###### ${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}"
+		echo "### Recipe state captured after sourcing ${PKG_RECIPEPATH}/${RECIPE_FILENAME}"
+		echo "### Sourced by the runner scripts before environment.source. Generated by bbxb, do not edit."
+		echo "#################################################################################"
+		while read -r NAME
+		do
+			case ${NAME} in
+				""|*[a-z]*) continue ;;
+				BASH*|COMP*|COPROC|DIRSTACK|EPOCH*|EUID|FUNCNAME|GROUPS|HISTCMD|HOSTNAME|HOSTTYPE) continue ;;
+				IFS|LINENO|MACHTYPE|MAPFILE|OLDPWD|OPTARG|OPTERR|OPTIND|OSTYPE|PIPESTATUS|PPID) continue ;;
+				PS[0-9]|PWD|RANDOM|READLINE*|SECONDS|SHELL|SHELLOPTS|SHLVL|SRANDOM|UID|_) continue ;;
+				HOME|USER|USERNAME|LOGNAME|LANG|LC_*|TERM|DISPLAY|XDG_*|DBUS_*|SSH_*|SUDO_*) continue ;;
+				PROMPT_COMMAND|LS_COLORS|MAIL*|EDITOR|VISUAL|TMPDIR|COLUMNS|LINES) continue ;;
+				SPACES|NUMSPACES|LOG_FILE|STATUS_FILE*|STATUS_CHK_FILE|PKG_CHKSUM|RECIPE_SCRIPT|RECIPE_SOURCE) continue ;;
+				ERROR_LOG|ERROR_MSG|BBXB_CONSOLE_FD) continue ;;
+				ALREADY_BUILT|BUILD_CHECKED_FILE|BUILD_CHECKED_KEY|BUILD_CHECKED_NAME|BUILD_DEPS_QUIET|BUILD_REQUIRED_BY) continue ;;
+			esac
+			case ${RESERVED} in *" ${NAME} "*) continue ;; esac
+			DEF=$( declare -p "${NAME}" 2>/dev/null ) || continue
+			ATTRS=${DEF#declare }
+			REST=${ATTRS#* }
+			ATTRS=${ATTRS%% *}
+			case ${ATTRS} in *n*) continue ;; esac
+			ATTRS=${ATTRS//r/}
+			if [ "${ATTRS}" = "-" ]
+			then
+				ATTRS="--"
+			fi
+			echo "declare ${ATTRS} ${REST}"
+		done < <( compgen -v | LC_ALL=C sort -u )
+		echo
+		echo "### Framework helpers available to the recipe scripts"
+		declare -f run_cmd log_run log_wait log_buffer stdout_log trow_error test_version download_uncompress tab strip_host_paths split_install || true
+	} > "${RECIPE_SOURCE}"
+	echo "Recipe variables snapshot written to ${RECIPE_SOURCE}"
+}
 
+function strip_host_paths () {
+	### strip_host_paths [--cmake] <file>...: for the post-build script of a target build. The files
+	### that record how a package was built (*-config scripts, Makefile.inc, Config.pm, the
+	### sysconfigdata of Python...) name the build host; they are rewritten in place into what the
+	### image has:
+	### - the compiler wrapper (CCWRAPPER) goes, by path or by name;
+	### - --sysroot and -Wl,--sysroot of the sysroot, -Wl,-rpath-link into it, the -I and -L of its
+	###   system directories and every -I and -L into a toolchain go;
+	### - the source path maps of the build go (-ffile-prefix-map and the other -f*-prefix-map,
+	###   --remap-path-prefix and --remap-path-scope, see host_path_maps);
+	### - a program of a toolchain keeps its name only (aarch64-linux-gnu-gcc, clang, python3);
+	### - the sysroot in front of any other path goes; with --cmake it becomes ${CMAKE_SYSROOT}, which a
+	###   cross build sets and the image leaves empty.
+	### The source and build trees of the package are left to the recipe. Native and cross builds
+	### install into the toolchains, where the host paths are right: nothing happens there.
+	function strip_host_paths_regex () {
+		### strip_host_paths_regex <text>: <text> as a literal in a sed extended regular expression
+		# shellcheck disable=SC2001
+		sed 's/[][\.*^$+?(){}|#]/\\&/g' <<< "${1}"
+	}
+	local ROOT_TO ROOT TOOLCHAIN RE START END TOKEN SYSINC SYSLIB
+	local -a EXPRS=()
+	ROOT_TO=
+	if [ "${1}" == "--cmake" ]
+	then
+		# shellcheck disable=SC2016
+		ROOT_TO='${CMAKE_SYSROOT}'
+		shift
+	fi
+	if [ "${PKG_TARGET_ENV}" != "target" ]
+	then
+		return 0
+	fi
+	### A token starts after a blank, a quote, =, ; or ( and ends before a blank, a quote, ; or )
+	START="(^|[[:space:]'\"=;(])"
+	END="([[:space:]'\";)]|$)"
+	TOKEN="[^[:space:]'\";)]*"
+	SYSINC=$(strip_host_paths_regex "${TARGET_INCLUDEDIR}")
+	SYSLIB=$(strip_host_paths_regex "${TARGET_LIBDIR}${TARGET_LIBSUFFIX}")
+	if [ -n "${CCWRAPPER}" ]
+	then
+		EXPRS+=(-e "s#$(strip_host_paths_regex "${CCWRAPPER}")[[:space:]]+##g")
+		EXPRS+=(-e "s#${START}$(strip_host_paths_regex "${CCWRAPPER##*/}")[[:space:]]+#\1#g")
+	fi
+	### One token per substitution and a new pass while any matched: two tokens in a row share the
+	### blank between them
+	EXPRS+=(-e ":token")
+	EXPRS+=(-e "s#${START}(-f(file|macro|debug|profile)-prefix-map|--remap-path-(prefix|scope))=${TOKEN}${END}#\1\5#")
+	for ROOT in $(printf '%s\n' "${SYSROOT}" "${BIN_PATH}" | LC_ALL=C sort -u)
+	do
+		RE=$(strip_host_paths_regex "${ROOT}")
+		EXPRS+=(-e "s#${START}(-Wl,)?--sysroot=${RE}${END}#\1\3#")
+		EXPRS+=(-e "s#${START}-Wl,-rpath-link,${RE}${TOKEN}${END}#\1\2#")
+		EXPRS+=(-e "s#${START}-I${RE}${SYSINC}/?${END}#\1\2#")
+		EXPRS+=(-e "s#${START}-L${RE}${SYSLIB}/?${END}#\1\2#")
+	done
+	for TOOLCHAIN in "${TOOLCHAIN_PATH}" "${GLOBAL_TOOLCHAIN_PATH}"
+	do
+		if [ -n "${TOOLCHAIN}" ]
+		then
+			EXPRS+=(-e "s#${START}-[IL]$(strip_host_paths_regex "${TOOLCHAIN}")${TOKEN}${END}#\1\2#")
+		fi
+	done
+	EXPRS+=(-e "t token")
+	for TOOLCHAIN in "${TOOLCHAIN_PATH}" "${GLOBAL_TOOLCHAIN_PATH}"
+	do
+		if [ -n "${TOOLCHAIN}" ]
+		then
+			EXPRS+=(-e "s#$(strip_host_paths_regex "${TOOLCHAIN}")(/[^/[:space:]'\";)]+)*/bin/##g")
+		fi
+	done
+	for ROOT in $(printf '%s\n' "${SYSROOT}" "${BIN_PATH}" | LC_ALL=C sort -u)
+	do
+		EXPRS+=(-e "s#$(strip_host_paths_regex "${ROOT}")(/|${END})#${ROOT_TO}\1#g")
+	done
+	run_cmd "sed -E -i $(printf '%q ' "${EXPRS[@]}" "${@}")"
+}
+
+function split_install () {
+	### split_install --keep|--keep-dev|--drop <patterns>...: for the post-build script of a target that
+	### installs part of a build (lfs/bind9:client). The patterns are paths of the image, find -path
+	### patterns (a * also matches a /), in one or more arguments split on blanks, so a recipe variable
+	### goes quoted and none is expanded on the build host. --keep removes from the staging directory
+	### every file (or link) no pattern matches, --drop every one a pattern matches; --keep-dev keeps
+	### what another build compiles and links with, the libraries and the include files of the library
+	### directory (in its subdirectories too: glib-2.0/include/glibconfig.h), the include files, the pc files, the aclocal macros, the cmake package files
+	### and the *-config scripts, and the files of the patterns: the install of a :bootstrap target.
+	### The directories that leaves empty go, the ones the install left empty (a state directory) and
+	### the post install scripts stay. Nothing happens in native and cross builds.
+	local MODE FILE DIR LIBPATH
+	local -a PATTERNS=() MATCH=( -false ) REMOVED=() NOT=()
+	MODE=${1}
+	shift
+	case ${MODE} in
+		--keep) NOT=( ! ) ;;
+		--keep-dev)
+			NOT=( ! )
+			LIBPATH=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}
+			set -- "${LIBPATH}/*.so ${LIBPATH}/*.so.* ${LIBPATH}/*.a ${LIBPATH}/*.h ${LIBPATH}/pkgconfig/*" \
+				"${INSTALL_SHAREDIR}/pkgconfig/* ${INSTALL_INCLUDEDIR}/* ${INSTALL_SHAREDIR}/aclocal/*" \
+				"${LIBPATH}/cmake/* ${INSTALL_SHAREDIR}/cmake/* ${INSTALL_EXECPREFIX}/bin/*-config" "${@}"
+		;;
+		--drop) ;;
+		*) trow_error "${ERROR_NOT_VALID_OPTION}" "split_install: --keep, --keep-dev or --drop, not ${MODE}." || return ;;
+	esac
+	if [ -z "${PKG_PKGPATH}" ] || [ ! -d "${PKG_PKGPATH}" ]
+	then
+		return 0
+	fi
+	### Up to the end of the text, its lines too: read returns 1 there
+	read -r -d '' -a PATTERNS <<< "${*}" || true
+	for FILE in "${PATTERNS[@]}"
+	do
+		MATCH+=( -o -path "${PKG_PKGPATH}${FILE}" )
+	done
+	mapfile -d '' REMOVED < <( find "${PKG_PKGPATH}" ! -type d ! -path "${PKG_PKGPATH}/postinst_scripts/*" \
+		"${NOT[@]}" \( "${MATCH[@]}" \) -print0 )
+	if [ "${#REMOVED[@]}" -gt 0 ]
+	then
+		rm -f "${REMOVED[@]}"
+	fi
+	for FILE in "${REMOVED[@]}"
+	do
+		DIR=${FILE%/*}
+		while [ "${DIR}" != "${PKG_PKGPATH}" ] && rmdir "${DIR}" 2>/dev/null
+		do
+			DIR=${DIR%/*}
+		done
+	done
+	return 0
+}
+
+function host_path_maps () {
+	### host_path_maps: the OLD=NEW source path maps of a target build, one per line, which settcenv
+	### passes to the C compilers (-ffile-prefix-map) and to rustc (--remap-path-prefix), gcc_buildenv to
+	### the gcc target libraries. A path under
+	### the data directory (sources, build trees, toolchains, cargo registry) is recorded under
+	### /usr/src/bbxb, a path in a sysroot as the path of the image. gcc and rustc apply the last map
+	### that matches, clang the longest: the sysroots, inside the data directory, come after it
+	echo "${DATA_PATH}=/usr/src/bbxb"
+	printf '%s=\n' "${BIN_PATH}" "${SYSROOT}" | sed '/^=$/d' | LC_ALL=C sort -u
+}
+
+function gcc_host_path_specs () {
+	### gcc_host_path_specs [<libgcc_s dir>]: the specs setup_gcc_specs (toolchain.functions) appends to
+	### the builtin ones of the cross gcc, for what the command lines of a target build would otherwise
+	### name: the source path maps of host_path_maps for the compilers (the cc1 spec also reaches C++,
+	### Fortran, the preprocessor and LTO) and for the assembler (the debug information of .S files);
+	### for the linker the multiarch directory of the sysroot (%R), where ld.bfd resolves the libraries
+	### a library needs only through -rpath-link, and the directory libgcc_s is in when gcc puts its run
+	### time libraries in version specific directories
+	local PREFIX_MAP CC1_SPEC ASM_SPEC
+	CC1_SPEC=
+	ASM_SPEC=
+	while read -r PREFIX_MAP
+	do
+		CC1_SPEC+=" -ffile-prefix-map=${PREFIX_MAP}"
+		ASM_SPEC+=" --debug-prefix-map ${PREFIX_MAP}"
+	done < <( host_path_maps )
+	printf '*cc1:\n+%s\n\n*asm:\n+%s\n\n' "${CC1_SPEC}" "${ASM_SPEC}"
+	printf '*link:\n+ -rpath-link %%R%s%s\n\n' "${TARGET_LIBDIR}${TARGET_LIBSUFFIX}" "${1:+ -L${1}}"
+}
+
+function clang_host_path_config () {
+	### clang_host_path_config [<library dir>...]: the configuration file setup_clang_config
+	### (toolchain.functions) puts next to the clang of the platform toolchain, with what the command lines
+	### of a target build would otherwise name: the sysroot, the source path maps of host_path_maps, the
+	### multiarch directory of the sysroot, where ld.bfd resolves the libraries a library needs only
+	### through -rpath-link, and the library directories of the cross gcc. clang reports none of these
+	### options as unused when they come from a configuration file, so they apply to every command:
+	### compile, preprocess and link
+	local PREFIX_MAP DIR
+	echo "--sysroot=${SYSROOT}"
+	while read -r PREFIX_MAP
+	do
+		echo "-ffile-prefix-map=${PREFIX_MAP}"
+	done < <( host_path_maps )
+	echo "-Wl,-rpath-link,${SYSROOT}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}"
+	for DIR in "${@}"
+	do
+		echo "-L${DIR}"
+	done
+}
+
+function find_host_paths () {
+	### find_host_paths <dir>: the files under <dir> that name a directory of the build host, the data
+	### directory (sources, build trees, toolchains, sysroots) or the framework checkout, as paths
+	### relative to <dir> in byte order: the regular files by their content, the symbolic links by their
+	### target (never followed), and the objects and static libraries with the LTO bytecode of gcc, whose
+	### compressed streams always hold one (see strip_lto_objects). build logs them for the staging
+	### directory of every target build, whose files go into the image
+	local DIR FILE
+	DIR=${1%/}
+	if [ -z "${DATA_PATH}" ] || [ -z "${BB_HOME}" ] || [ ! -d "${DIR}" ]
+	then
+		return 0
+	fi
+	{
+		grep -r -l -F -D skip -e "${DATA_PATH}" -e "${BB_HOME}" -- "${DIR}" 2>/dev/null || true
+		grep -r -l -a -F -D skip --include='*.a' --include='*.o' -e .gnu.lto_ -- "${DIR}" 2>/dev/null || true
+		find "${DIR}" -type l \( -lname "*${DATA_PATH}*" -o -lname "*${BB_HOME}*" \) 2>/dev/null || true
+	} | while IFS= read -r FILE
+	do
+		echo "${FILE#"${DIR}/"}"
+	done | LC_ALL=C sort -u
+}
+
+function elf_machine () {
+	### elf_machine: the Machine of the ELF header (readelf -h) of the platform (HM), empty for one it
+	### does not know: the checks of the files of a package read only the ELF files of the platform,
+	### not the firmware files of other processors
+	case ${HM} in
+		x86_64) echo "Advanced Micro Devices X86-64" ;;
+		i?86) echo "Intel 80386" ;;
+		aarch64) echo "AArch64" ;;
+		arm*) echo "ARM" ;;
+		riscv*) echo "RISC-V" ;;
+	esac
+}
+
+function executable_stack_files () {
+	### executable_stack_files <dir>: the programs and libraries of the target under <dir> whose stack
+	### is executable (PT_GNU_STACK RWE), relative to <dir>, in byte order. bfd gives a file an
+	### executable stack when one of its objects has no .note.GNU-stack (an assembler source that does
+	### not declare it, built without -Wa,--noexecstack), and glibc refuses to load such a library
+	### into a process whose stack is not executable: build stops on it. Only the ELF files of the
+	### machine of the platform count, the static libraries, objects and kernel modules not
+	local DIR=${1%/}
+	if [ ! -d "${DIR}" ]
+	then
+		return 0
+	fi
+	### One readelf for every file, as in unresolved_needed: /dev/null makes it name each one
+	{ find "${DIR}" -type f ! -name '*.a' ! -name '*.o' ! -name '*.ko' ! -name '*.ko.*' -print0 2> /dev/null || true; } | \
+		{ xargs -0 -r readelf -hlW /dev/null 2> /dev/null || true; } | \
+		awk -v machine="$( elf_machine )" -v dir="${DIR}/" '
+			/^File: / { file = substr($0, 7); skip = 0; next }
+			/^  Machine:/ { sub(/^  Machine: +/, ""); skip = (machine != "" && $0 != machine); next }
+			skip { next }
+			/^ +GNU_STACK / && / RWE / { print substr(file, length(dir) + 1) }' | LC_ALL=C sort -u
+}
+
+function unresolved_needed () {
+	### unresolved_needed <dir> <sysroot>: the libraries the programs and libraries of the target under
+	### <dir> need (NEEDED) that neither <dir> nor <sysroot> has, as "<file>: <library>" with the file
+	### relative to <dir>, in byte order. A library is looked for where the loader of the image looks:
+	### the RUNPATH or RPATH of the file ($ORIGIN is its directory), the directory of the file itself (a
+	### private library next to the one that loads it, as libsystemd-core next to libsystemd-shared), the
+	### directories of etc/ld.so.conf.d and /lib, /usr/lib, /lib<HARCH_LIB> and TARGET_LIBDIR with their
+	### multiarch suffix. Only the ELF files of the machine of the platform count (the firmware files of
+	### other processors do not), the static libraries, objects and kernel modules not. A library the
+	### build took from the build host has a name the sysroot does not have (libxml2.so.2 of the host
+	### against libxml2.so.16, libssl.so.3 against libssl.so.4): build stops on it
+	local DIR=${1%/}
+	local ROOT=${2%/}
+	local MACHINE ENTRY KIND FILE NEEDED RUNPATH LIBDIR BASE FOUND
+	local -a RUNPATH_DIRS ENTRIES
+	local -a LIBDIRS=()
+	local -A RUNPATHS=()
+	if [ ! -d "${DIR}" ]
+	then
+		return 0
+	fi
+	MACHINE=$( elf_machine )
+	for LIBDIR in /lib /usr/lib "/lib${HARCH_LIB}" "${TARGET_LIBDIR}"
+	do
+		LIBDIRS+=( "${LIBDIR}" "${LIBDIR}${TARGET_LIBSUFFIX}" )
+	done
+	while read -r LIBDIR
+	do
+		LIBDIRS+=( "${LIBDIR}" )
+	done < <( cat "${ROOT}"/etc/ld.so.conf.d/*.conf "${DIR}"/etc/ld.so.conf.d/*.conf 2> /dev/null | grep '^/' || true )
+	### One readelf for every file: with more than one file (/dev/null is always there) it names each
+	### one, the ones that are no ELF go to its errors (and its status: /dev/null is always one). The
+	### RUNPATH of a file comes after its NEEDED
+	mapfile -t ENTRIES < <( { find "${DIR}" -type f ! -name '*.a' ! -name '*.o' ! -name '*.ko' ! -name '*.ko.*' -print0 2> /dev/null || true; } | \
+		{ xargs -0 -r readelf -hdW /dev/null 2> /dev/null || true; } | \
+		awk -v machine="${MACHINE}" '
+			/^File: / { file = substr($0, 7); skip = 0; next }
+			/^  Machine:/ { sub(/^  Machine: +/, ""); skip = (machine != "" && $0 != machine); next }
+			skip { next }
+			/\((RUNPATH|RPATH)\)/ { if (match($0, /\[.*\]/)) print "R\t" file "\t" substr($0, RSTART + 1, RLENGTH - 2); next }
+			/\(NEEDED\)/ { if (match($0, /\[.*\]/)) print "N\t" file "\t" substr($0, RSTART + 1, RLENGTH - 2) }' )
+	for ENTRY in "${ENTRIES[@]}"
+	do
+		IFS=$'\t' read -r KIND FILE NEEDED <<< "${ENTRY}"
+		if [ "${KIND}" == R ]
+		then
+			RUNPATHS[${FILE}]=${NEEDED}
+		fi
+	done
+	for ENTRY in "${ENTRIES[@]}"
+	do
+		IFS=$'\t' read -r KIND FILE NEEDED <<< "${ENTRY}"
+		if [ "${KIND}" != N ]
+		then
+			continue
+		fi
+		FOUND=0
+		BASE=$( dirname "${FILE#"${DIR}"}" )
+		RUNPATH=${RUNPATHS[${FILE}]:-}
+		RUNPATH=${RUNPATH//\$\{ORIGIN\}/${BASE}}
+		RUNPATH=${RUNPATH//\$ORIGIN/${BASE}}
+		IFS=: read -r -a RUNPATH_DIRS <<< "${RUNPATH}"
+		for LIBDIR in "${RUNPATH_DIRS[@]}" "${BASE}" "${LIBDIRS[@]}"
+		do
+			if [ -e "${DIR}${LIBDIR}/${NEEDED}" ] || [ -e "${ROOT}${LIBDIR}/${NEEDED}" ]
+			then
+				FOUND=1
+				break
+			fi
+		done
+		if [ "${FOUND}" -eq 0 ]
+		then
+			echo "${FILE#"${DIR}/"}: ${NEEDED}"
+		fi
+	done | LC_ALL=C sort -u
+	return 0
+}
+
+function linker_for_build () {
+	### linker_for_build <linker> <fallback>: the linker of the native and cross builds. mold is a
+	### package of the framework (lfs/mold:cross, which setup_full_toolchain builds after lfs/cmake:native
+	### when GCC_DEFAULT_LD or LLVM_DEFAULT_LD asks for it): until the PATH finds ld.mold, among them
+	### the build of mold itself, the builds link with <fallback>
+	if [ "${1}" == mold ] && ! command -v ld.mold > /dev/null 2>&1
+	then
+		echo "${2}"
+	else
+		echo "${1}"
+	fi
+}
+
+function target_tool () {
+	### target_tool <name>: the binutils program of the target, by path when the platform toolchain holds
+	### it and by name otherwise. The framework reads and rewrites the objects of a package with these
+	### programs, and the PATH of a build is the one its toolchain needs: with llvm it names the llvm
+	### programs, and <HARCH>-readelf resolved through it is not always there
+	local NAME
+	NAME=${HARCH:+${HARCH}-}${1}
+	if [ -n "${TOOLCHAIN_PATH}" ] && [ -x "${TOOLCHAIN_PATH}/bin/${NAME}" ]
+	then
+		echo "${TOOLCHAIN_PATH}/bin/${NAME}"
+	else
+		echo "${NAME}"
+	fi
+}
+
+function readelf_prints () {
+	### readelf_prints <readelf> <text> <option>...: whether the readelf of the target prints <text> on
+	### either stream. Its status is not the answer, and never the status of a pipe: it fails on the
+	### bytecode of clang, which is the answer itself, and the run has pipefail
+	local TOOL TEXT OUTPUT
+	TOOL=${1}
+	TEXT=${2}
+	shift 2
+	OUTPUT=$( "${TOOL}" "${@}" 2>&1 || true )
+	[[ ${OUTPUT} == *"${TEXT}"* ]]
+}
+
+function lto_object_files () {
+	### lto_object_files <dir>: the objects and static libraries under <dir> that hold LTO bytecode, one
+	### "<kind> <path>" per line in byte order, <kind> fat when they also hold machine code, slim when
+	### they hold nothing else. gcc puts the bytecode in .gnu.lto_* sections and marks a slim object
+	### with the __gnu_lto_slim symbol, which readelf confirms in the symbol table: a file that names it,
+	### or names a section of LTO, in its own data is not one (the sources of a compiler do). nm answers
+	### for the bytecode of an archive of gcc-ar, through the LTO plugin, and never shows the marker.
+	### clang puts the bytecode in the .llvm.lto section of a fat object and writes a slim one as a
+	### bitcode file, which the readelf of the target does not take for ELF
+	local DIR FILE READELF
+	DIR=${1%/}
+	if [ ! -d "${DIR}" ]
+	then
+		return 0
+	fi
+	READELF=$( target_tool readelf )
+	find "${DIR}" -type f \( -name '*.a' -o -name '*.o' \) -print0 | LC_ALL=C sort -z |
+	while IFS= read -r -d '' FILE
+	do
+		if { LC_ALL=C grep -q -a -F -e __gnu_lto_slim -- "${FILE}" && \
+			readelf_prints "${READELF}" ' __gnu_lto_slim' --wide --syms -- "${FILE}"; } || \
+			readelf_prints "${READELF}" 'LLVM bitcode' -h -- "${FILE}"
+		then
+			echo "slim ${FILE}"
+		elif LC_ALL=C grep -q -a -F -e .gnu.lto_ -e .llvm.lto -- "${FILE}"
+		then
+			echo "fat ${FILE}"
+		fi
+	done
+}
+
+function strip_lto_objects () {
+	### strip_lto_objects <dir>: the LTO objects of the staging directory of a target build keep only
+	### their machine code. Their bytecode names the build host whatever the source path maps: gcc
+	### streams the working directory unmapped for a source file named by a relative path and the name
+	### of one named by an absolute path (GCC PR 108534, open for gcc 16), clang the name of an absolute
+	### source file (source_filename). The maps only reach the machine code and the debug information.
+	### - when the build makes no static libraries (PKG_OVERRIDESTATIC, BUILD_LIBSTATIC), a lib<name>.a
+	###   next to its lib<name>.so goes, as the --disable-static a build system ignores would have done
+	### - a fat object (settcenv compiles with -ffat-lto-objects when the build makes static libraries)
+	###   loses the bytecode: an ordinary object, which any compiler links
+	### - a slim object has nothing else and stays: build stops on it (lto_object_files)
+	### Remove the bytecode part once the compilers map those paths
+	local KIND FILE OBJCOPY RANLIB
+	OBJCOPY=$( target_tool objcopy )
+	RANLIB=$( target_tool ranlib )
+	while read -r KIND FILE
+	do
+		if [ "${PKG_OVERRIDESTATIC:-${BUILD_LIBSTATIC}}" -eq 0 ] && [[ ${FILE} == */lib*.a ]] && \
+			{ [ -e "${FILE%.a}.so" ] || [ -L "${FILE%.a}.so" ]; }
+		then
+			run_cmd "rm -v \"${FILE}\""
+		elif [ "${KIND}" == fat ]
+		then
+			run_cmd "\"${OBJCOPY}\" --wildcard -R '.gnu.lto_*' -R '.gnu.debuglto_*' -R .llvm.lto \"${FILE}\""
+			if [[ ${FILE} == *.a ]]
+			then
+				run_cmd "\"${RANLIB}\" \"${FILE}\""
+			fi
+		fi
+	done < <( lto_object_files "${1}" )
+}
+
+function recipe_path () {
+	### recipe_path <group>/<name>: directory holding the recipe, its scripts, files/ and patches/
+	echo "${PKG_PATH}/${1}"
+}
+
+function recipe_file () {
+	### recipe_file <group>/<name>: path of the recipe file (<group>/<name>/${RECIPE_FILENAME})
+	echo "${PKG_PATH}/${1}/${RECIPE_FILENAME}"
+}
+
+function package_version () {
+	### package_version <group>/<name>[:<target>]: the version a build of the recipe gets, PKG_VER of its
+	### package.env and selected variants: the default of the recipe, or the <NAME>_VER of the project
+	### (lfs/gcc: GCC_VER) that overrides it. The framework and the recipes that need the version of
+	### another package read it here: the versions live in their recipes, not in setenv
+
+	function package_version_resolve () {
+		### package_version_resolve <recipe>: resolve the recipe the way build does and print PKG_VER;
+		### it sets every variable of the recipe, so package_version runs it in a subshell
+		set +E
+		trap - ERR
+		unset PKG_VER PKG_SUFFIX PKG_DEPS PKG_VARIANTS
+		PKG_FILE=${1%%:*}
+		PKG_TARGET=
+		if [[ ${1} == *:* ]]
+		then
+			PKG_TARGET=${1#*:}
+		fi
+		PKG_NAME=${PKG_FILE##*/}
+		PKG_RECIPEPATH=$(recipe_path "${PKG_FILE}")
+		PKG_FULLNAME="\${PKG_NAME}\${PKG_SUFFIX}\${PKG_VER:+_\${PKG_VER}}"
+		set_target_prefixes "${PKG_TARGET}"
+		# shellcheck source=/dev/null
+		source "$(recipe_file "${PKG_FILE}")" > /dev/null 2>&1
+		apply_recipe_variants > /dev/null 2>&1
+		echo "${PKG_VER}"
+	}
+
+	( package_version_resolve "${1}" )
+}
+
+function set_target_prefixes () {
+	### set_target_prefixes <target>: PKG_TARGET_ENV, PKG_PKGPATH and the INSTALL_* prefixes of a
+	### build target: native installs into the global toolchain and never records a status, cross
+	### into the platform toolchain, any other name (bootstrap, stage1, a flavour or the empty
+	### default) into the sysroot through the staging directory PKG_PKGPATH. native-<name> and
+	### cross-<name> are of the class native and cross, with a name of their own (the stages of the
+	### cross gcc, lfs/gcc:cross-stage1).
+	### Shared by build and by the recipe utilities (pkg_lint, pkg_show).
+	case ${1} in
+		native|native-*)
+			PKG_TARGET_ENV=native
+			PKG_PKGPATH=
+			INSTALL_PREFIX=${NATIVE_PREFIX}
+			INSTALL_EXECPREFIX=${NATIVE_EXECPREFIX}
+			INSTALL_LIBDIR=${NATIVE_LIBDIR}
+			INSTALL_LIBSUFFIX=
+			INSTALL_INCLUDEDIR=${NATIVE_INCLUDEDIR}
+			INSTALL_SYSCONFDIR=${NATIVE_SYSCONFDIR}
+			INSTALL_LOCALSTATEDIR=${NATIVE_LOCALSTATEDIR}
+			INSTALL_SHAREDIR=${NATIVE_SHAREDIR}
+			NOSAVESTATUS=1
+		;;
+		cross|cross-*)
+			PKG_TARGET_ENV=cross
+			PKG_PKGPATH=
+			INSTALL_PREFIX=${CROSS_PREFIX}
+			INSTALL_EXECPREFIX=${CROSS_EXECPREFIX}
+			INSTALL_LIBDIR=${CROSS_LIBDIR}
+			INSTALL_LIBSUFFIX=
+			INSTALL_INCLUDEDIR=${CROSS_INCLUDEDIR}
+			INSTALL_SYSCONFDIR=${CROSS_SYSCONFDIR}
+			INSTALL_LOCALSTATEDIR=${CROSS_LOCALSTATEDIR}
+			INSTALL_SHAREDIR=${CROSS_SHAREDIR}
+		;;
+		*)
+			PKG_TARGET_ENV=target
+			PKG_PKGPATH=${PACKAGES_PATH}/${PKG_FULLNAME}${1:+-${1}}
+			INSTALL_PREFIX=${TARGET_PREFIX}
+			INSTALL_EXECPREFIX=${TARGET_EXECPREFIX}
+			INSTALL_LIBDIR=${TARGET_LIBDIR}
+			INSTALL_LIBSUFFIX=${TARGET_LIBSUFFIX}
+			INSTALL_INCLUDEDIR=${TARGET_INCLUDEDIR}
+			INSTALL_SYSCONFDIR=${TARGET_SYSCONFDIR}
+			INSTALL_LOCALSTATEDIR=${TARGET_LOCALSTATEDIR}
+			INSTALL_SHAREDIR=${TARGET_SHAREDIR}
+		;;
+	esac
+}
+
+function recipe_variants () {
+	### recipe_variants: print, one per line and in application order, the directories under
+	### ${PKG_RECIPEPATH}/variants that select the current build (paths relative to variants/).
+	### package.env is the default build; a variant directory has the same layout (package.env,
+	### the scripts, files/, patches/), is named after one selector and is applied on top of it:
+	###   target/<native|cross|sysroot>   the install class (sysroot: anything but native, cross,
+	###                                   native-<name> and cross-<name>)
+	###   target/<default|name>           the PKG_TARGET name (default: no target given)
+	###   toolchain/<gnu|llvm>            the toolchain the package is built with (PKG_TOOLCHAIN and
+	###                                   build --toolchain included)
+	###   arch/<HM>  platform/<PLATFORM_NAME>  version/<PKG_VER>
+	###   option/<name>                   WITH_<NAME> is set and not 0, no, false or off
+	###   option/<name>=<value>           <value> is one of the words of WITH_<NAME>
+	### A directory name may list several values separated by commas (target/native,cross). The
+	### axes nest inside a variant directory, in the order above, to select a conjunction
+	### (target/default/arch/aarch64). Every single-selector directory is applied first (target
+	### class, target name, toolchain, arch, platform, version, options), then the conjunctions by
+	### depth, so that a more specific directory always follows the ones it refines.
+	local VARIANTS_PATH RECIPE_TOOLCHAIN
+	local -a VARIANT_AXES=(target toolchain arch platform version option)
+	VARIANTS_PATH="${PKG_RECIPEPATH}/variants"
+	if [ ! -d "${VARIANTS_PATH}" ]
+	then
+		return 0
+	fi
+	RECIPE_TOOLCHAIN=${_PARAM[toolchain]:-${PKG_TOOLCHAIN:-${TOOLCHAIN}}}
+
+	function variant_matches () {
+		### variant_matches <axis> <directory name>: succeeds when one of the comma separated
+		### values of the name selects the current build
+		local VALUE OPTION
+		for VALUE in ${2//,/ }
+		do
+			case ${1} in
+				target)
+					case ${VALUE} in
+						native|cross) [ "${PKG_TARGET_ENV}" = "${VALUE}" ] && return 0 ;;
+						sysroot) [ "${PKG_TARGET_ENV}" = target ] && return 0 ;;
+						default) [ -z "${PKG_TARGET}" ] && return 0 ;;
+						*) [ "${PKG_TARGET}" = "${VALUE}" ] && return 0 ;;
+					esac
+				;;
+				toolchain) [ "${RECIPE_TOOLCHAIN}" = "${VALUE}" ] && return 0 ;;
+				arch) [ "${HM}" = "${VALUE}" ] && return 0 ;;
+				platform) [ "${PLATFORM_NAME}" = "${VALUE}" ] && return 0 ;;
+				version) [ "${PKG_VER}" = "${VALUE}" ] && return 0 ;;
+				option)
+					OPTION="WITH_$( echo "${VALUE%%=*}" | tr 'a-z-' 'A-Z_' )"
+					if [ "${VALUE}" = "${VALUE%%=*}" ]
+					then
+						case ${!OPTION:-} in
+							""|0|no|false|off) ;;
+							*) return 0 ;;
+						esac
+					else
+						case " ${!OPTION:-} " in
+							*" ${VALUE#*=} "*) return 0 ;;
+						esac
+					fi
+				;;
+			esac
+		done
+		return 1
+	}
+
+	function variant_walk () {
+		### variant_walk <directory> <depth> <first axis index>: print "<depth> <relative path>"
+		### for every matching directory below <directory>, then recurse into it for the axes
+		### that follow in the canonical order
+		local DIR DEPTH AXIS ENTRY NAME I
+		local -a MATCHES
+		DIR=${1}
+		DEPTH=${2}
+		for (( I = ${3}; I < ${#VARIANT_AXES[@]}; I++ ))
+		do
+			AXIS=${VARIANT_AXES[I]}
+			if [ ! -d "${DIR}/${AXIS}" ]
+			then
+				continue
+			fi
+			MATCHES=()
+			for ENTRY in "${DIR}/${AXIS}"/*/
+			do
+				NAME=$(basename "${ENTRY}")
+				if [ "${NAME}" = "*" ]
+				then
+					continue
+				fi
+				if variant_matches "${AXIS}" "${NAME}"
+				then
+					### The install class comes before the target name
+					case ${AXIS}/${NAME} in
+						target/native|target/cross|target/sysroot) MATCHES=("${NAME}" "${MATCHES[@]}") ;;
+						*) MATCHES+=("${NAME}") ;;
+					esac
+				fi
+			done
+			for NAME in "${MATCHES[@]}"
+			do
+				ENTRY="${DIR}/${AXIS}/${NAME}"
+				echo "${DEPTH} ${ENTRY#"${VARIANTS_PATH}"/}"
+				variant_walk "${ENTRY}" $((DEPTH+1)) $((I+1))
+			done
+		done
+		return 0
+	}
+
+	variant_walk "${VARIANTS_PATH}" 1 0 | LC_ALL=C sort -s -k1,1n | cut -d' ' -f2-
+	return 0
+}
+
+function apply_recipe_variants () {
+	### apply_recipe_variants: source the package.env of every variant directory selected by
+	### recipe_variants, in that order, and record the directories in PKG_VARIANTS (used by
+	### recipe_script and recipe_patches). The target directories are applied first on their own:
+	### they may set PKG_TOOLCHAIN or PKG_VER, which the other selectors read.
+	local VARIANT
+	PKG_VARIANTS=
+	for VARIANT in $( recipe_variants )
+	do
+		case ${VARIANT} in
+			target/*/*|*/*/*) continue ;;
+			target/*) ;;
+			*) continue ;;
+		esac
+		if [ -f "${PKG_RECIPEPATH}/variants/${VARIANT}/${RECIPE_FILENAME}" ]
+		then
+			# shellcheck source=/dev/null
+			source "${PKG_RECIPEPATH}/variants/${VARIANT}/${RECIPE_FILENAME}"
+		fi
+		PKG_VARIANTS+="${PKG_VARIANTS:+ }${VARIANT}"
+	done
+	for VARIANT in $( recipe_variants )
+	do
+		case " ${PKG_VARIANTS} " in
+			*" ${VARIANT} "*) continue ;;
+		esac
+		if [ -f "${PKG_RECIPEPATH}/variants/${VARIANT}/${RECIPE_FILENAME}" ]
+		then
+			# shellcheck source=/dev/null
+			source "${PKG_RECIPEPATH}/variants/${VARIANT}/${RECIPE_FILENAME}"
+		fi
+		PKG_VARIANTS+="${PKG_VARIANTS:+ }${VARIANT}"
+	done
+	return 0
+}
+
+function recipe_script () {
+	### recipe_script <prebuild.sh|build.sh|postbuild.sh|postinstall.sh>: print the path of the
+	### script to run, the one of the last selected variant directory that carries it, else the
+	### one of the recipe directory; print nothing when there is none.
+	local VARIANT SCRIPT
+	SCRIPT="${PKG_RECIPEPATH}/${1}"
+	for VARIANT in ${PKG_VARIANTS}
+	do
+		if [ -f "${PKG_RECIPEPATH}/variants/${VARIANT}/${1}" ]
+		then
+			SCRIPT="${PKG_RECIPEPATH}/variants/${VARIANT}/${1}"
+		fi
+	done
+	if [ -f "${SCRIPT}" ]
+	then
+		echo "${SCRIPT}"
+	fi
+	return 0
+}
+
+function patch_list () {
+	### patch_list <directory>...: print the patches to apply, one path per line: every *.patch
+	### and *.diff file of the patches/ subdirectory of the given directories, in the byte order
+	### of the file names (00-first.patch, 10-second.patch...). A file of a later directory
+	### replaces the file of the same name of an earlier one, an empty file cancels it.
+	local DIR PATCH NAME
+	local -A PATCH_BY_NAME
+	for DIR in "${@}"
+	do
+		for PATCH in "${DIR}"/patches/*.patch "${DIR}"/patches/*.diff
+		do
+			if [ -f "${PATCH}" ]
+			then
+				PATCH_BY_NAME[$(basename "${PATCH}")]=${PATCH}
+			fi
+		done
+	done
+	for NAME in "${!PATCH_BY_NAME[@]}"
+	do
+		echo "${NAME}"
+	done | LC_ALL=C sort | while IFS= read -r NAME
+	do
+		if [ -s "${PATCH_BY_NAME[${NAME}]}" ]
+		then
+			echo "${PATCH_BY_NAME[${NAME}]}"
+		fi
+	done
+	return 0
+}
+
+function recipe_patches () {
+	### recipe_patches: print the patches of the current recipe (patch_list over the recipe
+	### directory and the selected variant directories, in their application order)
+	local VARIANT
+	local -a DIRS=("${PKG_RECIPEPATH}")
+	for VARIANT in ${PKG_VARIANTS}
+	do
+		DIRS+=("${PKG_RECIPEPATH}/variants/${VARIANT}")
+	done
+	patch_list "${DIRS[@]}"
+	return 0
+}
+
+function apply_patches () {
+	### apply_patches <patch file>...: apply the given patches to the current directory, in the
+	### order given, with patch -f -p1
+	local PATCH_FILE
+	for PATCH_FILE in "${@}"
+	do
+		echo -n "${SPACES}Applying $(basename "${PATCH_FILE}") patch..."
+		run_cmd "patch -f -p1 < \"${PATCH_FILE}\""
+		echo "Done."
+	done
+	return 0
+}
+
+function recipe_checksum () {
+	### recipe_checksum <recipe dir>: md5 over the names, types, symlink targets and contents of
+	### the whole recipe directory, so that editing a script, a static file or a patch rebuilds
+	### the package like editing the recipe does. Symlinks are hashed by target, never followed.
+	### Editor and patch leftovers (*.bak, *.orig, *.rej, *~, .*.swp) are ignored.
+	local ENTRY
+	(
+		cd "${1}" || exit 1
+		find . \( -name '*.bak' -o -name '*.orig' -o -name '*.rej' -o -name '*~' -o -name '.*.sw?' \) -prune -o -print0 |
+		LC_ALL=C sort -z |
+		while IFS= read -r -d '' ENTRY
+		do
+			if [ -L "${ENTRY}" ]
+			then
+				printf 'l %s %s\n' "${ENTRY}" "$(readlink "${ENTRY}")"
+			elif [ -d "${ENTRY}" ]
+			then
+				printf 'd %s\n' "${ENTRY}"
+			else
+				printf 'f %s %s\n' "${ENTRY}" "$(md5sum < "${ENTRY}" | cut -d' ' -f1)"
+			fi
+		done | md5sum | cut -d' ' -f1
+	)
+}
+
+function checked_package_key () {
+	### checked_package_key <group>/<name>[:<target>] [<status suffix>]: the key of a build in the
+	### list of the packages checked in this run (BUILD_CHECKED_FILE). The suffix is the one of the
+	### status file (.tmp for build --temporary).
+	local TARGET=
+	if [[ ${1} == *:* ]]
+	then
+		TARGET=${1#*:}
+		TARGET=${TARGET%%:*}
+	fi
+	echo "${1%%:*}:${TARGET}${2}"
+}
+
+function checked_package () {
+	### checked_package <key>: print the name of the package when build has built it, or found it
+	### built, earlier in this run; fail otherwise. bbxb sets BUILD_CHECKED_FILE, a file of its
+	### own for every run: without it every build call checks its package.
+	if [ -z "${BUILD_CHECKED_FILE}" ] || [ ! -f "${BUILD_CHECKED_FILE}" ]
+	then
+		return 1
+	fi
+	awk -F '\t' -v key="${1}" '$1 == key { print $2; found = 1; exit } END { exit ! found }' "${BUILD_CHECKED_FILE}"
+}
+
+function add_checked_package () {
+	### add_checked_package <key> <name>: record in BUILD_CHECKED_FILE that the package is built
+	if [ -n "${BUILD_CHECKED_FILE}" ]
+	then
+		printf '%s\t%s\n' "${1}" "${2}" >> "${BUILD_CHECKED_FILE}"
+	fi
+	return 0
+}
+
+function preparesources () {
 	cd "${PKG_SRCPATH}"
-	if [ "x${PATCHDEB}" != x ]
+	if [ -n "${PATCHDEB}" ]
 	then
 		echo -n "${SPACES}Retrieve DEB patch info..."
 		[ ! -d "${PKG_SRCPATH}/debian" ] && mkdir -p "${PKG_SRCPATH}/debian"
@@ -739,30 +1758,9 @@ function preparesources () {
 			echo "${SPACES}\"series\" patch list file does not exist."
 		fi
 	fi
-	IFS=,
-	for scanpatch in ${PATCHES:-}
-	do
-		if [[ ${scanpatch} =~ ^https?://|^ftp:// ]]
-		then
-			echo -n "${SPACES}Downloading patch[set]..."	
-			NODELETEDESTDIR=1 download_uncompress "${scanpatch}" "${PKG_SRCPATH}/bbxb_patches"
-		else
-			echo -n "${SPACES}Copying $scanpatch patch..."
-			run_cmd "mkdir -pv \"${PKG_SRCPATH}/bbxb_patches\""
-			run_cmd "cp -v \"${PATCH_PATH}/${scanpatch}\" \"${PKG_SRCPATH}/bbxb_patches\""
-		fi
-	done
-	unset IFS
-	if [ -d "${PKG_SRCPATH}/bbxb_patches" ]
-	then
-		find "${PKG_SRCPATH}/bbxb_patches" -type f -print0 | xargs -0 -I{} -n1 bash -c "
-			PATCH=\"\$(basename {})\"
-			echo -n \"Applying \${PATCH} patch...\"
-			echo \"\$ patch -p1 < {}\"
-			patch -f -p1 < \"{}\" >> ${LOG_FILE} 2>&1
-			echo \"Done.\"
-		"
-	fi
+	### The patches/ directories of the recipe and of the selected variants, in file name order
+	# shellcheck disable=SC2046
+	apply_patches $( recipe_patches )
 	if [ -f "${PKG_SRCPATH}/${CONF_CMD}" ] && [ ! -x "${PKG_SRCPATH}/${CONF_CMD}" ]
 	then
 		run_cmd "chmod +x ${PKG_SRCPATH}/${CONF_CMD}" >> "${LOG_FILE}"
@@ -780,15 +1778,135 @@ function downloadonly () {
 	fi
 }
 
-function configmake () {	
+function target_runner_script () {
+	### target_runner_script: the content of <HARCH>-run (setup_target_runner), the one way a build runs a
+	### program of the target: "<HARCH>-run <program> [<arguments>]", the exe_wrapper of the meson cross
+	### file, the binary wrapper of g-ir-scanner.cross (lfs/gobject-introspection), the emulator of CMake.
+	### The sysroot is QEMU_LD_PREFIX of environment.source (the platform sysroot outside a build).
+	### Across architectures (HM is not BM, the machine of the build host) qemu-<HM>-static with it. On
+	### the machine of the build host the program runs natively through the dynamic loader of the
+	### sysroot, the one its PT_INTERP names, without the cache of the host and with the libraries of
+	### the sysroot: first LD_LIBRARY_PATH (the libraries of the build directory), QEMU_LD_LIBRARY_PATH
+	### and the RUNPATH of the program (the loader would look for its image paths on the host), each
+	### directory inside the sysroot when it is there, as qemu opens it, then the library
+	### directories of the sysroot. Only the default directories of the loader stay the ones of the host,
+	### after all of these. A program without PT_INTERP (static, a script) runs as it is.
+	### Called as <HARCH>-ldd (a link to it, setup_target_runner) it is the ldd of the target, the
+	### ldd wrapper of g-ir-scanner.cross: the same loader lists the libraries of the program
+	### (LD_TRACE_LOADED_OBJECTS, exported at the exec alone, not to the shell and to readelf). The ldd
+	### of the build host would load them with its own C library, older than the one of the sysroot
+	local SYSROOT_LIBS="\${SYSROOT}/lib${HARCH_LIB}${TARGET_LIBSUFFIX}:\${SYSROOT}${TARGET_LIBDIR}${TARGET_LIBSUFFIX}"
+
+	cat <<-EOF
+		#!/bin/sh
+		# ${HARCH}-run <program> [<arguments>]: a program of the target, run by a build (bbxb, target_runner_script)
+		SYSROOT=\${QEMU_LD_PREFIX:-${BIN_PATH}}
+		case \${0##*/} in
+		    *-ldd) TRACE=1 ;;
+		    *) TRACE= ;;
+		esac
+	EOF
+	if [ "${HM}" != "${BM}" ]
+	then
+		cat <<-EOF
+			export QEMU_LD_PREFIX="\${SYSROOT}"
+			export QEMU_CPU="\${QEMU_CPU:-max}"
+			[ -z "\${TRACE}" ] || export LD_TRACE_LOADED_OBJECTS=1
+			exec qemu-${HM}-static "\${@}"
+		EOF
+		return 0
+	fi
+	cat <<-EOF
+		PROGRAM=\${1}
+		case \${PROGRAM} in
+		    */*) ;;
+		    *)
+		        IFS=:
+		        for DIR in \${PATH}
+		        do
+		            if [ -f "\${DIR:-.}/\${1}" ] && [ -x "\${DIR:-.}/\${1}" ]
+		            then
+		                PROGRAM=\${DIR:-.}/\${1}
+		                break
+		            fi
+		        done
+		        unset IFS
+		    ;;
+		esac
+		LOADER=\$(readelf -lW "\${PROGRAM}" 2> /dev/null | sed -n 's/^.*\[Requesting program interpreter: \(.*\)\]\$/\1/p')
+		RUNPATH=\$(readelf -dW "\${PROGRAM}" 2> /dev/null | sed -n 's/^.*(R\(UN\)\{0,1\}PATH).*\[\(.*\)\]\$/\2/p' | sed "s#\\\$ORIGIN#\${PROGRAM%/*}#g" | head -n1)
+		if [ -z "\${LOADER}" ]
+		then
+		    if [ -n "\${TRACE}" ]
+		    then
+		        echo "	not a dynamic executable" >&2
+		        exit 1
+		    fi
+		    exec "\${@}"
+		fi
+		shift
+		LIBRARY_PATH=
+		IFS=:
+		for DIR in \${LD_LIBRARY_PATH} \${QEMU_LD_LIBRARY_PATH} \${RUNPATH}
+		do
+		    if [ -z "\${DIR}" ]
+		    then
+		        continue
+		    fi
+		    if [ -d "\${SYSROOT}\${DIR}" ]
+		    then
+		        DIR=\${SYSROOT}\${DIR}
+		    fi
+		    LIBRARY_PATH=\${LIBRARY_PATH}\${DIR}:
+		done
+		unset IFS
+		[ -z "\${TRACE}" ] || export LD_TRACE_LOADED_OBJECTS=1
+		exec "\${SYSROOT}\${LOADER}" --inhibit-cache --library-path "\${LIBRARY_PATH}${SYSROOT_LIBS}" --argv0 "\${PROGRAM}" "\${PROGRAM}" "\${@}"
+	EOF
+	return 0
+}
+
+function libtool_sysroot () {
+	### libtool_sysroot <sysroot> <dir>: lt_sysroot=<sysroot> in the libtool scripts configure generated
+	### under <dir> without one
+	local SYSROOT_DIR=${1}
+	local LIBTOOL_FILE
+	while read -r LIBTOOL_FILE
+	do
+		run_cmd "sed -i 's#^lt_sysroot=\$#lt_sysroot=${SYSROOT_DIR}#' \"${LIBTOOL_FILE}\""
+	done < <(grep -rlx --include=libtool 'lt_sysroot=' "${2}" 2>/dev/null || true)
+}
+
+function smart_autoreconf () {
+	### smart_autoreconf <dir>: autoreconf -fi in <dir> with the autotools of the global toolchain
+	### (lfs/{libtool,autoconf,automake,gettext}:native, first in the PATH), the aclocal directories of
+	### the sysroot and of the platform toolchain included. configmake runs it through xargs bash -c
+	local WORK_DIR=${1}
+	local ACINCLUDE=
+	if [ -d "${BIN_PATH}${TARGET_PREFIX}/share/aclocal" ]
+	then
+		ACINCLUDE+=" --include=${BIN_PATH}${TARGET_PREFIX}/share/aclocal"
+	fi
+	if [ -d "${TOOLCHAIN_PATH}/share/aclocal" ]
+	then
+		ACINCLUDE+=" --include=${TOOLCHAIN_PATH}/share/aclocal"
+	fi
+	pushd "${WORK_DIR}"
+	run_cmd "mkdir -pv m4"
+	run_cmd "rm -rfv autom4te.cache aclocal.m4 configure libtool ltmain.sh lt-main.sh"
+	export PATH="${GLOBAL_TOOLCHAIN_PATH}/bin:${PATH}"
+	if [ -f po/update-potfiles ]
+	then
+		run_cmd "./po/update-potfiles"
+	fi
+	MAX_RETRIES=5 run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/autoreconf -f -i ${ACINCLUDE}"
+	popd
+}
+export -f smart_autoreconf
+
+function configmake () {
 	if [ "${PKG_AUTOCONF:-0}" != 0 ]
 	then
-		if [ "${PKG_AUTOCONF:-0}" == 1 ]
-		then
-			PKG_AUTOCONF=${AUTOCONF_VER}
-		fi
-		echo "# Setting up ${PKG_AUTOCONF:-${AUTOCONF_VER}} ${PKG_AUTOMAKE:-${AUTOMAKE_VER}} ${PKG_LIBTOOL:-${LIBTOOL_VER}} ${PKG_GETTEXT:-${GETTEXT_VER}}"
-		setup_autotools "${PKG_AUTOCONF:-${AUTOCONF_VER}}" "${PKG_AUTOMAKE:-${AUTOMAKE_VER}}" "${PKG_LIBTOOL:-${LIBTOOL_VER}}" "${PKG_GETTEXT:-${GETTEXT_VER}}"
 		if [ "${AUTOCONF_PATH}" == "autoscan" ]
 		then
 			if [ "${PKG_COPYSRC:-0}" -eq 0 ]
@@ -802,7 +1920,7 @@ function configmake () {
 			popd
 		fi
 		#### Multi process autoreconf 
-		echo -n "${AUTOCONF_PATH:-.}" | xargs --verbose -P"${AUTOCONF_THREADS:-${NPROCS}}" -d',' -I{} bash -c "PKG_AUTOMAKE=${PKG_AUTOMAKE} smart_autoreconf ${PKG_SRCPATH}/{} || exit 255"
+		echo -n "${AUTOCONF_PATH:-.}" | xargs --verbose -P"${AUTOCONF_THREADS:-${NPROCS}}" -d',' -I{} bash -c "smart_autoreconf ${PKG_SRCPATH}/{} || exit 255"
 	fi
 	if [ "${PKG_COPYSRC:-0}" -eq 1 ] 
 	then
@@ -836,7 +1954,22 @@ function configmake () {
 				CONF_FLAGS="--build=${BARCH} --host=${BARCH} ${CONF_FLAGS}"
 			;;
 			target)
-				CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH} ${CONF_FLAGS}"
+				### Without a value libtool asks the compiler for the sysroot (--print-sysroot): a cross gcc that
+				### has BIN_PATH as its default needs none, and the configure options some packages keep (sudo -V)
+				### name no host path. The clang of setup_clang_config does not answer and needs no sysroot
+				### from libtool either, whose command lines then carry none: no option at all
+				if [ "${PKG_TOOLCHAIN:-${TOOLCHAIN}}" == gnu ] && \
+					[ "$( "${TOOLCHAIN_PATH}/bin/${HARCH}-gcc" -print-sysroot 2>/dev/null || true )" == "${BIN_PATH}" ]
+				then
+					CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot ${CONF_FLAGS}"
+				elif [ "${PKG_TOOLCHAIN:-${TOOLCHAIN}}" == llvm ] && [ ! -d "${DISTOS_PATH}${TARGET_INCLUDEDIR}" ] && \
+					clang_config_installed
+				then
+					CONF_FLAGS="--build=${BARCH} --host=${HARCH} ${CONF_FLAGS}"
+					local LT_SYSROOT=${BIN_PATH}
+				else
+					CONF_FLAGS="--build=${BARCH} --host=${HARCH} --with-sysroot=${BIN_PATH} ${CONF_FLAGS}"
+				fi
 			;;
 		esac
 	fi
@@ -853,17 +1986,27 @@ function configmake () {
 	fi
 	cat >runconfig.sh <<-EOF
 		#!/bin/bash
+		source "${PKG_BLDPATH}/recipe.source"
 		source "${PKG_BLDPATH}/environment.source"
 		${CONF_ENV} ${RUNCONFIG_CMD} ${CONF_FLAGS} ${CONF_VARS} \${@}
 	EOF
 	cat >runmake.sh <<-EOF
 		#!/bin/bash
+		source "${PKG_BLDPATH}/recipe.source"
 		source "${PKG_BLDPATH}/environment.source"
 		${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
 	EOF
 	run_cmd "chmod +x runconfig.sh runmake.sh"
 
 	run_cmd "./runconfig.sh"
+	### The libtool of a clang build without --with-sysroot has no sysroot: a relink at install time
+	### (-L<libdir> of the libraries of the package) searches the libdir of the build host, where a host
+	### of the same architecture has libraries of the same name (libcrypto without SM4 for tpm2-tss on
+	### generic-x64). The sysroot the gnu build gets from gcc -print-sysroot, with no configure option
+	if [ -n "${LT_SYSROOT}" ]
+	then
+		libtool_sysroot "${LT_SYSROOT}" "${PKG_BLDPATH}"
+	fi
 	IFS=,
 	for target in ${PKG_MAKETARGETS:-all,install}
 	do
@@ -879,8 +2022,10 @@ function simplemake () {
 	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* ${PKG_BLDPATH}"
 	cd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	cat >runmake.sh <<-EOF
-		#!/bin/bash -x
+		#!/bin/bash
+		source "${PKG_BLDPATH}/recipe.source"
 		source "${PKG_BLDPATH}/environment.source"
+		set -x
 		${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make V=${MAKEVERBOSE:-0} PREFIX=${INSTALL_PREFIX} LIBSUFFIX=${INSTALL_LIBSUFFIX} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
 	EOF
 	run_cmd "chmod +x runmake.sh"
@@ -912,26 +2057,74 @@ function cmakebuild () {
 	fi
 	local NINJA_FLAGS
 
-	NINJA_FLAGS="$(if [ "${MAKEVERBOSE}" -eq 1 ]; then echo -n '-v'; fi) -j${NPROCS}"
+	NINJA_FLAGS="$(if [ "${MAKEVERBOSE:-0}" -eq 1 ]; then echo -n '-v'; fi) -j${NPROCS}"
 	CMAKE_GENERATOR=${CMAKE_GENERATOR:-"Unix Makefiles"}
 
 	echo "CCWRAPPER=\"\" create_environment_source --target ${PKG_TARGET_ENV}" | log_buffer info
 	CCWRAPPER="" create_environment_source --target "${PKG_TARGET_ENV}"
-	
+
+	### CMake adds --sysroot=CMAKE_SYSROOT to every command line, and CMAKE_SYSROOT has to stay: the find
+	### commands search the sysroot through it and the exported targets of the sysroot name their files
+	### with it (strip_host_paths --cmake). A compiler with the sysroot in its own configuration
+	### (CC_HOST_PATH_CONFIG) needs no such option: the file CMake reads after the module of each
+	### compiler (CMAKE_USER_MAKE_RULES_OVERRIDE, also passed to try_compile) empties it
+	local SYSROOT_OPTION_OVERRIDE=
+	if [ "${CC_HOST_PATH_CONFIG}" -eq 1 ]
+	then
+		SYSROOT_OPTION_OVERRIDE="${PKG_BLDPATH}/bbxb-no-sysroot-option.cmake"
+		cat > "${SYSROOT_OPTION_OVERRIDE}" <<-'EOF'
+			foreach(lang C CXX ASM Fortran OBJC OBJCXX)
+			  set(CMAKE_${lang}_COMPILE_OPTIONS_SYSROOT "")
+			endforeach()
+		EOF
+	fi
+
+	### A target build is a cross build for CMake: -DCMAKE_CROSSCOMPILING does not last, CMake declares
+	### one only for a CMAKE_SYSTEM_NAME given. Without it a target of the machine of the build host
+	### (generic-x64) takes the if(CMAKE_CROSSCOMPILING) branches of a native build, try_run runs
+	### natively against the libraries of the host and a package installs itself with the program it
+	### built (lfs/cmake). try_run and the programs a build runs go through <HARCH>-run. find_program
+	### looks in the PATH of the build only (CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER): through the sysroot
+	### it found the programs of the image first (the sed of lfs/Poppler), which only the binfmt entry
+	### of qemu ran; libraries, headers and packages are still searched in the sysroot
+	local CMAKE_CROSS_FLAGS=
+	if [ "${PKG_TARGET_ENV}" == target ]
+	then
+		CMAKE_CROSS_FLAGS="-DCMAKE_SYSTEM_NAME=${HOS^} -DCMAKE_SYSTEM_PROCESSOR=${HM} -DCMAKE_CROSSCOMPILING_EMULATOR=${HARCH}-run"
+		CMAKE_CROSS_FLAGS+=" -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER"
+	fi
+
+	### Release is the build type (NDEBUG, the choices of the projects for it) without its -O3, which
+	### CMake puts after CFLAGS: the level is OPTLEVEL, in CFLAGS
+	### AR, RANLIB and STRIP of a target build are program names (settcenv): CMake would take a name for
+	### a path into the build directory, so the cache gets the program PATH finds. With LTO (IPO) CMake
+	### archives with CMAKE_<LANG>_COMPILER_AR/RANLIB instead, which it looks for next to the compiler:
+	### the clang of the platform toolchain has no llvm-ar there (NOTFOUND), so they get the same ones
 	cat >runconfig.sh <<-EOF
-		#!/bin/bash -x
+		#!/bin/bash
+		source "${PKG_BLDPATH}/recipe.source"
 		source "${PKG_BLDPATH}/environment.source"
+		set -x
 		${CONF_ENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/cmake ${PKG_SRCPATH}${CONF_PATH:+/${CONF_PATH}} \\
 		   -G "${CMAKE_GENERATOR}" \\
 		   -DCMAKE_BUILD_TYPE="Release" \\
+		   -DCMAKE_C_FLAGS_RELEASE="-DNDEBUG" \\
+		   -DCMAKE_CXX_FLAGS_RELEASE="-DNDEBUG" \\
+		   -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \\
 		   -DTOOLCHAIN_PREFIX=${HARCH}- \\
 		   -DCMAKE_SYSROOT=${SYSROOT} \\
+		   ${SYSROOT_OPTION_OVERRIDE:+-DCMAKE_USER_MAKE_RULES_OVERRIDE=${SYSROOT_OPTION_OVERRIDE}} \\
 		   -DCMAKE_C_COMPILER_LAUNCHER=${CCWRAPPER} \\
 		   -DCMAKE_CXX_COMPILER_LAUNCHER=${CCWRAPPER} \\
-		   -DCMAKE_AR=\${AR} \\
-		   -DCMAKE_RANLIB=\${RANLIB} \\
-		   -DCMAKE_STRIP=\${STRIP} \\
+		   -DCMAKE_AR=\$(command -v \${AR}) \\
+		   -DCMAKE_C_COMPILER_AR=\$(command -v \${AR}) \\
+		   -DCMAKE_CXX_COMPILER_AR=\$(command -v \${AR}) \\
+		   -DCMAKE_RANLIB=\$(command -v \${RANLIB}) \\
+		   -DCMAKE_C_COMPILER_RANLIB=\$(command -v \${RANLIB}) \\
+		   -DCMAKE_CXX_COMPILER_RANLIB=\$(command -v \${RANLIB}) \\
+		   -DCMAKE_STRIP=\$(command -v \${STRIP}) \\
 		   -DCMAKE_CROSSCOMPILING:BOOL=ON \\
+		   ${CMAKE_CROSS_FLAGS} \\
 		   -DCMAKE_SKIP_RPATH:BOOL=ON \\
 		   -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}" \\
 		   -DCMAKE_INSTALL_LIBDIR="${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}" \\
@@ -947,15 +2140,19 @@ function cmakebuild () {
 	case "${CMAKE_GENERATOR}" in
 		"Ninja")
 			cat >runmake.sh <<-EOF
-				#!/bin/bash -x
+				#!/bin/bash
+				source "${PKG_BLDPATH}/recipe.source"
 				source "${PKG_BLDPATH}/environment.source"
+				set -x
 				${PKG_MAKEENV} DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}
 			EOF
 		;;
 		"Unix Makefiles")
 			cat >runmake.sh <<-EOF
-				#!/bin/bash -x
+				#!/bin/bash
+				source "${PKG_BLDPATH}/recipe.source"
 				source "${PKG_BLDPATH}/environment.source"
+				set -x
 				${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make VERBOSE=${MAKEVERBOSE:-0} DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
 			EOF
 		;;
@@ -979,7 +2176,7 @@ function mesonninja () {
 			local FIRST=1
 			for flag in ${1}
 			do
-				if [ ${FIRST} -ne 1 ]
+				if [ "${FIRST}" -ne 1 ]
 				then
 					echo -n ", "
 				fi
@@ -988,9 +2185,17 @@ function mesonninja () {
 			done
 			echo
 		}
-		local C C_ARGS C_LINK_ARGS CPP CPP_ARGS CPP_LINK_ARGS FORTRAN FORTRAN_ARGS FORTRAN_LINK_ARGS
+		local C C_ARGS C_LINK_ARGS CPP CPP_ARGS CPP_LINK_ARGS FORTRAN FORTRAN_ARGS FORTRAN_LINK_ARGS PYTHON
 		# shellcheck source=/dev/null
 		source "${PKG_BLDPATH}/environment.source"
+		### The python of the host machine is the crossenv when environment.source activates it; a
+		### build without it (PKG_DISABLECROSSPYTHON, or before setup_python creates it: the
+		### dependencies of lfs/python3, systemd:bootstrap) leaves meson the python3 of PATH, the
+		### native one, which has jinja2
+		if command -v cross-python3 > /dev/null
+		then
+			PYTHON="python = 'cross-python3'"
+		fi
 		C=$(buildmesonargs "${CC}")
 		C_ARGS=$(buildmesonargs "${CFLAGS}")
 		C_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
@@ -1003,6 +2208,9 @@ function mesonninja () {
 			FORTRAN_ARGS=$(buildmesonargs "${FFLAGS}")
 			FORTRAN_LINK_ARGS=$(buildmesonargs "${LDFLAGS}")
 		fi
+		### needs_exe_wrapper: a program of the target the build runs (mesa_clc, the introspection dumper)
+		### goes through <HARCH>-run (target_runner_script) also when the build host has the same
+		### architecture, where meson would run it natively with the libraries of the host (generic-x64)
 		cat > "cross-${PLATFORM_NAME}" <<-EOF
 			[binaries]
 			c = [${C}]
@@ -1015,8 +2223,8 @@ function mesonninja () {
 			nm = '${NM}'
 			ranlib = '${RANLIB}'
 			pkgconfig = '${PKG_CONFIG}'
-			python = 'cross-python3'
-			exe_wrapper = 'qemu-${HM}-static'
+			${PYTHON}
+			exe_wrapper = '${HARCH}-run'
 
 			[host_machine]
 			system = '${HOS}'
@@ -1026,6 +2234,7 @@ function mesonninja () {
 
 			[properties]
 			sys_root = '${SYSROOT}'
+			needs_exe_wrapper = true
 			c_args = [${C_ARGS}]
 			cpp_args = [${CPP_ARGS}]
 			fortran_args= [${FORTRAN_ARGS}]
@@ -1046,8 +2255,9 @@ function mesonninja () {
 	esac
 	if [ "${STD_CONF_FLAGS:-1}" -eq 1 ]
 	then
+		### CONF_FLAGS follow MESON_FLAGS on the meson command line (runconfig.sh below), once
 		MESON_FLAGS="--prefix=${INSTALL_PREFIX} --libdir=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX} --includedir=${INSTALL_INCLUDEDIR} \
-			--sysconfdir=${INSTALL_SYSCONFDIR} --localstatedir=${INSTALL_LOCALSTATEDIR} --datadir=${INSTALL_SHAREDIR} ${CONF_FLAGS}"
+			--sysconfdir=${INSTALL_SYSCONFDIR} --localstatedir=${INSTALL_LOCALSTATEDIR} --datadir=${INSTALL_SHAREDIR}"
 		if [ "${PKG_OVERRIDESHARED:-${BUILD_LIBSHARED}}" -eq 0 ] && [ "${PKG_OVERRIDESTATIC:-${BUILD_LIBSTATIC}}" -eq 1 ]
 		then
 			MESON_FLAGS+=" --default-library=static"
@@ -1073,16 +2283,25 @@ function mesonninja () {
 		*)
 			createmesoncross
 			MESON_FLAGS+=" --cross-file cross-${PLATFORM_NAME}"
+			### A dependency of the build machine (native: true, wayland-scanner) is a program the build
+			### runs: the pc files of the cross builds win over the ones of the sysroot, whose programs
+			### are of the target (on a host of the same architecture they run natively, without the
+			### libraries of the sysroot)
+			MESON_FLAGS+=" -Dbuild.pkg_config_path=${TOOLCHAIN_PATH}/lib/pkgconfig"
 		;;
 	esac
 	cat > runconfig.sh <<-EOF
-		#!/bin/bash -x
+		#!/bin/bash
+		source "${PKG_BLDPATH}/recipe.source"
 		source "${PKG_BLDPATH}/environment.source"
-		${CONF_ENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/meson ${PKG_SRCPATH} ${PKG_BLDPATH} ${MESON_FLAGS} ${CONF_FLAGS} \${@}	
+		set -x
+		${CONF_ENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/meson ${PKG_SRCPATH} ${PKG_BLDPATH} ${MESON_FLAGS} ${CONF_FLAGS} \${@}
 	EOF
 	cat >runmake.sh <<-EOF
-		#!/bin/bash -x
+		#!/bin/bash
+		source "${PKG_BLDPATH}/recipe.source"
 		source "${PKG_BLDPATH}/environment.source"
+		set -x
 		${PKG_MAKEENV} DESTDIR=${PKG_PKGPATH} ${GLOBAL_TOOLCHAIN_PATH}/bin/ninja ${NINJA_FLAGS} ${PKG_MAKEVARS} \${@}
 	EOF
 	run_cmd "chmod +x runconfig.sh runmake.sh"
@@ -1102,10 +2321,11 @@ function cargobuild () {
 
 	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 	cd "${PKG_BLDPATH}"
-	# shellcheck disable=SC2034
 	cat >runmake.sh <<-EOF
-		#!/bin/bash -x
+		#!/bin/bash
+		source recipe.source
 		source environment.source
+		set -x
 
 		case \${1} in
 		  install)
@@ -1120,13 +2340,13 @@ function cargobuild () {
 			$(
 				# shellcheck source=/dev/null
 				source environment.source
-				for file in ${CARGO_BINLIST}
+				for CARGO_FILE in ${CARGO_BINLIST}
 				do
-					echo "    cp -fpv \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${INSTALL_EXECPREFIX}/bin/${file}\""
+					echo "    cp -fpv \"target/${CARGO_TARGET}/release/${CARGO_FILE}\" \"${PKG_PKGPATH}${INSTALL_EXECPREFIX}/bin/${CARGO_FILE}\""
 				done
-				for file in ${CARGO_LIBLIST}
+				for CARGO_FILE in ${CARGO_LIBLIST}
 				do
-					echo "    cp -fpv \"target/${CARGO_TARGET}/release/${file}\" \"${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/${file}\""
+					echo "    cp -fpv \"target/${CARGO_TARGET}/release/${CARGO_FILE}\" \"${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/${CARGO_FILE}\""
 				done
 			)
 		  ;;
@@ -1163,8 +2383,7 @@ function kernelmodbuild () {
 	fi
 
 	run_cmd "KCFLAGS=\"${PKG_CFLAGS}\" ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} modules"
-	# shellcheck disable=SC2153
-	run_cmd "eval ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} INSTALL_MOD_PATH=${PKG_PKGPATH} INSTALL_MOD_DIR=${PKG_KERNEL_MODPATH} modules_install"
+	run_cmd "eval ${PKG_KERNEL_BLDPATH}/make4kern.sh ${BUILD_OPTION}M=${PWD} ${PKG_MAKEVARS} INSTALL_MOD_PATH=${PKG_PKGPATH} INSTALL_MOD_DIR=${PKG_KERNEL_MODPATH:-} modules_install"
 	run_cmd "rm -f ${PKG_PKGPATH}/lib/modules/*/modules.*"
 
 	run_cmd "mkdir -pv ${PKG_PKGPATH}/postinst_scripts"
@@ -1177,6 +2396,11 @@ function kernelmodbuild () {
 }
 
 function kernelbuild () {
+	### The host programs of the kernel build (extract-cert and sign-file with libcrypto...) take their
+	### libraries from the global toolchain: HOSTPKG_CONFIG is its pkgconf with its pc files alone (the
+	### PKG_CONFIG variables of the target are emptied below), HOSTLDFLAGS gives them its RUNPATH. A
+	### library it does not have falls back to the one of the build host (objtool: -lelf); the recipe
+	### depends on the native packages its configuration needs (lfs/openssl:native)
 	function make4kern () {
 		cat <<-EOF > make4kern.sh
 			source "${PKG_BLDPATH}/environment.source"
@@ -1193,7 +2417,7 @@ function kernelbuild () {
 				READELF="\${READELF}" \\
 				STRIP="\${STRIP}" \\
 				KCFLAGS="\${KCFLAGS}${LLVM_KERNELPOLLYFLAGS:+ ${LLVM_KERNELPOLLYFLAGS}}${PKG_CFLAGS:+ ${PKG_CFLAGS}}" \\
-				KBUILD_LDFLAGS="${KERNEL_OPTLINK_FLAGS}${PKG_LDFLAGS:+ ${PKG_LDFLAGS}}" \\
+				BBXB_KBUILD_LDFLAGS="${KERNEL_LDFLAGS}" \\
 				ARCH=${KERNEL_ARCH} \\
 				CROSS_COMPILE=${HARCH}- \\
 				HOSTCC="\${CC_FOR_BUILD}" \\
@@ -1202,10 +2426,11 @@ function kernelbuild () {
 				HOSTLD="\${LINKER_EXE_FOR_BUILD}" \\
 				HOSTCFLAGS="\${CFLAGS_FOR_BUILD}" \\
 				HOSTCXXFLAGS="\${CXXFLAGS_FOR_BUILD}" \\
-				HOSTLDFLAGS="\${LDFLAGS_FOR_BUILD}" \\
+				HOSTLDFLAGS="\${LDFLAGS_FOR_BUILD} -Wl,-rpath,${GLOBAL_TOOLCHAIN_PATH}/lib" \\
+				HOSTPKG_CONFIG="env PKG_CONFIG_LIBDIR=${GLOBAL_TOOLCHAIN_PATH}/lib/pkgconfig:${GLOBAL_TOOLCHAIN_PATH}/share/pkgconfig PKG_CONFIG_SYSROOT_DIR= ${GLOBAL_TOOLCHAIN_PATH}/bin/pkgconf" \\
 				EXTRAVERSION=${KERNEL_EXTRAVERSION} \\
 				LOCALVERSION=${KERNEL_LOCALVERSION} \\
-				${EXTRA_PARMS} ${PKG_MAKEVARS} \${@}
+				${PKG_MAKEVARS} \${@}
 		EOF
 		run_cmd "cat make4kern.sh"
 		run_cmd "chmod +x make4kern.sh"
@@ -1215,6 +2440,23 @@ function kernelbuild () {
 	cd "${PKG_BLDPATH}"
 
 	sed -e 's/FLAGS=.*/FLAGS=/g' -e 's/PKG_CONFIG\(.*\)=.*/PKG_CONFIG\1=/' -i environment.source
+
+	### The linker flags of the build go into BBXB_KBUILD_LDFLAGS, which the Makefile adds to its
+	### KBUILD_LDFLAGS: KBUILD_LDFLAGS on the command line of make would make it ignore every
+	### "KBUILD_LDFLAGS +=" of the kernel (-m/-EL of the architecture, -z noexecstack, the ThinLTO
+	### --lto-whole-program-visibility). The LTO back end of ld.lld runs at O2 unless told: --lto-O3
+	### with KERNEL_OPTLEVEL 3
+	local KERNEL_LDFLAGS="${KERNEL_OPTLINK_FLAGS}${PKG_LDFLAGS:+ ${PKG_LDFLAGS}}"
+	if [ "${PKG_TOOLCHAIN:-${TOOLCHAIN}}" == llvm ] && [ "${KERNEL_OPTLEVEL:-2}" == 3 ] && \
+		[ "${PKG_OVERRIDELTO:-${KERNEL_LTOENABLE:-0}}" != 0 ]
+	then
+		KERNEL_LDFLAGS+=" --lto-O3"
+	fi
+	run_cmd "sed -i '/^KBUILD_LDFLAGS[[:space:]]*:=/a KBUILD_LDFLAGS += \$(BBXB_KBUILD_LDFLAGS)' Makefile"
+	if ! grep -qxF "KBUILD_LDFLAGS += \$(BBXB_KBUILD_LDFLAGS)" Makefile
+	then
+		trow_error "${ERROR_GENERIC}" "kernelbuild: no KBUILD_LDFLAGS := in the Makefile of ${PKG_FULLNAME}." || return
+	fi
 
 	make4kern
 
@@ -1251,7 +2493,7 @@ function kernelbuild () {
 			;;
 	esac
 
-	if [ "x${CONF_FLAGS}" != "x" ]
+	if [ -n "${CONF_FLAGS}" ]
 	then
 		run_cmd "scripts/config ${CONF_FLAGS}"
 	fi
@@ -1285,27 +2527,22 @@ function kernelbuild () {
 		run_cmd "mkdir -p \"${PKG_PKGPATH}/boot\""
 	fi
 
-	KERNEL_RELEASE=$(./make4kern.sh kernelrelease)
+	KERNEL_RELEASE=$(./make4kern.sh V=0 kernelrelease)
+	### The version of the kernel built, from its Makefile: the recipes of the kernels name it their own way
+	add_system_config_variable KERNEL_VER "$(./make4kern.sh V=0 kernelversion)"
 	add_system_config_variable KERNEL_RELEASE "${KERNEL_RELEASE}"
 
 	run_cmd "cp -pv .config \"${PKG_PKGPATH}/boot/config-${KERNEL_RELEASE}\""
 
 	# Build and install kernel
 	run_cmd "./make4kern.sh \"${KERNEL_IMAGE}\""
-	case ${KERNEL_NAME}
-	in
-		kernel*)
-			run_cmd "cp \"arch/${KERNEL_ARCH}/boot/${KERNEL_IMAGE}\" \"${PKG_PKGPATH}/boot/${KERNEL_NAME}\""
-			local STATUS=${?}
-			;;
-		*)
-			if [ ! -d "${PKG_PKGPATH}/boot" ]
-			then
-				mkdir "${PKG_PKGPATH}/boot"
-			fi
-			run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=\"${KERNEL_ARCH}\"} ${HARCH:+CROSS_COMPILE=\"${HARCH}-\"} INSTALL_PATH=\"${PKG_PKGPATH}/boot\" ${PKG_MAKEVARS} install"
-			;;
-	esac
+	### Not "make install": scripts/install.sh hands the image to the installkernel of the build
+	### machine, which ignores INSTALL_PATH (kernel-install of the Fedora container: no image in
+	### the package), and the fallback of the architecture names no version. The name the firmware
+	### of a board wants (KERNEL_NAME of the platform, kernel8.img of the Raspberry Pi) is a copy the
+	### kernel recipe makes
+	run_cmd "cp \"arch/${KERNEL_ARCH}/boot/${KERNEL_IMAGE}\" \"${PKG_PKGPATH}/boot/vmlinuz-${KERNEL_RELEASE}\""
+	run_cmd "cp System.map \"${PKG_PKGPATH}/boot/System.map-${KERNEL_RELEASE}\""
 	
 	# Build and install modules
 
@@ -1321,7 +2558,7 @@ function kernelbuild () {
 	fi
 
 	# Build and install DTBS
-	if [ "${KERNEL_DTBS:-0}" -eq 1 ] && [ "${STATUS}" -eq 0 ]
+	if [ "${KERNEL_DTBS:-0}" -eq 1 ]
 	then
 		if [ ! -d "${PKG_PKGPATH}/boot/overlays" ]
 		then
@@ -1329,18 +2566,6 @@ function kernelbuild () {
 		fi
 		run_cmd "./make4kern.sh dtbs"
 		run_cmd "${GLOBAL_TOOLCHAIN_PATH}/bin/make ${KERNEL_ARCH:+ARCH=\"${KERNEL_ARCH}\"} ${HARCH:+CROSS_COMPILE=\"${HARCH}-\"} INSTALL_DTBS_PATH=\"${PKG_PKGPATH}/boot\" ${PKG_MAKEVARS} dtbs_install"
-	fi
-
-	if [ "${PKG_KERNEL_INITRAMFS:-0}" -eq 1 ]
-	then
-		run_cmd "mkdir -pv \"${PKG_PKGPATH}/postinst_scripts\""
-		run_cmd "echo -n \"dracut --force --kver ${KERNEL_RELEASE} -N -a drm --fstab --zstd\" > \"${PKG_PKGPATH}/postinst_scripts/99_kernel\""
-		if [ -n "${PKG_KERNEL_INITRAMFS_DRIVERS}" ]
-		then
-			run_cmd "echo \" --add-drivers \\\"${PKG_KERNEL_INITRAMFS_DRIVERS}\\\"\" >> \"${PKG_PKGPATH}/postinst_scripts/99_kernel\""
-		else
-			run_cmd "echo >> \"${PKG_PKGPATH}/postinst_scripts/99_kernel\""
-		fi
 	fi
 
 	PKG_KERNEL_BLDPATH="${PWD}"
@@ -1383,7 +2608,7 @@ function pythonbuild () {
 			PYTHON_LIB_PATH="$(dirname "$(ldd "${PYTHON_FOR_BUILD}" | grep "libpython${PYTHONBIN_VER}" | awk '{print $3}')")"
 			COMMON_LDFLAGS+=" -L${PYTHON_LIB_PATH}"
 		;;
-		target)
+		*)
 			if [ -d "${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m" ]
 			then
 				COMMON_CFLAGS+=" -I${DISTOS_PATH}/usr/include/python${PYTHONBIN_VER}m"
@@ -1429,15 +2654,26 @@ function pythonbuild () {
 		local PYTHONBUILD="--no-binary :all:"
 	fi
 	case ${PKG_TARGET_ENV} in
-		native|cross)
+		native)
 			run_cmd "PIP_CACHE_DIR=${DOWNLOAD_PATH}/pip ${PYTHON_FOR_BUILD} -m pip ${VERBOSE} install --no-deps ${PYTHONBUILD} --prefix=${INSTALL_PREFIX} ${PIPPKG}"
 		;;
-		target)
+		cross)
+			run_cmd "PIP_CACHE_DIR=${DOWNLOAD_PATH}/pip ${PYTHON_FOR_BUILD} -m pip ${VERBOSE} install --no-deps ${PYTHONBUILD} --prefix=${INSTALL_PREFIX} ${PIPPKG}"
+		;;
+		*)
 			run_cmd "cross-python -m site"
-			run_cmd "PIP_CACHE_DIR=${DOWNLOAD_PATH}/pip cross-python -m pip ${VERBOSE} install --compile --force-reinstall --no-deps ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${INSTALL_PREFIX} ${PIPPKG}"
+			### --no-compile: pip byte-compiles where it installs, so the pyc would name the staging
+			### directory of the host in co_filename (and in every traceback of the image). compileall
+			### writes the path the image has (-s strips the staging directory, -p makes it absolute);
+			### a module that does not compile is left to the target, as pip leaves it
+			run_cmd "PIP_CACHE_DIR=${DOWNLOAD_PATH}/pip cross-python -m pip ${VERBOSE} install --no-compile --force-reinstall --no-deps ${PYTHONBUILD} --root ${PKG_PKGPATH} --prefix=${INSTALL_PREFIX} ${PIPPKG}"
 			if [ "${PYTHON_PKGDIR}" == dist-packages ]
 			then
 				run_cmd "mv \"${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/site-packages\" \"${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}/dist-packages\""
+			fi
+			if [ -d "${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}" ]
+			then
+				run_cmd "cross-python -m compileall -q -s \"${PKG_PKGPATH}\" -p / \"${PKG_PKGPATH}${INSTALL_LIBDIR}/python${PYTHONBIN_VER}\" || true"
 			fi
 		;;
 	esac
@@ -1448,48 +2684,93 @@ function custom () {
 	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
 	cat >runmake.sh <<-EOF
-		#!/bin/bash -ex
+		#!/bin/bash -e
+		source "${PKG_BLDPATH}/recipe.source"
 		source "${PKG_BLDPATH}/environment.source"
+		set -x
 
 	EOF
-	echo "${PKG_BUILDSCRIPT}" >>runmake.sh
+	if [ -n "$( recipe_script build.sh )" ]
+	then
+		echo "source \"$( recipe_script build.sh )\"" >>runmake.sh
+	else
+		trow_error "${ERROR_FILE_NOT_FOUND}" "${PKG_FULLNAME}: BUILD_PROCESS=custom requires build.sh in the recipe or in a selected variant"
+	fi
 	run_cmd "chmod +x runmake.sh"
 	run_cmd "./runmake.sh"
 	popd
 }
 
 function perlmodule () {
+	### perlmodule: a perl module with a Makefile.PL (ExtUtils::MakeMaker), run by the native perl
+	### (lfs/perl5:native, a dependency of the recipe). The native target installs it into that perl, the
+	### configuration tools of the other modules (File::ShareDir::Install...). A target build makes it for
+	### the perl of the image (lfs/perl5, of the same PERL_VER): Makefile.PL finds first in its @INC a
+	### directory with the Config of the image alone (Config.pm, Config_heavy.pl, Config_git.pl, and
+	### Errno.pm, which checks that the architecture of the Config is its own and is generated for it), so
+	### MakeMaker takes the install directories and the build settings of the target, while the native
+	### perl keeps its own XS modules; the library directories of that Config (archlibexp, privlibexp)
+	### are the ones of the sysroot, so the headers are its CORE; the compiler, the archiver and their
+	### flags (OPTIMIZE, LDDLFLAGS) are the ones of the build, not the ones perl was built with. The module goes into site_perl (INSTALLDIRS=site: the perl of the
+	### image has no vendor directories), installed with pure_install: no perllocal.pod, which every
+	### module would append to. CONF_FLAGS are more Makefile.PL arguments, PKG_MAKETARGETS the make
+	### targets (all,pure_install)
+	local PERL_EXE=${GLOBAL_TOOLCHAIN_PATH}/perl5/bin/perl
+	local PERL_ARCHLIB PERL_CONFIG PERL_TARGET_ARGS
+	PERL_ARCHLIB=${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/$( package_version lfs/perl5 | cut -d. -f1,2 )/core_perl
 	run_cmd "cp -frp \"${PKG_SRCPATH}\"/* \"${PKG_BLDPATH}\""
 	pushd "${PKG_BLDPATH}${CONF_PATH:+/${CONF_PATH}}"
+	if [ "${PKG_TARGET_ENV}" == target ]
+	then
+		PERL_CONFIG="PERL5LIB=\"\${PWD}/bbxb-perl-config\""
+		PERL_TARGET_ARGS="CC=\"\${CC}\" LD=\"\${CC}\" AR=\"\${AR}\" FULL_AR=\"\${AR}\" RANLIB=\"\${RANLIB}\""
+		PERL_TARGET_ARGS+=" OPTIMIZE=\"\${CFLAGS}\" LDDLFLAGS=\"-shared \${LDFLAGS}\" LDFLAGS=\"\${LDFLAGS}\""
+	fi
 	cat > runconfig.sh <<-EOF
 		#!/bin/bash
+		source "${PKG_BLDPATH}/recipe.source"
 		source "${PKG_BLDPATH}/environment.source"
-
-		perl Makefile.PL \\
-		AR='${AR}' CC='${CC}' CPPRUN='${CPP}' FULL_AR='${AR}' LD='${CC}' \\
-		PERL_INC='${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/5.36/CORE' \\
+		set -e
+		if [ "${PKG_TARGET_ENV}" == target ]
+		then
+			mkdir -p bbxb-perl-config
+			for CONFIG_FILE in Config.pm Config_heavy.pl Config_git.pl Errno.pm
+			do
+				cp -v "\${SYSROOT}${PERL_ARCHLIB}/\${CONFIG_FILE}" bbxb-perl-config/
+			done
+			### The library directories of the perl of the image are the ones of the sysroot during the build:
+			### MakeMaker reads the headers from archlibexp/CORE (every subdirectory too) and the typemap from
+			### privlibexp; it puts neither in the @INC of the native perl
+			sed -i -E "s#^(    (arch|priv)libexp => ')#\\1\${SYSROOT}#" bbxb-perl-config/Config.pm
+			sed -i -E "s#^((arch|priv)libexp=')#\\1\${SYSROOT}#" bbxb-perl-config/Config_heavy.pl
+		fi
+		${PERL_CONFIG} ${CONF_ENV} "${PERL_EXE}" Makefile.PL INSTALLDIRS=site \\
+			PERL="${PERL_EXE}" FULLPERL="${PERL_EXE}" ${PERL_TARGET_ARGS} \\
+			${CONF_FLAGS} \${@}
 	EOF
-	sudo chroot "${SYSROOT}" \
-		perl -V | \
-		grep -o '[^ ].*=.*' | \
-		sed -e 's/ =/=/g' -e 's/^[a-z0-9_]*=/\U&/' -e '/=\x27/! s/=/=\x27/' -e '/\x27$/! s/$/\x27/' | \
-		grep -e 'CCFLAGS=' -e 'CCCDLFLAGS=' -e 'CCDLFLAGS=' -e 'LDDLFLAGS=' -e 'LDFLAGS=' -e 'OFF_T=' | \
-		xargs -d'\n' >> runconfig.sh
-	run_cmd "chmod +x runconfig.sh"
-	run_cmd "./runconfig.sh"
 	cat > runmake.sh <<-EOF
 		#!/bin/bash
+		source "${PKG_BLDPATH}/recipe.source"
 		source "${PKG_BLDPATH}/environment.source"
-		make PERL_INC='${SYSROOT}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}/perl5/5.36/core_perl/CORE'
+		${PERL_CONFIG} ${PKG_MAKEENV} ${GLOBAL_TOOLCHAIN_PATH}/bin/make DESTDIR=${PKG_PKGPATH} ${PKG_MAKEVARS} \${@}
 	EOF
-	run_cmd "chmod +x runmake.sh"
-	run_cmd "./runmake.sh"
-
-	pause
-
+	run_cmd "chmod +x runconfig.sh runmake.sh"
+	run_cmd "./runconfig.sh"
+	IFS=,
+	for target in ${PKG_MAKETARGETS:-all,pure_install}
+	do
+		unset IFS
+		echo "Making ${target}..."
+		run_cmd "./runmake.sh ${target}"
+	done
+	unset IFS
+	### The .packlist of the module lists the files with the staging directory in front
+	if [ -n "${PKG_PKGPATH}" ]
+	then
+		run_cmd "find \"${PKG_PKGPATH}\" -name .packlist -print -delete"
+	fi
 	popd
 }
-
 
 function downloadsources () {
 	if [ -n "${PKG_URL}" ]
@@ -1519,6 +2800,81 @@ function downloadsources () {
 	fi
 }
 
+function sources_key () {
+	### sources_key: md5 of what the prepared sources of the package are made of, the content of the
+	### marker of PKG_KEEPBUILDDIR: the archives or the repository, the Debian patches and the patch
+	### files of the recipe and of the selected variants (names and contents). Another target or
+	### platform with other patches gets another key; a change of the recipe elsewhere does not
+	local PATCH_FILE
+	{
+		printf '%s\n' "PKG_URL=${PKG_URL}" "GIT_URL=${GIT_URL}" "GIT_COMMIT=${GIT_COMMIT}" \
+			"PATCHDEB=${PATCHDEB}" "MAKEDIR=${MAKEDIR}"
+		recipe_patches | while read -r PATCH_FILE
+		do
+			printf '%s %s\n' "$( basename "${PATCH_FILE}" )" "$( md5sum < "${PATCH_FILE}" | cut -d' ' -f1 )"
+		done
+	} | md5sum | cut -d' ' -f1
+	return 0
+}
+
+function builddir_key () {
+	### builddir_key <environment.source>: md5 of what the configuration of a kept build directory
+	### (PKG_KEEPBUILDDIR) depends on. CMake and meson read the compilers and the flags of the
+	### environment only when they configure an empty directory, and a cache variable dropped from
+	### the command line stays in the cache: the exported environment of the build (not the
+	### directory it was written from, nor the PATH of the shell that started bbxb), the
+	### configuration variables of the recipe, the function of BUILD_PROCESS (it writes
+	### runconfig.sh) and size and time of the compilers of the environment: a build system does not
+	### see a compiler rebuilt with the same version
+	local KEY_VAR EXE
+	{
+		sed -n -e '/^export ENVIRONMENT_SOURCE_PATH=/d' -e '/^export PATH=/d' -e '/^export /p' "${1}" 2>/dev/null || true
+		for KEY_VAR in CONF_CMD CONF_ENV CONF_FLAGS CONF_PATH CONF_VARS CMAKE_GENERATOR STD_CONF_FLAGS \
+			PKG_AUTOCONF PKG_COPYSRC PKG_TOOLCHAIN \
+			PKG_OVERRIDELD PKG_OVERRIDELTO PKG_OVERRIDESHARED PKG_OVERRIDESTATIC \
+			BUILD_LIBSHARED BUILD_LIBSTATIC LTOENABLE \
+			INSTALL_PREFIX INSTALL_EXECPREFIX INSTALL_LIBDIR INSTALL_LIBSUFFIX INSTALL_INCLUDEDIR \
+			INSTALL_SYSCONFDIR INSTALL_LOCALSTATEDIR INSTALL_SHAREDIR
+		do
+			printf '%s=%s\n' "${KEY_VAR}" "${!KEY_VAR}"
+		done
+		declare -f "${BUILD_PROCESS:-none}" 2>/dev/null || true
+		(
+			# shellcheck source=/dev/null
+			source "${1}"
+			for EXE in "${CC_EXE}" "${CXX_EXE}"
+			do
+				if [ -n "${EXE}" ]
+				then
+					stat -L -c '%n %s %Y' "$( command -v "${EXE%% *}" )"
+				fi
+			done
+		) 2>/dev/null || true
+	} | md5sum | cut -d' ' -f1
+	return 0
+}
+
+function stale_builddirs () {
+	### stale_builddirs: the build directories kept (PKG_KEEPBUILDDIR, recognized by their stamp) for
+	### another version of the package, <name><suffix>_<other version>[-<target>] under BLD_PATH:
+	### a version bump leaves the tree of the previous one, several GB for lfs/llvm
+	local DIR BASE
+	if [ -z "${PKG_VER}" ]
+	then
+		return 0
+	fi
+	for DIR in "${BLD_PATH}/${PKG_NAME}${PKG_SUFFIX}_"*
+	do
+		BASE=${DIR##*/}
+		if [ -f "${DIR}/.bbxb-environment" ] && [ "${DIR}" != "${PKG_BLDPATH}" ] && \
+			[ "${BASE}" != "${PKG_FULLNAME}" ] && [[ "${BASE}" != "${PKG_FULLNAME}"-* ]]
+		then
+			echo "${DIR}"
+		fi
+	done
+	return 0
+}
+
 function build () {(
 
 	unset \
@@ -1538,28 +2894,26 @@ function build () {(
 		GIT_COMMIT \
 		MAKEDIR \
 		PATCHDEB \
-		PATCHES \
 		PKG_AUTOCONF \
-		PKG_AUTOMAKE \
-		PKG_BUILDSCRIPT \
 		PKG_CFLAGS \
 		PKG_CHECK \
 		PKG_COPYSRC \
+		PKG_CPPFLAGS \
 		PKG_CXXFLAGS \
 		PKG_DEPS \
 		PKG_DISABLECROSSPYTHON \
 		PKG_DISABLECCWRAPPER \
 		PKG_FAULTYCFLAGS \
 		PKG_FCFLAGS \
-		PKG_GETTEXT \
+		PKG_KEEPBUILDDIR \
 		PKG_KERNEL_BUILD_MODULES \
 		PKG_KERNEL_INITRAMFS \
 		PKG_KERNEL_INITRAMFS_DRIVERS \
+		PKG_KERNEL_LOCALBUILD \
 		PKG_KERNEL_MOD \
 		PKG_KERNEL_MODPATH \
 		PKG_LDFLAGS \
 		PKG_LD_LIBRARY_PATH \
-		PKG_LIBTOOL \
 		PKG_LLVMPOLLYFEATURES \
 		PKG_MAKEENV \
 		PKG_MAKETARGETS \
@@ -1568,10 +2922,8 @@ function build () {(
 		PKG_OVERRIDELTO \
 		PKG_OVERRIDESHARED \
 		PKG_OVERRIDESTATIC \
-		PKG_POSTBUILD \
-		PKG_POSTINSTALL \
 		PKG_POSTINSTALL_PRIO \
-		PKG_PREBUILD \
+		PKG_PYTHONBUILD \
 		PKG_RUSTFLAGS \
 		PKG_SRCDIR \
 		PKG_SUFFIX \
@@ -1586,11 +2938,18 @@ function build () {(
 		VAR_INSTALL_INCDIR \
 		VAR_INSTALL_CONFDIR \
 
-	OPTS="--force --no_gcc_check --no_save_status --temporary --keep_builddir" OPTS_WITH_VALUE="--toolchain --with_extra_modules" param2value "${@}"
+	OPTS="--force --no_gcc_check --no_save_status --temporary --keep_builddir --clean_builddir" OPTS_WITH_VALUE="--toolchain --with_extra_modules" param2value "${@}"
 
 	# Split dependency in Package name and its Target separated by ':'
 
 	local \
+		ALREADY_BUILT \
+		BUILD_CHECKED_KEY \
+		BUILD_CHECKED_NAME \
+		BUILDDIR_KEY \
+		BUILDDIR_STAMP \
+		CLEANBUILDDIR \
+		CONSOLE_LINE_OPEN \
 		FORCE \
 		GCC_CHECK \
 		INSTALL_PREFIX \
@@ -1610,25 +2969,34 @@ function build () {(
 		PKG_FULLNAME \
 		PKG_NAME \
 		PKG_PKGPATH \
+		PKG_RECIPEPATH \
 		PKG_REMOVELAFILES \
 		PKG_SRCDIR \
 		PKG_TARGET \
 		PKG_TARGET_ENV \
+		PKG_VARIANTS \
+		POSTINST_FILE \
+		POSTINST_VAR \
+		RECIPE_SCRIPT \
+		RECIPE_SCRIPT_FILE \
+		SOURCES_KEY \
+		SOURCES_MARKER \
+		STALE_BUILDDIR \
 		STATUS_CHK_FILE \
 		STATUS_FILE \
 		STATUS_FILE_DEFAULT_TARGET \
 		TEMPORARY_STATUS
 
-	# shellcheck disable=SC2154
-	PKG_FILE=$(cut -d':' -f1 <<<"${_param_1}")
-	PKG_TARGET=$(cut -s -d':' -f2 <<<"${_param_1}")
-	GCC_CHECK=${_param_no_gcc_check:-0}
-	FORCE=${_param_force:-0}
-	NOSAVESTATUS=${_param_no_save_status:-0}
-	KEEPBUILDDIR=${_param_keep_builddir:-0}
+	PKG_FILE=$(cut -d':' -f1 <<<"${_PARAM[1]}")
+	PKG_TARGET=$(cut -s -d':' -f2 <<<"${_PARAM[1]}")
+	GCC_CHECK=${_PARAM[no_gcc_check]:-0}
+	FORCE=${_PARAM[force]:-0}
+	NOSAVESTATUS=${_PARAM[no_save_status]:-0}
+	KEEPBUILDDIR=${_PARAM[keep_builddir]:-0}
+	CLEANBUILDDIR=${_PARAM[clean_builddir]:-0}
 	TEMPORARY_STATUS=
 
-	if [ "${_param_temporary:-0}" -eq 1 ]
+	if [ "${_PARAM[temporary]:-0}" -eq 1 ]
 	then
 		TEMPORARY_STATUS=.tmp
 	fi
@@ -1637,63 +3005,43 @@ function build () {(
 	then
 		NUMSPACES=0
 	fi
+	SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
 
-	if [ ! -f "${PKG_PATH}/${PKG_FILE}.pkg" ]
+	if [ ! -f "$(recipe_file "${PKG_FILE}")" ]
 	then
 		trow_error "${ERROR_FILE_NOT_FOUND}" "Package ${PKG_FILE} does not exists."
 	fi
-	
+
+	### A library is a dependency of many packages, and every package walks its dependencies: what
+	### this run has already built or found built is not checked again
+	BUILD_CHECKED_KEY=$( checked_package_key "${PKG_FILE}${PKG_TARGET:+:${PKG_TARGET}}" "${TEMPORARY_STATUS}" )
+	if [ "${FORCE}" -eq 0 ] && BUILD_CHECKED_NAME=$( checked_package "${BUILD_CHECKED_KEY}" )
+	then
+		if [ "${BUILD_DEPS_QUIET:-0}" -eq 0 ]
+		then
+			echo -e "${SPACES}Package ${BUILD_CHECKED_NAME} already built.\n"
+		fi
+		return 0
+	fi
+
 	PKG_NAME=$(basename "${PKG_FILE}")
+	PKG_RECIPEPATH=$(recipe_path "${PKG_FILE}")
+	export PKG_RECIPEPATH
 	PKG_FULLNAME="\${PKG_NAME}\${PKG_SUFFIX}\${PKG_VER:+_\${PKG_VER}}"
 	PKG_SRCDIR=${PKG_SRCDIR:-${PKG_FULLNAME}}
 	PKG_BLDPATH=${BLD_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}
-	case ${PKG_TARGET} in
-		native)
-			PKG_TARGET_ENV=native
-			PKG_PKGPATH=
-			INSTALL_PREFIX=${NATIVE_PREFIX}
-			INSTALL_EXECPREFIX=${NATIVE_EXECPREFIX}
-			INSTALL_LIBDIR=${NATIVE_LIBDIR}
-			INSTALL_LIBSUFFIX=
-			INSTALL_INCLUDEDIR=${NATIVE_INCLUDEDIR}
-			INSTALL_SYSCONFDIR=${NATIVE_SYSCONFDIR}
-			INSTALL_LOCALSTATEDIR=${NATIVE_LOCALSTATEDIR}
-			INSTALL_SHAREDIR=${NATIVE_SHAREDIR}
-			NOSAVESTATUS=1
-		;;
-		cross)
-			PKG_TARGET_ENV=cross
-			PKG_PKGPATH=
-			INSTALL_PREFIX=${CROSS_PREFIX}
-			INSTALL_EXECPREFIX=${CROSS_EXECPREFIX}
-			INSTALL_LIBDIR=${CROSS_LIBDIR}
-			INSTALL_LIBSUFFIX=
-			INSTALL_INCLUDEDIR=${CROSS_INCLUDEDIR}
-			INSTALL_SYSCONFDIR=${CROSS_SYSCONFDIR}
-			INSTALL_LOCALSTATEDIR=${CROSS_LOCALSTATEDIR}
-			INSTALL_SHAREDIR=${CROSS_SHAREDIR}
-		;;
-		*)
-			PKG_TARGET_ENV=target
-			PKG_PKGPATH=${PACKAGES_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}
-			INSTALL_PREFIX=${TARGET_PREFIX}
-			INSTALL_EXECPREFIX=${TARGET_EXECPREFIX}
-			INSTALL_LIBDIR=${TARGET_LIBDIR}
-			INSTALL_LIBSUFFIX=${TARGET_LIBSUFFIX}
-			INSTALL_INCLUDEDIR=${TARGET_INCLUDEDIR}
-			INSTALL_SYSCONFDIR=${TARGET_SYSCONFDIR}
-			INSTALL_LOCALSTATEDIR=${TARGET_LOCALSTATEDIR}
-			INSTALL_SHAREDIR=${TARGET_SHAREDIR}
-		;;
-	esac
+	set_target_prefixes "${PKG_TARGET}"
 
 	# shellcheck source=/dev/null
-	source "${PKG_PATH}/${PKG_FILE}.pkg"
+	source "$(recipe_file "${PKG_FILE}")"
+	### Then the variant directories selected by the target, toolchain, arch, platform, version
+	### and options of this build (see recipe_variants)
+	apply_recipe_variants
 
-	PKG_TOOLCHAIN=${_param_toolchain:-${PKG_TOOLCHAIN}}
-	PKG_KERNEL_BUILD_MODULES="${_param_with_extra_modules:-${PKG_KERNEL_BUILD_MODULES}}"
+	PKG_TOOLCHAIN=${_PARAM[toolchain]:-${PKG_TOOLCHAIN}}
+	PKG_KERNEL_BUILD_MODULES="${_PARAM[with_extra_modules]:-${PKG_KERNEL_BUILD_MODULES}}"
 
-	eval PKG_FULLNAME=${PKG_FULLNAME}
+	eval PKG_FULLNAME="${PKG_FULLNAME}"
 	eval PKG_SRCPATH="${SRC_PATH}/${PKG_SRCDIR}"
 	eval PKG_BLDPATH="${PKG_BLDPATH}"
 	eval PKG_PKGPATH="${PKG_PKGPATH}"
@@ -1704,18 +3052,51 @@ function build () {(
 	STATUS_FILE_DEFAULT_TARGET=${STATUS_PATH}/${PKG_FULLNAME}
 	LOG_FILE=${LOG_PATH}/${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}.log
 
-	SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
-	echo -n "${SPACES}Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}"
+	function build_deps () {
+		### build_deps: build the dependencies (PKG_DEPS) that are not built or whose recipe changed.
+		### A native or cross package passes its target on to them. With BUILD_DEPS_QUIET=1 the
+		### console only gets the packages that are built.
+		local dep
+		### Read by a dependency that has to be built, when it prints its first line
+		BUILD_REQUIRED_BY="${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}"
+		for dep in ${PKG_DEPS}
+		do
+			if [ ! -f "$(recipe_file "${dep/:*/}")" ]
+			then
+				trow_error "${ERROR_FILE_NOT_FOUND}" "Dependency package ${dep/:*/} does not exists."
+			fi
+			NUMSPACES=$((NUMSPACES+1))
+			SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
+			if [ "${BUILD_DEPS_QUIET:-0}" -eq 0 ]
+			then
+				echo "${SPACES}Requires ${dep}"
+			fi
+			# shellcheck disable=SC2046
+			build $( if [ "${NOSAVESTATUS}" -eq 1 ] || [ "${TEMPORARY_STATUS}" == .tmp ]; then echo "--temporary"; fi ) \
+				$( if [ "${GCC_CHECK}" -eq 1 ]; then echo "--no_gcc_check"; fi ) \
+				"${dep}$( if [ "${PKG_TARGET_ENV}" == native ] || [ "${PKG_TARGET_ENV}" == cross ]; then echo ":${PKG_TARGET_ENV}"; fi )"
+			NUMSPACES=$((NUMSPACES-1))
+			SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
+		done
+		return 0
+	}
 
+	if [ "${BUILD_DEPS_QUIET:-0}" -eq 0 ]
+	then
+		echo -n "${SPACES}Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}"
+	fi
+
+	### Status is the checksum of the whole recipe directory (recipe, scripts, files/, patches/)
+	PKG_CHKSUM="$( recipe_checksum "${PKG_RECIPEPATH}" )"
+	ALREADY_BUILT=0
 	if [ -z "${PKG_CHECK}" ]
 	then
-		if [ "${PKG_TARGET}" == "native" ]
+		if [ "${PKG_TARGET_ENV}" == "native" ]
 		then
 			echo
-			trow_error "${ERROR_GENERIC}" "PKG_CHECK is empty and PKG_TARGET is native. Exiting..."
+			trow_error "${ERROR_GENERIC}" "PKG_CHECK is empty and ${PKG_TARGET} is a native target. Exiting..."
 		fi
 		### Check if target package or default package has already built
-		PKG_CHKSUM="$( md5sum "${PKG_PATH}/${PKG_FILE}.pkg" )"
 		if [ -f "${STATUS_FILE_DEFAULT_TARGET}" ]
 		then
 			STATUS_CHK_FILE=${STATUS_FILE_DEFAULT_TARGET}${PKG_TARGET:+-${PKG_TARGET}}
@@ -1726,38 +3107,42 @@ function build () {(
 		then
 			if [ "${PKG_CHKSUM}" == "$( cat "${STATUS_CHK_FILE}" )" ]
 			then
-				echo -e " already built.\n"
-				return 0
+				ALREADY_BUILT=1
 			else
 				rm -f "${STATUS_FILE}"
 			fi
 		fi
-	else
-		#echo -e "Check command: ${PKG_CHECK}"
-		if eval "${PKG_CHECK}" > /dev/null 2>&1
+	elif eval "${PKG_CHECK}" > /dev/null 2>&1
+	then
+		ALREADY_BUILT=1
+	fi
+	if [ "${ALREADY_BUILT}" -eq 1 ]
+	then
+		if [ "${BUILD_DEPS_QUIET:-0}" -eq 0 ]
 		then
 			echo -e " already built.\n"
-			return 0
 		fi
-	fi
-	echo
-	for dep in ${PKG_DEPS}
-	do
-		if [ ! -f "${PKG_PATH}/${dep/:*/}.pkg" ]
+		add_checked_package "${BUILD_CHECKED_KEY}" "${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}"
+		### The status is the checksum of this recipe alone: the dependencies are walked all the same,
+		### so that a dependency whose recipe changed is rebuilt. The packages already built on top
+		### of it are not: that is build --force. A probe (PKG_CHECK) looks at what is installed,
+		### which the host may provide: the dependencies of its recipe are left alone.
+		if [ -z "${PKG_CHECK}" ]
 		then
-			trow_error "${ERROR_FILE_NOT_FOUND}" "Dependency package ${dep/:*/} does not exists."
+			BUILD_DEPS_QUIET=1
+			build_deps
 		fi
-		NUMSPACES=$((NUMSPACES+1))
-		SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
-		echo "${SPACES}Requires ${dep}"
-		#echo "Called from ${PKG_FILE}"
-		# shellcheck disable=SC2046
-		build $( if [ "${NOSAVESTATUS}" -eq 1 ] || [ "${TEMPORARY_STATUS}" == .tmp ]; then echo "--temporary"; fi ) \
-			$( if [ "${GCC_CHECK}" -eq 1 ]; then echo "--no_gcc_check"; fi ) \
-			"${dep}$( if [ "${PKG_TARGET_ENV}" == native ] || [ "${PKG_TARGET_ENV}" == cross ]; then echo ":${PKG_TARGET_ENV}"; fi )"
-		NUMSPACES=$((NUMSPACES-1))
-		SPACES=$(for ((i = 0 ; i < "${NUMSPACES}" ; i++ )); do echo -n "   "; done)
-	done
+		return 0
+	fi
+	if [ "${BUILD_DEPS_QUIET:-0}" -eq 1 ]
+	then
+		### Reached by walking the dependencies of a package already built: nothing printed so far
+		echo "${SPACES}Package ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}, required by ${BUILD_REQUIRED_BY}"
+		BUILD_DEPS_QUIET=0
+	else
+		echo
+	fi
+	build_deps
 
 	truncate -s0 "${LOG_FILE}"
 	
@@ -1766,7 +3151,10 @@ function build () {(
 		"check_${PKG_TOOLCHAIN:-${TOOLCHAIN}}_c"
 	fi
 
-	echo -n "${SPACES}"
+	### Every console line of the build carries its own indentation: "Done." closes the line of
+	### "Building..." (CONSOLE_LINE_OPEN), or goes on a line of its own when nothing is built
+	### (BUILD_PROCESS none, after the line of the sources)
+	CONSOLE_LINE_OPEN=0
 	# Build defaults
 	### To manage source path removal at beginning or at the end...
 	#if [ -d ${PKG_SRCPATH} ]
@@ -1781,31 +3169,62 @@ function build () {(
 	then
 		run_cmd "mkdir -p \"${BIN_PATH}\"" >> "${LOG_FILE}"
 	fi
-	cat <<-EOF >> "${LOG_FILE}"
-		Pre build script:
-		==================
-		${PKG_PREBUILD}
-		==================
-
-		Post build script:
-		==================
-		${PKG_POSTBUILD} 
-		==================
-
-		Post install script:
-		==================
-		${PKG_POSTINSTALL}
-		==================
-
-	EOF
+	echo "Recipe variants: ${PKG_VARIANTS:-none}" >> "${LOG_FILE}"
+	echo "Recipe patches: $( recipe_patches | sed "s|^${PKG_RECIPEPATH}/||" | tr '\n' ' ' )" >> "${LOG_FILE}"
+	for RECIPE_SCRIPT in prebuild.sh build.sh postbuild.sh postinstall.sh
+	do
+		RECIPE_SCRIPT_FILE=$( recipe_script "${RECIPE_SCRIPT}" )
+		if [ -n "${RECIPE_SCRIPT_FILE}" ]
+		then
+			{
+				echo "Recipe script ${RECIPE_SCRIPT} (${RECIPE_SCRIPT_FILE#"${PKG_RECIPEPATH}"/}):"
+				echo "=================="
+				cat "${RECIPE_SCRIPT_FILE}"
+				echo "=================="
+				echo
+			} >> "${LOG_FILE}"
+		fi
+	done
 	if [ -n "${PKG_URL}" ] || [ -n "${GIT_URL}" ]
 	then
-		echo -n "Downloading ${PKG_FULLNAME}..."
-		downloadsources >> "${LOG_FILE}"
-		echo "Done."
-		preparesources >> "${LOG_FILE}"
+		### PKG_KEEPBUILDDIR: the sources are extracted and patched only once. The marker is written in
+		### the sources directory once they are ready and carries their key (sources_key): a build that
+		### extracts them again (another target, lfs/llvm:native) removes it with them, other patches
+		### (another target, another platform of the project) prepare them again, an interrupted
+		### preparation leaves none. prebuild.sh runs all the same: it has to be idempotent
+		SOURCES_MARKER="${PKG_SRCPATH}/.bbxb-sources"
+		SOURCES_KEY=$( sources_key )
+		if [ "${PKG_KEEPBUILDDIR:-0}" -eq 1 ] && [ "${CLEANBUILDDIR}" -eq 0 ] && [ -f "${SOURCES_MARKER}" ] && \
+			[ "$( cat "${SOURCES_MARKER}" )" == "${SOURCES_KEY}" ]
+		then
+			echo "${SPACES}Sources of ${PKG_FULLNAME} already prepared."
+		else
+			echo -n "${SPACES}Downloading ${PKG_FULLNAME}..."
+			downloadsources >> "${LOG_FILE}"
+			echo "Done."
+			{
+				### A git clone is not removed by downloadsources: neither is its marker
+				if [ -f "${SOURCES_MARKER}" ]
+				then
+					run_cmd "rm -f \"${SOURCES_MARKER}\""
+				fi
+				preparesources
+				if [ "${PKG_KEEPBUILDDIR:-0}" -eq 1 ]
+				then
+					run_cmd "echo \"${SOURCES_KEY}\" > \"${SOURCES_MARKER}\""
+				fi
+			} >> "${LOG_FILE}"
+		fi
 	fi
-	if [ -d "${PKG_BLDPATH}" ]
+	if [ "${PKG_KEEPBUILDDIR:-0}" -eq 1 ]
+	then
+		### The kept trees of the other versions of the package go (stale_builddirs)
+		for STALE_BUILDDIR in $( stale_builddirs )
+		do
+			run_cmd "rm -rf \"${STALE_BUILDDIR}\"" >> "${LOG_FILE}"
+		done
+	fi
+	if [ -d "${PKG_BLDPATH}" ] && { [ "${PKG_KEEPBUILDDIR:-0}" -ne 1 ] || [ "${CLEANBUILDDIR}" -eq 1 ]; }
 	then
 		run_cmd "rm -rf \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
 	fi
@@ -1818,47 +3237,98 @@ function build () {(
 		run_cmd "mkdir -p \"${PKG_PKGPATH}\"" >> "${LOG_FILE}"
 	fi
 	( create_environment_source --target "${PKG_TARGET_ENV}" ) | log_buffer info >> "${LOG_FILE}"
-	#### Pre-Build
-	if [ -n "${PKG_PREBUILD}" ]
+	if [ "${PKG_KEEPBUILDDIR:-0}" -eq 1 ] && [ "${BUILD_PROCESS:-none}" != none ] && [ "${BUILD_PROCESS}" != downloadonly ]
 	then
-		if [ -d "${PKG_SRCPATH}" ]
+		### A kept build directory configured with another environment is emptied (builddir_key): CMake
+		### and meson would keep the compilers and the flags of their cache. A directory without the
+		### stamp (left by --keep_builddir, or by a build before PKG_KEEPBUILDDIR) has an unknown
+		### environment: emptied too. A flavor that configures nothing (lfs/llvm:libclc, none) leaves
+		### the tree and the stamp to the ones that do: its key, with another BUILD_PROCESS, would
+		### empty the tree at every build of the other flavors
+		BUILDDIR_STAMP="${PKG_BLDPATH}/.bbxb-environment"
+		BUILDDIR_KEY=$( builddir_key "${PKG_BLDPATH}/environment.source" )
+		if [ "$( cat "${BUILDDIR_STAMP}" 2>/dev/null || true )" != "${BUILDDIR_KEY}" ] && \
+			[ -n "$( find "${PKG_BLDPATH}" -mindepth 1 -maxdepth 1 ! -name environment.source -print -quit 2>/dev/null || true )" ]
 		then
-			cd "${PKG_SRCPATH}"
+			echo "${SPACES}Build directory of ${PKG_FULLNAME} emptied: the build environment changed."
+			run_cmd "find \"${PKG_BLDPATH}\" -mindepth 1 -maxdepth 1 ! -name environment.source -exec rm -rf {} +" >> "${LOG_FILE}"
 		fi
-		echo "Running pre build script..." | log_buffer info >> "${LOG_FILE}"
-		(
-			run_cmd "set -x
-				set +o pipefail
-				source \"${PKG_BLDPATH}/environment.source\"
-				${PKG_PREBUILD}
-				set +x"
-		) >> "${LOG_FILE}"
+		run_cmd "echo \"${BUILDDIR_KEY}\" > \"${BUILDDIR_STAMP}\"" >> "${LOG_FILE}"
+	fi
+	create_recipe_source | log_buffer info >> "${LOG_FILE}"
+	#### Pre-Build
+	RECIPE_SCRIPT_FILE=$( recipe_script prebuild.sh )
+	if [ -n "${RECIPE_SCRIPT_FILE}" ]
+	then
+		cat > "${PKG_BLDPATH}/runprebuild.sh" <<-EOF
+			#!/bin/bash
+			set +o pipefail
+			cd "${PKG_SRCPATH}"
+			source "${PKG_BLDPATH}/recipe.source"
+			source "${PKG_BLDPATH}/environment.source"
+			set -x
+			source "${RECIPE_SCRIPT_FILE}"
+			set +x
+		EOF
+		{
+			run_cmd "chmod +x \"${PKG_BLDPATH}/runprebuild.sh\""
+			echo "Running pre build script..." | log_buffer info
+			run_cmd "\"${PKG_BLDPATH}/runprebuild.sh\""
+		} >> "${LOG_FILE}"
 	fi
 	#### Build
 	if [ ! "${BUILD_PROCESS:-none}" == none ]
 	then
 		echo -n "${SPACES}Building ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}} [${BUILD_PROCESS}]..."
+		CONSOLE_LINE_OPEN=1
 		${BUILD_PROCESS} >> "${LOG_FILE}" 2>&1
 	fi
 	#### Post-Build
-	if [ -n "${PKG_POSTBUILD}" ]
+	RECIPE_SCRIPT_FILE=$( recipe_script postbuild.sh )
+	if [ -n "${RECIPE_SCRIPT_FILE}" ]
 	then
-		cd "${PKG_BLDPATH}"
-		echo "Running post build script..." | log_buffer info >> "${LOG_FILE}"
-		(
-			run_cmd "set -ex
-				set +o pipefail
-				source \"${PKG_BLDPATH}/environment.source\"
-				${PKG_POSTBUILD}
-				set +ex"
-		) >> "${LOG_FILE}"
+		cat > "${PKG_BLDPATH}/runpostbuild.sh" <<-EOF
+			#!/bin/bash
+			set -e
+			set +o pipefail
+			cd "${PKG_BLDPATH}"
+			source "${PKG_BLDPATH}/recipe.source"
+			source "${PKG_BLDPATH}/environment.source"
+			set -x
+			source "${RECIPE_SCRIPT_FILE}"
+			set +ex
+		EOF
+		{
+			run_cmd "chmod +x \"${PKG_BLDPATH}/runpostbuild.sh\""
+			echo "Running post build script..." | log_buffer info
+			run_cmd "\"${PKG_BLDPATH}/runpostbuild.sh\""
+		} >> "${LOG_FILE}"
 	fi
 	#### Post-Install
-	if [ -n "${PKG_POSTINSTALL}" ]
+	RECIPE_SCRIPT_FILE=$( recipe_script postinstall.sh )
+	if [ -n "${RECIPE_SCRIPT_FILE}" ] && [ -z "${PKG_PKGPATH}" ]
 	then
-		run_cmd "mkdir -p ${PKG_PKGPATH}/postinst_scripts" >> "${LOG_FILE}"
-		echo "${PKG_POSTINSTALL}" > "${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}"
-		run_cmd "cat \"${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}\"" >> "${LOG_FILE}"
+		### Post install scripts run inside the target image: nothing to do for native and cross builds
+		echo "postinstall.sh ignored for the ${PKG_TARGET_ENV} build" | log_buffer info >> "${LOG_FILE}"
+	elif [ -n "${RECIPE_SCRIPT_FILE}" ]
+	then
+		POSTINST_FILE="${PKG_PKGPATH}/postinst_scripts/${PKG_POSTINSTALL_PRIO:-50}_${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}}"
+		run_cmd "mkdir -p \"${PKG_PKGPATH}/postinst_scripts\"" >> "${LOG_FILE}"
+		### The script runs inside the target chroot: prepend the image-safe values it may
+		### reference (no host paths), then the recipe file itself.
+		{
+			echo "### ${PKG_FULLNAME}${PKG_TARGET:+-${PKG_TARGET}} post install script, generated by bbxb"
+			for POSTINST_VAR in INSTALL_PREFIX INSTALL_EXECPREFIX INSTALL_LIBDIR INSTALL_LIBSUFFIX \
+				INSTALL_INCLUDEDIR INSTALL_SYSCONFDIR INSTALL_LOCALSTATEDIR INSTALL_SHAREDIR \
+				PKG_NAME PKG_VER PKG_SUFFIX PKG_FULLNAME PKG_TARGET \
+				HARCH HM HOS HLIBC HARCH_LIB PLATFORM_NAME TOOLCHAIN
+			do
+				printf '%s=%q\n' "${POSTINST_VAR}" "${!POSTINST_VAR}"
+			done
+			echo
+			cat "${RECIPE_SCRIPT_FILE}"
+		} > "${POSTINST_FILE}"
+		run_cmd "cat \"${POSTINST_FILE}\"" >> "${LOG_FILE}"
 	fi
 
 	##### Create package
@@ -1877,6 +3347,45 @@ function build () {(
 				run_cmd "find \"${PKG_PKGPATH}${INSTALL_LIBDIR}${INSTALL_LIBSUFFIX}\" -name \"*.la\" -print0 | xargs -0 -I{} rm -fv \"{}\""
 				fi
 			fi
+			### The image should name no directory of the build host. The LTO bytecode always does: the
+			### static libraries keep their machine code, and bytecode without it stops the build
+			strip_lto_objects "${PKG_PKGPATH}"
+			SLIM_LTO_FILES=$( lto_object_files "${PKG_PKGPATH}" | while read -r LTO_KIND LTO_FILE
+				do
+					### only the slim ones: strip_lto_objects has just taken the bytecode out of the fat
+					### ones, which stay listed when they name a section of their own in their data
+					if [ "${LTO_KIND}" == slim ]
+					then
+						echo "${LTO_FILE#"${PKG_PKGPATH}/"}"
+					fi
+				done )
+			if [ -n "${SLIM_LTO_FILES}" ]
+			then
+				trow_error "${ERROR_GENERIC}" "LTO bytecode without machine code in $(tr '\n' ' ' <<< "${SLIM_LTO_FILES}")of ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}: remove the static libraries in postbuild.sh, or build them as fat objects with PKG_OVERRIDESTATIC=1"
+			fi
+			### The files of the package that still name it go to the log, one warning per package (grep
+			### the logs for "host paths in")
+			HOST_PATH_FILES=$( find_host_paths "${PKG_PKGPATH}" )
+			if [ -n "${HOST_PATH_FILES}" ]
+			then
+				{
+					echo "WARNING: host paths in $(wc -l <<< "${HOST_PATH_FILES}") files of ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}:"
+					echo "${HOST_PATH_FILES}"
+				} | log_buffer info
+			fi
+			### Every library the package needs is in the package or in the sysroot: one of the build
+			### host has another name there
+			UNRESOLVED_FILES=$( unresolved_needed "${PKG_PKGPATH}" "${BIN_PATH}" )
+			if [ -n "${UNRESOLVED_FILES}" ]
+			then
+				trow_error "${ERROR_GENERIC}" "Libraries neither ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}} nor the sysroot has, taken from the build host: $(tr '\n' ' ' <<< "${UNRESOLVED_FILES}")"
+			fi
+			### No program or library asks for an executable stack, which glibc refuses to load
+			EXECSTACK_FILES=$( executable_stack_files "${PKG_PKGPATH}" )
+			if [ -n "${EXECSTACK_FILES}" ]
+			then
+				trow_error "${ERROR_GENERIC}" "Executable stack in $(tr '\n' ' ' <<< "${EXECSTACK_FILES}")of ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}: an object without .note.GNU-stack (assembler sources), build them with -Wa,--noexecstack"
+			fi
 			if [ "${NOSAVESTATUS}" -eq 0 ] && [ -z "${TEMPORARY_STATUS}" ]
 			then
 				create_sfx_package "${PKG_PKGPATH}"
@@ -1886,7 +3395,7 @@ function build () {(
 			set +e
 		) >> "${LOG_FILE}" 2>&1
 	fi
-	if [ "${KEEPBUILDDIR}" -eq 0 ]
+	if [ "${KEEPBUILDDIR}" -eq 0 ] && [ "${PKG_KEEPBUILDDIR:-0}" -ne 1 ]
 	then
 		run_cmd "rm -rf \"${PKG_BLDPATH}\"" >> "${LOG_FILE}"
 	fi
@@ -1897,11 +3406,19 @@ function build () {(
 	fi
 	if [ "${NOSAVESTATUS}" -eq 0 ]
 	then
-		run_cmd "md5sum \"${PKG_PATH}/${PKG_FILE}.pkg\" > \"${STATUS_FILE}\"" >> "${LOG_FILE}"
+		run_cmd "echo \"${PKG_CHKSUM}\" > \"${STATUS_FILE}\"" >> "${LOG_FILE}"
+		add_checked_package "${BUILD_CHECKED_KEY}" "${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}"
 	else
-		run_cmd "rm -f \"${STATUS_PATH}/*.tmp\"" >> "${LOG_FILE}"
+		### The dependencies of a build that saves no status were built --temporary: their status
+		### files go with it (the glob outside the quotes, or rm got the literal name)
+		run_cmd "rm -f \"${STATUS_PATH}\"/*.tmp" >> "${LOG_FILE}"
 	fi
-	echo "Done."
+	if [ "${CONSOLE_LINE_OPEN}" -eq 1 ]
+	then
+		echo "Done."
+	else
+		echo "${SPACES}Done."
+	fi
 	echo
 )}
 

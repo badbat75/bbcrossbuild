@@ -1,12 +1,27 @@
+# setenv: every path and version default, computed from what bbxb.conf and the platform set.
+# Sourced by bbxb (and by utilities/pkgtools.functions): the variables are read by the libraries.
+# shellcheck shell=bash
 NPROCS=$(nproc --ignore=1)
 LTOPROCS=$(( $(nproc) / 4 ))
+# The threads of one link (mold, gold, the ThinLTO jobs of lld and of LLVMgold), half of the CPUs:
+# make -j runs several links at once, each would take every CPU, and a quarter made the big links slow
+LINKPROCS=${LINKPROCS:-$(( $(nproc) / 2 > 0 ? $(nproc) / 2 : 1 ))}
+
+# C standard for everything compiled with the host compiler (native builds, *_FOR_BUILD flags,
+# toolchain bootstrap). GCC 15 and later default to C23, where "int f ()" is a prototype with no
+# arguments, and several GNU packages built for the host (gettext, gmp...) still rely on the old
+# meaning. Override from bbxb.conf when the host compiler needs something else.
+HOST_CSTD=${HOST_CSTD:--std=gnu17}
+# Same for the C++ sources of the toolchain bootstrap (binutils, gcc), empty by default: the
+# gcc 16 sources build with the C++20 default of the host gcc 16, while any -std here breaks
+# its configure (top level wants at least C++14, libcody exactly C++11 and it can only add its
+# own -std=c++11 when CXXFLAGS carries none). Set -std=gnu++11 for gcc 14 sources.
+HOST_CXXSTD=${HOST_CXXSTD:-}
 
 HARCH=${HM}-${HOS}-${HLIBC}
 
-DATA_PATH=${DATA_PATH:-${HOME}/.bbxb}
+DATA_PATH=${DATA_PATH:-/mnt/bbcrossbuild/datadir}
 
-GLOBAL_SRC_PATH=${DATA_PATH}/${SRC_DIR:-sources}
-GLOBAL_BLD_PATH=${DATA_PATH}/${BLD_DIR:-builds}
 GLOBAL_LOG_PATH=${DATA_PATH}/${LOG_DIR:-logs}
 GLOBAL_TOOLCHAIN_PATH=${DATA_PATH}/${TOOLCHAIN_DIR:-toolchain}
 GLOBAL_CACHE_PATH=${DATA_PATH}/${CACHE_DIR:-cache}
@@ -26,12 +41,16 @@ TOOLCHAIN_PATH=${PLATFORM_PATH}/${TOOLCHAIN_DIR:-toolchain}
 DISKIMAGES_PATH=${PLATFORM_PATH}/${DISKIMAGES_DIR:-diskimages}
 USERDATA_PATH=${PROJECT_PATH}/${USERDATA_DIR:-data}
 PACKAGES_PATH=${PLATFORM_PATH}/${PACKAGES_DIR:-packages}
-CACHE_PATH=${PLATFORM_PATH}/${CACHE_DIR:-cache}
 export DISTOS_PATH BIN_PATH TOOLCHAIN_PATH
 
-PRJ_PATH=${BB_HOME}/${PRJ_DIR:-projects}
+# The projects: the projects/ submodule, or any directory given as PRJ_PATH (absolute, or relative to
+# the checkout, as bbxb reads it)
+PRJ_PATH=${PRJ_PATH:-${PRJ_DIR:-projects}}
+[[ ${PRJ_PATH} == /* ]] || PRJ_PATH=${BB_HOME}/${PRJ_PATH}
 PKG_PATH=${BB_HOME}/${PKG_DIR:-packages}
-PATCH_PATH=${BB_HOME}/${PATCH_DIR:-patches}
+# Name of the recipe file inside every packages/<group>/<name>/ directory: variable definitions
+# sourced by build, the shell scripts live next to it as *.sh files
+RECIPE_FILENAME=package.env
 IMG_PATH=${BB_HOME}/${IMG_DIR:-images}
 
 MULTI_ARCH=${MULTIARCH:-1}
@@ -69,20 +88,6 @@ BUILD_LIBSTATIC=${BUILD_LIBSTATIC:-1}
 
 TOOLCHAIN=${TOOLCHAIN:-gnu}
 
-### GNU gcc tools versions
-BINUTILS_VER=${BINUTILS_VER:-2.40}
-GCC_VER=${GCC_VER:-13.3.0}
-### LLVM version
-LLVM_VER=${LLVM_VER:-16.0.6}
-### Python version
-PYTHON_VER=${PYTHON_VER:-3.10.15}
-#### Tools version
-AUTOCONF_VER=${AUTOCONF_VER:-2.71}
-AUTOCONFARCHIVE_VER=${AUTOCONFARCHIVE_VER:-2022.09.03}
-AUTOMAKE_VER=${AUTOMAKE_VER:-1.16.5}
-LIBTOOL_VER=${LIBTOOL_VER:-2.4.7}
-GETTEXT_VER=${GETTEXT_VER:-0.21.1}
-export AUTOMAKE_VER
-### Bootstrap libraries and headers versions
-KERNEL_VER=${KERNEL_VER:-6.12.1}
-GLIBC_VER=${GLIBC_VER:-2.37}
+### The versions of the packages are in their recipes (lfs/gcc: GCC_VER=${GCC_VER:-<version>}): a
+### project overrides one by setting the variable (GCC_VER, BINUTILS_VER, LLVM_VER, PYTHON_VER,
+### PERL_VER, KERNEL_VER, GLIBC_VER, AUTOCONFARCHIVE_VER), the framework reads it with package_version

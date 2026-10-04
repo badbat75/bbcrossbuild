@@ -11,21 +11,125 @@ check_images_functions () {
 	fi
 }
 
+function loopdevmgr() {
+	### Usage: loopdevmgr create <image path>
+	### 		create: returns Loop Device
+	###			delete: returns null
+	local CMD="${1}"
+	local IMAGE_PATH="${2}"
+	case "${CMD}" in
+		create)
+			LODEVICE=$(sudo losetup -f --raw | awk '{print $1}')
+			local MINOR="${LODEVICE//\/dev\/loop/}"
+			if [ ! -e "${LODEVICE}" ]
+			then
+				run_cmd -s "mknod -m 0660 ${LODEVICE} b 7 ${MINOR}" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+			fi
+			run_cmd -s "losetup -f -P --show \"${IMAGE_PATH}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+			#LODEVICE=$(sudo losetup -l --raw | grep "${IMAGE_PATH}" | tail -n1 | awk '{print $1}')
+			while read -r line
+			do
+				eval "${line//MAJ:MIN/MAJMIN} bash -c '
+					if [ ! -e /dev/\${NAME} ];
+					then
+						run_cmd -s \"mknod -m 0660 /dev/\${NAME} b \$(echo \${MAJMIN} | cut -d: -f1) \$(echo \${MAJMIN} | cut -d: -f2)\" >> \"${LOG_PATH}/images_${MOUNT_NAME}.log\";
+					fi'"
+			done <<< "$(lsblk -P "${LODEVICE}" -Q 'TYPE == "part"')"
+			echo "${LODEVICE}"
+		;;
+	esac
+}
+
+function image_fs_tools () {
+	### image_fs_tools: the programs of the filesystems of an image (mke2fs, e2fsck, resize2fs and chattr,
+	### mkfs.btrfs and fsck.btrfs, mkfs.vfat and fsck.vfat) are the ones of lfs/e2fsprogs:native,
+	### lfs/btrfs-progs:native and lfs/dosfstools:native in the global toolchain, built here on first
+	### use (their check makes it a test when they are there), not the ones of the build host.
+	### IMAGE_FS_PATH is the PATH sudo runs them with: those sbin and bin first, then the system
+	### directories of fsck (util-linux), which runs the fsck.<type> it finds in the PATH. It calls
+	### build, whose param2value empties _PARAM: the caller has read them before
+	build lfs/e2fsprogs:native
+	build lfs/btrfs-progs:native
+	build lfs/dosfstools:native
+	IMAGE_FS_PATH=${GLOBAL_TOOLCHAIN_PATH}/sbin:${GLOBAL_TOOLCHAIN_PATH}/bin:/usr/sbin:/usr/bin:/sbin:/bin
+}
+
+function binary_size () {
+	# binary_size [--path <directory>] [--free <percent>] [--bootsize <MiB>] [--round pow2|<MiB>]
+	### The --size of create_image for an image that holds <directory> (default the sysroot, BIN_PATH):
+	### the MiB its files take (du: the blocks they have, a hard link once), <percent> more (default 30:
+	### the metadata, the journal and the reserved blocks of the file system, what the post install
+	### scripts write, the room of the running system) and what comes before the root partition in the
+	### default layout: the first 4 MiB and the boot partition, --bootsize of create_image (256).
+	### Rounded up to a power of two when QEMU boots the platform from an SD card (QEMU_STORAGE=sd-card:
+	### QEMU refuses an SD card of another size), to a multiple of 1024 MiB otherwise; --round chooses.
+	### Printed as <n>G, <n>M when it is no whole number of GiB
+	OPTS="" OPTS_WITH_VALUE="--path --free --bootsize --round" param2value "${@}"
+
+	local SIZE_PATH FREE BOOT_SIZE ROUND USED SIZE POWER
+
+	SIZE_PATH=${_PARAM[path]:-${BIN_PATH}}
+	FREE=${_PARAM[free]:-30}
+	BOOT_SIZE=${_PARAM[bootsize]:-256}
+	ROUND=${_PARAM[round]:-$( [ "${QEMU_STORAGE}" == sd-card ] && echo pow2 || echo 1024 )}
+
+	if [ ! -d "${SIZE_PATH}" ]
+	then
+		trow_error "${ERROR_PATH_NOT_FOUND}" "binary_size: no directory ${SIZE_PATH}." || return
+	fi
+	if [[ ! ${FREE} =~ ^[0-9]+$ ]] || [[ ! ${BOOT_SIZE} =~ ^[1-9][0-9]*$ ]] || [[ ! ${ROUND} =~ ^(pow2|[1-9][0-9]*)$ ]]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "binary_size: --free takes a percent, --bootsize MiB, --round pow2 or MiB." || return
+	fi
+	USED=$(du -s --block-size=1M "${SIZE_PATH}" | cut -f1)
+	SIZE=$(( USED * (100 + FREE) / 100 + 4 + BOOT_SIZE ))
+	if [ "${ROUND}" == pow2 ]
+	then
+		POWER=1
+		while [ "${POWER}" -lt "${SIZE}" ]
+		do
+			POWER=$(( POWER * 2 ))
+		done
+		SIZE=${POWER}
+	else
+		SIZE=$(( (SIZE + ROUND - 1) / ROUND * ROUND ))
+	fi
+	if (( SIZE % 1024 == 0 ))
+	then
+		echo "$(( SIZE / 1024 ))G"
+	else
+		echo "${SIZE}M"
+	fi
+}
+
 function create_image() {
-	# create_image <tag_name> [--rootfstype <fs_type>] [--size <size_in_KiB> [--layout <layout_file>]
+	# create_image <tag_name> [--rootfstype <fs_type>] [--size <size>] [--layout <layout_file>]
+	#              [--bootsize <MiB>] [--boottype <sfdisk type>] [--bootdir <mount point>]
+	### --size is what fallocate takes (2G, 8192M; binary_size computes it from the sysroot);
+	### --bootsize the MiB of the FAT boot partition of the default layout (256), which starts at 4 MiB,
+	### the root partition right after it with the rest of the image;
+	### --boottype is the MBR type of the FAT boot partition of the default layout: c (FAT32 LBA),
+	### ef for the EFI system partition the UEFI firmware boots from; --bootdir is where the fstab of
+	### the image mounts it: /boot, /boot/firmware for the firmware of the Raspberry Pi
 
-	OPTS="" OPTS_WITH_VALUE="--rootfstype --size --layout" param2value "${@}"
+	OPTS="" OPTS_WITH_VALUE="--rootfstype --size --layout --bootsize --boottype --bootdir" param2value "${@}"
 
-	local MOUNT_NAME MOUNT_LAYOUT IMAGE_PATH MOUNT_DIR ROOTFS_TYPE SIZEIEC LAYOUT LODEVICE
+	local MOUNT_NAME MOUNT_LAYOUT IMAGE_PATH MOUNT_DIR ROOTFS_TYPE SIZEIEC LAYOUT LODEVICE BOOT_SIZE BOOT_TYPE BOOT_DIR IMAGE_FS_PATH
 
-	# shellcheck disable=SC2154
-	MOUNT_NAME=${_param_1}
-	# shellcheck disable=SC2154
-	MOUNT_LAYOUT=${_param_layout}
+	MOUNT_NAME=${_PARAM[1]}
+	MOUNT_LAYOUT=${_PARAM[layout]}
 	IMAGE_PATH=${DISKIMAGES_PATH}/${MOUNT_NAME}.img
 	MOUNT_DIR=${PLATFORM_PATH}/${MOUNT_NAME}
-	ROOTFS_TYPE=${_param_rootfstype:-ext4}
-	SIZEIEC=${_param_size:-2G}
+	ROOTFS_TYPE=${_PARAM[rootfstype]:-ext4}
+	SIZEIEC=${_PARAM[size]:-2G}
+	BOOT_SIZE=${_PARAM[bootsize]:-256}
+	BOOT_TYPE=${_PARAM[boottype]:-c}
+	BOOT_DIR=${_PARAM[bootdir]:-/boot}
+	if [[ ! ${BOOT_SIZE} =~ ^[1-9][0-9]*$ ]]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "create_image: --bootsize takes MiB." || return
+	fi
+	image_fs_tools
 
 	if [ -z "${MOUNT_LAYOUT}" ]
 	then
@@ -34,8 +138,8 @@ function create_image() {
 			unit: sectors
 			sector-size: 512
 
-			start=        8192, size=      524288, type=c
-			start=      532480, type=83
+			start=8192, size=$(( BOOT_SIZE * 2048 )), type=${BOOT_TYPE}
+			start=$(( 8192 + BOOT_SIZE * 2048 )), type=83
 			EOF
 		)"
 	else
@@ -59,28 +163,30 @@ function create_image() {
 	echo -n "Partitioning... "
 	run_cmd "echo '${LAYOUT}' | sfdisk \"${IMAGE_PATH}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 	echo "ok."
-	echo -n "Creating loopback devices... "
-	run_cmd -s "losetup -f -P \"${IMAGE_PATH}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-	LODEVICE=$(sudo losetup -l --raw | grep "${IMAGE_PATH}" | tail -n1 | awk '{print $1}')
+	echo -n "Cleaning loopback devices... "
+	run_cmd -s "losetup -v -D" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+	echo "ok."
+	echo -n "Setting up loopback devices... "
+	LODEVICE=$(loopdevmgr create "${IMAGE_PATH}")
 	echo "ok."
 	echo -n "Creating filesystems... "
-	run_cmd -s "mkfs.vfat \"${LODEVICE}p1\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-	run_cmd -s "\"mkfs.${ROOTFS_TYPE}\" \"${LODEVICE}p2\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+	run_cmd -s "env PATH=\"${IMAGE_FS_PATH}\" mkfs.vfat \"${LODEVICE}p1\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+	run_cmd -s "env PATH=\"${IMAGE_FS_PATH}\" \"mkfs.${ROOTFS_TYPE}\" \"${LODEVICE}p2\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 	echo "ok."
 	echo -n "Mounting image... "
 	{
 		run_cmd "mkdir -pv \"${MOUNT_DIR}\""
 		run_cmd -s "mount \"${LODEVICE}p2\" \"${MOUNT_DIR}\""
-		run_cmd -s "mkdir -pv \"${MOUNT_DIR}/\"{boot,dev/pts,etc,proc}"
+		run_cmd -s "mkdir -pv \"${MOUNT_DIR}${BOOT_DIR}\" \"${MOUNT_DIR}/\"{dev/pts,etc,proc}"
 		run_cmd -s "install -dv -m 1777 \"${MOUNT_DIR}/tmp\""
-		run_cmd -s "mount \"${LODEVICE}p1\" \"${MOUNT_DIR}/boot\"" 
+		run_cmd -s "mount \"${LODEVICE}p1\" \"${MOUNT_DIR}${BOOT_DIR}\""
 	} >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 	MOUNTED_IMAGES+=( "${MOUNT_NAME}" )
 	echo "ok."
 	echo -n "Creating /etc/fstab... "
 	run_cmd -s "bash -c 'cat > ${MOUNT_DIR}/etc/fstab <<-EOF
 		proc                 /proc proc defaults 0 0
-		PARTUUID=$(sudo blkid "${LODEVICE}p1" -o value -s PARTUUID) /boot $(sudo blkid "${LODEVICE}p1" -o value -s TYPE) defaults 0 2
+		PARTUUID=$(sudo blkid "${LODEVICE}p1" -o value -s PARTUUID) ${BOOT_DIR} $(sudo blkid "${LODEVICE}p1" -o value -s TYPE) defaults 0 2
 		PARTUUID=$(sudo blkid "${LODEVICE}p2" -o value -s PARTUUID) /     $(sudo blkid "${LODEVICE}p2" -o value -s TYPE) defaults 0 1
 		EOF
 		'" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
@@ -89,7 +195,7 @@ function create_image() {
 		btrfs)
 			echo -n "Setting COW settings to journal... "
 			run_cmd -s "mkdir -pv \"${MOUNT_DIR}/var/log/journal\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
-			run_cmd -s "chattr -RV +C \"${MOUNT_DIR}/var/log/journal\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+			run_cmd -s "env PATH=\"${IMAGE_FS_PATH}\" chattr -RV +C \"${MOUNT_DIR}/var/log/journal\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 			echo "ok."
 		;;
 	esac
@@ -108,24 +214,23 @@ function mount_tag () {
 	OPTS="" OPTS_WITH_VALUE="--url --imgfile --mountlist --resize" param2value "${@}"
 
 	local MOUNT_NAME RESIZE URL IMGFILE IMAGE_PATH IMAGEFILE_PATH MOUNT_DIR PARTNO IMGSIZE PARTINFO PARTNO MPOINT ROOTREADY
+	local MOUNTLIST IMAGE_FS_PATH
 
-	# shellcheck disable=SC2154
-	MOUNT_NAME=${_param_1}
-	# shellcheck disable=SC2154
-	RESIZE=${_param_resize}
-	# shellcheck disable=SC2154
-	URL=${_param_url}
-	# shellcheck disable=SC2154
-	IMGFILE=${_param_imgfile}
+	MOUNT_NAME=${_PARAM[1]}
+	RESIZE=${_PARAM[resize]}
+	URL=${_PARAM[url]}
+	IMGFILE=${_PARAM[imgfile]}
+	MOUNTLIST=${_PARAM[mountlist]}
 	IMAGE_PATH=${DISKIMAGES_PATH}/${MOUNT_NAME}
 	IMAGEFILE_PATH=${DISKIMAGES_PATH}/${MOUNT_NAME}.img
 	MOUNT_DIR=${PLATFORM_PATH}/${MOUNT_NAME}
 
-	if [ -z "${_param_mountlist}" ]
+	if [ -z "${MOUNTLIST}" ]
 	then
 		echo "Error. No mount points specified."
 		false
 	fi
+	image_fs_tools
 
 	if [ ! -d "${IMAGE_PATH}" ] ; then run_cmd "mkdir -pv \"${IMAGE_PATH}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log" ; fi
 
@@ -164,33 +269,34 @@ function mount_tag () {
 
 	# Create loopback devices for the image and its partitions
 	echo -n "Creating loop devices... "
-	{
-		run_cmd -s "losetup -f -P \"${IMAGEFILE_PATH}\""
-		run_cmd -s "losetup -j \"${IMAGEFILE_PATH}\""
-		LOOPDEV=$(sudo losetup -j "${IMAGEFILE_PATH}" | awk '{print $1}' | sed 's/.$//g')
-		echo | log_buffer info
-		echo "Loop device for ${IMAGEFILE_PATH}: ${LOOPDEV}" | log_buffer info
-		run_cmd -s "partprobe \"${LOOPDEV}\""
-		run_cmd -s "kpartx \"${LOOPDEV}\""
-	} >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+		LOOPDEV=$(loopdevmgr create "${IMAGEFILE_PATH}")
+	#{
+		#run_cmd -s "losetup -f -P \"${IMAGEFILE_PATH}\""
+		#run_cmd -s "losetup -j \"${IMAGEFILE_PATH}\""
+		#LOOPDEV=$(sudo losetup -j "${IMAGEFILE_PATH}" | awk '{print $1}' | sed 's/.$//g')
+		#echo | log_buffer info
+		#echo "Loop device for ${IMAGEFILE_PATH}: ${LOOPDEV}" | log_buffer info
+		#run_cmd -s "partprobe \"${LOOPDEV}\""
+		#run_cmd -s "kpartx \"${LOOPDEV}\""
+	#} >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 	echo "ok."
 
 	if [ -n "${RESIZE}" ]
 	then
 		# Check the root partition
 		echo -n "Check root filesystems... "
-		run_cmd -s "fsck -fp \"${LOOPDEV}p${PARTNO}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+		run_cmd -s "env PATH=\"${IMAGE_FS_PATH}\" fsck -fp \"${LOOPDEV}p${PARTNO}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 		echo "ok."
 		# Resize the root partition
 		echo -n "Resize root partition... "
-		run_cmd -s "resize2fs \"${LOOPDEV}p${PARTNO}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+		run_cmd -s "env PATH=\"${IMAGE_FS_PATH}\" resize2fs \"${LOOPDEV}p${PARTNO}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 		echo "ok."
 	fi
 
 	# Mount the image filesystems
 	echo -n "Mounting all the partitions in ${MOUNT_DIR}... "
 	{
-		for e in ${_param_mountlist}
+		for e in ${MOUNTLIST}
 		do
 			PARTNO=$(echo "${e}" | awk -F: '{print $1}')
 			MPOINT=$(echo "${e}" | awk -F: '{print $2}')
@@ -200,7 +306,7 @@ function mount_tag () {
 				unset MPOINT
 			fi
 			if [ ! -d "${MOUNT_DIR}${MPOINT}" ] ; then run_cmd "mkdir -pv \"${MOUNT_DIR}${MPOINT}\"" ; fi
-			run_cmd -s "fsck -fp \"${LOOPDEV}p${PARTNO}\""
+			run_cmd -s "env PATH=\"${IMAGE_FS_PATH}\" fsck -fp \"${LOOPDEV}p${PARTNO}\""
 			run_cmd -s "mount \"${LOOPDEV}p${PARTNO}\" \"${MOUNT_DIR}${MPOINT}\"" 
 		done
 		if [ "${ROOTREADY}" -eq 1 ]
@@ -237,17 +343,18 @@ function unmount_tag () {
 
 	OPTS="--all --finalize --kill" OPTS_WITH_VALUE="" param2value "${@}"
 
-	local ALL KILL WHAT2UNMOUNT MOUNT_NAME MOUNT_DIR IMAGEFILE_PATH PROC STATUS ACTIVE_MOUNTS LOOPDEV
+	local ALL KILL WHAT2UNMOUNT MOUNT_NAME MOUNT_DIR IMAGEFILE_PATH PROC STATUS ACTIVE_MOUNTS LOOPDEV UNMOUNT_TRIES UNMOUNT_FAILED
+	UNMOUNT_FAILED=0
 
-	ALL=${_param_all:-0}
-	FINALIZE=${_param_finalize:-0}
-	KILL=${_param_kill:-0}
+	ALL=${_PARAM[all]:-0}
+	FINALIZE=${_PARAM[finalize]:-0}
+	KILL=${_PARAM[kill]:-0}
 
 	if [ "${ALL}" -eq 1 ]
 	then
 		WHAT2UNMOUNT=${MOUNTED_IMAGES[*]}
 	else
-		WHAT2UNMOUNT=${_param_1}
+		WHAT2UNMOUNT=${_PARAM[1]}
 	fi
 
 	for MOUNT_NAME in ${WHAT2UNMOUNT}
@@ -274,8 +381,17 @@ function unmount_tag () {
 			run_cmd -s "mv \"${MOUNT_DIR}/etc/resolv.conf.bbxb\" \"${MOUNT_DIR}/etc/resolv.conf\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 		fi
 
+		UNMOUNT_TRIES=0
 		while mountpoint -q "${MOUNT_DIR}"
 		do
+			### A busy mount is retried every second, not forever: this also runs from the error handler
+			UNMOUNT_TRIES=$((UNMOUNT_TRIES+1))
+			if [ "${UNMOUNT_TRIES}" -gt "${UNMOUNT_MAX_TRIES:-30}" ]
+			then
+				echo "giving up: ${MOUNT_DIR} is still mounted."
+				UNMOUNT_FAILED=1
+				break
+			fi
 			echo -n "Unmounting ${MOUNT_DIR}... "
 			LOOPDEV=$(lsblk -ndo pkname "$(findmnt --raw -no source "${MOUNT_DIR}")")
 			IMAGEFILE_PATH=$(losetup -nO back-file "/dev/${LOOPDEV}")
@@ -285,6 +401,7 @@ function unmount_tag () {
 			then
 				echo -n "deleting loopback device [${LOOPDEV}]... "
 				run_cmd -s "losetup -D \"${LOOPDEV}\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
+				run_cmd -s "rm -f \"/dev/${LOOPDEV}*\"" >> "${LOG_PATH}/images_${MOUNT_NAME}.log"
 				echo "ok."
 				if [ "${FINALIZE}" -eq 1 ]
 				then
@@ -310,8 +427,8 @@ function unmount_tag () {
 			fi
 		done
 
-		# remove MOUNT_NAME from MOUNTED_IMAGES array
-		if [ "${#MOUNTED_IMAGES[@]}" -gt 0 ]
+		# remove MOUNT_NAME from MOUNTED_IMAGES array (it stays there when the unmount gave up)
+		if [ "${#MOUNTED_IMAGES[@]}" -gt 0 ] && ! mountpoint -q "${MOUNT_DIR}"
 		then
 			local ARRAY_INDEX
 			ARRAY_INDEX=0
@@ -335,6 +452,8 @@ function unmount_tag () {
 	then
 		echo "Active mounts:" "${MOUNTED_IMAGES[@]}"
 	fi
+	### Not zero when a mount is still busy after UNMOUNT_MAX_TRIES (the error handler ignores it)
+	return "${UNMOUNT_FAILED}"
 }
 
 function mount_from () {
@@ -344,12 +463,11 @@ function mount_from () {
 	OPTS="" OPTS_WITH_VALUE="--url --imgfile --tag --mountlist --resize" param2value "${@}"
 
 	local TAG IMGFILE MOUNTLIST RESIZE
-	# shellcheck disable=SC2154
-	TAG=${_param_tag}
-	IMGFILE=${_param_imgfile}
-	URL=${_param_url}
-	MOUNTLIST=${_param_mountlist}
-	RESIZE=${_param_resize}
+	TAG=${_PARAM[tag]}
+	IMGFILE=${_PARAM[imgfile]}
+	URL=${_PARAM[url]}
+	MOUNTLIST=${_PARAM[mountlist]}
+	RESIZE=${_PARAM[resize]}
 
 	if [ ! -d "${DISKIMAGES_PATH}" ] ; then run_cmd "mkdir -pv ${DISKIMAGES_PATH}" >> "${LOG_PATH}/images_${TAG}.log" ; fi
 	if [ ! -f "${DISKIMAGES_PATH}/${TAG}.img" ]
@@ -376,55 +494,35 @@ function run_on_root_dir () {
 
 	local CHROOT_DIR CHROOT_USER CHROOT_CMD CHROOT_PWD CHROOT_PROMPT
 
-	# shellcheck disable=SC2154
-	CHROOT_DIR=${_param_1}
-	# shellcheck disable=SC2154
-	CHROOT_USER=${_param_2}
-	# shellcheck disable=SC2154
-	CHROOT_CMD=${_param_3}
-	# shellcheck disable=SC2154
-	ALLOCATE_PTY=${_param_allocate_pty:-0}
+	CHROOT_DIR=${_PARAM[1]}
+	CHROOT_USER=${_PARAM[2]}
+	CHROOT_CMD=${_PARAM[3]}
+	ALLOCATE_PTY=${_PARAM[allocate_pty]:-0}
 
-	{
+	function chroot_cmd () {
+		### Runs under log_run, that is in a || list where the ERR trap is off: every step
+		### returns its own status
 		if [ "${CHROOT_USER}" = root ]
 		then
-			CHROOT_PWD=$(sudo chroot "${PLATFORM_PATH}/${CHROOT_DIR}" pwd)
+			CHROOT_PWD=$(sudo chroot "${PLATFORM_PATH}/${CHROOT_DIR}" pwd) || return "${?}"
 			CHROOT_PROMPT="${CHROOT_USER}:${CHROOT_PWD}# "
 		else
-			CHROOT_PWD=$(sudo chroot "${PLATFORM_PATH}/${CHROOT_DIR}" su - "${CHROOT_USER}" -c pwd)
+			CHROOT_PWD=$(sudo chroot "${PLATFORM_PATH}/${CHROOT_DIR}" su - "${CHROOT_USER}" -c pwd) || return "${?}"
 			CHROOT_PROMPT="${CHROOT_USER}:${CHROOT_PWD}$ "
 		fi
 		echo "${CHROOT_PROMPT}${CHROOT_CMD}"
 		if [ "${CHROOT_USER}" = root ]
 		then
-			sudo chroot "${PLATFORM_PATH}/${CHROOT_DIR}" bash -c "${CHROOT_CMD}"
+			sudo chroot "${PLATFORM_PATH}/${CHROOT_DIR}" bash -c "${CHROOT_CMD}" || return "${?}"
 		else
 			sudo chroot "${PLATFORM_PATH}/${CHROOT_DIR}" su - "$( if [ "${ALLOCATE_PTY}" -eq 1 ]; then echo "--pty"; fi )" \
-				"${CHROOT_USER}" -c "${CHROOT_CMD}" 
+				"${CHROOT_USER}" -c "${CHROOT_CMD}" || return "${?}"
 		fi
 		echo
-	} 2> >(log_buffer error "${LOG_PATH}/images_${CHROOT_DIR}.log") > >(log_buffer log "${LOG_PATH}/images_${CHROOT_DIR}.log")
-}
+	}
 
-function set_ownership () {
-	### set_ownership <owner:group> <target_directory> <copy_ownership_from_directory> <file>
-	if [ -e "${2}/${3}" ]
-	then
-		chown -h "${1}" "${2}/${3}"	
-		# Check SUID from source path to change it on destination path
-		if [ -u "${4}/${3}" ]
-		then
-			chmod -v u+s "${2}/${3}"
-		fi
-		if [ -g "${4}/${3}" ]
-		then
-			chmod -v g+s "${2}/${3}"
-		fi
-	else
-		echo "${2}/${3} does not exists" >&2
-	fi
+	log_run "${LOG_PATH}/images_${CHROOT_DIR}.log" chroot_cmd
 }
-export -f set_ownership
 
 function inject_into_mount_tag () {
 	# inject_into_mount_tag <mount_tag> <object> <directory> <owner>
@@ -437,14 +535,14 @@ function inject_into_mount_tag () {
 
 	OPTS="--remove_devfiles" OPTS_WITH_VALUE="" param2value "${@}"
 
-	local ROOT_DIR OBJECT TARGET_DIR TARGET_OWNER TARGET_PATH SOURCE_PATH TARGET_FILE REMOVE_DEVFILES
+	local ROOT_DIR OBJECT TARGET_DIR TARGET_OWNER TARGET_PATH SOURCE_PATH TARGET_FILE REMOVE_DEVFILES DEV_BIND
 
-	ROOT_DIR=${_param_1}
-	OBJECT=${_param_2}
-	TARGET_DIR=${_param_3}
-	TARGET_OWNER=${_param_4:-"root:root"}
+	ROOT_DIR=${_PARAM[1]}
+	OBJECT=${_PARAM[2]}
+	TARGET_DIR=${_PARAM[3]}
+	TARGET_OWNER=${_PARAM[4]:-"root:root"}
 	TARGET_PATH=${PLATFORM_PATH}/${ROOT_DIR}${TARGET_DIR}
-	REMOVE_DEVFILES=${_param_remove_devfiles:-0}
+	REMOVE_DEVFILES=${_PARAM[remove_devfiles]:-0}
 
 	case ${OBJECT} in
 		binaries)
@@ -474,34 +572,29 @@ function inject_into_mount_tag () {
 			run_cmd -s "mkdir -p ${TARGET_PATH}"
 			run_cmd -s "chown -h ${TARGET_OWNER} ${TARGET_PATH}"
 		fi
+		### mount_tag binds the /dev of the host on the /dev of the image for the chroot, and rsync
+		### would write the device files of the sysroot (dev/console and dev/null of create-base-fs)
+		### into the /dev of the host: the bind is lifted while they are copied into the image
+		DEV_BIND=${PLATFORM_PATH}/${ROOT_DIR}/dev
+		if mountpoint -q "${DEV_BIND}"
+		then
+			run_cmd -s "umount \"${DEV_BIND}\""
+		else
+			DEV_BIND=
+		fi
 		echo -n "Syncing ${SOURCE_PATH} to ${TARGET_PATH}... " | log_buffer info
 		pushd "${SOURCE_PATH}" || return "${ERROR_PATH_NOT_FOUND}"
-		run_cmd -s "rsync -K -a ${RSYNC_EXCLUDE} --devices --specials --no-owner --no-group ${TARGET_FILE} \"${TARGET_PATH}\""
+		### The owner is given by rsync (--chown), which sets it before the mode: a chown of its own
+		### after the copy clears setuid and setgid (Linux does it for root too, and for the same
+		### owner), and the modes of the sysroot (setuid, setgid, sticky) reach the image as they are
+		run_cmd -s "rsync -K -a ${RSYNC_EXCLUDE} --devices --specials --chown=${TARGET_OWNER} ${TARGET_FILE} \"${TARGET_PATH}\""
 		popd > /dev/null || return "${ERROR_PATH_NOT_FOUND}"
+		if [ -n "${DEV_BIND}" ]
+		then
+			run_cmd -s "mount --bind /dev \"${DEV_BIND}\""
+		fi
 		echo -e "Done.\n" | log_buffer info
 	} >> "${LOG_PATH}/images_${ROOT_DIR}.log"
-	echo -n "Setting ownership... "
-	{
-		case ${OBJECT} in
-			binaries)
-				run_cmd -S "$(declare -f set_ownership); export -f set_ownership; find -P ${TARGET_PATH} \\
-					-not \( -path ${TARGET_PATH}/proc -prune \) \\
-					-not \( -path ${TARGET_PATH}/dev -prune \) \\
-					-not \( -path ${TARGET_PATH}/proc -prune \) \\
-					-not \( -path ${TARGET_PATH}/sys -prune \) \\
-					-not \( -path ${TARGET_PATH}/tmp -prune \) \\
-					-printf '%P\0' | xargs -0 -I{} -n1 -P\"${NPROCS}\" bash -c \\
-					'set_ownership \"${TARGET_OWNER}\" \"${TARGET_PATH}\" \"{}\" \"${BIN_PATH}\"' \\
-				"
-				;;
-			*)
-				run_cmd -S "$(declare -f set_ownership); export -f set_ownership; echo \"${TARGET_FILE}\" | xargs -I{} -d'\n' -n1 -P\"${NPROCS}\" bash -c \\
-					'set_ownership \"${TARGET_OWNER}\" \"${TARGET_PATH}\" \"{}\" \"${OBJECT}\"' \\
-				"
-				;;
-		esac
-		echo | log_buffer info
-	}  >> "${LOG_PATH}/images_${ROOT_DIR}.log"
 	echo "Done."
 
 }
@@ -512,16 +605,287 @@ function run_postinstall_scripts () {
 
 	local MOUNT_NAME
 
-	MOUNT_NAME=${_param_1}
+	MOUNT_NAME=${_PARAM[1]}
 
 	{
-		echo "Running post install scripts on ${_param_1}... " | log_buffer info
+		echo "Running post install scripts on ${_PARAM[1]}... " | log_buffer info
 		export PLATFORM_PATH LOG_PATH
 		export -f param2value run_on_root_dir
-		find "${PLATFORM_PATH}/${_param_1}/postinst_scripts" -type f -printf '%P\0' | sort -nz | xargs -0 -I{} bash -c "run_on_root_dir \"${MOUNT_NAME}\" root 'set -x; source /postinst_scripts/{}'"
-		run_cmd -s "rm -rfv ${PLATFORM_PATH}/${_param_1}/postinst_scripts"
+		### A failing post install script does not stop the image (it never did): it is reported in the log
+		find "${PLATFORM_PATH}/${_PARAM[1]}/postinst_scripts" -type f -printf '%P\0' | sort -nz | xargs -0 -I{} bash -c "run_on_root_dir \"${MOUNT_NAME}\" root 'set -x; source /postinst_scripts/{}' || echo \"Post install script {} failed [status \${?}]\" | log_buffer error"
+		run_cmd -s "rm -rfv ${PLATFORM_PATH}/${_PARAM[1]}/postinst_scripts"
 		echo "Done." | log_buffer info 
-	} >> "${LOG_PATH}/images_${_param_1}.log"
+	} >> "${LOG_PATH}/images_${_PARAM[1]}.log"
+}
+
+function image_mount_dir () {
+	### image_mount_dir <image file>: the directory bbxb mount uses by default, next to the image:
+	### lfs.img -> lfs.mnt
+	echo "${1%.img}.mnt"
+}
+
+function image_fstab_mounts () {
+	### image_fstab_mounts <fstab>: the file systems of the fstab of an image other than the root,
+	### one per line as "<spec> <mount point>", in the order of the file (a parent before what is
+	### mounted in it): the ones named by PARTUUID, UUID or LABEL, which a partition of the image
+	### can match. Swap, pseudo file systems and devices by path are left out.
+	local SPEC MPOINT FSTYPE REST
+	while read -r SPEC MPOINT FSTYPE REST
+	do
+		if [[ ${SPEC} != @(PARTUUID|UUID|LABEL)=* ]] || [[ ${MPOINT} != /?* ]] || [ "${FSTYPE}" == swap ]
+		then
+			continue
+		fi
+		echo "${SPEC} ${MPOINT}"
+	done < "${1}"
+}
+
+function image_partitions () {
+	### image_partitions <loop device> <image file>: the partitions of the loop device of an image,
+	### one per line. Their nodes are created when /dev has none (a container, whose /dev is no
+	### devtmpfs), and when the image has a partition table they are waited for a few seconds: the
+	### kernel reads it after losetup.
+	local LOOPDEV NAME MAJMIN TYPE TRIES TABLE
+	LOOPDEV=${1}
+	TABLE=$(sfdisk -d "${2}" 2> /dev/null || true)
+	TRIES=0
+	while [[ ${TABLE} == *$'\n/'* ]] && [[ $'\n'$(lsblk -rno TYPE "${LOOPDEV}")$'\n' != *$'\npart\n'* ]] &&
+		[ "${TRIES}" -lt 5 ]
+	do
+		sleep 1
+		TRIES=$((TRIES+1))
+	done
+	lsblk -rno NAME,MAJ:MIN,TYPE "${LOOPDEV}" | while read -r NAME MAJMIN TYPE
+	do
+		if [ "${TYPE}" != part ]
+		then
+			continue
+		fi
+		if [ ! -e "/dev/${NAME}" ]
+		then
+			run_cmd -s "mknod -m 0660 \"/dev/${NAME}\" b ${MAJMIN%%:*} ${MAJMIN##*:}" > /dev/null || return
+		fi
+		echo "/dev/${NAME}"
+	done
+}
+
+function image_mount_point () {
+	### image_mount_point <loop device>: the mount point closest to / among the ones of the loop
+	### device and of its partitions (the root of the image), none when nothing of it is mounted
+	lsblk -rno MOUNTPOINT "${1}" 2> /dev/null | awk 'NF { print length, $0 }' | sort -n | head -n1 |
+		cut -d' ' -f2- | while IFS= read -r DIR
+	do
+		### lsblk -r writes a blank and the other special characters as \x<hex>
+		printf '%b\n' "${DIR}"
+	done
+}
+
+function image_mount_list () {
+	### image_mount_list: the disk images attached to a loop device, by bbxb mount or by a build
+	### (mount_tag): the image, the loop device, the directory of its root and whether it is
+	### read-only
+	local NAME RO BACKFILE DIR LINES
+	LINES=$(losetup -l -n --raw -O NAME,RO,BACK-FILE | while read -r NAME RO BACKFILE
+	do
+		DIR=$(image_mount_point "${NAME}")
+		### An image without a system: its partitions on <directory>/p<n>
+		if [[ ${DIR} =~ /p[0-9]+$ ]]
+		then
+			DIR=$(dirname "${DIR}")
+		fi
+		printf '%b\t%s\t%s\t%s\n' "${BACKFILE}" "${NAME}" "${DIR:-(not mounted)}" "$( [ "${RO}" == 1 ] && echo ro || echo rw )"
+	done)
+	if [ -z "${LINES}" ]
+	then
+		echo "No image is mounted."
+		return 0
+	fi
+	printf 'IMAGE\tLOOP\tDIRECTORY\tMODE\n%s\n' "${LINES}" | column -t -s $'\t'
+}
+
+function image_mount () {
+	### image_mount [--ro] <image file> [<directory>]: mount the file systems of a disk image on
+	### <directory> (default: image_mount_dir), the way the system it holds mounts them: the
+	### partition with /etc/fstab is the root, the partitions its fstab names by PARTUUID, UUID or
+	### LABEL go to their mount points (the boot partition of create_image, /boot/firmware of
+	### Raspberry Pi OS). An image with no such partition has each partition on <directory>/p<n>,
+	### one without a partition table its file system on <directory>. Nothing of the chroot of
+	### mount_tag (dev, proc, sys, resolv.conf): this is to look into an image or to change it.
+	### image_umount undoes it; a failure halfway undoes what was done.
+	local RO IMAGE DIR LOOPDEV ATTACHED PART PARTS ROOTPART SPEC MPOINT FOUND KEY VALUE
+	local -a MOUNT_OPTS LOSETUP_OPTS
+
+	OPTS="--ro" OPTS_WITH_VALUE="" param2value "${@}"
+	RO=${_PARAM[ro]:-0}
+	IMAGE=${_PARAM[1]}
+	DIR=${_PARAM[2]}
+	if [ ! -f "${IMAGE}" ]
+	then
+		trow_error "${ERROR_FILE_NOT_FOUND}" "No image ${IMAGE}." || return
+	fi
+	IMAGE=$(realpath "${IMAGE}")
+	DIR=$(realpath -m "${DIR:-$(image_mount_dir "${IMAGE}")}")
+	ATTACHED=$(losetup -nO NAME -j "${IMAGE}" | xargs)
+	if [ -n "${ATTACHED}" ]
+	then
+		trow_error "${ERROR_GENERIC}" "${IMAGE} is already attached to ${ATTACHED} (bbxb umount ${IMAGE})." || return
+	fi
+	if mountpoint -q "${DIR}"
+	then
+		trow_error "${ERROR_GENERIC}" "${DIR} is already a mount point." || return
+	fi
+	MOUNT_OPTS=()
+	LOSETUP_OPTS=(--find --partscan --show)
+	if [ "${RO}" -eq 1 ]
+	then
+		MOUNT_OPTS=(-o ro)
+		LOSETUP_OPTS+=(--read-only)
+	fi
+
+	function image_mount_undo () {
+		sudo umount -R "${DIR}" 2> /dev/null || true
+		sudo losetup -d "${LOOPDEV}" 2> /dev/null || true
+		return 1
+	}
+
+	if [ ! -d "${DIR}" ]
+	then
+		run_cmd "mkdir -p \"${DIR}\"" > /dev/null || return
+	fi
+	LOOPDEV=$(sudo losetup "${LOSETUP_OPTS[@]}" "${IMAGE}") || return
+	echo "${IMAGE} on ${LOOPDEV}"
+	mapfile -t PARTS < <(image_partitions "${LOOPDEV}" "${IMAGE}")
+
+	if [ "${#PARTS[@]}" -eq 0 ]
+	then
+		run_cmd -s "mount ${MOUNT_OPTS[*]} \"${LOOPDEV}\" \"${DIR}\"" > /dev/null || image_mount_undo || return
+		echo "${LOOPDEV} on ${DIR}"
+	else
+		### The root: the first partition that mounts and has /etc/fstab
+		ROOTPART=
+		for PART in "${PARTS[@]}"
+		do
+			if sudo mount "${MOUNT_OPTS[@]}" "${PART}" "${DIR}" 2> /dev/null
+			then
+				if [ -f "${DIR}/etc/fstab" ]
+				then
+					ROOTPART=${PART}
+					echo "${PART} on ${DIR}"
+					break
+				fi
+				sudo umount "${DIR}" || image_mount_undo || return
+			fi
+		done
+		if [ -n "${ROOTPART}" ]
+		then
+			while read -r SPEC MPOINT
+			do
+				FOUND=
+				for PART in "${PARTS[@]}"
+				do
+					if [ "${PART}" == "${ROOTPART}" ]
+					then
+						continue
+					fi
+					while IFS='=' read -r KEY VALUE
+					do
+						if [ "${KEY}=${VALUE}" == "${SPEC}" ]
+						then
+							FOUND=${PART}
+						fi
+					done < <(sudo blkid -o export "${PART}")
+					if [ -n "${FOUND}" ]
+					then
+						break
+					fi
+				done
+				if [ -z "${FOUND}" ]
+				then
+					echo "${SPEC} ${MPOINT}: not a partition of the image, left out"
+					continue
+				fi
+				if [ ! -d "${DIR}${MPOINT}" ]
+				then
+					run_cmd -s "mkdir -p \"${DIR}${MPOINT}\"" > /dev/null || image_mount_undo || return
+				fi
+				run_cmd -s "mount ${MOUNT_OPTS[*]} \"${FOUND}\" \"${DIR}${MPOINT}\"" > /dev/null || image_mount_undo || return
+				echo "${FOUND} on ${DIR}${MPOINT}"
+			done < <(image_fstab_mounts "${DIR}/etc/fstab")
+		else
+			### No system in it: every partition on p<n>
+			for PART in "${PARTS[@]}"
+			do
+				MPOINT=${DIR}/p${PART##*p}
+				run_cmd "mkdir -p \"${MPOINT}\"" > /dev/null || image_mount_undo || return
+				if run_cmd -s "mount ${MOUNT_OPTS[*]} \"${PART}\" \"${MPOINT}\"" > /dev/null
+				then
+					echo "${PART} on ${MPOINT}"
+				else
+					echo "${PART}: no file system mount knows, left out"
+				fi
+			done
+		fi
+	fi
+	echo "Mounted${MOUNT_OPTS[*]:+ read-only}: bbxb umount ${DIR} to release it."
+}
+
+function image_umount () {
+	### image_umount <image file | directory>: unmount what image_mount mounted, from the image or
+	### from its directory (the mounts in it: the p<n> of an image without a system too), and
+	### detach the loop devices; the directories left empty are removed. An image attached but not
+	### mounted is only detached.
+	local TARGET SOURCE PKNAME LOOPDEV LOOPDEVS MPOINT
+	local -a MPOINTS
+
+	TARGET=${1}
+	if [ -z "${TARGET}" ] || [ ! -e "${TARGET}" ]
+	then
+		trow_error "${ERROR_FILE_NOT_FOUND}" "No image or directory ${TARGET}." || return
+	fi
+	TARGET=$(realpath "${TARGET}")
+	if [ -d "${TARGET}" ]
+	then
+		LOOPDEVS=$(findmnt -rn -o SOURCE,TARGET | awk -v dir="${TARGET}" '$2 == dir || index($2, dir "/") == 1 { print $1 }' |
+			while read -r SOURCE
+			do
+				PKNAME=$(lsblk -ndo PKNAME "${SOURCE}" 2> /dev/null || true)
+				echo "/dev/${PKNAME:-$(basename "${SOURCE}")}"
+			done | grep '^/dev/loop' | sort -u | xargs || true)
+		if [ -z "${LOOPDEVS}" ]
+		then
+			trow_error "${ERROR_GENERIC}" "No image is mounted on ${TARGET} (bbxb mount list)." || return
+		fi
+	else
+		LOOPDEVS=$(losetup -nO NAME -j "${TARGET}" | xargs)
+		if [ -z "${LOOPDEVS}" ]
+		then
+			trow_error "${ERROR_GENERIC}" "${TARGET} is not attached to a loop device (bbxb mount list)." || return
+		fi
+	fi
+
+	for LOOPDEV in ${LOOPDEVS}
+	do
+		### Every mount point of the device and its partitions, the deepest first
+		mapfile -t MPOINTS < <(lsblk -rno MOUNTPOINT "${LOOPDEV}" | awk 'NF { print length, $0 }' | sort -rn |
+			cut -d' ' -f2- | while IFS= read -r MPOINT; do printf '%b\n' "${MPOINT}"; done)
+		for MPOINT in "${MPOINTS[@]}"
+		do
+			run_cmd -s "umount \"${MPOINT}\"" > /dev/null || return
+			echo "${MPOINT} unmounted"
+		done
+		run_cmd -s "losetup -d \"${LOOPDEV}\"" > /dev/null || return
+		echo "${LOOPDEV} detached"
+		### The directories image_mount made: the mount points outside the image, and the one of
+		### the p<n>. Inside the image (boot) they went with it; rmdir leaves any with content
+		for MPOINT in "${MPOINTS[@]}"
+		do
+			rmdir "${MPOINT}" 2> /dev/null || true
+			if [[ ${MPOINT} =~ /p[0-9]+$ ]]
+			then
+				rmdir "$(dirname "${MPOINT}")" 2> /dev/null || true
+			fi
+		done
+	done
 }
 
 unset MOUNTED_IMAGES

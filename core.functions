@@ -9,18 +9,24 @@ check_core_functions () {
 	fi
 }
 
+### The values param2value parsed, by option name (no dashes, - as _) and by position: the
+### array is global and every param2value call empties it
+declare -gA _PARAM=()
+
 param2value () {
 	
 	# Requires at least one OPTS or OPTS_WITH_VALUE to run
 	# OPTS="-a -b -c" OPTS_WITH_VALUE="-d" param2value "${@}"
+	# The values go into _PARAM: ${_PARAM[d]} the value of -d, ${_PARAM[a]} 1 when -a is given,
+	# ${_PARAM[1]}... the positional parameters
 
 	local NUM OPTION OPTS PARAMETER
 
 	OPTS+=" -v "
 	NUM=0
 
-	# shellcheck disable=SC2046
-	unset $( ( set -o posix ; set ) | ( grep ^_param_ || : ) | sed 's/=.*$//g' | xargs )
+	unset _PARAM
+	declare -gA _PARAM=()
 
 	while(($#)) ; do
 		if [[ ${1} == -* ]]
@@ -34,26 +40,44 @@ param2value () {
 						shift
 						if [ ! "${1}" == "" ]
 						then 
-							eval "_param_${PARAMETER}='${1}'"
+							_PARAM[${PARAMETER}]=${1}
 						else
 							trow_error "${ERROR_NOT_VALID_OPTION}" "${OPTION} unset, no assigned value."
 						fi
 					else
-						eval "_param_${PARAMETER}=1"
+						_PARAM[${PARAMETER}]=1
 					fi
 			else
 				trow_error "${ERROR_NOT_VALID_OPTION}" "Unrecognized option: ${1}"
 			fi
 		else
 				NUM=$((NUM+1))
-				eval "_param_${NUM}='${1}'"
+				_PARAM[${NUM}]=${1}
 				PARAMETER=${NUM}
 		fi
-		if [ "${_param_v:-0}" -eq 1 ]
+		if [ "${_PARAM[v]:-0}" -eq 1 ]
 		then
-			eval echo "_param_${PARAMETER}=\$_param_${PARAMETER}"
+			echo "_PARAM[${PARAMETER}]=${_PARAM[${PARAMETER}]}"
 		fi
 		shift
+	done
+}
+
+param_list () {
+
+	### param_list [<first index>]: print the positional parameters of the last param2value call,
+	### one per line, from <first index> (default 1) on. For a function that takes a list of them
+	### (the units of enable_service): mapfile -t UNITS < <(param_list). param2value unsets the
+	### array at every call, so the list ends at the first index it did not set.
+
+	local PARAM_INDEX
+
+	PARAM_INDEX=${1:-1}
+
+	while [ -n "${_PARAM[${PARAM_INDEX}]:-}" ]
+	do
+		echo "${_PARAM[${PARAM_INDEX}]}"
+		PARAM_INDEX=$((PARAM_INDEX+1))
 	done
 }
 
@@ -123,7 +147,8 @@ download_uncompress () {
 	# if download file does not exists in filesystem
 	if [ ! -f "${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}" ]
 	then
-		run_cmd "curl -k -LsR -o \"${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}\" \"${URL}\""
+		### -f: an HTTP error must stop the build here instead of storing the error page as the source archive
+		run_cmd "curl -k -fLsR -o \"${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}\" \"${URL}\""
 	fi
 	if [ -d "${DEST_DIR}" ] && [ "${NODELETEDESTDIR}" -eq 0 ]
 	then
@@ -132,6 +157,21 @@ download_uncompress () {
 	FILE_ENCODING=$(file -iz "${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}")
 	DOWNLOAD_FILE_TYPE=$(echo "${FILE_ENCODING}" | grep -E -o "compressed-encoding=[^;]*" | sed 's/compressed-encoding=//' || true )
 	UNCOMPRESSED_FILE_TYPE=$(echo "${FILE_ENCODING}" | awk '{print $2}' | sed 's/;$//')
+	### file -z runs the decompressor of what it recognizes: on a zip of more than one file that is
+	### gzip, which gives up ("more than one entry"), and the type becomes a decompression error. The
+	### type of the file itself, without -z, says zip (docbook-xml)
+	if [ "$(file -b --mime-type "${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}")" == application/zip ]
+	then
+		DOWNLOAD_FILE_TYPE=application/zip
+		UNCOMPRESSED_FILE_TYPE=application/zip
+	fi
+	### A server that answers 200 with an HTML page (a moved repository, a landing page) must
+	### not leave that page in the cache in place of the archive: drop it and fail here.
+	if [ "${UNCOMPRESSED_FILE_TYPE}" = "text/html" ]
+	then
+		run_cmd "rm -f \"${DOWNLOAD_PATH}/${DOWNLOAD_HASH_FILE}\""
+		trow_error "${ERROR_GENERIC}" "The download of ${URL} is an HTML page, not an archive"
+	fi
 	if [ ! -d "${DEST_DIR}" ] ; then run_cmd "mkdir -pv \"${DEST_DIR}\"" ; fi
 	case ${UNCOMPRESSED_FILE_TYPE} in
 		application/x-tar)
@@ -298,37 +338,120 @@ pathremove () {
 }
 
 log_buffer () {
+	### log_buffer [log_type] [log_file]: prefix every line of stdin with time and type (the log a
+	### line belongs to is its file name, which bbxb logtail prints in front of it).
+	### No external command per line: the writer has to keep up with the output of a parallel make.
 	(
-		unset IFS
 		local LOG_TYPE="${1:-log}"
-		local LOG_FILE="${2:-/dev/stdout}"
+		local LOG_DEST="${2:-/dev/stdout}"
+		local LOG_CHAR LOG_LINE LOG_FD
 		case ${LOG_TYPE} in
-			cmd)    local LOG_CHAR='$';;
-			info)   local LOG_CHAR='#';;
-			log)    local LOG_CHAR='-';;
-			status) local LOG_CHAR='=';;
-			error)  local LOG_CHAR='!';;
-			*)      local LOG_CHAR="${LOG_TYPE}";;
+			cmd)    LOG_CHAR='$';;
+			info)   LOG_CHAR='#';;
+			log)    LOG_CHAR='-';;
+			status) LOG_CHAR='=';;
+			error)  LOG_CHAR='!';;
+			*)      LOG_CHAR="${LOG_TYPE}";;
 		esac
-		while read -r line
+		### The stdout of the shell, duplicated, never reopened through /dev/stdout: the pipe or
+		### the terminal a container gives the build belongs to root, and the build does not
+		if [ "${LOG_DEST}" == /dev/stdout ]
+		then
+			exec {LOG_FD}>&1
+		else
+			exec {LOG_FD}>> "${LOG_DEST}"
+		fi
+		while IFS= read -r LOG_LINE || [ -n "${LOG_LINE}" ]
 		do
-			printf "%s - [%s]${LOG_CHAR} %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$(basename "${PWD}")" "${line}" >> "${LOG_FILE}"
-		done < /dev/stdin
+			printf '%(%Y-%m-%d %H:%M:%S)T %s %s\n' -1 "${LOG_CHAR}" "${LOG_LINE}"
+		done >&"${LOG_FD}"
 	)
 }
 
-run_cmd () {
-	
-	local CMDLINE STATUS RETRIES
+log_wait () {
+	### log_wait <pid>...: wait for the log writers started by log_run, LOG_WAIT_TIMEOUT seconds
+	### at most (default 10): a command that leaves a daemon behind (the sccache server) keeps the
+	### pipes open and its writers never end.
+	local LOG_PID LOG_POLLS
+	LOG_POLLS=$(( ${LOG_WAIT_TIMEOUT:-10} * 50 ))
+	for LOG_PID in "${@}"
+	do
+		while [ "${LOG_POLLS}" -gt 0 ] && kill -0 "${LOG_PID}" 2> /dev/null
+		do
+			sleep 0.02
+			LOG_POLLS=$((LOG_POLLS-1))
+		done
+	done
+	return 0
+}
 
-	unset RUNCMD_SUDO
+log_run () {
+	### log_run <log_file> <command> [<argument>...]: run the command (in this shell, so eval and
+	### functions work) with stdout and stderr going through log_buffer into <log_file> (empty:
+	### the current stdout) and return its status once both log writers are done. The log is
+	### therefore complete when the caller, or the ERR trap, acts on a failure; a shell that
+	### exits with the writers still behind loses the last lines, which are the error. The
+	### command runs in a || list: a function passed here has to return its own status.
+	local LOG_RUN_FILE LOG_RUN_STATUS LOG_RUN_OUT LOG_RUN_ERR LOG_RUN_OUTPID LOG_RUN_ERRPID LOG_RUN_SHELL
+	LOG_RUN_FILE=${1:-/dev/stdout}
+	shift
+	exec {LOG_RUN_OUT}> >(log_buffer log "${LOG_RUN_FILE}")
+	LOG_RUN_OUTPID=${!}
+	exec {LOG_RUN_ERR}> >(log_buffer error "${LOG_RUN_FILE}")
+	LOG_RUN_ERRPID=${!}
+	LOG_RUN_STATUS=0
+	ERROR_LOG=
+	if [ -n "${BBXB_CONSOLE_FD}" ]
+	then
+		### The command does not inherit the console of error_console: a daemon would keep it open
+		"${@}" 1>&"${LOG_RUN_OUT}" 2>&"${LOG_RUN_ERR}" {BBXB_CONSOLE_FD}>&- || LOG_RUN_STATUS=${?}
+	else
+		"${@}" 1>&"${LOG_RUN_OUT}" 2>&"${LOG_RUN_ERR}" || LOG_RUN_STATUS=${?}
+	fi
+	exec {LOG_RUN_OUT}>&- {LOG_RUN_ERR}>&-
+	log_wait "${LOG_RUN_OUTPID}" "${LOG_RUN_ERRPID}"
+	if [ "${LOG_RUN_STATUS}" -ne 0 ]
+	then
+		### Global on purpose: on_error reports the log of the command that failed
+		if [ "${LOG_RUN_FILE}" == /dev/stdout ]
+		then
+			LOG_RUN_SHELL=${BASHPID}
+			ERROR_LOG=$(stdout_log "${LOG_RUN_SHELL}")
+		else
+			ERROR_LOG=${LOG_RUN_FILE}
+		fi
+	fi
+	return "${LOG_RUN_STATUS}"
+}
+
+stdout_log () {
+	### stdout_log <pid of the calling shell>: print the file the stdout of that shell is
+	### redirected to, when it is a regular file and not the stdout of the main shell as well
+	### (bbxb itself redirected to a file is the console, not a log)
+	local SHELL_OUT MAIN_OUT
+	SHELL_OUT=$(readlink "/proc/${1}/fd/1" 2> /dev/null || true)
+	MAIN_OUT=$(readlink "/proc/${$}/fd/1" 2> /dev/null || true)
+	if [ -f "${SHELL_OUT}" ] && [ "${SHELL_OUT}" != "${MAIN_OUT}" ]
+	then
+		echo "${SHELL_OUT}"
+	fi
+	return 0
+}
+
+run_cmd () {
+	### run_cmd [-S|-s] "command string": log the command and run it through log_run. The status
+	### is returned, never trapped here: the ERR trap fires at the call site, once the log is
+	### complete, and MAX_RETRIES can repeat the command.
+	local CMDLINE STATUS RETRIES RUNCMD_SUDO LOG_TYPE LOG_LINE
+
+	RUNCMD_SUDO=
 	case "${1}" in
-		"-S") 
-			local RUNCMD_SUDO="sudo/bash"
+		"-S")
+			RUNCMD_SUDO="sudo/bash"
 			shift
 			;;
 		"-s")
-			local RUNCMD_SUDO="sudo"
+			RUNCMD_SUDO="sudo"
 			shift
 			;;
 	esac
@@ -337,33 +460,25 @@ run_cmd () {
 	RETRIES=0
 	while [ "${STATUS}" -ne 0 ] && [ "${RETRIES}" -lt "${MAX_RETRIES:-1}" ]
 	do
-		local RETRIES=$((RETRIES+1))
+		RETRIES=$((RETRIES+1))
 		if [ ${RETRIES} -gt 1 ]
 		then
 			# Sleep random between 6 and 10 seconds
 			sleep $((6 + "${RANDOM}" % 5))
 			echo "Try ${RETRIES}" | log_buffer info
 		fi
-		(
-			local LINENO=0
-			while IFS= read -r line
-			do
-				local LINE=$((LINE+1))
-				case ${LINE} in
-					1) local LOG_TYPE=cmd ;;
-					*) local LOG_TYPE='>' ;;
-				esac
-				echo "${line}" | log_buffer "${LOG_TYPE}"
-			done <<< "${RUNCMD_SUDO:+[${RUNCMD_SUDO}] }${CMDLINE}"
-		)
+		LOG_TYPE=cmd
+		while IFS= read -r LOG_LINE
+		do
+			echo "${LOG_LINE}" | log_buffer "${LOG_TYPE}"
+			LOG_TYPE='>'
+		done <<< "${RUNCMD_SUDO:+[${RUNCMD_SUDO}] }${CMDLINE}"
+		STATUS=0
 		case "${RUNCMD_SUDO}" in
-		"sudo/bash") 
-			# shellcheck disable=SC2024
-			sudo bash -c "${CMDLINE}" 2> >(log_buffer error) > >(log_buffer)
-			STATUS=${PIPESTATUS[0]}
+		"sudo/bash")
+			log_run "" sudo bash -c "${CMDLINE}" || STATUS=${?}
 			;;
-		*)	eval "${RUNCMD_SUDO:+${RUNCMD_SUDO} }${CMDLINE}" 2> >(log_buffer error) > >(log_buffer)
-			STATUS=${PIPESTATUS[0]}
+		*)	log_run "" eval "${RUNCMD_SUDO:+${RUNCMD_SUDO} }${CMDLINE}" || STATUS=${?}
 			;;
 		esac
 	done
@@ -371,19 +486,310 @@ run_cmd () {
 }
 
 trow_error () {
+	### trow_error <error_code> <error_message>: return the code; under bbxb the ERR trap
+	### (on_error) reports the message, elsewhere (utilities, recipe scripts) it is printed here.
 	local ERROR_CODE=${1}
-	local ERROR_MSG=${2}
-	#local ERROR_PARAM=${3}
+	### Global on purpose: on_error reads it
+	ERROR_MSG=${2}
 
-	echo >&2
-	echo "${ERROR_MSG:-ERR received.} [${FUNCNAME[*]} - ERR: ${ERROR_CODE}]" >&2
+	if [[ $(trap -p ERR) != *on_error* ]]
+	then
+		echo >&2
+		echo "${ERROR_MSG:-ERR received.} [${FUNCNAME[*]} - ERR: ${ERROR_CODE}]" >&2
+	fi
 	return "${ERROR_CODE}"
 }
 
-export -f run_cmd log_buffer
+error_console () {
+	### error_console: print stdin on the console, the stderr bbxb started with, which it keeps
+	### as BBXB_CONSOLE_FD: a failing step usually has its own stderr redirected to a log.
+	if [ -n "${BBXB_CONSOLE_FD}" ] && { : >&"${BBXB_CONSOLE_FD}"; } 2> /dev/null
+	then
+		cat >&"${BBXB_CONSOLE_FD}"
+	else
+		cat >&2
+	fi
+	return 0
+}
+
+on_error () {
+	### on_error <status>: the ERR trap of bbxb (trap 'on_error ${?}' ERR, with set -E). A failure
+	### inside nested builds climbs one subshell at a time: the innermost shell reports it, once
+	### (message, package, call stack, log file and its last lines), the parent shells only pass
+	### the status on, and the main shell unmounts the images and exits.
+	local STATUS=${1:-1}
+	local ERROR_FLAG ERROR_SHELL
+	set +E +o pipefail
+	trap - ERR
+	ERROR_FLAG="${TMPDIR:-/tmp}/bbxb_error.${$}"
+	if [ "${STATUS}" -ne 130 ] && [ ! -f "${ERROR_FLAG}" ]
+	then
+		: > "${ERROR_FLAG}"
+		if [ -z "${ERROR_LOG}" ] || [ ! -f "${ERROR_LOG}" ]
+		then
+			ERROR_SHELL=${BASHPID}
+			ERROR_LOG=$(stdout_log "${ERROR_SHELL}")
+			if [ -z "${ERROR_LOG}" ]
+			then
+				### The log of the package, when the failure is inside build
+				ERROR_LOG=${LOG_FILE}
+			fi
+		fi
+		{
+			echo
+			echo "ERROR: ${ERROR_MSG:-command failed} [status ${STATUS}]"
+			if [ -n "${PKG_FULLNAME}" ]
+			then
+				echo "   Package: ${PKG_FULLNAME}${PKG_TARGET:+:${PKG_TARGET}}"
+			fi
+			echo "   Stack:   ${FUNCNAME[*]:1}"
+			if [ -n "${ERROR_LOG}" ] && [ -f "${ERROR_LOG}" ]
+			then
+				echo "   Log:     ${ERROR_LOG}"
+				### stdout and stderr have a log writer each: the error lines (type !) are
+				### not necessarily the last ones of the log, and some tools (meson, cmake)
+				### explain the failure on stdout, so the end of both streams is shown
+				if grep -q '^[-0-9]* [0-9:]* ! ' "${ERROR_LOG}"
+				then
+					if grep -q '^[-0-9]* [0-9:]* - ' "${ERROR_LOG}"
+					then
+						echo "   Last $(( ${ERROR_LOG_LINES:-20} / 2 )) output lines of the log:"
+						grep '^[-0-9]* [0-9:]* - ' "${ERROR_LOG}" | tail -n "$(( ${ERROR_LOG_LINES:-20} / 2 ))" | sed 's/^/   | /'
+					fi
+					echo "   Last ${ERROR_LOG_LINES:-20} error lines of the log:"
+					grep '^[-0-9]* [0-9:]* ! ' "${ERROR_LOG}" | tail -n "${ERROR_LOG_LINES:-20}" | sed 's/^/   | /'
+				else
+					echo "   Last ${ERROR_LOG_LINES:-20} lines of the log:"
+					tail -n "${ERROR_LOG_LINES:-20}" "${ERROR_LOG}" | sed 's/^/   | /'
+				fi
+			fi
+			echo
+		} 2>&1 | error_console
+		if [ -n "${ERROR_LOG}" ] && [ -f "${ERROR_LOG}" ]
+		then
+			echo "ERROR: ${ERROR_MSG:-command failed} [status ${STATUS}] [${FUNCNAME[*]:1}]" | log_buffer error "${ERROR_LOG}"
+		fi
+	fi
+	if [ "${BASH_SUBSHELL}" -eq 0 ]
+	then
+		on_exit "${STATUS}"
+	fi
+	exit "${STATUS}"
+}
+
+on_interrupt () {
+	### on_interrupt: the SIGINT trap of bbxb. Every shell of the process group gets the signal:
+	### the subshells leave with 130, which on_error passes on silently, the main shell cleans up.
+	set +E +o pipefail
+	trap - ERR SIGINT
+	if [ "${BASH_SUBSHELL}" -eq 0 ]
+	then
+		on_exit 130
+	fi
+	exit 130
+}
+
+on_exit () {
+	### on_exit <status>: what the main shell does before leaving on an error or on SIGINT
+	trap - ERR SIGINT
+	{
+		if [ "${1}" -eq 130 ]
+		then
+			echo
+			echo "Interrupted."
+		fi
+		if declare -F unmount_tag > /dev/null
+		then
+			unmount_tag --all || true
+		fi
+		echo "Build stopped [status ${1}]."
+		echo
+	} 2>&1 | error_console
+	rm -f "${TMPDIR:-/tmp}/bbxb_error.${$}"
+	if [ -n "${BUILD_CHECKED_FILE}" ]
+	then
+		rm -f "${BUILD_CHECKED_FILE}"
+	fi
+	return 0
+}
+
+export -f run_cmd log_run log_wait log_buffer stdout_log
 
 tab () {
 	echo -en '\t'
+}
+
+log_tail () {
+
+	### log_tail [--interval <seconds>] <directory>...: follow the *.log files of the directories,
+	### each line behind the name of its log ("[glibc_2.42-cross] ..."), until SIGINT or SIGTERM,
+	### which end the whole shell (bbxb logtail). One inotifywait watches the directories (one
+	### inotify instance: a tail -F per log exhausts the 128 of the user, after which every tail
+	### polls), and a modify event reads its log from the byte offset it was left at to its last
+	### complete line. The events of a burst are read together, each log once. The logs there when
+	### it starts are followed from their end, the ones that appear later from their first byte; a
+	### log shorter than its offset was truncated by a new build of its package and restarts from 0.
+	### The directories that do not exist yet are looked for every <interval> seconds (default 2).
+
+	local INTERVAL LOG_DIR LOG_FILE LOG_TAIL_INIT WATCH_FD="" WATCH_PID="" WATCH_STATUS REWATCH
+	local -a DIRS WATCHED=()
+	local -A OFFSET=() PENDING=()
+
+	OPTS="" OPTS_WITH_VALUE="--interval" param2value "${@}"
+	INTERVAL=${_PARAM[interval]:-2}
+	mapfile -t DIRS < <(param_list)
+
+	if ! command -v inotifywait > /dev/null
+	then
+		trow_error "${ERROR_FILE_NOT_FOUND}" "log_tail needs inotifywait: install inotify-tools" || return
+	fi
+
+	function log_tail_stop () {
+		if [ -n "${WATCH_PID}" ]
+		then
+			kill "${WATCH_PID}" 2> /dev/null || true
+		fi
+		trap - INT TERM
+		exit 0
+	}
+	function log_tail_read () {
+		### log_tail_read <log>...: print what the logs gained since their offset
+		local LOG_SIZE LOG_FILE LOG_OFFSET LOG_LENGTH LOG_LAST
+		while read -r LOG_SIZE LOG_FILE
+		do
+			if [ -z "${OFFSET[${LOG_FILE}]}" ] && [ "${LOG_TAIL_INIT}" -eq 1 ]
+			then
+				OFFSET[${LOG_FILE}]=${LOG_SIZE}
+				continue
+			fi
+			LOG_OFFSET=${OFFSET[${LOG_FILE}]:-0}
+			if [ "${LOG_SIZE}" -lt "${LOG_OFFSET}" ]
+			then
+				LOG_OFFSET=0
+			fi
+			LOG_LENGTH=$(( LOG_SIZE - LOG_OFFSET ))
+			if [ "${LOG_LENGTH}" -gt 0 ]
+			then
+				### A last line still being written waits for its next event
+				LOG_LAST=$(tail -c "+${LOG_SIZE}" -- "${LOG_FILE}" 2> /dev/null | head -c 1 || true)
+				if [ -n "${LOG_LAST}" ]
+				then
+					LOG_LENGTH=$(( LOG_LENGTH - $(tail -c "+$(( LOG_OFFSET + 1 ))" -- "${LOG_FILE}" 2> /dev/null \
+						| head -c "${LOG_LENGTH}" | tail -n 1 | wc -c || true) ))
+				fi
+			fi
+			if [ "${LOG_LENGTH}" -gt 0 ]
+			then
+				tail -c "+$(( LOG_OFFSET + 1 ))" -- "${LOG_FILE}" 2> /dev/null | head -c "${LOG_LENGTH}" \
+					| awk -v prefix="[$(basename "${LOG_FILE}" .log)] " '{ print prefix $0; fflush() }' || true
+			fi
+			OFFSET[${LOG_FILE}]=$(( LOG_OFFSET + LOG_LENGTH ))
+		done < <(stat -c '%s %n' -- "${@}" 2> /dev/null || true)
+	}
+	function log_tail_watch () {
+		### log_tail_watch: (re)start inotifywait on the directories that exist, then read what
+		### their logs gained before the watches were in place
+		local LINE
+		local -a LOGS=()
+		if [ -n "${WATCH_PID}" ]
+		then
+			kill "${WATCH_PID}" 2> /dev/null || true
+			exec {WATCH_FD}<&-
+			WATCH_FD=""
+			WATCH_PID=""
+		fi
+		WATCHED=()
+		for LOG_DIR in "${DIRS[@]}"
+		do
+			if [ -d "${LOG_DIR}" ]
+			then
+				WATCHED+=("${LOG_DIR}")
+			fi
+		done
+		if [ "${#WATCHED[@]}" -gt 0 ]
+		then
+			exec {WATCH_FD}< <(exec inotifywait -m -e modify -e delete_self -e move_self \
+				--format '%w%f' -- "${WATCHED[@]}" 2>&1)
+			WATCH_PID=${!}
+			### Its stderr says when the watches are in place
+			while read -r -u "${WATCH_FD}" LINE && [ "${LINE}" != "Watches established." ]
+			do
+				:
+			done
+			for LOG_DIR in "${WATCHED[@]}"
+			do
+				for LOG_FILE in "${LOG_DIR}"/*.log
+				do
+					if [ -f "${LOG_FILE}" ]
+					then
+						LOGS+=("${LOG_FILE}")
+					fi
+				done
+			done
+			if [ "${#LOGS[@]}" -gt 0 ]
+			then
+				log_tail_read "${LOGS[@]}"
+			fi
+		fi
+		LOG_TAIL_INIT=0
+	}
+	trap 'log_tail_stop' INT TERM
+
+	LOG_TAIL_INIT=1
+	log_tail_watch
+	while true
+	do
+		REWATCH=0
+		WATCH_STATUS=1
+		if [ -z "${WATCH_FD}" ]
+		then
+			sleep "${INTERVAL}"
+		elif read -r -t "${INTERVAL}" -u "${WATCH_FD}" LOG_FILE
+		then
+			WATCH_STATUS=0
+		else
+			WATCH_STATUS=${?}
+		fi
+		if [ "${WATCH_STATUS}" -eq 0 ]
+		then
+			### The burst goes on for a moment: each log once for all of its events
+			sleep 0.2
+			PENDING=()
+			while true
+			do
+				case ${LOG_FILE} in
+					*.log) PENDING[${LOG_FILE}]=1 ;;
+					### A directory moved or removed: its watch is gone
+					*/) REWATCH=1 ;;
+				esac
+				if ! read -r -t 0 -u "${WATCH_FD}" || ! read -r -u "${WATCH_FD}" LOG_FILE
+				then
+					break
+				fi
+			done
+			if [ "${#PENDING[@]}" -gt 0 ]
+			then
+				log_tail_read "${!PENDING[@]}"
+			fi
+		elif [ -n "${WATCH_FD}" ] && [ "${WATCH_STATUS}" -le 128 ]
+		then
+			### inotifywait ended (not a timeout): every directory it watched is gone
+			REWATCH=1
+			sleep "${INTERVAL}"
+		fi
+		### A directory that appeared since
+		for LOG_DIR in "${DIRS[@]}"
+		do
+			if [ -d "${LOG_DIR}" ] && [[ " ${WATCHED[*]} " != *" ${LOG_DIR} "* ]]
+			then
+				REWATCH=1
+			fi
+		done
+		if [ "${REWATCH}" -eq 1 ]
+		then
+			log_tail_watch
+		fi
+	done
 }
 
 is_core_functions () {
