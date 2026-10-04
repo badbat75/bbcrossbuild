@@ -25,16 +25,6 @@ the logs of systemd (meson) showed no compile line; the `-flto` of every object 
 (`MAKEVERBOSE=1` since October 2026), and a target of GRUB (the modules, built with its own
 `TARGET_CFLAGS`) may not take the flags of the framework at all.
 
-## gnutls with mold
-
-`GCC_DEFAULT_LD=mold`, rpi3-aarch64, October 2026: `lfs/gnutls` 3.8.13 builds and links with mold
-(`-fuse-ld=mold` in its log; `mold 2.42.1` in the `.comment` of `libgnutls.so.30`, `libgnutlsxx.so.30`,
-`certtool`, `gnutls-cli`), and the symbol versions of its version script are there (`GNUTLS_3_4`,
-`GNUTLS_3_7_0`, `GNUTLS_FIPS140_3_4`). Still to check in the image: a TLS connection with `gnutls-cli`,
-and the programs of the two recipes that link it, `lfs/systemd` (`-Dgnutls=enabled`) and
-`lfs/NetworkManager` (`-Dcrypto=gnutls`, with `LFS_ENABLENM=1`): which of them load `libgnutls.so.30`
-is in their NEEDED once they are built.
-
 ## The link options of Rust out of the sccache key
 
 `settcenv` (`build.functions`) turns every link flag (`TOOLCHAIN_LINKERFLAGS`, `OPTLINK_FLAGS`,
