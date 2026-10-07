@@ -28,13 +28,31 @@ OSCONFIG_POSTINST_NAME=${OSCONFIG_POSTINST_NAME:-99_osconfig}
 ### install theirs, and apply the first rule that matches a unit, in the name order of the files.
 ### 00- therefore makes the project the last word on every unit it names.
 OSCONFIG_PRESET_NAME=${OSCONFIG_PRESET_NAME:-00-${PROJECT_NAME}.preset}
-### Both are rewritten at every run, and this is the only moment the run is known to start: bbxb
-### sources this file once, while the sysroot survives from one build to the next and a directive
-### that is no longer in the project file must not stay in it.
+### The files of the sysroot the directives wrote whole, one path of the image per line, outside
+### the image: osconfig_file records them, the next run removes them.
+OSCONFIG_FILES=${OSCONFIG_FILES:-${PLATFORM_PATH}/osconfig.files}
+### All of them are rewritten at every run, and this is the only moment the run is known to start:
+### bbxb sources this file once (bbxb build only), while the sysroot survives from one build to the
+### next and a directive that is no longer in the project file must not stay in it (the .network
+### files of systemd-networkd stayed in an image whose project had moved to NetworkManager). A file
+### the directives only edit (/etc/hosts, a file of a package) is not in the list.
 if [ -n "${BIN_PATH}" ]
 then
 	rm -f "${BIN_PATH}/postinst_scripts/${OSCONFIG_POSTINST_NAME}" \
 		"${BIN_PATH}${TARGET_SYSCONFDIR}/systemd/system-preset/${OSCONFIG_PRESET_NAME}" 2> /dev/null || true
+	if [ -f "${OSCONFIG_FILES}" ]
+	then
+		while IFS= read -r OSCONFIG_PREVIOUS
+		do
+			### A path of the image and nothing else: absolute, no way out of the sysroot
+			if [[ ${OSCONFIG_PREVIOUS} == /* ]] && [[ ${OSCONFIG_PREVIOUS} != *..* ]]
+			then
+				rm -f "${BIN_PATH}${OSCONFIG_PREVIOUS}" 2> /dev/null || true
+			fi
+		done < "${OSCONFIG_FILES}"
+		rm -f "${OSCONFIG_FILES}"
+		unset OSCONFIG_PREVIOUS
+	fi
 fi
 
 function osconfig_log () {
@@ -45,13 +63,25 @@ function osconfig_log () {
 }
 
 function osconfig_file () {
-	### osconfig_file <path under the sysroot>: create the directory of the file, record it in the
-	### log and print its full path in the sysroot, which the caller writes
-	local OSCONFIG_PATH
+	### osconfig_file [--edit] <path under the sysroot>: create the directory of the file, record it
+	### in the log and in OSCONFIG_FILES, and print its full path in the sysroot, which the caller
+	### writes. --edit is for a file the caller changes and does not own (a file of a package), which
+	### the next run must not remove: it goes into the log only.
+	local OSCONFIG_PATH OSCONFIG_EDIT=0
+	if [ "${1}" == --edit ]
+	then
+		OSCONFIG_EDIT=1
+		shift
+	fi
 	OSCONFIG_PATH=${BIN_PATH}${1}
 	if [ ! -d "$(dirname "${OSCONFIG_PATH}")" ]
 	then
 		mkdir -p "$(dirname "${OSCONFIG_PATH}")"
+	fi
+	if [ "${OSCONFIG_EDIT}" -eq 0 ] && ! grep -qxF -- "${1}" "${OSCONFIG_FILES}" 2> /dev/null
+	then
+		mkdir -p "$(dirname "${OSCONFIG_FILES}")"
+		printf '%s\n' "${1}" >> "${OSCONFIG_FILES}"
 	fi
 	echo "Writing ${1}" | osconfig_log
 	echo "${OSCONFIG_PATH}"
@@ -300,7 +330,7 @@ function set_hostname () {
 
 	echo "Host name: ${HOST_NAME}${HOST_DOMAIN:+ in ${HOST_DOMAIN}}"
 	printf '%s\n' "${HOST_NAME}" > "$(osconfig_file "${TARGET_SYSCONFDIR}/hostname")"
-	HOSTS_FILE=$(osconfig_file "${TARGET_SYSCONFDIR}/hosts")
+	HOSTS_FILE=$(osconfig_file --edit "${TARGET_SYSCONFDIR}/hosts")
 	if [ -f "${HOSTS_FILE}" ]
 	then
 		### The line of a previous run goes: the host name is a setting of the project and changes
@@ -337,8 +367,17 @@ function set_locale () {
 function configure_network () {
 	### configure_network <device> [--address <address/prefix>] [--gateway <address>]
 	###	[--dns <address>[,<address>]] [--domains <list>] [--nodomains] [--file <name>]
+	###	[--networkmanager]
 	### The .network file of systemd-networkd for one link. Without --address the link asks DHCP
 	### for everything; with it, it is configured statically and DHCP is off.
+	### --networkmanager writes the keyfile profile of NetworkManager instead,
+	### /etc/NetworkManager/system-connections/<name>.nmconnection (mode 600, as NetworkManager
+	### wants it), the same settings for an ethernet link. Without it NetworkManager makes the
+	### automatic connection of a wired link, and that one follows ID_NET_AUTO_LINK_LOCAL_ONLY of
+	### udev (82-net-auto-link-local.hwdb of systemd): the usb-net of QEMU, a Linux USB gadget,
+	### got a 169.254 address and no DHCP. NetworkManager gives the lease domain to
+	### systemd-resolved as a search domain by itself, so the profile needs nothing for it;
+	### --nodomains has no counterpart there and is refused.
 	###
 	### UseDomains takes the domain name of the DHCP lease (option 15, and the search list of the
 	### router advertisements) as the search domain of the link, which is what every other client
@@ -352,8 +391,90 @@ function configure_network () {
 	### hosts line of nsswitch asks after DNS through nss-mdns. --nodomains leaves the lease domain
 	### out, for a link that must not name the search domain of the system.
 	local NETWORK_DEVICE NETWORK_FILE NETWORK_ADDRESS NETWORK_GATEWAY NETWORK_DNS NETWORK_DOMAINS \
-		NETWORK_NODOMAINS OSCONFIG_ADDRESS
-	OPTS="--nodomains" OPTS_WITH_VALUE="--address --gateway --dns --domains --file" param2value "${@}"
+		NETWORK_NODOMAINS NETWORK_NM OSCONFIG_ADDRESS
+
+	function configure_network_nm () {
+		### The keyfile profile: an address with a colon is IPv6, the others IPv4. A static IPv6
+		### address leaves IPv4 off, as the .network file asks no DHCP then; IPv6 keeps the router
+		### advertisements unless it has the static address. Lists end with a semicolon.
+		local NM_IPV4_METHOD NM_IPV4_ADDRESS NM_IPV6_METHOD NM_IPV6_ADDRESS NM_IPV4_DNS NM_IPV6_DNS \
+			NM_SEARCH NM_SEARCH_FAMILY NM_KEYFILE NM_DOMAINS
+		NM_IPV4_METHOD=auto
+		NM_IPV6_METHOD=auto
+		if [[ ${NETWORK_ADDRESS} == *:* ]]
+		then
+			NM_IPV4_METHOD=disabled
+			NM_IPV6_METHOD=manual
+			NM_IPV6_ADDRESS=${NETWORK_ADDRESS}${NETWORK_GATEWAY:+,${NETWORK_GATEWAY}}
+		elif [ -n "${NETWORK_ADDRESS}" ]
+		then
+			NM_IPV4_METHOD=manual
+			NM_IPV4_ADDRESS=${NETWORK_ADDRESS}${NETWORK_GATEWAY:+,${NETWORK_GATEWAY}}
+		fi
+		for OSCONFIG_ADDRESS in ${NETWORK_DNS//,/ }
+		do
+			if [[ ${OSCONFIG_ADDRESS} == *:* ]]
+			then
+				NM_IPV6_DNS+="${OSCONFIG_ADDRESS};"
+			else
+				NM_IPV4_DNS+="${OSCONFIG_ADDRESS};"
+			fi
+		done
+		if [ -n "${NETWORK_DOMAINS}" ]
+		then
+			read -ra NM_DOMAINS <<< "${NETWORK_DOMAINS}"
+			NM_SEARCH=$(printf '%s;' "${NM_DOMAINS[@]}")
+		fi
+		NM_SEARCH_FAMILY=ipv4
+		if [ "${NM_IPV4_METHOD}" = disabled ]
+		then
+			NM_SEARCH_FAMILY=ipv6
+		fi
+
+		NM_KEYFILE=$(osconfig_file "${TARGET_SYSCONFDIR}/NetworkManager/system-connections/${NETWORK_FILE}.nmconnection")
+		(
+		umask 077
+		{
+			echo "[connection]"
+			echo "id=${NETWORK_FILE}"
+			echo "type=ethernet"
+			echo "interface-name=${NETWORK_DEVICE}"
+			echo "autoconnect=true"
+			echo
+			echo "[ipv4]"
+			echo "method=${NM_IPV4_METHOD}"
+			if [ -n "${NM_IPV4_ADDRESS}" ]
+			then
+				echo "address1=${NM_IPV4_ADDRESS}"
+			fi
+			if [ -n "${NM_IPV4_DNS}" ]
+			then
+				echo "dns=${NM_IPV4_DNS}"
+			fi
+			if [ -n "${NM_SEARCH}" ] && [ "${NM_SEARCH_FAMILY}" = ipv4 ]
+			then
+				echo "dns-search=${NM_SEARCH}"
+			fi
+			echo
+			echo "[ipv6]"
+			echo "method=${NM_IPV6_METHOD}"
+			if [ -n "${NM_IPV6_ADDRESS}" ]
+			then
+				echo "address1=${NM_IPV6_ADDRESS}"
+			fi
+			if [ -n "${NM_IPV6_DNS}" ]
+			then
+				echo "dns=${NM_IPV6_DNS}"
+			fi
+			if [ -n "${NM_SEARCH}" ] && [ "${NM_SEARCH_FAMILY}" = ipv6 ]
+			then
+				echo "dns-search=${NM_SEARCH}"
+			fi
+		} > "${NM_KEYFILE}"
+		)
+	}
+
+	OPTS="--nodomains --networkmanager" OPTS_WITH_VALUE="--address --gateway --dns --domains --file" param2value "${@}"
 
 	NETWORK_DEVICE=${_PARAM[1]}
 	NETWORK_ADDRESS=${_PARAM[address]}
@@ -362,14 +483,25 @@ function configure_network () {
 	NETWORK_DOMAINS=${_PARAM[domains]}
 	NETWORK_NODOMAINS=${_PARAM[nodomains]:-0}
 	NETWORK_FILE=${_PARAM[file]:-${NETWORK_DEVICE}}
+	NETWORK_NM=${_PARAM[networkmanager]:-0}
 
 	if [ -z "${NETWORK_DEVICE}" ]
 	then
 		trow_error "${ERROR_NOT_VALID_OPTION}" "configure_network: no device given."
 		return "${?}"
 	fi
+	if [ "${NETWORK_NM}" -eq 1 ] && [ "${NETWORK_NODOMAINS}" -eq 1 ]
+	then
+		trow_error "${ERROR_NOT_VALID_OPTION}" "configure_network: --nodomains has no NetworkManager counterpart."
+		return "${?}"
+	fi
 
 	echo "Network link: ${NETWORK_DEVICE} (${NETWORK_ADDRESS:-DHCP})"
+	if [ "${NETWORK_NM}" -eq 1 ]
+	then
+		configure_network_nm
+		return
+	fi
 	NETWORK_FILE=$(osconfig_file "${TARGET_SYSCONFDIR}/systemd/network/${NETWORK_FILE}.network")
 	{
 		### No SSID= match for a wireless link: the SSID is a list of globs there, and a name with

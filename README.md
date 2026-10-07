@@ -570,7 +570,7 @@ BBCrossBuild provides various functions for use in project files. These are orga
 
 #### OS Configuration Functions (osconfig.functions)
 
-What the project decides about the system it builds. A file is written into the target sysroot (`${BIN_PATH}`), where the image, the chroot and the packages built from it find it; a command that only the target can run (`systemctl`, `useradd`, `chpasswd`) is written into the post install script of the project, `${BIN_PATH}/postinst_scripts/99_osconfig`, which `run_postinstall_scripts` runs as root inside the image after the ones of the packages. The functions that write a command take `--tag <mount tag>` and then act at once on a mounted image: that is what a project needs after `inject_into_mount_tag`, when the post install scripts have already run. The command then runs on the build host, as root, against the root of the image (`systemctl --root`, `useradd --prefix`, `chpasswd --prefix`), with the programs of the global toolchain (`lfs/systemd:native`, `lfs/shadow:native`, built on first use), not in its chroot under emulation; without the tag the post install script runs the programs the system has installed. `generate_ssh_keys` runs the `ssh-keygen` of `lfs/openssh:native`. The post install script and the preset file of the project are rewritten at every run of `bbxb`.
+What the project decides about the system it builds. A file is written into the target sysroot (`${BIN_PATH}`), where the image, the chroot and the packages built from it find it; a command that only the target can run (`systemctl`, `useradd`, `chpasswd`) is written into the post install script of the project, `${BIN_PATH}/postinst_scripts/99_osconfig`, which `run_postinstall_scripts` runs as root inside the image after the ones of the packages. The functions that write a command take `--tag <mount tag>` and then act at once on a mounted image: that is what a project needs after `inject_into_mount_tag`, when the post install scripts have already run. The command then runs on the build host, as root, against the root of the image (`systemctl --root`, `useradd --prefix`, `chpasswd --prefix`), with the programs of the global toolchain (`lfs/systemd:native`, `lfs/shadow:native`, built on first use), not in its chroot under emulation; without the tag the post install script runs the programs the system has installed. `generate_ssh_keys` runs the `ssh-keygen` of `lfs/openssh:native`. The post install script and the preset file of the project are rewritten at every run of `bbxb`, and so is every file a directive writes: they are listed in `<platform>/osconfig.files`, outside the image, and the next build removes them first, so a directive taken out of the project leaves nothing behind in the sysroot (a file a directive only edits, `/etc/hosts`, stays).
 
 - **set_hostname**: Host name of the system, in `/etc/hostname` and in the `127.0.1.1` line of `/etc/hosts`
   ```
@@ -586,9 +586,9 @@ What the project decides about the system it builds. A file is written into the 
   - `<locale>`: Value of `LANG` in `/etc/locale.conf`
   - `--keymap <keymap>`: Value of `KEYMAP` in `/etc/vconsole.conf`
 
-- **configure_network**: The `.network` file of systemd-networkd for one link
+- **configure_network**: The `.network` file of systemd-networkd for one link, or with `--networkmanager` its NetworkManager keyfile profile
   ```
-  configure_network <device> [--address <address/prefix>] [--gateway <address>] [--dns <address>[,<address>]] [--domains <list>] [--nodomains] [--file <name>]
+  configure_network <device> [--address <address/prefix>] [--gateway <address>] [--dns <address>[,<address>]] [--domains <list>] [--nodomains] [--file <name>] [--networkmanager]
   ```
   - `<device>`: Name of the link (the `Name=` of the `[Match]` section)
   - `--address <address/prefix>`: Static address; without it the link asks DHCP for everything
@@ -597,6 +597,7 @@ What the project decides about the system it builds. A file is written into the 
   - `--domains <list>`: `Domains=` of the link
   - `--nodomains`: Do not take the search domain from the DHCP lease (`UseDomains=yes` is the default)
   - `--file <name>`: Name of the file, when it must differ from the device
+  - `--networkmanager`: Write `/etc/NetworkManager/system-connections/<name>.nmconnection` (an ethernet profile, mode 600) instead; NetworkManager takes the lease domain by itself, so `--nodomains` is refused
 
 - **set_network_wait_online**: What `systemd-networkd-wait-online` waits for, as a drop-in of its unit
   ```

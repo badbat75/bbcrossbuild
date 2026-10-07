@@ -150,6 +150,59 @@ setup () {
 		"Gateway=192.168.1.1" "DNS=192.168.1.1" "DNS=9.9.9.9" "Domains=example.org"
 }
 
+@test "configure_network --networkmanager writes an ethernet keyfile profile asking DHCP" {
+	configure_network eth0 --networkmanager
+	KEYFILE="${BIN_PATH}${TARGET_SYSCONFDIR}/NetworkManager/system-connections/eth0.nmconnection"
+	run cat "${KEYFILE}"
+	assert_output_lines "[connection]" "id=eth0" "type=ethernet" "interface-name=eth0" "autoconnect=true" \
+		"" "[ipv4]" "method=auto" "" "[ipv6]" "method=auto"
+	[ "$(stat -c %a "${KEYFILE}")" = 600 ]
+	[ ! -e "${BIN_PATH}${TARGET_SYSCONFDIR}/systemd/network/eth0.network" ]
+}
+
+@test "configure_network --networkmanager with an address configures the profile statically" {
+	configure_network eth0 --networkmanager --address 192.168.1.10/24 --gateway 192.168.1.1 \
+		--dns 192.168.1.1,2001:db8::53 --domains "example.org lan" --file wired
+	run cat "${BIN_PATH}${TARGET_SYSCONFDIR}/NetworkManager/system-connections/wired.nmconnection"
+	assert_output_lines "[connection]" "id=wired" "type=ethernet" "interface-name=eth0" "autoconnect=true" \
+		"" "[ipv4]" "method=manual" "address1=192.168.1.10/24,192.168.1.1" "dns=192.168.1.1;" \
+		"dns-search=example.org;lan;" "" "[ipv6]" "method=auto" "dns=2001:db8::53;"
+	configure_network eth0 --networkmanager --address 2001:db8::10/64 --domains example.org
+	run cat "${BIN_PATH}${TARGET_SYSCONFDIR}/NetworkManager/system-connections/eth0.nmconnection"
+	assert_output_lines "[connection]" "id=eth0" "type=ethernet" "interface-name=eth0" "autoconnect=true" \
+		"" "[ipv4]" "method=disabled" "" "[ipv6]" "method=manual" "address1=2001:db8::10/64" \
+		"dns-search=example.org;"
+}
+
+@test "configure_network --networkmanager refuses --nodomains" {
+	run configure_network eth0 --networkmanager --nodomains
+	[ "${status}" -ne 0 ]
+	[ ! -e "${BIN_PATH}${TARGET_SYSCONFDIR}/NetworkManager/system-connections/eth0.nmconnection" ]
+}
+
+@test "the next run removes the files of the directives, not the ones they only edit" {
+	printf '127.0.0.1 localhost\n' > "${BIN_PATH}${TARGET_SYSCONFDIR}/hosts"
+	set_hostname lfs
+	configure_network eth0
+	configure_network eth0
+	run cat "${OSCONFIG_FILES}"
+	assert_output_lines "${TARGET_SYSCONFDIR}/hostname" "${TARGET_SYSCONFDIR}/systemd/network/eth0.network"
+	### A path that leaves the sysroot is never removed
+	printf '/../outside\n' >> "${OSCONFIG_FILES}"
+	touch "${BIN_PATH}/../outside"
+	### The next run: the project moved to NetworkManager
+	source "${BB_HOME}/osconfig.functions"
+	[ ! -e "${OSCONFIG_FILES}" ]
+	[ ! -e "${BIN_PATH}${TARGET_SYSCONFDIR}/hostname" ]
+	[ ! -e "${BIN_PATH}${TARGET_SYSCONFDIR}/systemd/network/eth0.network" ]
+	[ -e "${BIN_PATH}/../outside" ]
+	run cat "${BIN_PATH}${TARGET_SYSCONFDIR}/hosts"
+	assert_output_lines "127.0.0.1 localhost" "127.0.1.1 lfs"
+	configure_network eth0 --networkmanager
+	run cat "${OSCONFIG_FILES}"
+	assert_output_lines "${TARGET_SYSCONFDIR}/NetworkManager/system-connections/eth0.nmconnection"
+}
+
 @test "set_network_wait_online writes the drop-in of the unit of the package" {
 	set_network_wait_online --any
 	run cat "${BIN_PATH}${TARGET_SYSCONFDIR}/systemd/system/systemd-networkd-wait-online.service.d/osconfig.conf"
